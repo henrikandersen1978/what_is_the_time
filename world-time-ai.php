@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://example.com/world-time-ai
  * Description:       Import and display current local time for cities worldwide with AI-generated content. Hierarchical location pages with timezone support.
- * Version:           0.1.6
+ * Version:           0.1.7
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            World Time AI Team
@@ -30,12 +30,20 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '0.1.6' );
+
+define( 'WTA_VERSION', '0.1.7' );
 
 /**
  * GitHub repository for updates.
  */
 define( 'WTA_GITHUB_REPO', 'henrikandersen1978/what_is_the_time' );
+
+/**
+ * Plugin slug (directory name).
+ * IMPORTANT: The plugin must be installed in wp-content/plugins/world-time-ai/
+ * and the basename will be: world-time-ai/world-time-ai.php
+ */
+define( 'WTA_PLUGIN_SLUG', 'world-time-ai' );
 
 /**
  * Plugin directory path.
