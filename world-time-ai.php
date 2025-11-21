@@ -30,7 +30,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '1.0.0' );
+define( 'WTA_VERSION', '1.0.1' );
 
 /**
  * GitHub repository for updates.
