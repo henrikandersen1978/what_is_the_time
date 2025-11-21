@@ -38,6 +38,7 @@
 			$('#wta-reset-all').on('click', this.resetAll.bind(this));
 			$('#wta-clear-cache').on('click', this.clearCache.bind(this));
 			$('#wta-clear-logs').on('click', this.clearLogs.bind(this));
+			$('#wta-clear-update-cache').on('click', this.clearUpdateCache.bind(this));
 		},
 
 		/**
@@ -249,6 +250,41 @@
 
 			// Note: You'd need to add an AJAX endpoint for this
 			alert('Log clearing functionality will be implemented.');
+		},
+
+		/**
+		 * Clear update cache
+		 */
+		clearUpdateCache: function(e) {
+			e.preventDefault();
+
+			var $button = $(e.currentTarget);
+			var $result = $('#wta-clear-update-cache-result');
+
+			var data = {
+				action: 'wta_clear_update_cache',
+				nonce: wtaAdmin.nonce
+			};
+
+			$button.prop('disabled', true);
+			$result.html('<span style="color: #999;">Clearing...</span>');
+
+			$.post(wtaAdmin.ajaxurl, data, function(response) {
+				if (response.success) {
+					$result.html('<span style="color: #46b450;">✓ Cache cleared! Visit <a href="plugins.php">Plugins page</a> to check for updates.</span>');
+				} else {
+					$result.html('<span style="color: #dc3232;">✗ Error: ' + response.data.message + '</span>');
+				}
+			}).fail(function() {
+				$result.html('<span style="color: #dc3232;">✗ Connection failed</span>');
+			}).always(function() {
+				$button.prop('disabled', false);
+				setTimeout(function() {
+					$result.fadeOut(function() {
+						$(this).html('').show();
+					});
+				}, 5000);
+			});
 		}
 	};
 
@@ -258,6 +294,8 @@
 	});
 
 })(jQuery);
+
+
 
 
 

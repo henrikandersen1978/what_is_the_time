@@ -353,7 +353,37 @@ class WTA_Admin {
 
 		wp_send_json_success( array( 'message' => __( 'API connection successful!', WTA_TEXT_DOMAIN ) ) );
 	}
+
+	/**
+	 * AJAX handler to clear GitHub update cache.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_clear_update_cache() {
+		check_ajax_referer( 'wta_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', WTA_TEXT_DOMAIN ) ) );
+		}
+
+		// Clear the GitHub updater cache
+		$cache_key = 'wta_github_release_' . md5( WTA_GITHUB_REPO );
+		$result    = delete_transient( $cache_key );
+
+		if ( $result ) {
+			error_log( '[WTA GitHub Updater] Cache manually cleared via admin tools' );
+			wp_send_json_success( array(
+				'message' => __( 'Update cache cleared successfully! Visit the Plugins page to check for updates.', WTA_TEXT_DOMAIN ),
+			) );
+		} else {
+			wp_send_json_error( array(
+				'message' => __( 'Failed to clear cache or cache was already empty.', WTA_TEXT_DOMAIN ),
+			) );
+		}
+	}
 }
+
+
 
 
 

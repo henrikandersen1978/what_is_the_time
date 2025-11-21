@@ -111,15 +111,24 @@ class WTA_GitHub_Updater {
 			return $transient;
 		}
 
+		// Debug: Log local version
+		error_log( '[WTA GitHub Updater] Local plugin version: ' . $this->version );
+
 		// Get latest release info from GitHub
 		$release = $this->get_latest_release();
 
 		if ( ! $release || is_wp_error( $release ) ) {
+			error_log( '[WTA GitHub Updater] Failed to get release info from GitHub' );
 			return $transient;
 		}
 
+		// Debug: Log remote version
+		error_log( '[WTA GitHub Updater] Remote version from GitHub: ' . $release['version'] );
+
 		// Compare versions
 		if ( $this->is_newer_version( $release['version'] ) ) {
+			error_log( '[WTA GitHub Updater] Update available! Injecting update info for version ' . $release['version'] );
+			
 			$plugin_data = array(
 				'slug'        => $this->plugin_slug,
 				'plugin'      => $this->plugin_basename,
@@ -130,6 +139,8 @@ class WTA_GitHub_Updater {
 			);
 
 			$transient->response[ $this->plugin_basename ] = (object) $plugin_data;
+		} else {
+			error_log( '[WTA GitHub Updater] No update needed. Local version ' . $this->version . ' is up to date.' );
 		}
 
 		return $transient;
@@ -197,30 +208,41 @@ class WTA_GitHub_Updater {
 		// Check cache first
 		$cached = get_transient( $this->cache_key );
 		if ( false !== $cached ) {
+			error_log( '[WTA GitHub Updater] Using cached release data' );
 			return $cached;
 		}
 
 		// Fetch from GitHub API
-		$api_url  = sprintf( 'https://api.github.com/repos/%s/releases/latest', $this->github_repo );
+		$api_url = sprintf( 'https://api.github.com/repos/%s/releases/latest', $this->github_repo );
+		error_log( '[WTA GitHub Updater] Fetching from GitHub API: ' . $api_url );
+
 		$response = wp_remote_get(
 			$api_url,
 			array(
 				'timeout' => 10,
 				'headers' => array(
-					'Accept' => 'application/vnd.github.v3+json',
+					'Accept'     => 'application/vnd.github.v3+json',
+					'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' ),
 				),
 			)
 		);
 
 		// Handle errors gracefully
 		if ( is_wp_error( $response ) ) {
-			WTA_Logger::error( 'GitHub API request failed: ' . $response->get_error_message() );
+			$error_message = $response->get_error_message();
+			error_log( '[WTA GitHub Updater] GitHub API request failed: ' . $error_message );
+			if ( class_exists( 'WTA_Logger' ) ) {
+				WTA_Logger::error( 'GitHub API request failed: ' . $error_message );
+			}
 			return false;
 		}
 
 		$response_code = wp_remote_retrieve_response_code( $response );
 		if ( 200 !== $response_code ) {
-			WTA_Logger::error( 'GitHub API returned status code: ' . $response_code );
+			error_log( '[WTA GitHub Updater] GitHub API returned status code: ' . $response_code );
+			if ( class_exists( 'WTA_Logger' ) ) {
+				WTA_Logger::error( 'GitHub API returned status code: ' . $response_code );
+			}
 			return false;
 		}
 
@@ -228,13 +250,22 @@ class WTA_GitHub_Updater {
 		$data = json_decode( $body, true );
 
 		if ( empty( $data ) || ! isset( $data['tag_name'] ) ) {
-			WTA_Logger::error( 'Invalid GitHub API response' );
+			error_log( '[WTA GitHub Updater] Invalid GitHub API response - missing tag_name' );
+			if ( class_exists( 'WTA_Logger' ) ) {
+				WTA_Logger::error( 'Invalid GitHub API response' );
+			}
 			return false;
 		}
 
+		// Debug: Log raw tag name
+		error_log( '[WTA GitHub Updater] Raw tag_name from GitHub: ' . $data['tag_name'] );
+
 		// Parse release data
+		$normalized_version = $this->normalize_version( $data['tag_name'] );
+		error_log( '[WTA GitHub Updater] Normalized version: ' . $normalized_version );
+
 		$release = array(
-			'version'      => $this->normalize_version( $data['tag_name'] ),
+			'version'      => $normalized_version,
 			'html_url'     => $data['html_url'] ?? '',
 			'download_url' => $data['zipball_url'] ?? '',
 			'description'  => ! empty( $data['body'] ) ? $this->parse_description( $data['body'] ) : 'No description available.',
@@ -244,6 +275,7 @@ class WTA_GitHub_Updater {
 
 		// Cache the result
 		set_transient( $this->cache_key, $release, $this->cache_duration );
+		error_log( '[WTA GitHub Updater] Release data cached for ' . ( $this->cache_duration / 3600 ) . ' hours' );
 
 		return $release;
 	}
@@ -256,7 +288,11 @@ class WTA_GitHub_Updater {
 	 * @return string Normalized version string.
 	 */
 	private function normalize_version( $version ) {
-		return ltrim( $version, 'vV' );
+		// Remove 'v' or 'V' prefix from version strings like 'v0.1.5'
+		$normalized = ltrim( $version, 'vV' );
+		// Trim any whitespace
+		$normalized = trim( $normalized );
+		return $normalized;
 	}
 
 	/**
@@ -267,7 +303,15 @@ class WTA_GitHub_Updater {
 	 * @return bool True if new version is newer.
 	 */
 	private function is_newer_version( $new_version ) {
-		return version_compare( $new_version, $this->version, '>' );
+		$is_newer = version_compare( $new_version, $this->version, '>' );
+		error_log( sprintf(
+			'[WTA GitHub Updater] Version comparison: %s (remote) %s %s (local) = %s',
+			$new_version,
+			$is_newer ? '>' : '<=',
+			$this->version,
+			$is_newer ? 'UPDATE AVAILABLE' : 'UP TO DATE'
+		) );
+		return $is_newer;
 	}
 
 	/**
@@ -313,12 +357,31 @@ class WTA_GitHub_Updater {
 	 * Clear the cached release data.
 	 *
 	 * Useful for forcing a fresh check, e.g., from admin tools.
+	 * After clearing cache, visit the Plugins page to trigger a new check.
 	 *
 	 * @since 1.0.0
 	 * @return bool True on success, false on failure.
 	 */
 	public function clear_cache() {
-		return delete_transient( $this->cache_key );
+		$result = delete_transient( $this->cache_key );
+		if ( $result ) {
+			error_log( '[WTA GitHub Updater] Cache cleared successfully. Visit Plugins page to check for updates.' );
+		}
+		return $result;
+	}
+
+	/**
+	 * Get the cache key used for storing release data.
+	 *
+	 * Useful for manually clearing the cache via WordPress transient functions.
+	 *
+	 * @since 1.0.0
+	 * @return string The transient cache key.
+	 */
+	public function get_cache_key() {
+		return $this->cache_key;
 	}
 }
+
+
 

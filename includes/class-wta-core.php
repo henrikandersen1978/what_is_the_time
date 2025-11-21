@@ -156,6 +156,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_reset_all_data', $admin, 'ajax_reset_all_data' );
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed', $admin, 'ajax_retry_failed' );
 		$this->loader->add_action( 'wp_ajax_wta_test_api', $admin, 'ajax_test_api' );
+		$this->loader->add_action( 'wp_ajax_wta_clear_update_cache', $admin, 'ajax_clear_update_cache' );
 	}
 
 	/**
