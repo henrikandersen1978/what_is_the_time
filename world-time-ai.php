@@ -33,6 +33,11 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'WTA_VERSION', '1.0.0' );
 
 /**
+ * GitHub repository for updates.
+ */
+define( 'WTA_GITHUB_REPO', 'henrikandersen1978/what_is_the_time' );
+
+/**
  * Plugin directory path.
  */
 define( 'WTA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

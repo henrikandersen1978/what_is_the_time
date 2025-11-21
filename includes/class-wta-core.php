@@ -47,6 +47,7 @@ class WTA_Core {
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_cron_hooks();
+		$this->init_github_updater();
 	}
 
 	/**
@@ -67,6 +68,7 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-github-updater.php';
 
 		/**
 		 * Core classes
@@ -196,6 +198,21 @@ class WTA_Core {
 		// AI content generation cron
 		$cron_ai = new WTA_Cron_AI();
 		$this->loader->add_action( 'world_time_generate_ai_content', $cron_ai, 'process' );
+	}
+
+	/**
+	 * Initialize the GitHub updater for plugin updates.
+	 *
+	 * @since  1.0.0
+	 * @access private
+	 */
+	private function init_github_updater() {
+		$updater = new WTA_GitHub_Updater(
+			WTA_GITHUB_REPO,
+			WTA_VERSION,
+			WTA_PLUGIN_BASENAME
+		);
+		$updater->init();
 	}
 
 	/**
