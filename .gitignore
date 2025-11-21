@@ -1,0 +1,39 @@
+# Build files
+world-time-ai.zip
+world-time-ai-temp/
+build/
+test-extract/
+
+# Temporary files
+*.log
+*.tmp
+puc.zip
+temp-puc/
+
+# Diagnostic and cleanup scripts
+*-diagnostic.php
+*-reset-and-install.php
+*-registration.php
+*-before-install.php
+cleanup-before-install.php
+force-plugin-registration.php
+complete-reset-and-install.php
+deep-diagnostic.php
+
+# Documentation (keep only in docs/)
+GITHUB-RELEASE-GUIDE.md
+CREATE-RELEASE-CHECKLIST.md
+UPGRADE-TO-*.md
+fix-wordpress-plugin-issue.md
+
+# Build scripts
+build-release.sh
+build-release.ps1
+test-github-api.ps1
+
+# SQL files
+*.sql
+
+# OS files
+.DS_Store
+Thumbs.db
