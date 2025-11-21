@@ -1,0 +1,189 @@
+/**
+ * Frontend styles for World Time AI
+ *
+ * @package WorldTimeAI
+ */
+
+/* Clock Display */
+.wta-clock-container {
+	text-align: center;
+	margin: 2rem 0;
+	padding: 2rem;
+	background: #f5f5f5;
+	border-radius: 8px;
+}
+
+.wta-clock {
+	font-size: 3rem;
+	font-weight: bold;
+	color: #2c3e50;
+	font-family: 'Courier New', Courier, monospace;
+	margin-bottom: 0.5rem;
+}
+
+.wta-timezone-info {
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+	margin-top: 0.5rem;
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.wta-timezone-abbr {
+	font-weight: bold;
+	text-transform: uppercase;
+}
+
+.wta-timezone-name {
+	font-style: italic;
+}
+
+/* Time Difference */
+.wta-time-difference {
+	text-align: center;
+	margin: 1.5rem 0;
+	padding: 1rem;
+	background: #e8f4f8;
+	border-left: 4px solid #3498db;
+	border-radius: 4px;
+}
+
+.wta-time-difference p {
+	margin: 0;
+	color: #2c3e50;
+	font-size: 1.1rem;
+}
+
+/* Content Area */
+.wta-content {
+	margin: 2rem 0;
+	line-height: 1.6;
+}
+
+.wta-content h2 {
+	color: #2c3e50;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+	font-size: 1.5rem;
+}
+
+.wta-content h3 {
+	color: #34495e;
+	margin-top: 1.5rem;
+	margin-bottom: 0.75rem;
+	font-size: 1.25rem;
+}
+
+.wta-content p {
+	margin-bottom: 1rem;
+}
+
+/* Children Lists (Cities/Countries) */
+.wta-children-list {
+	margin: 3rem 0;
+}
+
+.wta-children-list h2 {
+	color: #2c3e50;
+	margin-bottom: 1rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 2px solid #3498db;
+}
+
+.wta-cities-list,
+.wta-countries-list {
+	list-style: none;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 1rem;
+	margin: 0;
+}
+
+.wta-cities-list li,
+.wta-countries-list li {
+	background: #fff;
+	padding: 0.75rem 1rem;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+}
+
+.wta-cities-list li:hover,
+.wta-countries-list li:hover {
+	background: #f8f9fa;
+	border-color: #3498db;
+	transform: translateY(-2px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.wta-cities-list a,
+.wta-countries-list a {
+	color: #2c3e50;
+	text-decoration: none;
+	display: block;
+	font-weight: 500;
+}
+
+.wta-cities-list a:hover,
+.wta-countries-list a:hover {
+	color: #3498db;
+}
+
+/* Shortcode Styles */
+span.wta-time-difference {
+	display: inline-block;
+	padding: 0.25rem 0.75rem;
+	background: #e8f4f8;
+	border-radius: 4px;
+	font-weight: 500;
+	color: #2c3e50;
+}
+
+div.wta-clock {
+	display: inline-block;
+	padding: 0.5rem 1rem;
+	background: #2c3e50;
+	color: #fff;
+	border-radius: 4px;
+	font-family: 'Courier New', Courier, monospace;
+	font-size: 1.5rem;
+	font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.wta-clock {
+		font-size: 2rem;
+	}
+
+	.wta-cities-list,
+	.wta-countries-list {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+
+	.wta-timezone-info {
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-clock {
+		font-size: 1.5rem;
+	}
+
+	.wta-clock-container {
+		padding: 1rem;
+	}
+
+	.wta-cities-list,
+	.wta-countries-list {
+		grid-template-columns: 1fr;
+	}
+}
+
+
+
+
