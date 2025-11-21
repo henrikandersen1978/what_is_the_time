@@ -64,6 +64,12 @@ $has_key = ! empty( $openai_key );
 						</th>
 						<td>
 							<select id="wta_openai_model" name="wta_openai_model">
+								<option value="gpt-4o-mini" <?php selected( get_option( 'wta_openai_model' ), 'gpt-4o-mini' ); ?>>
+									GPT-4o Mini ⭐ (Recommended - Most cost-effective)
+								</option>
+								<option value="gpt-4o" <?php selected( get_option( 'wta_openai_model' ), 'gpt-4o' ); ?>>
+									GPT-4o
+								</option>
 								<option value="gpt-4" <?php selected( get_option( 'wta_openai_model' ), 'gpt-4' ); ?>>
 									GPT-4
 								</option>
@@ -75,7 +81,7 @@ $has_key = ! empty( $openai_key );
 								</option>
 							</select>
 							<p class="description">
-								<?php esc_html_e( 'Choose the OpenAI model to use for content generation', WTA_TEXT_DOMAIN ); ?>
+								<?php esc_html_e( 'Choose the OpenAI model to use for content generation. GPT-4o Mini is recommended for best cost/quality ratio.', WTA_TEXT_DOMAIN ); ?>
 							</p>
 						</td>
 					</tr>
