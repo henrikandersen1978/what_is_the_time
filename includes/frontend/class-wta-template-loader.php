@@ -74,3 +74,4 @@ class WTA_Template_Loader {
 
 
 
+

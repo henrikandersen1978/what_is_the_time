@@ -1,0 +1,20 @@
+{
+  "instructions": "Alternative data sources for testing",
+  "option_1_jsdelivr": {
+    "countries": "https://cdn.jsdelivr.net/npm/countries-states-cities-database@1.0.0/countries.json",
+    "states": "https://cdn.jsdelivr.net/npm/countries-states-cities-database@1.0.0/states.json", 
+    "cities": "https://cdn.jsdelivr.net/npm/countries-states-cities-database@1.0.0/cities.json"
+  },
+  "option_2_github_pages": {
+    "note": "Try with different branch names",
+    "branches": ["master", "main", "v5", "v6"],
+    "base": "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/",
+    "paths": ["countries.json", "json/countries.json", "src/countries.json"]
+  },
+  "option_3_alternative_source": {
+    "countries": "https://restcountries.com/v3.1/all",
+    "note": "Different format - requires adapter"
+  }
+}
+
+

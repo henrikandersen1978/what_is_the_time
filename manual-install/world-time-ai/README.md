@@ -1,8 +1,20 @@
 # World Time AI - WordPress Plugin
 
-Version: 1.0.0  
+Version: 0.3.5  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
+
+## 📝 Changelog
+
+### Version 0.3.5 (TEST Release)
+- 🧪 Test release to verify settings preservation during updates
+- ✅ Verify that API keys and configurations persist after upgrade
+
+### Version 0.3.4
+- ✅ Automatic settings preservation during plugin updates
+- ✅ Admin notice confirming successful upgrade
+- ✅ Version tracking system implemented
+- 📚 Updated documentation with upgrade information
 
 ## Overview
 

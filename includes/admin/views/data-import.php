@@ -187,3 +187,4 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 
 
 
+
