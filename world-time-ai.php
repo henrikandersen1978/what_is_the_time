@@ -1,0 +1,105 @@
+<?php
+/**
+ * World Time AI
+ *
+ * @package           WorldTimeAI
+ * @author            Henrik Andersen
+ * @copyright         2025 Henrik Andersen
+ * @license           GPL-2.0-or-later
+ *
+ * @wordpress-plugin
+ * Plugin Name:       World Time AI
+ * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
+ * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
+ * Version:           2.0.0
+ * Requires at least: 6.8
+ * Requires PHP:      8.4
+ * Author:            Henrik Andersen
+ * Author URI:        https://github.com/henrikandersen1978
+ * Text Domain:       world-time-ai
+ * License:           GPL v2 or later
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
+
+/**
+ * Current plugin version.
+ */
+define( 'WTA_VERSION', '2.0.0' );
+
+/**
+ * Plugin directory path.
+ */
+define( 'WTA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+
+/**
+ * Plugin directory URL.
+ */
+define( 'WTA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
+/**
+ * Custom post type name.
+ */
+define( 'WTA_POST_TYPE', 'world_time_location' );
+
+/**
+ * Text domain for translations.
+ */
+define( 'WTA_TEXT_DOMAIN', 'world-time-ai' );
+
+/**
+ * Queue table name (without prefix).
+ */
+define( 'WTA_QUEUE_TABLE', 'world_time_queue' );
+
+/**
+ * The code that runs during plugin activation.
+ */
+function activate_world_time_ai() {
+	require_once WTA_PLUGIN_DIR . 'includes/class-wta-activator.php';
+	WTA_Activator::activate();
+}
+
+/**
+ * The code that runs during plugin deactivation.
+ */
+function deactivate_world_time_ai() {
+	require_once WTA_PLUGIN_DIR . 'includes/class-wta-deactivator.php';
+	WTA_Deactivator::deactivate();
+}
+
+register_activation_hook( __FILE__, 'activate_world_time_ai' );
+register_deactivation_hook( __FILE__, 'deactivate_world_time_ai' );
+
+/**
+ * The core plugin class.
+ */
+require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
+
+/**
+ * Begins execution of the plugin.
+ */
+function run_world_time_ai() {
+	$plugin = new WTA_Core();
+	$plugin->run();
+}
+run_world_time_ai();
+
+/**
+ * Plugin Update Checker
+ */
+require WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$updateChecker = PucFactory::buildUpdateChecker(
+	'https://github.com/henrikandersen1978/what_is_the_time',
+	__FILE__,
+	'world-time-ai'
+);
+
+$updateChecker->getVcsApi()->enableReleaseAssets();
