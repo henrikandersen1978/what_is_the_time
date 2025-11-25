@@ -176,15 +176,21 @@ class WTA_Cron_Structure {
 			// Now queue individual cities (reuse the existing queue_cities logic)
 			$queued_count = WTA_Importer::queue_cities_from_array( $cities, $countries, $options );
 
-			// Mark job as done
+				// Mark job as done
 			WTA_Queue::update_status( $item['id'], 'done' );
-			WTA_Logger::info( "Cities_import job completed", array(
+			
+			$log_data = array(
 				'job_id' => $item['id'],
 				'cities_queued' => $queued_count,
 				'total_cities_in_file' => count( $cities ),
 				'min_population_filter' => $options['min_population'],
-				'selected_continents' => implode( ', ', $options['selected_continents'] ),
-			) );
+			);
+			
+			if ( ! empty( $options['selected_continents'] ) ) {
+				$log_data['selected_continents'] = implode( ', ', $options['selected_continents'] );
+			}
+			
+			WTA_Logger::info( "Cities_import job completed", $log_data );
 
 			return 1; // Processed 1 job
 		}
