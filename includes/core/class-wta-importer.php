@@ -53,9 +53,10 @@ class WTA_Importer {
 
 		foreach ( $countries as $country ) {
 			$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+			$continent_code = WTA_Utils::get_continent_code( $continent );
 
-			// Filter by selected continents
-			if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent, $options['selected_continents'], true ) ) {
+			// Filter by selected continents (by code)
+			if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
 				continue;
 			}
 

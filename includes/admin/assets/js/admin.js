@@ -78,9 +78,9 @@
 					var stats = response.data.stats || {};
 					var message = '<strong>Import queue prepared successfully!</strong><br><br>';
 					message += 'Queued items:<br>';
-					if (stats.continents) message += '• Continents: ' + stats.continents + '<br>';
-					if (stats.countries) message += '• Countries: ' + stats.countries + '<br>';
-					if (stats.cities) message += '• Cities: ' + stats.cities + '<br>';
+					message += '• Continents: ' + (stats.continents || 0) + '<br>';
+					message += '• Countries: ' + (stats.countries || 0) + '<br>';
+					message += '• Cities: ' + (stats.cities || 0) + ' (batch job - actual cities will be queued by cron)<br>';
 					
 					$resultDiv.html(
 						'<div class="notice notice-success"><p>' + message + '</p></div>'
