@@ -9,6 +9,19 @@
 class WTA_Post_Type {
 
 	/**
+	 * Constructor.
+	 *
+	 * @since    2.0.0
+	 */
+	public function __construct() {
+		// Add custom rewrite rules
+		add_action( 'init', array( $this, 'add_custom_rewrite_rules' ), 20 );
+		
+		// Filter the permalink structure
+		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
+	}
+
+	/**
 	 * Register the custom post type.
 	 *
 	 * Creates a hierarchical custom post type for locations (continents, countries, cities).
@@ -50,11 +63,7 @@ class WTA_Post_Type {
 			'show_ui'            => true,
 			'show_in_menu'       => false, // We add custom menu via admin class
 			'query_var'          => true,
-			'rewrite'            => array(
-				'slug'         => '', // Root level URLs
-				'with_front'   => false,
-				'hierarchical' => true,
-			),
+			'rewrite'            => false, // We'll handle rewrite rules manually
 			'capability_type'    => 'post',
 			'has_archive'        => true,
 			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships
@@ -65,6 +74,71 @@ class WTA_Post_Type {
 		);
 
 		register_post_type( WTA_POST_TYPE, $args );
+	}
+
+	/**
+	 * Add custom rewrite rules for clean URLs.
+	 *
+	 * This creates rules that allow URLs like /europa/danmark/kobenhavn/
+	 * without the post type slug.
+	 *
+	 * @since    2.0.0
+	 */
+	public function add_custom_rewrite_rules() {
+		// Three-level hierarchy: /continent/country/city/
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/([^/]+)/?$',
+			'index.php?world_time_location=$matches[3]&wta_parent1=$matches[2]&wta_parent2=$matches[1]',
+			'top'
+		);
+
+		// Two-level hierarchy: /continent/country/
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/?$',
+			'index.php?world_time_location=$matches[2]&wta_parent1=$matches[1]',
+			'top'
+		);
+
+		// One-level: /continent/
+		add_rewrite_rule(
+			'^([^/]+)/?$',
+			'index.php?world_time_location=$matches[1]',
+			'top'
+		);
+	}
+
+	/**
+	 * Filter the post type link to generate clean URLs.
+	 *
+	 * @since    2.0.0
+	 * @param    string  $post_link The post's permalink.
+	 * @param    WP_Post $post      The post object.
+	 * @return   string             The filtered permalink.
+	 */
+	public function filter_post_type_link( $post_link, $post ) {
+		if ( WTA_POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
+			return $post_link;
+		}
+
+		// Build hierarchical URL
+		$slug_parts = array();
+		$current_post = $post;
+
+		// Traverse up the hierarchy
+		while ( $current_post ) {
+			array_unshift( $slug_parts, $current_post->post_name );
+			
+			if ( $current_post->post_parent ) {
+				$current_post = get_post( $current_post->post_parent );
+			} else {
+				$current_post = null;
+			}
+		}
+
+		// Generate URL
+		$post_link = home_url( '/' . implode( '/', $slug_parts ) . '/' );
+
+		return $post_link;
 	}
 }
 

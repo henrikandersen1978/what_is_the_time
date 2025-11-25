@@ -142,7 +142,8 @@ class WTA_Activator {
 	 * @since 2.0.0
 	 */
 	private static function set_default_prompts() {
-		// Translate location name
+		// NOTE: Translation is now handled by WTA_AI_Translator before post creation
+		// These old translate prompts are kept for backward compatibility but no longer used
 		add_option( 'wta_prompt_translate_name_system', 'Du er en professionel oversætter der oversætter stednavne til dansk.' );
 		add_option( 'wta_prompt_translate_name_user', 'Oversæt "{location_name}" til dansk. Svar kun med det oversatte navn, ingen forklaring.' );
 
@@ -151,24 +152,24 @@ class WTA_Activator {
 		add_option( 'wta_prompt_city_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}. Brug formatet "Hvad er klokken i [by]?"' );
 
 		// City page content
-		add_option( 'wta_prompt_city_content_system', '{base_language_description}. Du skriver informativt og SEO-venligt indhold om byer.' );
-		add_option( 'wta_prompt_city_content_user', 'Skriv 200-300 ord om {location_name_local} i {country_name}. Inkluder tidszonen ({timezone}) og interessante fakta om byen.' );
+		add_option( 'wta_prompt_city_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om byer. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
+		add_option( 'wta_prompt_city_content_user', 'Skriv 200-300 ord om {location_name_local} i {country_name}. Tidszonen er {timezone}. Inkluder konkrete, interessante fakta om byen. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
 
 		// Country page title
 		add_option( 'wta_prompt_country_title_system', 'Du er en SEO ekspert der skriver fængende sider på dansk.' );
 		add_option( 'wta_prompt_country_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.' );
 
 		// Country page content
-		add_option( 'wta_prompt_country_content_system', '{base_language_description}. Du skriver informativt og SEO-venligt indhold om lande.' );
-		add_option( 'wta_prompt_country_content_user', 'Skriv 300-400 ord om {location_name_local} i {continent_name}. Inkluder tidszoner og interessante fakta om landet.' );
+		add_option( 'wta_prompt_country_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om lande. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
+		add_option( 'wta_prompt_country_content_user', 'Skriv 300-400 ord om {location_name_local} i {continent_name}. Inkluder konkrete fakta om tidszoner, geografi og kultur. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
 
 		// Continent page title
 		add_option( 'wta_prompt_continent_title_system', 'Du er en SEO ekspert der skriver fængende sider på dansk.' );
 		add_option( 'wta_prompt_continent_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.' );
 
 		// Continent page content
-		add_option( 'wta_prompt_continent_content_system', '{base_language_description}. Du skriver informativt og SEO-venligt indhold om kontinenter.' );
-		add_option( 'wta_prompt_continent_content_user', 'Skriv 400-500 ord om {location_name_local}. Inkluder tidszoner og interessante fakta om kontinentet.' );
+		add_option( 'wta_prompt_continent_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om kontinenter. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
+		add_option( 'wta_prompt_continent_content_user', 'Skriv 400-500 ord om {location_name_local}. Inkluder konkrete fakta om tidszoner, geografi og interessante forhold. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
 
 		// Yoast SEO title
 		add_option( 'wta_prompt_yoast_title_system', 'Du er en SEO ekspert der skriver meta titles på dansk.' );
@@ -190,19 +191,19 @@ class WTA_Activator {
 			return;
 		}
 
-		// Process structure queue (continents, countries, cities) - Every 5 minutes
+		// Process structure queue (continents, countries, cities) - Every 1 minute
 		if ( false === as_next_scheduled_action( 'wta_process_structure' ) ) {
-			as_schedule_recurring_action( time(), 5 * MINUTE_IN_SECONDS, 'wta_process_structure', array(), 'world-time-ai' );
+			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_structure', array(), 'world-time-ai' );
 		}
 
-		// Process timezone resolution - Every 5 minutes
+		// Process timezone resolution - Every 1 minute
 		if ( false === as_next_scheduled_action( 'wta_process_timezone' ) ) {
-			as_schedule_recurring_action( time(), 5 * MINUTE_IN_SECONDS, 'wta_process_timezone', array(), 'world-time-ai' );
+			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_timezone', array(), 'world-time-ai' );
 		}
 
-		// Process AI content generation - Every 5 minutes
+		// Process AI content generation - Every 1 minute
 		if ( false === as_next_scheduled_action( 'wta_process_ai_content' ) ) {
-			as_schedule_recurring_action( time(), 5 * MINUTE_IN_SECONDS, 'wta_process_ai_content', array(), 'world-time-ai' );
+			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_ai_content', array(), 'world-time-ai' );
 		}
 	}
 }

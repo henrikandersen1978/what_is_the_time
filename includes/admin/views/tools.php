@@ -47,6 +47,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</p>
 		</div>
 
+		<!-- Translation Cache -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Translation Cache', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'Clear cached AI translations. Use this when you change the base language or want to force fresh translations.', WTA_TEXT_DOMAIN ); ?></p>
+			<p>
+				<button type="button" class="button" id="wta-clear-translation-cache"><?php esc_html_e( 'Clear Translation Cache', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-translation-cache-result"></div>
+		</div>
+
 		<!-- Reset Data -->
 		<div class="wta-card wta-card-warning">
 			<h2><?php esc_html_e( 'Reset All Data', WTA_TEXT_DOMAIN ); ?></h2>
@@ -153,6 +164,40 @@ jQuery(document).ready(function($) {
 			},
 			error: function() {
 				$container.html('<div class="notice notice-error"><p>Failed to load logs</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Clear translation cache
+	$('#wta-clear-translation-cache').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-translation-cache-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_clear_translation_cache',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
 			},
 			complete: function() {
 				$button.prop('disabled', false);

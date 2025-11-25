@@ -8,15 +8,15 @@
  * @license           GPL-2.0-or-later
  *
  * @wordpress-plugin
- * Plugin Name:       Time Zone Clock
+ * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.0.7
+ * Version:           2.1.0
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
  * Author URI:        https://github.com/henrikandersen1978
- * Text Domain:       time-zone-clock
+ * Text Domain:       world-time-ai
  * License:           GPL v2 or later
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  */
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.0.7' );
+define( 'WTA_VERSION', '2.1.0' );
 
 /**
  * Plugin directory path.

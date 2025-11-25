@@ -66,7 +66,7 @@ class WTA_Importer {
 					'continent',
 					array(
 						'name'     => $continent,
-						'name_local' => WTA_Quick_Translate::translate( $continent, 'continent' ),
+						'name_local' => WTA_AI_Translator::translate( $continent, 'continent' ),
 					),
 					'continent_' . sanitize_title( $continent )
 				);
@@ -86,7 +86,7 @@ class WTA_Importer {
 				'country',
 				array(
 					'name'         => $country['name'],
-					'name_local'   => WTA_Quick_Translate::translate( $country['name'], 'country' ),
+					'name_local'   => WTA_AI_Translator::translate( $country['name'], 'country' ),
 					'country_code' => $country['iso2'],
 					'country_id'   => $country['id'],
 					'continent'    => $country['region'],
@@ -184,7 +184,7 @@ class WTA_Importer {
 			// Queue city
 			$city_payload = array(
 				'name'         => $city['name'],
-				'name_local'   => WTA_Quick_Translate::translate( $city['name'], 'city' ),
+				'name_local'   => WTA_AI_Translator::translate( $city['name'], 'city' ),
 				'city_id'      => $city['id'],
 				'country_id'   => $city['country_id'],
 				'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,

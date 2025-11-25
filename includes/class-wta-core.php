@@ -59,6 +59,7 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
 
 		// Action Scheduler Processors
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
@@ -147,6 +148,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_reset_all_data', $admin, 'ajax_reset_all_data' );
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed_items', $admin, 'ajax_retry_failed_items' );
 		$this->loader->add_action( 'wp_ajax_wta_get_logs', $admin, 'ajax_get_logs' );
+		$this->loader->add_action( 'wp_ajax_wta_clear_translation_cache', $admin, 'ajax_clear_translation_cache' );
 
 		// Settings
 		$settings = new WTA_Settings();
@@ -226,7 +228,7 @@ class WTA_Core {
 		// Check and schedule missing actions
 		foreach ( $required_actions as $action ) {
 			if ( false === as_next_scheduled_action( $action ) ) {
-				as_schedule_recurring_action( time(), 5 * MINUTE_IN_SECONDS, $action, array(), 'world-time-ai' );
+				as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, $action, array(), 'world-time-ai' );
 				
 				WTA_Logger::info( "Auto-scheduled missing action: $action" );
 			}

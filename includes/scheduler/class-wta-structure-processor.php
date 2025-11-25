@@ -14,7 +14,7 @@ class WTA_Structure_Processor {
 	/**
 	 * Process batch.
 	 *
-	 * Called by Action Scheduler every 5 minutes.
+	 * Called by Action Scheduler every minute.
 	 *
 	 * @since    2.0.0
 	 */
@@ -141,7 +141,7 @@ class WTA_Structure_Processor {
 		$data = $item['payload'];
 
 		// Find parent continent post
-		$continent_name_local = WTA_Quick_Translate::translate( $data['continent'], 'continent' );
+		$continent_name_local = WTA_AI_Translator::translate( $data['continent'], 'continent' );
 		$parent = get_page_by_path( sanitize_title( $continent_name_local ), OBJECT, WTA_POST_TYPE );
 
 		if ( ! $parent ) {

@@ -13,7 +13,7 @@ class WTA_AI_Processor {
 	/**
 	 * Process batch.
 	 *
-	 * Called by Action Scheduler every 5 minutes.
+	 * Called by Action Scheduler every minute.
 	 *
 	 * @since    2.0.0
 	 */
@@ -258,7 +258,58 @@ class WTA_AI_Processor {
 			return false;
 		}
 
-		return $data['choices'][0]['message']['content'];
+		$content = $data['choices'][0]['message']['content'];
+		
+		// Clean up the content
+		return $this->clean_ai_content( $content );
+	}
+
+	/**
+	 * Clean AI-generated content.
+	 *
+	 * Removes common AI artifacts and unwanted phrases.
+	 *
+	 * @since    2.0.0
+	 * @param    string $content The AI-generated content.
+	 * @return   string          Cleaned content.
+	 */
+	private function clean_ai_content( $content ) {
+		// Remove surrounding quotes if present
+		$content = trim( $content );
+		if ( ( str_starts_with( $content, '"' ) && str_ends_with( $content, '"' ) ) ||
+		     ( str_starts_with( $content, "'" ) && str_ends_with( $content, "'" ) ) ) {
+			$content = substr( $content, 1, -1 );
+		}
+
+		// Remove common ChatGPT artifacts (Danish versions)
+		$artifacts = array(
+			'/^Velkommen til\s+/i',
+			'/^Lad os udforske\s+/i',
+			'/^I denne artikel\s+/i',
+			'/^Her er\s+/i',
+			'/^Dette er\s+/i',
+			'/\s+Håber dette hjælper!?$/i',
+			'/\s+God fornøjelse!?$/i',
+			'/\s+Rigtig god fornøjelse!?$/i',
+			'/\s+Enjoy!?$/i',
+			'/\s+Happy travels!?$/i',
+			// English versions (in case they slip through)
+			'/^Welcome to\s+/i',
+			'/^Let\'s explore\s+/i',
+			'/^In this article\s+/i',
+			'/^Here is\s+/i',
+			'/^This is\s+/i',
+			'/\s+Hope this helps!?$/i',
+		);
+
+		foreach ( $artifacts as $pattern ) {
+			$content = preg_replace( $pattern, '', $content );
+		}
+
+		// Remove excessive whitespace
+		$content = preg_replace( '/\s+/', ' ', $content );
+		
+		return trim( $content );
 	}
 }
 

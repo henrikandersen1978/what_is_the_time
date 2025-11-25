@@ -441,6 +441,27 @@ class WTA_Admin {
 
 		wp_send_json_success( array( 'logs' => $logs ) );
 	}
+
+	/**
+	 * AJAX: Clear translation cache.
+	 *
+	 * @since    2.0.0
+	 */
+	public function ajax_clear_translation_cache() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		WTA_AI_Translator::clear_cache();
+
+		WTA_Logger::info( 'Translation cache cleared by user' );
+
+		wp_send_json_success( array(
+			'message' => 'Translation cache has been cleared. New imports will use fresh translations.',
+		) );
+	}
 }
 
 
