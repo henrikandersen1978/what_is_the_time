@@ -38,10 +38,9 @@ class WTA_Importer {
 			WTA_Logger::info( 'Cleared existing queue' );
 		}
 
-		// Fetch data from GitHub
+		// Fetch data from GitHub (only countries and states, not cities yet)
 		$countries = WTA_Github_Fetcher::fetch_countries();
 		$states = WTA_Github_Fetcher::fetch_states();
-		$cities = WTA_Github_Fetcher::fetch_cities();
 
 		// Check for errors
 		if ( is_wp_error( $countries ) ) {
@@ -49,9 +48,6 @@ class WTA_Importer {
 		}
 		if ( is_wp_error( $states ) ) {
 			return $states;
-		}
-		if ( is_wp_error( $cities ) ) {
-			return $cities;
 		}
 
 		// Process data
@@ -68,8 +64,8 @@ class WTA_Importer {
 		// Queue countries
 		$stats['countries'] = self::queue_countries( $countries, $options );
 
-		// Queue cities
-		$stats['cities'] = self::queue_cities( $cities, $countries, $options );
+		// Queue cities processing job (will be processed in background)
+		$stats['cities'] = self::queue_cities_batch_job( $countries, $options );
 
 		WTA_Logger::info( 'Import preparation complete', $stats );
 
@@ -205,7 +201,7 @@ class WTA_Importer {
 	}
 
 	/**
-	 * Queue cities.
+	 * Queue cities from array (can be called externally by cron).
 	 *
 	 * @since 1.0.0
 	 * @param array $cities    Cities data.
@@ -213,7 +209,7 @@ class WTA_Importer {
 	 * @param array $options   Import options.
 	 * @return int Number of queued items.
 	 */
-	private static function queue_cities( $cities, $countries, $options ) {
+	public static function queue_cities_from_array( $cities, $countries, $options ) {
 		$count = 0;
 		$selected = $options['selected_continents'];
 		$min_population = $options['min_population'];
@@ -319,6 +315,37 @@ class WTA_Importer {
 	 */
 	public static function get_progress() {
 		return WTA_Queue::get_stats();
+	}
+
+	/**
+	 * Queue a batch job for processing cities (to avoid memory issues).
+	 *
+	 * Instead of loading all 6+ million cities into memory, we queue
+	 * a special "cities_import" job that will be processed by cron.
+	 *
+	 * @since 1.0.0
+	 * @param array $countries Countries data for filtering.
+	 * @param array $options   Import options.
+	 * @return int Number of queued batch jobs (always 1).
+	 */
+	private static function queue_cities_batch_job( $countries, $options ) {
+		// Create a single "import cities" job with the filter criteria
+		WTA_Queue::insert(
+			'cities_import',
+			null,
+			array(
+				'countries' => $countries,
+				'selected_continents' => $options['selected_continents'],
+				'min_population' => $options['min_population'],
+				'max_cities_per_country' => $options['max_cities_per_country'],
+				'status' => 'pending',
+			)
+		);
+		
+		WTA_Logger::info( 'Cities batch import job queued (will process in background to avoid memory issues)' );
+		
+		// Return 1 to indicate 1 job queued (not actual city count)
+		return 1;
 	}
 }
 

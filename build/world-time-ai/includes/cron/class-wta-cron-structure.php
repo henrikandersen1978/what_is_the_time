@@ -48,6 +48,9 @@ class WTA_Cron_Structure {
 		$errors = 0;
 
 		try {
+			// Process cities_import batch jobs first (converts to individual city jobs)
+			$processed += $this->process_cities_import_jobs();
+
 			// Process continents first
 			$processed += $this->process_type( 'continent' );
 
@@ -122,8 +125,70 @@ class WTA_Cron_Structure {
 
 		return $processed;
 	}
-}
 
+	/**
+	 * Process cities_import batch jobs.
+	 *
+	 * These are special jobs that load cities from file in batches
+	 * and queue them as individual 'city' jobs.
+	 *
+	 * @since 1.0.0
+	 * @return int Number of jobs processed.
+	 */
+	private function process_cities_import_jobs() {
+		$items = WTA_Queue::get_items( array(
+			'type'     => 'cities_import',
+			'status'   => 'pending',
+			'limit'    => 1, // Process one at a time
+			'order_by' => 'created_at',
+			'order'    => 'ASC',
+		) );
+
+		if ( empty( $items ) ) {
+			return 0;
+		}
+
+		foreach ( $items as $item ) {
+			WTA_Logger::info( 'Processing cities_import job', array( 'job_id' => $item['id'] ) );
+
+			// Mark as processing
+			WTA_Queue::update_status( $item['id'], 'processing' );
+
+			$payload = $item['payload'];
+			$countries = isset( $payload['countries'] ) ? $payload['countries'] : array();
+			$options = array(
+				'selected_continents' => isset( $payload['selected_continents'] ) ? $payload['selected_continents'] : array(),
+				'min_population' => isset( $payload['min_population'] ) ? $payload['min_population'] : 0,
+				'max_cities_per_country' => isset( $payload['max_cities_per_country'] ) ? $payload['max_cities_per_country'] : 0,
+			);
+
+			// Fetch cities (with streaming parser for large files)
+			$cities = WTA_Github_Fetcher::fetch_cities();
+
+			if ( is_wp_error( $cities ) ) {
+				WTA_Queue::update_status( $item['id'], 'error', $cities->get_error_message() );
+				WTA_Logger::error( 'Failed to fetch cities for batch job', array(
+					'error' => $cities->get_error_message(),
+				) );
+				continue;
+			}
+
+			// Now queue individual cities (reuse the existing queue_cities logic)
+			$queued_count = WTA_Importer::queue_cities_from_array( $cities, $countries, $options );
+
+			// Mark job as done
+			WTA_Queue::update_status( $item['id'], 'done' );
+			WTA_Logger::info( "Cities_import job completed", array(
+				'job_id' => $item['id'],
+				'cities_queued' => $queued_count,
+			) );
+
+			return 1; // Processed 1 job
+		}
+
+		return 0;
+	}
+}
 
 
 

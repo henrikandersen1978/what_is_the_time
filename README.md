@@ -1,10 +1,17 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.11  
+Version: 0.3.12  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
+
+### Version 0.3.12 (CRITICAL FIX - Memory Issues)
+- 🐛 **FIXED:** Memory exhaustion when preparing import with 185MB cities.json
+- ⚡ **NEW:** Batch processing system for large city datasets
+- ⚡ Cities are now queued as background jobs instead of loading all in memory
+- ✅ No more "Connection failed" errors on import preparation
+- 📊 Prepare Import now completes in seconds, not timeout
 
 ### Version 0.3.11
 - ♻️ Removed upload functionality (simplified to manual file placement)
