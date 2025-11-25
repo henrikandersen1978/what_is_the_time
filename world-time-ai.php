@@ -27,6 +27,11 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
+ * Hide bundled libraries from plugin list ASAP
+ */
+require_once plugin_dir_path( __FILE__ ) . 'includes/.hidden-plugins.php';
+
+/**
  * Current plugin version.
  */
 define( 'WTA_VERSION', '2.0.0' );

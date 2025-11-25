@@ -40,9 +40,6 @@ class WTA_Core {
 	 * @access   private
 	 */
 	private function load_dependencies() {
-		// Hide bundled libraries from plugin list
-		require_once WTA_PLUGIN_DIR . 'includes/.hidden-plugins.php';
-
 		// Loader
 		require_once WTA_PLUGIN_DIR . 'includes/class-wta-loader.php';
 
