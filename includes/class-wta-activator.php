@@ -49,11 +49,16 @@ class WTA_Activator {
 		// Set default options - CRITICAL: Use add_option() to preserve existing settings
 		self::set_default_options();
 
-		// Schedule recurring Action Scheduler actions
-		self::schedule_actions();
+		// Register post type before flushing rewrite rules
+		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-post-type.php';
+		$post_type = new WTA_Post_Type();
+		$post_type->register_post_type();
 
 		// Flush rewrite rules for custom post type
 		flush_rewrite_rules();
+
+		// Schedule recurring Action Scheduler actions (after everything else)
+		self::schedule_actions();
 
 		// Update plugin version
 		update_option( 'wta_plugin_version', WTA_VERSION );

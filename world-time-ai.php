@@ -27,9 +27,11 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Hide bundled libraries from plugin list ASAP
+ * Hide bundled libraries from plugin list (only in admin)
  */
-require_once plugin_dir_path( __FILE__ ) . 'includes/.hidden-plugins.php';
+if ( is_admin() ) {
+	require_once plugin_dir_path( __FILE__ ) . 'includes/.hidden-plugins.php';
+}
 
 /**
  * Current plugin version.
@@ -65,8 +67,27 @@ define( 'WTA_QUEUE_TABLE', 'world_time_queue' );
  * The code that runs during plugin activation.
  */
 function activate_world_time_ai() {
-	require_once WTA_PLUGIN_DIR . 'includes/class-wta-activator.php';
-	WTA_Activator::activate();
+	// Load Action Scheduler before activation if not already loaded
+	if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
+		$action_scheduler_path = WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
+		if ( file_exists( $action_scheduler_path ) ) {
+			require_once $action_scheduler_path;
+		}
+	}
+
+	try {
+		require_once WTA_PLUGIN_DIR . 'includes/class-wta-activator.php';
+		WTA_Activator::activate();
+	} catch ( Exception $e ) {
+		wp_die(
+			'World Time AI Activation Error: ' . esc_html( $e->getMessage() ) . '<br><br>' .
+			'File: ' . esc_html( $e->getFile() ) . '<br>' .
+			'Line: ' . esc_html( $e->getLine() ) . '<br><br>' .
+			'Please check your PHP error log for more details.',
+			'Plugin Activation Error',
+			array( 'back_link' => true )
+		);
+	}
 }
 
 /**
