@@ -7,7 +7,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if we're in the right directory
-if (-not (Test-Path "world-time-ai.php")) {
+if (-not (Test-Path "time-zone-clock.php")) {
     Write-Host "[ERROR] Run this script from the plugin root directory" -ForegroundColor Red
     exit 1
 }
@@ -45,7 +45,7 @@ Write-Host ""
 # Create build directory
 Write-Host "[2/5] Creating build directory..." -ForegroundColor Yellow
 
-$buildDir = "build\world-time-ai"
+$buildDir = "build\time-zone-clock"
 
 if (Test-Path "build") {
     Remove-Item -Recurse -Force "build" | Out-Null
@@ -61,7 +61,7 @@ Write-Host ""
 Write-Host "[3/5] Copying plugin files..." -ForegroundColor Yellow
 
 $itemsToCopy = @(
-    "world-time-ai.php",
+    "time-zone-clock.php",
     "uninstall.php",
     "README.md",
     "SETUP-INSTRUCTIONS.md",
@@ -126,7 +126,7 @@ Write-Host ""
 # Create ZIP
 Write-Host "[4/5] Creating ZIP file..." -ForegroundColor Yellow
 
-$zipPath = "build\world-time-ai.zip"
+$zipPath = "build\time-zone-clock.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
@@ -152,7 +152,7 @@ Write-Host "  [OK] ZIP created ($zipSizeMB MB)" -ForegroundColor Green
 Write-Host ""
 
 # Read version from plugin file
-$pluginContent = Get-Content "world-time-ai.php" -Raw
+$pluginContent = Get-Content "time-zone-clock.php" -Raw
 if ($pluginContent -match 'Version:\s*([0-9.]+)') {
     $version = $matches[1]
 }
@@ -167,7 +167,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  BUILD SUMMARY" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Version   : $version" -ForegroundColor White
-Write-Host "ZIP file  : build\world-time-ai.zip" -ForegroundColor White
+Write-Host "ZIP file  : build\time-zone-clock.zip" -ForegroundColor White
 Write-Host "Size      : $zipSizeMB MB" -ForegroundColor White
 Write-Host ""
 
@@ -179,7 +179,7 @@ Write-Host "4. git tag -a v$version -m 'Version $version'" -ForegroundColor Whit
 Write-Host "5. git push origin main" -ForegroundColor White
 Write-Host "6. git push origin v$version" -ForegroundColor White
 Write-Host "7. Create GitHub release" -ForegroundColor White
-Write-Host "8. Upload build\world-time-ai.zip" -ForegroundColor White
+Write-Host "8. Upload build\time-zone-clock.zip" -ForegroundColor White
 Write-Host ""
 Write-Host "GitHub Releases:" -ForegroundColor Cyan
 Write-Host "https://github.com/henrikandersen1978/what_is_the_time/releases/new" -ForegroundColor Blue
