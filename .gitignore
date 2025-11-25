@@ -1,51 +1,34 @@
+# Build artifacts
+build/temp-release/
+releases/
+
 # WordPress
 *.log
 wp-config.php
-wp-content/advanced-cache.php
-wp-content/backup-db/
-wp-content/backups/
-wp-content/blogs.dir/
-wp-content/cache/
-wp-content/upgrade/
 wp-content/uploads/
-wp-content/mu-plugins/
-wp-content/wp-cache-config.php
-wp-content/plugins/hello.php
-
-# Large JSON files
-*.json
-json/
-
-# Build artifacts
-*.zip
-build/
-
-# External libraries (download via script)
-includes/action-scheduler/
-includes/plugin-update-checker/
+wp-content/cache/
 
 # IDE
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
+*.sublime-*
+
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Node
 node_modules/
 npm-debug.log
-package-lock.json
 
-# Composer
-vendor/
-composer.lock
+# Temp files
+*.tmp
+*.bak
+*.swp
+*~
 
-# Environment
-.env
-.env.local
-
-# Logs
-*.log
-logs/
+# Zip files (only keep in releases/)
+/*.zip
+build/*.zip
 
