@@ -67,6 +67,7 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
 
 		/**
 		 * Core classes

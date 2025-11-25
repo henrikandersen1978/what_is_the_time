@@ -63,13 +63,14 @@ class WTA_Queue_Processor {
 			return true;
 		}
 
-		// Use English name for now, AI will translate later
-		$name = $data['name'];
-		$slug = WTA_Utils::generate_slug( $name );
+		// Get Danish name immediately to ensure Danish URL
+		$english_name = $data['name'];
+		$danish_name = WTA_Quick_Translate::get_danish_name( $english_name );
+		$slug = WTA_Utils::generate_slug( $danish_name );
 
-		// Create post
+		// Create post with Danish name
 		$post_data = array(
-			'post_title'   => $name,
+			'post_title'   => $danish_name,
 			'post_name'    => $slug,
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft', // Will be published after AI content generation
@@ -88,7 +89,8 @@ class WTA_Queue_Processor {
 		// Add meta data
 		update_post_meta( $post_id, 'wta_type', 'continent' );
 		update_post_meta( $post_id, 'wta_continent_code', $data['code'] );
-		update_post_meta( $post_id, 'wta_name_original', $name );
+		update_post_meta( $post_id, 'wta_name_original', $english_name );
+		update_post_meta( $post_id, 'wta_name_danish', $danish_name );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 
 		// Queue AI content generation
@@ -133,8 +135,10 @@ class WTA_Queue_Processor {
 			return new WP_Error( 'parent_not_found', $error_msg );
 		}
 
-		$name = $data['name'];
-		$slug = WTA_Utils::generate_slug( $name );
+		// Get Danish name immediately to ensure Danish URL
+		$english_name = $data['name'];
+		$danish_name = WTA_Quick_Translate::get_danish_name( $english_name );
+		$slug = WTA_Utils::generate_slug( $danish_name );
 		$country_code = isset( $data['iso2'] ) ? $data['iso2'] : '';
 		$lat = isset( $data['latitude'] ) ? WTA_Utils::sanitize_latitude( $data['latitude'] ) : null;
 		$lng = isset( $data['longitude'] ) ? WTA_Utils::sanitize_longitude( $data['longitude'] ) : null;
@@ -143,9 +147,9 @@ class WTA_Queue_Processor {
 		$timezone = WTA_Timezone_Helper::get_default_timezone_for_country( $country_code );
 		$timezone_status = $timezone ? 'resolved' : 'pending';
 
-		// Create post
+		// Create post with Danish name
 		$post_data = array(
-			'post_title'   => $name,
+			'post_title'   => $danish_name,
 			'post_name'    => $slug,
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft',
@@ -166,7 +170,8 @@ class WTA_Queue_Processor {
 		update_post_meta( $post_id, 'wta_continent_code', $continent_code );
 		update_post_meta( $post_id, 'wta_country_code', $country_code );
 		update_post_meta( $post_id, 'wta_country_id', $data['id'] );
-		update_post_meta( $post_id, 'wta_name_original', $name );
+		update_post_meta( $post_id, 'wta_name_original', $english_name );
+		update_post_meta( $post_id, 'wta_name_danish', $danish_name );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
 		if ( $lat !== null ) {
@@ -219,8 +224,10 @@ class WTA_Queue_Processor {
 			return new WP_Error( 'parent_not_found', $error_msg );
 		}
 
-		$name = $data['name'];
-		$slug = WTA_Utils::generate_slug( $name );
+		// Get Danish name immediately to ensure Danish URL
+		$english_name = $data['name'];
+		$danish_name = WTA_Quick_Translate::get_danish_name( $english_name );
+		$slug = WTA_Utils::generate_slug( $danish_name );
 		$country_code = isset( $data['country_code'] ) ? $data['country_code'] : '';
 		$region = isset( $data['region'] ) ? $data['region'] : '';
 		$continent_code = WTA_Utils::get_continent_code( $region );
@@ -252,9 +259,9 @@ class WTA_Queue_Processor {
 			$timezone_status = 'pending';
 		}
 
-		// Create post
+		// Create post with Danish name
 		$post_data = array(
-			'post_title'   => $name,
+			'post_title'   => $danish_name,
 			'post_name'    => $slug,
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft',
@@ -276,7 +283,8 @@ class WTA_Queue_Processor {
 		update_post_meta( $post_id, 'wta_country_code', $country_code );
 		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
 		update_post_meta( $post_id, 'wta_city_id', $data['id'] );
-		update_post_meta( $post_id, 'wta_name_original', $name );
+		update_post_meta( $post_id, 'wta_name_original', $english_name );
+		update_post_meta( $post_id, 'wta_name_danish', $danish_name );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
 		if ( $lat !== null ) {
