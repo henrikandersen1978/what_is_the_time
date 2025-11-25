@@ -123,9 +123,8 @@ $puc_path = WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-check
 if ( file_exists( $puc_path ) ) {
 	require $puc_path;
 
-	use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-	$updateChecker = PucFactory::buildUpdateChecker(
+	// Use fully qualified class name to avoid "use" statement in conditional block
+	$updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 		'https://github.com/henrikandersen1978/what_is_the_time',
 		__FILE__,
 		'world-time-ai'
