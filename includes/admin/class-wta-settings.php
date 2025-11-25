@@ -14,6 +14,11 @@ class WTA_Settings {
 	 * @since    2.0.0
 	 */
 	public function register_settings() {
+		// Data Import Settings
+		register_setting( 'wta_data_import_settings_group', 'wta_github_countries_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_github_states_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_github_cities_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+
 		// AI Settings
 		register_setting( 'wta_ai_settings', 'wta_openai_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'wta_ai_settings', 'wta_openai_model', array( 'sanitize_callback' => 'sanitize_text_field' ) );
