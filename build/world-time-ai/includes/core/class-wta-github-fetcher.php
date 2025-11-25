@@ -14,6 +14,98 @@
 class WTA_Github_Fetcher {
 
 	/**
+	 * Get the persistent data directory path.
+	 * Uses WordPress uploads directory to survive plugin updates.
+	 *
+	 * @since 1.0.0
+	 * @return string Directory path.
+	 */
+	private static function get_data_directory() {
+		$upload_dir = wp_upload_dir();
+		return $upload_dir['basedir'] . '/world-time-ai-data';
+	}
+
+	/**
+	 * Ensure data directory exists.
+	 *
+	 * @since 1.0.0
+	 * @return bool True on success, false on failure.
+	 */
+	private static function ensure_data_directory() {
+		$dir = self::get_data_directory();
+		
+		if ( ! file_exists( $dir ) ) {
+			if ( ! wp_mkdir_p( $dir ) ) {
+				WTA_Logger::error( 'Failed to create data directory', array( 'path' => $dir ) );
+				return false;
+			}
+			
+			// Add .htaccess to protect the directory
+			$htaccess = $dir . '/.htaccess';
+			file_put_contents( $htaccess, "# Protect data directory\nDeny from all" );
+			
+			WTA_Logger::info( 'Created data directory', array( 'path' => $dir ) );
+		}
+		
+		return true;
+	}
+
+	/**
+	 * Get path for a specific JSON file.
+	 * Checks multiple locations for backward compatibility.
+	 *
+	 * @since 1.0.0
+	 * @param string $filename Filename (e.g., 'countries.json').
+	 * @return string|null File path if found, null otherwise.
+	 */
+	private static function get_json_file_path( $filename ) {
+		// Priority 1: New persistent location (wp-content/uploads/world-time-ai-data/)
+		$new_path = self::get_data_directory() . '/' . $filename;
+		if ( file_exists( $new_path ) ) {
+			return $new_path;
+		}
+		
+		// Priority 2: Old plugin location (for backward compatibility)
+		$old_path = WP_CONTENT_DIR . '/plugins/world-time-ai/json/' . $filename;
+		if ( file_exists( $old_path ) ) {
+			// Auto-migrate to new location
+			self::migrate_json_file( $old_path, $new_path, $filename );
+			return $new_path;
+		}
+		
+		return null;
+	}
+
+	/**
+	 * Migrate JSON file from old location to new persistent location.
+	 *
+	 * @since 1.0.0
+	 * @param string $old_path Old file path.
+	 * @param string $new_path New file path.
+	 * @param string $filename Filename for logging.
+	 * @return bool True on success, false on failure.
+	 */
+	private static function migrate_json_file( $old_path, $new_path, $filename ) {
+		if ( ! self::ensure_data_directory() ) {
+			return false;
+		}
+		
+		WTA_Logger::info( "Migrating {$filename} to persistent location", array(
+			'from' => $old_path,
+			'to' => $new_path
+		) );
+		
+		if ( copy( $old_path, $new_path ) ) {
+			WTA_Logger::info( "Successfully migrated {$filename}" );
+			// Don't delete old file immediately - let user do it manually
+			return true;
+		} else {
+			WTA_Logger::error( "Failed to migrate {$filename}" );
+			return false;
+		}
+	}
+
+	/**
 	 * Fetch countries data.
 	 * 
 	 * Checks for local file first for better performance.
@@ -22,17 +114,21 @@ class WTA_Github_Fetcher {
 	 * @return array|WP_Error Countries data or error.
 	 */
 	public static function fetch_countries() {
-		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
-		if ( file_exists( $local_file ) ) {
-			WTA_Logger::info( 'Using local countries.json file' );
+		$local_file = self::get_json_file_path( 'countries.json' );
+		if ( $local_file ) {
+			WTA_Logger::info( 'Using local countries.json file', array( 'path' => $local_file ) );
 			return self::parse_large_json_file( $local_file, 'countries' );
 		}
 		
 		$url = get_option( 'wta_github_countries_url' );
 		if ( empty( $url ) ) {
+			$data_dir = self::get_data_directory();
 			return new WP_Error( 
 				'missing_data_source', 
-				__( 'No data source configured. Please either place countries.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+				sprintf(
+					__( 'No data source configured. Please either place countries.json in %s or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN ),
+					$data_dir
+				)
 			);
 		}
 		
@@ -48,17 +144,21 @@ class WTA_Github_Fetcher {
 	 * @return array|WP_Error States data or error.
 	 */
 	public static function fetch_states() {
-		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
-		if ( file_exists( $local_file ) ) {
-			WTA_Logger::info( 'Using local states.json file' );
+		$local_file = self::get_json_file_path( 'states.json' );
+		if ( $local_file ) {
+			WTA_Logger::info( 'Using local states.json file', array( 'path' => $local_file ) );
 			return self::parse_large_json_file( $local_file, 'states' );
 		}
 		
 		$url = get_option( 'wta_github_states_url' );
 		if ( empty( $url ) ) {
+			$data_dir = self::get_data_directory();
 			return new WP_Error( 
 				'missing_data_source', 
-				__( 'No data source configured. Please either place states.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+				sprintf(
+					__( 'No data source configured. Please either place states.json in %s or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN ),
+					$data_dir
+				)
 			);
 		}
 		
@@ -75,17 +175,21 @@ class WTA_Github_Fetcher {
 	 */
 	public static function fetch_cities() {
 		// First check for local JSON file to avoid memory issues with huge GitHub downloads
-		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
-		if ( file_exists( $local_file ) ) {
-			WTA_Logger::info( 'Using local cities.json file' );
+		$local_file = self::get_json_file_path( 'cities.json' );
+		if ( $local_file ) {
+			WTA_Logger::info( 'Using local cities.json file', array( 'path' => $local_file ) );
 			return self::parse_large_json_file( $local_file, 'cities' );
 		}
 		
 		$url = get_option( 'wta_github_cities_url' );
 		if ( empty( $url ) ) {
+			$data_dir = self::get_data_directory();
 			return new WP_Error( 
 				'missing_data_source', 
-				__( 'No data source configured. Please either place cities.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+				sprintf(
+					__( 'No data source configured. Please either place cities.json in %s or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN ),
+					$data_dir
+				)
 			);
 		}
 		
@@ -358,8 +462,3 @@ class WTA_Github_Fetcher {
 		WTA_Logger::info( 'GitHub data cache cleared' );
 	}
 }
-
-
-
-
-

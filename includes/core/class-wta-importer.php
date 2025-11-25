@@ -251,13 +251,17 @@ class WTA_Importer {
 				}
 			}
 
-			// Filter by population
-			if ( $min_population > 0 ) {
-				$population = isset( $city['population'] ) ? intval( $city['population'] ) : 0;
-				if ( $population < $min_population ) {
+		// Filter by population (only filter cities that have population data)
+		if ( $min_population > 0 ) {
+			// Only apply filter if city has population data
+			if ( isset( $city['population'] ) && ! is_null( $city['population'] ) ) {
+				$population = intval( $city['population'] );
+				if ( $population > 0 && $population < $min_population ) {
 					continue;
 				}
 			}
+			// Cities with null or missing population data are NOT filtered out
+		}
 
 			// Check max cities per country limit
 			if ( $max_cities > 0 ) {

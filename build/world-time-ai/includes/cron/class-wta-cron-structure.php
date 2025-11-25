@@ -181,6 +181,9 @@ class WTA_Cron_Structure {
 			WTA_Logger::info( "Cities_import job completed", array(
 				'job_id' => $item['id'],
 				'cities_queued' => $queued_count,
+				'total_cities_in_file' => count( $cities ),
+				'min_population_filter' => $options['min_population'],
+				'selected_continents' => implode( ', ', $options['selected_continents'] ),
 			) );
 
 			return 1; // Processed 1 job
