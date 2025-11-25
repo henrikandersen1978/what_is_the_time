@@ -58,3 +58,4 @@ class WTA_Deactivator {
 	}
 }
 
+

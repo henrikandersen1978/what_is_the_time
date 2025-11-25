@@ -160,3 +160,4 @@ $queue_stats = WTA_Queue::get_stats();
 	</div>
 </div>
 
+

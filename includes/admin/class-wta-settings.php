@@ -37,3 +37,4 @@ class WTA_Settings {
 	}
 }
 
+

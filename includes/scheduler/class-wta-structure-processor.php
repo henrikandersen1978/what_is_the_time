@@ -380,3 +380,4 @@ class WTA_Structure_Processor {
 	}
 }
 
+

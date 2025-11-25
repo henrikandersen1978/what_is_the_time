@@ -318,3 +318,4 @@ class WTA_Queue {
 	}
 }
 
+

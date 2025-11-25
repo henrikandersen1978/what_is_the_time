@@ -106,3 +106,4 @@ class WTA_Loader {
 	}
 }
 
+

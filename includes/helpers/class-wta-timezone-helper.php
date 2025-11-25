@@ -192,3 +192,4 @@ class WTA_Timezone_Helper {
 	}
 }
 
+

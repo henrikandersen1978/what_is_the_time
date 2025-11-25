@@ -68,3 +68,4 @@ class WTA_Post_Type {
 	}
 }
 
+
