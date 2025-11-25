@@ -131,14 +131,11 @@ if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
 
-Add-Type -Assembly System.IO.Compression.FileSystem
-$compressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
-[System.IO.Compression.ZipFile]::CreateFromDirectory(
-    (Resolve-Path $buildDir).Path,
-    (Join-Path (Get-Location) $zipPath),
-    $compressionLevel,
-    $true
-)
+# Create ZIP file
+# Change to build directory so paths in ZIP are correct
+Push-Location "build"
+Compress-Archive -Path "time-zone-clock" -DestinationPath "..\$zipPath" -CompressionLevel Optimal -Force
+Pop-Location
 
 if (-not (Test-Path $zipPath)) {
     Write-Host "  [ERROR] Failed to create ZIP file" -ForegroundColor Red
