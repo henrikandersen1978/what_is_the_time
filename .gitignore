@@ -1,6 +1,6 @@
 # Build artifacts
 build/temp-release/
-releases/
+releases/*.zip
 
 # WordPress
 *.log
