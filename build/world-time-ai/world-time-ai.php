@@ -105,20 +105,21 @@ run_world_time_ai();
 
 /**
  * Initialize Plugin Update Checker for GitHub updates.
+ * Load after main plugin execution to ensure clean activation.
  */
 add_action( 'plugins_loaded', function() {
 	$puc_file = WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
 	if ( file_exists( $puc_file ) ) {
 		require $puc_file;
 		
-		$updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+		$wtaUpdateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 			'https://github.com/' . WTA_GITHUB_REPO,
 			__FILE__,
 			'world-time-ai'
 		);
 		
-		// Enable release assets - this will look for a zip file in the GitHub release
-		$updateChecker->getVcsApi()->enableReleaseAssets('world-time-ai.zip');
+		// Use release assets from GitHub releases
+		$wtaUpdateChecker->getVcsApi()->enableReleaseAssets();
 	}
 }, 20 );
 

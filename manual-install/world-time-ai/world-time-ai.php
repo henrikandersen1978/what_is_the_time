@@ -30,12 +30,20 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
+
 define( 'WTA_VERSION', '0.3.4' );
 
 /**
  * GitHub repository for updates.
  */
 define( 'WTA_GITHUB_REPO', 'henrikandersen1978/what_is_the_time' );
+
+/**
+ * Plugin slug (directory name).
+ * IMPORTANT: The plugin must be installed in wp-content/plugins/world-time-ai/
+ * and the basename will be: world-time-ai/world-time-ai.php
+ */
+define( 'WTA_PLUGIN_SLUG', 'world-time-ai' );
 
 /**
  * Plugin directory path.
@@ -104,25 +112,6 @@ function run_world_time_ai() {
 run_world_time_ai();
 
 /**
- * Initialize Plugin Update Checker for GitHub updates.
- */
-add_action( 'plugins_loaded', function() {
-	$puc_file = WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
-	if ( file_exists( $puc_file ) ) {
-		require $puc_file;
-		
-		$updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
-			'https://github.com/' . WTA_GITHUB_REPO,
-			__FILE__,
-			'world-time-ai'
-		);
-		
-		// Enable release assets - this will look for a zip file in the GitHub release
-		$updateChecker->getVcsApi()->enableReleaseAssets('world-time-ai.zip');
-	}
-}, 20 );
-
-/**
  * Check for plugin upgrades and handle version transitions.
  * This runs on every load to ensure settings are preserved during updates.
  */
@@ -180,3 +169,7 @@ add_action( 'admin_notices', function() {
 		delete_transient( 'wta_upgraded_notice' );
 	}
 } );
+
+
+
+
