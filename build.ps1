@@ -131,10 +131,13 @@ if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
 
-# Create ZIP file
-# Change to build directory so paths in ZIP are correct
+# Create ZIP file with Unix-style paths using tar
+# Windows 10/11 has tar built-in which creates Linux-compatible ZIPs
 Push-Location "build"
-Compress-Archive -Path "time-zone-clock" -DestinationPath "..\$zipPath" -CompressionLevel Optimal -Force
+
+# Use tar with -a (auto-detect format from extension)
+tar -a -c -f "..\$zipPath" "time-zone-clock"
+
 Pop-Location
 
 if (-not (Test-Path $zipPath)) {
