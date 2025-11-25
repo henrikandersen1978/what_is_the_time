@@ -1,10 +1,15 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.7  
+Version: 0.3.8  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
+
+### Version 0.3.8 (Hotfix)
+- 🐛 **FIXED:** Better error message when no data source configured
+- 🐛 **FIXED:** Now shows helpful instructions if both local files and URLs are missing
+- ✅ Validates data source BEFORE attempting fetch
 
 ### Version 0.3.7
 - 🚀 **NEW:** Streaming JSON parser for large files (185MB cities.json!)

@@ -29,6 +29,13 @@ class WTA_Github_Fetcher {
 		}
 		
 		$url = get_option( 'wta_github_countries_url' );
+		if ( empty( $url ) ) {
+			return new WP_Error( 
+				'missing_data_source', 
+				__( 'No data source configured. Please either place countries.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+			);
+		}
+		
 		return self::fetch_json( $url, 'countries' );
 	}
 
@@ -48,6 +55,13 @@ class WTA_Github_Fetcher {
 		}
 		
 		$url = get_option( 'wta_github_states_url' );
+		if ( empty( $url ) ) {
+			return new WP_Error( 
+				'missing_data_source', 
+				__( 'No data source configured. Please either place states.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+			);
+		}
+		
 		return self::fetch_json( $url, 'states' );
 	}
 
@@ -68,6 +82,13 @@ class WTA_Github_Fetcher {
 		}
 		
 		$url = get_option( 'wta_github_cities_url' );
+		if ( empty( $url ) ) {
+			return new WP_Error( 
+				'missing_data_source', 
+				__( 'No data source configured. Please either place cities.json in /wp-content/plugins/world-time-ai/json/ or configure GitHub URL in Data & Import settings.', WTA_TEXT_DOMAIN )
+			);
+		}
+		
 		return self::fetch_json( $url, 'cities' );
 	}
 
