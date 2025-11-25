@@ -1,14 +1,21 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.8  
+Version: 0.3.9  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
 
-### Version 0.3.8 (Hotfix)
+### Version 0.3.9 (FILE UPLOAD FEATURE!)
+- 🚀 **NEW:** Upload JSON files directly from admin panel!
+- 🚀 **NEW:** Chunked upload for large files (187MB cities.json!)
+- ⚡ Automatic 5MB chunks - no PHP upload limits!
+- 📊 Progress bar for large uploads
+- ✅ Upload countries.json, states.json, and cities.json
+- 🎯 Simple, user-friendly interface
+
+### Version 0.3.8
 - 🐛 **FIXED:** Better error message when no data source configured
-- 🐛 **FIXED:** Now shows helpful instructions if both local files and URLs are missing
 - ✅ Validates data source BEFORE attempting fetch
 
 ### Version 0.3.7
@@ -98,20 +105,34 @@ If you need to manually update:
 
 ## Configuration
 
-### Optional: Local JSON Data Files
+### JSON Data Files - Two Options
 
-**For better performance and to avoid memory issues with large files:**
+#### Option 1: Upload via Admin Panel (EASIEST! 🚀)
 
-You can place local JSON data files in `/wp-content/plugins/world-time-ai/json/`:
-- `countries.json` (460 KB)
-- `states.json` (6.2 MB)
-- `cities.json` (185 MB) ⚠️ **Recommended for this large file!**
+**NEW in v0.3.9:** Upload JSON files directly in WordPress admin!
+
+Go to **World Time AI > Data & Import** → "Upload JSON Files" section:
+- Upload `countries.json` (460 KB)
+- Upload `states.json` (6.2 MB)
+- Upload `cities.json` (185 MB) - Uses automatic chunked upload!
 
 **Benefits:**
-- ✅ Faster import (no download needed)
-- ✅ Handles huge files (185MB cities.json) without memory issues
-- ✅ Uses streaming parser for files > 50MB
-- ✅ Automatic chunked processing prevents timeouts
+- ✅ No FTP/SSH needed - upload right from WordPress
+- ✅ Automatic chunked upload for large files (5MB chunks)
+- ✅ Progress bar for large uploads
+- ✅ No PHP upload size limits!
+
+**For cities.json (185MB):**
+- File is automatically split into 5MB chunks
+- Uploaded progressively with real-time progress
+- Handles huge files without any memory issues
+
+#### Option 2: Manual File Placement
+
+If you prefer, manually place files in `/wp-content/plugins/world-time-ai/json/`:
+- `countries.json`
+- `states.json`
+- `cities.json`
 
 **How it works:**
 1. Plugin checks for local files first

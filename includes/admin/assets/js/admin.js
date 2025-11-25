@@ -32,12 +32,157 @@
 			$('#wta-test-openai-api').on('click', this.testOpenAI.bind(this));
 			$('#wta-test-timezonedb-api').on('click', this.testTimeZoneDB.bind(this));
 			
+			// File uploads
+			$('.wta-upload-btn').on('click', this.handleFileUpload.bind(this));
+			
 			// Tools
 			$('#wta-retry-failed').on('click', this.retryFailed.bind(this));
 			$('#wta-reset-stuck').on('click', this.resetStuck.bind(this));
 			$('#wta-reset-all').on('click', this.resetAll.bind(this));
 			$('#wta-clear-cache').on('click', this.clearCache.bind(this));
 			$('#wta-clear-logs').on('click', this.clearLogs.bind(this));
+		},
+
+		/**
+		 * Handle file upload
+		 */
+		handleFileUpload: function(e) {
+			e.preventDefault();
+			
+			var $button = $(e.currentTarget);
+			var fileType = $button.data('type');
+			var $fileInput = $('#wta_upload_' + fileType);
+			var $status = $('#wta-' + fileType + '-status');
+			var $progress = $('#wta-' + fileType + '-progress');
+			
+			var file = $fileInput[0].files[0];
+			
+			if (!file) {
+				alert('Please select a file first');
+				return;
+			}
+			
+			if (!file.name.endsWith('.json')) {
+				alert('Please select a JSON file');
+				return;
+			}
+			
+			// Check file size - use chunked upload for files > 10MB
+			var chunkSize = 5 * 1024 * 1024; // 5MB chunks
+			var useChunkedUpload = file.size > 10 * 1024 * 1024;
+			
+			if (useChunkedUpload) {
+				this.chunkedUpload(file, fileType, $button, $status, $progress, chunkSize);
+			} else {
+				this.simpleUpload(file, fileType, $button, $status);
+			}
+		},
+
+		/**
+		 * Simple upload for small files
+		 */
+		simpleUpload: function(file, fileType, $button, $status) {
+			var formData = new FormData();
+			formData.append('action', 'wta_upload_json');
+			formData.append('nonce', wtaAdmin.nonce);
+			formData.append('file_type', fileType);
+			formData.append('file', file);
+			
+			$button.prop('disabled', true);
+			$status.removeClass('success error').addClass('uploading').text('Uploading...');
+			
+			$.ajax({
+				url: wtaAdmin.ajaxurl,
+				type: 'POST',
+				data: formData,
+				processData: false,
+				contentType: false,
+				success: function(response) {
+					if (response.success) {
+						$status.removeClass('uploading').addClass('success').text('✓ ' + response.data.message);
+						setTimeout(function() {
+							location.reload();
+						}, 1500);
+					} else {
+						$status.removeClass('uploading').addClass('error').text('✗ ' + response.data.message);
+					}
+				},
+				error: function() {
+					$status.removeClass('uploading').addClass('error').text('✗ Upload failed');
+				},
+				complete: function() {
+					$button.prop('disabled', false);
+				}
+			});
+		},
+
+		/**
+		 * Chunked upload for large files
+		 */
+		chunkedUpload: function(file, fileType, $button, $status, $progress, chunkSize) {
+			var totalChunks = Math.ceil(file.size / chunkSize);
+			var currentChunk = 0;
+			var uploadId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+			
+			$button.prop('disabled', true);
+			$status.removeClass('success error').addClass('uploading').text('Uploading in chunks...');
+			$progress.show();
+			
+			var uploadChunk = function() {
+				var start = currentChunk * chunkSize;
+				var end = Math.min(start + chunkSize, file.size);
+				var chunk = file.slice(start, end);
+				
+				var formData = new FormData();
+				formData.append('action', 'wta_upload_json_chunk');
+				formData.append('nonce', wtaAdmin.nonce);
+				formData.append('file_type', fileType);
+				formData.append('chunk', chunk);
+				formData.append('chunk_index', currentChunk);
+				formData.append('total_chunks', totalChunks);
+				formData.append('upload_id', uploadId);
+				formData.append('file_name', file.name);
+				
+				$.ajax({
+					url: wtaAdmin.ajaxurl,
+					type: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function(response) {
+						if (response.success) {
+							currentChunk++;
+							var progress = Math.round((currentChunk / totalChunks) * 100);
+							$progress.find('.progress-bar').css('width', progress + '%');
+							$progress.find('.progress-text').text(progress + '%');
+							
+							if (currentChunk < totalChunks) {
+								// Upload next chunk
+								uploadChunk();
+							} else {
+								// All chunks uploaded
+								$status.removeClass('uploading').addClass('success').text('✓ Upload complete!');
+								$progress.hide();
+								setTimeout(function() {
+									location.reload();
+								}, 1500);
+							}
+						} else {
+							$status.removeClass('uploading').addClass('error').text('✗ ' + response.data.message);
+							$progress.hide();
+							$button.prop('disabled', false);
+						}
+					},
+					error: function() {
+						$status.removeClass('uploading').addClass('error').text('✗ Upload failed at chunk ' + (currentChunk + 1));
+						$progress.hide();
+						$button.prop('disabled', false);
+					}
+				});
+			};
+			
+			// Start uploading
+			uploadChunk();
 		},
 
 		/**

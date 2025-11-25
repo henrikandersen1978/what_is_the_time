@@ -47,7 +47,6 @@ class WTA_Core {
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_cron_hooks();
-		$this->init_github_updater();
 	}
 
 	/**
@@ -68,7 +67,7 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-github-updater.php';
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-file-uploader.php';
 
 		/**
 		 * Core classes
@@ -156,7 +155,10 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_reset_all_data', $admin, 'ajax_reset_all_data' );
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed', $admin, 'ajax_retry_failed' );
 		$this->loader->add_action( 'wp_ajax_wta_test_api', $admin, 'ajax_test_api' );
-		$this->loader->add_action( 'wp_ajax_wta_clear_update_cache', $admin, 'ajax_clear_update_cache' );
+		
+		// File upload handlers
+		$this->loader->add_action( 'wp_ajax_wta_upload_json', 'WTA_File_Uploader', 'handle_simple_upload' );
+		$this->loader->add_action( 'wp_ajax_wta_upload_json_chunk', 'WTA_File_Uploader', 'handle_chunked_upload' );
 	}
 
 	/**
@@ -199,21 +201,6 @@ class WTA_Core {
 		// AI content generation cron
 		$cron_ai = new WTA_Cron_AI();
 		$this->loader->add_action( 'world_time_generate_ai_content', $cron_ai, 'process' );
-	}
-
-	/**
-	 * Initialize the GitHub updater for plugin updates.
-	 *
-	 * @since  1.0.0
-	 * @access private
-	 */
-	private function init_github_updater() {
-		$updater = new WTA_GitHub_Updater(
-			WTA_GITHUB_REPO,
-			WTA_VERSION,
-			WTA_PLUGIN_BASENAME
-		);
-		$updater->init();
 	}
 
 	/**
