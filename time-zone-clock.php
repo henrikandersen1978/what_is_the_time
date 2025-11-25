@@ -11,7 +11,7 @@
  * Plugin Name:       Time Zone Clock
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.0.6
+ * Version:           2.0.7
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.0.6' );
+define( 'WTA_VERSION', '2.0.7' );
 
 /**
  * Plugin directory path.

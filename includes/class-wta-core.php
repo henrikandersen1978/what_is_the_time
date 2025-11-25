@@ -33,6 +33,9 @@ class WTA_Core {
 		
 		// Check for updates after WordPress is fully loaded
 		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
+		
+		// Auto-heal: Ensure Action Scheduler actions are scheduled
+		add_action( 'admin_init', array( $this, 'ensure_actions_scheduled' ) );
 	}
 
 	/**
@@ -188,6 +191,46 @@ class WTA_Core {
 		// AI processor
 		$ai_processor = new WTA_AI_Processor();
 		$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
+	}
+
+	/**
+	 * Auto-heal: Ensure Action Scheduler actions are scheduled.
+	 * 
+	 * Runs on admin_init to automatically schedule missing recurring actions.
+	 * This prevents issues where actions get unscheduled or were never scheduled.
+	 *
+	 * @since    2.0.0
+	 */
+	public function ensure_actions_scheduled() {
+		// Only if Action Scheduler is available
+		if ( ! function_exists( 'as_schedule_recurring_action' ) || ! function_exists( 'as_next_scheduled_action' ) ) {
+			return;
+		}
+
+		// Check once per hour to avoid overhead
+		$last_check = get_transient( 'wta_actions_checked' );
+		if ( false !== $last_check ) {
+			return;
+		}
+
+		// Set transient for 1 hour
+		set_transient( 'wta_actions_checked', time(), HOUR_IN_SECONDS );
+
+		// Define required actions
+		$required_actions = array(
+			'wta_process_structure',
+			'wta_process_timezone',
+			'wta_process_ai_content',
+		);
+
+		// Check and schedule missing actions
+		foreach ( $required_actions as $action ) {
+			if ( false === as_next_scheduled_action( $action ) ) {
+				as_schedule_recurring_action( time(), 5 * MINUTE_IN_SECONDS, $action, array(), 'world-time-ai' );
+				
+				WTA_Logger::info( "Auto-scheduled missing action: $action" );
+			}
+		}
 	}
 
 	/**
