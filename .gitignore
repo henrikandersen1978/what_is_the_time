@@ -20,6 +20,10 @@ json/
 *.zip
 build/
 
+# External libraries (download via script)
+includes/action-scheduler/
+includes/plugin-update-checker/
+
 # IDE
 .vscode/
 .idea/
