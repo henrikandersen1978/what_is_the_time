@@ -27,10 +27,12 @@ class WTA_Core {
 	 */
 	public function __construct() {
 		$this->load_dependencies();
-		$this->check_plugin_update();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
+		
+		// Check for updates after WordPress is fully loaded
+		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
 	}
 
 	/**
@@ -88,9 +90,9 @@ class WTA_Core {
 	 * Check for plugin updates and run upgrade routines if needed.
 	 *
 	 * @since    2.0.0
-	 * @access   private
+	 * @access   public
 	 */
-	private function check_plugin_update() {
+	public function check_plugin_update() {
 		$current_version = get_option( 'wta_plugin_version', '0.0.0' );
 
 		if ( version_compare( $current_version, WTA_VERSION, '<' ) ) {
