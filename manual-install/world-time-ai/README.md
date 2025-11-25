@@ -1,20 +1,29 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.5  
+Version: 0.3.6  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
 
-### Version 0.3.5 (TEST Release)
-- 🧪 Test release to verify settings preservation during updates
-- ✅ Verify that API keys and configurations persist after upgrade
+### Version 0.3.6 (CRITICAL FIX)
+- 🔧 **FIXED:** Settings no longer overwrite each other when saving
+- 🔧 Separated settings into independent groups:
+  - AI Settings (OpenAI, Yoast)
+  - Timezone & Language Settings
+  - Data Import Settings
+  - Prompts (already separate)
+- ✅ Now you can save any admin page without losing other settings!
+
+### Version 0.3.5
+- 🧪 Test release for settings preservation
+- Added changelog to README
+- Added version display on dashboard
 
 ### Version 0.3.4
 - ✅ Automatic settings preservation during plugin updates
 - ✅ Admin notice confirming successful upgrade
 - ✅ Version tracking system implemented
-- 📚 Updated documentation with upgrade information
 
 ## Overview
 
@@ -308,8 +317,6 @@ GPL v2 or later
 - Frontend templates
 - Shortcodes
 - Yoast SEO integration
-
-
 
 
 

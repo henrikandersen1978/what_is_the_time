@@ -15,41 +15,38 @@ class WTA_Settings {
 
 	/**
 	 * Register all settings.
+	 * 
+	 * IMPORTANT: Using separate settings groups prevents settings from being overwritten
+	 * when saving different admin pages.
 	 *
 	 * @since 1.0.0
 	 */
 	public function register_settings() {
-		// GitHub URLs
-		register_setting( 'wta_settings_group', 'wta_github_countries_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
-		register_setting( 'wta_settings_group', 'wta_github_states_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
-		register_setting( 'wta_settings_group', 'wta_github_cities_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		// AI Settings Group (AI Settings page)
+		register_setting( 'wta_ai_settings_group', 'wta_openai_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_ai_settings_group', 'wta_openai_model', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_ai_settings_group', 'wta_openai_temperature', array( 'sanitize_callback' => 'floatval' ) );
+		register_setting( 'wta_ai_settings_group', 'wta_openai_max_tokens', array( 'sanitize_callback' => 'intval' ) );
+		register_setting( 'wta_ai_settings_group', 'wta_yoast_integration_enabled', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
+		register_setting( 'wta_ai_settings_group', 'wta_yoast_allow_overwrite', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
 
-		// TimeZoneDB
-		register_setting( 'wta_settings_group', 'wta_timezonedb_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_complex_countries', array( 'sanitize_callback' => array( $this, 'sanitize_complex_countries' ) ) );
+		// Timezone & Language Settings Group (Timezone & Language page)
+		register_setting( 'wta_timezone_settings_group', 'wta_timezonedb_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_timezone_settings_group', 'wta_complex_countries', array( 'sanitize_callback' => array( $this, 'sanitize_complex_countries' ) ) );
+		register_setting( 'wta_timezone_settings_group', 'wta_base_country_name', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_timezone_settings_group', 'wta_base_timezone', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_timezone_settings_group', 'wta_base_language', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_timezone_settings_group', 'wta_base_language_description', array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 
-		// Base settings
-		register_setting( 'wta_settings_group', 'wta_base_country_name', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_base_timezone', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_base_language', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_base_language_description', array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
+		// Data Import Settings Group (Data & Import page)
+		register_setting( 'wta_data_import_settings_group', 'wta_github_countries_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_github_states_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_github_cities_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_selected_continents', array( 'sanitize_callback' => array( $this, 'sanitize_array' ) ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_min_population', array( 'sanitize_callback' => 'intval' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_max_cities_per_country', array( 'sanitize_callback' => 'intval' ) );
 
-		// OpenAI
-		register_setting( 'wta_settings_group', 'wta_openai_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_openai_model', array( 'sanitize_callback' => 'sanitize_text_field' ) );
-		register_setting( 'wta_settings_group', 'wta_openai_temperature', array( 'sanitize_callback' => 'floatval' ) );
-		register_setting( 'wta_settings_group', 'wta_openai_max_tokens', array( 'sanitize_callback' => 'intval' ) );
-
-		// Import filters
-		register_setting( 'wta_settings_group', 'wta_selected_continents', array( 'sanitize_callback' => array( $this, 'sanitize_array' ) ) );
-		register_setting( 'wta_settings_group', 'wta_min_population', array( 'sanitize_callback' => 'intval' ) );
-		register_setting( 'wta_settings_group', 'wta_max_cities_per_country', array( 'sanitize_callback' => 'intval' ) );
-
-		// Yoast
-		register_setting( 'wta_settings_group', 'wta_yoast_integration_enabled', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
-		register_setting( 'wta_settings_group', 'wta_yoast_allow_overwrite', array( 'sanitize_callback' => 'rest_sanitize_boolean' ) );
-
-		// Register prompt settings
+		// Register prompt settings (separate group)
 		$this->register_prompt_settings();
 	}
 

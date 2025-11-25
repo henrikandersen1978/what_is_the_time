@@ -19,7 +19,7 @@ $complex_countries = get_option( 'wta_complex_countries', array() );
 	<h1><?php esc_html_e( 'Timezone & Language Settings', WTA_TEXT_DOMAIN ); ?></h1>
 
 	<form method="post" action="options.php">
-		<?php settings_fields( 'wta_settings_group' ); ?>
+		<?php settings_fields( 'wta_timezone_settings_group' ); ?>
 		
 		<div class="wta-admin-grid">
 			<!-- Base Country & Language -->

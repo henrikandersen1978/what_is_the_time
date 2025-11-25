@@ -18,7 +18,7 @@ $has_key = ! empty( $openai_key );
 	<h1><?php esc_html_e( 'AI Settings', WTA_TEXT_DOMAIN ); ?></h1>
 
 	<form method="post" action="options.php">
-		<?php settings_fields( 'wta_settings_group' ); ?>
+		<?php settings_fields( 'wta_ai_settings_group' ); ?>
 		
 		<div class="wta-admin-grid">
 			<!-- OpenAI API Configuration -->

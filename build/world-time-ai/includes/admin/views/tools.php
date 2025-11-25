@@ -64,17 +64,6 @@ $log_counts = WTA_Logger::get_log_counts();
 					</button>
 				</p>
 			</div>
-
-			<div class="wta-tool-group">
-				<h3><?php esc_html_e( 'Clear Update Cache', WTA_TEXT_DOMAIN ); ?></h3>
-				<p><?php esc_html_e( 'Clear the GitHub updater cache to force a fresh check for plugin updates. After clearing, visit the Plugins page to check for updates.', WTA_TEXT_DOMAIN ); ?></p>
-				<p>
-					<button type="button" id="wta-clear-update-cache" class="button">
-						<?php esc_html_e( 'Clear Update Cache', WTA_TEXT_DOMAIN ); ?>
-					</button>
-					<span id="wta-clear-update-cache-result" style="margin-left: 10px;"></span>
-				</p>
-			</div>
 		</div>
 
 		<!-- Log Summary -->
@@ -148,8 +137,6 @@ $log_counts = WTA_Logger::get_log_counts();
 		</div>
 	</div>
 </div>
-
-
 
 
 

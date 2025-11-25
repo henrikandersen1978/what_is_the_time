@@ -24,7 +24,7 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 		<div class="wta-card wta-card-wide">
 			<h2><?php esc_html_e( 'Data Sources (GitHub)', WTA_TEXT_DOMAIN ); ?></h2>
 			<form method="post" action="options.php">
-				<?php settings_fields( 'wta_settings_group' ); ?>
+				<?php settings_fields( 'wta_data_import_settings_group' ); ?>
 				
 				<table class="form-table">
 					<tr>
