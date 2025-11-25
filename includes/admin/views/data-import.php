@@ -40,17 +40,18 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							<input type="url" id="wta_github_countries_url" name="wta_github_countries_url" 
 								value="<?php echo esc_attr( get_option( 'wta_github_countries_url' ) ); ?>" 
 								class="large-text" />
-							<p class="description">
+			<p class="description">
 				<?php 
-				$countries_file = WTA_PLUGIN_DIR . 'json/countries.json';
+				$upload_dir = wp_upload_dir();
+				$countries_file = $upload_dir['basedir'] . '/world-time-ai-data/countries.json';
 				if ( file_exists( $countries_file ) ) {
-									$size = size_format( filesize( $countries_file ) );
-									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-								} else {
-									esc_html_e( 'URL to countries.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
-								}
-								?>
-							</p>
+					$size = size_format( filesize( $countries_file ) );
+					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+				} else {
+					esc_html_e( 'URL to countries.json file (optional if local file exists in wp-content/uploads/world-time-ai-data/)', WTA_TEXT_DOMAIN );
+				}
+				?>
+			</p>
 						</td>
 					</tr>
 					<tr>
@@ -63,17 +64,18 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							<input type="url" id="wta_github_states_url" name="wta_github_states_url" 
 								value="<?php echo esc_attr( get_option( 'wta_github_states_url' ) ); ?>" 
 								class="large-text" />
-							<p class="description">
+			<p class="description">
 				<?php 
-				$states_file = WTA_PLUGIN_DIR . 'json/states.json';
+				$upload_dir = wp_upload_dir();
+				$states_file = $upload_dir['basedir'] . '/world-time-ai-data/states.json';
 				if ( file_exists( $states_file ) ) {
-									$size = size_format( filesize( $states_file ) );
-									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-								} else {
-									esc_html_e( 'URL to states.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
-								}
-								?>
-							</p>
+					$size = size_format( filesize( $states_file ) );
+					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+				} else {
+					esc_html_e( 'URL to states.json file (optional if local file exists in wp-content/uploads/world-time-ai-data/)', WTA_TEXT_DOMAIN );
+				}
+				?>
+			</p>
 						</td>
 					</tr>
 					<tr>
@@ -86,17 +88,18 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							<input type="url" id="wta_github_cities_url" name="wta_github_cities_url" 
 								value="<?php echo esc_attr( get_option( 'wta_github_cities_url' ) ); ?>" 
 								class="large-text" />
-							<p class="description">
+			<p class="description">
 				<?php 
-				$cities_file = WTA_PLUGIN_DIR . 'json/cities.json';
+				$upload_dir = wp_upload_dir();
+				$cities_file = $upload_dir['basedir'] . '/world-time-ai-data/cities.json';
 				if ( file_exists( $cities_file ) ) {
-									$size = size_format( filesize( $cities_file ) );
-									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-								} else {
-									esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, local placement recommended)', WTA_TEXT_DOMAIN );
-								}
-								?>
-							</p>
+					$size = size_format( filesize( $cities_file ) );
+					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+				} else {
+					esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, local placement in wp-content/uploads/world-time-ai-data/ recommended)', WTA_TEXT_DOMAIN );
+				}
+				?>
+			</p>
 						</td>
 					</tr>
 				</table>
