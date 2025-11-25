@@ -90,6 +90,39 @@ foreach ($item in $itemsToCopy) {
 Write-Host "  [OK] All files copied" -ForegroundColor Green
 Write-Host ""
 
+# Remove plugin headers from bundled libraries so WordPress doesn't detect them
+Write-Host "[3.5/5] Patching bundled libraries..." -ForegroundColor Yellow
+
+$actionSchedulerFile = "$buildDir\includes\action-scheduler\action-scheduler.php"
+if (Test-Path $actionSchedulerFile) {
+    $content = Get-Content $actionSchedulerFile -Raw
+    
+    # Simply comment out "Plugin Name:" so WordPress doesn't detect it
+    $content = $content -replace '\* Plugin Name:', '* Library Name:'
+    
+    Set-Content -Path $actionSchedulerFile -Value $content -NoNewline
+    Write-Host "  [OK] Action Scheduler plugin header neutralized" -ForegroundColor Gray
+}
+
+$pucFile = "$buildDir\includes\plugin-update-checker\plugin-update-checker.php"
+if (Test-Path $pucFile) {
+    $content = Get-Content $pucFile -Raw
+    
+    # Remove any plugin header if it exists
+    if ($content -match '/\*\*[^/]*\* Plugin Name:') {
+        $content = $content -replace '(?s)/\*\*[^/]*\* Plugin Name:[^/]*\*/', '/**
+ * Plugin Update Checker Library (Bundled)
+ * Part of World Time AI - Not a standalone plugin
+ */'
+        
+        Set-Content -Path $pucFile -Value $content -NoNewline
+        Write-Host "  [OK] Plugin Update Checker header removed" -ForegroundColor Gray
+    }
+}
+
+Write-Host "  [OK] Libraries patched" -ForegroundColor Green
+Write-Host ""
+
 # Create ZIP
 Write-Host "[4/5] Creating ZIP file..." -ForegroundColor Yellow
 
