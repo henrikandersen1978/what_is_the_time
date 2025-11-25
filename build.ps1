@@ -137,7 +137,7 @@ $compressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
     (Resolve-Path $buildDir).Path,
     (Join-Path (Get-Location) $zipPath),
     $compressionLevel,
-    $false
+    $true
 )
 
 if (-not (Test-Path $zipPath)) {
