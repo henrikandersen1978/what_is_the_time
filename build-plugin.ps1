@@ -134,11 +134,12 @@ Write-Host "Size: $zipSizeMB MB`n" -ForegroundColor White
 
 Write-Host "📋 Next steps:" -ForegroundColor Yellow
 Write-Host "1. Test the ZIP file locally" -ForegroundColor White
-Write-Host "2. Commit: git add . && git commit -m 'Version $version'" -ForegroundColor White
+Write-Host "2. Commit: git add ." -ForegroundColor White
 Write-Host "3. Tag: git tag -a v$version -m 'Version $version'" -ForegroundColor White
-Write-Host "4. Push: git push origin main && git push origin v$version" -ForegroundColor White
-Write-Host "5. Create GitHub release: https://github.com/henrikandersen1978/what_is_the_time/releases/new" -ForegroundColor White
-Write-Host "6. Upload build\world-time-ai.zip to the release`n" -ForegroundColor White
+Write-Host "4. Push: git push origin main" -ForegroundColor White
+Write-Host "5. Push tag: git push origin v$version" -ForegroundColor White
+Write-Host "6. Create GitHub release: https://github.com/henrikandersen1978/what_is_the_time/releases/new" -ForegroundColor White
+Write-Host "7. Upload build\world-time-ai.zip to the release`n" -ForegroundColor White
 
 Write-Host "✨ Ready for release!" -ForegroundColor Green
 Write-Host ""
