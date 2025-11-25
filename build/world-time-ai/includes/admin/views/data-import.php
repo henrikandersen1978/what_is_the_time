@@ -42,12 +42,24 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								class="large-text" />
 							<p class="description">
 								<?php 
-								$countries_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
+								$upload_dir = wp_upload_dir();
+								$data_dir = $upload_dir['basedir'] . '/world-time-ai-data';
+								$countries_file = $data_dir . '/countries.json';
+								
+								// Also check old location
+								$old_countries_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
+								
 								if ( file_exists( $countries_file ) ) {
 									$size = size_format( filesize( $countries_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} elseif ( file_exists( $old_countries_file ) ) {
+									$size = size_format( filesize( $old_countries_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - will be auto-migrated to persistent location', WTA_TEXT_DOMAIN ), $size );
 								} else {
-									esc_html_e( 'URL to countries.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
+									echo sprintf( 
+										esc_html__( 'URL to countries.json file (optional if local file exists). Place file in: %s', WTA_TEXT_DOMAIN ),
+										'<code>' . esc_html( $data_dir ) . '</code>'
+									);
 								}
 								?>
 							</p>
@@ -65,12 +77,20 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								class="large-text" />
 							<p class="description">
 								<?php 
-								$states_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
+								$states_file = $data_dir . '/states.json';
+								$old_states_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
+								
 								if ( file_exists( $states_file ) ) {
 									$size = size_format( filesize( $states_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} elseif ( file_exists( $old_states_file ) ) {
+									$size = size_format( filesize( $old_states_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - will be auto-migrated to persistent location', WTA_TEXT_DOMAIN ), $size );
 								} else {
-									esc_html_e( 'URL to states.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
+									echo sprintf( 
+										esc_html__( 'URL to states.json file (optional if local file exists). Place file in: %s', WTA_TEXT_DOMAIN ),
+										'<code>' . esc_html( $data_dir ) . '</code>'
+									);
 								}
 								?>
 							</p>
@@ -88,12 +108,20 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								class="large-text" />
 							<p class="description">
 								<?php 
-								$cities_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
+								$cities_file = $data_dir . '/cities.json';
+								$old_cities_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
+								
 								if ( file_exists( $cities_file ) ) {
 									$size = size_format( filesize( $cities_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} elseif ( file_exists( $old_cities_file ) ) {
+									$size = size_format( filesize( $old_cities_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - will be auto-migrated to persistent location', WTA_TEXT_DOMAIN ), $size );
 								} else {
-									esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, local placement recommended)', WTA_TEXT_DOMAIN );
+									echo sprintf( 
+										esc_html__( 'URL to cities.json file (Note: cities.json is 185MB, local placement recommended). Place file in: %s', WTA_TEXT_DOMAIN ),
+										'<code>' . esc_html( $data_dir ) . '</code>'
+									);
 								}
 								?>
 							</p>
@@ -143,7 +171,7 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							<input type="number" id="min_population" name="min_population" 
 								value="<?php echo esc_attr( $min_population ); ?>" min="0" step="1000" />
 							<p class="description">
-								<?php esc_html_e( 'Filter cities by minimum population (0 = no filter). Note: Not all cities have population data.', WTA_TEXT_DOMAIN ); ?>
+								<?php esc_html_e( 'Filter cities by minimum population (0 = no filter). Note: Cities without population data will NOT be filtered out - only cities with known population below this threshold will be excluded.', WTA_TEXT_DOMAIN ); ?>
 							</p>
 						</td>
 					</tr>

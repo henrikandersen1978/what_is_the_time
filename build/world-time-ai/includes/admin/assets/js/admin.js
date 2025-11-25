@@ -76,7 +76,7 @@
 					message += '<strong>Queued items:</strong><br>';
 					message += 'Continents: ' + stats.continents + '<br>';
 					message += 'Countries: ' + stats.countries + '<br>';
-					message += 'Cities: ' + stats.cities;
+					message += 'Cities: ' + stats.cities + ' <em>(batch job - actual cities will be queued by cron)</em>';
 					
 					$result.addClass('success').html(message).show();
 				} else {
