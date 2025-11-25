@@ -88,6 +88,38 @@ class WTA_Utils {
 	}
 
 	/**
+	 * Get available continents.
+	 *
+	 * @since    2.0.0
+	 * @param    string $language  Language code.
+	 * @return   array             Array of continent codes => names.
+	 */
+	public static function get_available_continents( $language = 'da-DK' ) {
+		$continents = array(
+			'da-DK' => array(
+				'EU' => 'Europa',
+				'AS' => 'Asien',
+				'AF' => 'Afrika',
+				'NA' => 'Nordamerika',
+				'SA' => 'Sydamerika',
+				'OC' => 'Oceanien',
+				'AN' => 'Antarktis',
+			),
+			'en-US' => array(
+				'EU' => 'Europe',
+				'AS' => 'Asia',
+				'AF' => 'Africa',
+				'NA' => 'North America',
+				'SA' => 'South America',
+				'OC' => 'Oceania',
+				'AN' => 'Antarctica',
+			),
+		);
+
+		return isset( $continents[ $language ] ) ? $continents[ $language ] : $continents['en-US'];
+	}
+
+	/**
 	 * Get continent name from code.
 	 *
 	 * @since    2.0.0

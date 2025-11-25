@@ -41,9 +41,9 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_countries_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php 
-								$countries_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
-								if ( file_exists( $countries_file ) ) {
+				<?php 
+				$countries_file = WTA_PLUGIN_DIR . 'json/countries.json';
+				if ( file_exists( $countries_file ) ) {
 									$size = size_format( filesize( $countries_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
 								} else {
@@ -64,9 +64,9 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_states_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php 
-								$states_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
-								if ( file_exists( $states_file ) ) {
+				<?php 
+				$states_file = WTA_PLUGIN_DIR . 'json/states.json';
+				if ( file_exists( $states_file ) ) {
 									$size = size_format( filesize( $states_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
 								} else {
@@ -87,9 +87,9 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_cities_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php 
-								$cities_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
-								if ( file_exists( $cities_file ) ) {
+				<?php 
+				$cities_file = WTA_PLUGIN_DIR . 'json/cities.json';
+				if ( file_exists( $cities_file ) ) {
 									$size = size_format( filesize( $cities_file ) );
 									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
 								} else {
