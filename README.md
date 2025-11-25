@@ -1,10 +1,14 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.9  
+Version: 0.3.10  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
+
+### Version 0.3.10 (Hotfix)
+- 🐛 **FIXED:** AJAX upload handlers now properly registered
+- ✅ File upload functionality working correctly
 
 ### Version 0.3.9 (FILE UPLOAD FEATURE!)
 - 🚀 **NEW:** Upload JSON files directly from admin panel!
