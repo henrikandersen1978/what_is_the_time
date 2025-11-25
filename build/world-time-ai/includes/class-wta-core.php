@@ -45,7 +45,6 @@ class WTA_Core {
 		$this->load_dependencies();
 		$this->set_locale();
 		$this->define_admin_hooks();
-		$this->register_upload_hooks();
 		$this->define_public_hooks();
 		$this->define_cron_hooks();
 	}
@@ -68,7 +67,6 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-file-uploader.php';
 
 		/**
 		 * Core classes
@@ -156,17 +154,6 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_reset_all_data', $admin, 'ajax_reset_all_data' );
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed', $admin, 'ajax_retry_failed' );
 		$this->loader->add_action( 'wp_ajax_wta_test_api', $admin, 'ajax_test_api' );
-	}
-
-	/**
-	 * Register file upload hooks directly (static methods).
-	 *
-	 * @since  1.0.0
-	 * @access private
-	 */
-	private function register_upload_hooks() {
-		add_action( 'wp_ajax_wta_upload_json', array( 'WTA_File_Uploader', 'handle_simple_upload' ) );
-		add_action( 'wp_ajax_wta_upload_json_chunk', array( 'WTA_File_Uploader', 'handle_chunked_upload' ) );
 	}
 
 	/**

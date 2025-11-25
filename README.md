@@ -1,22 +1,15 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.10  
+Version: 0.3.11  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
 
-### Version 0.3.10 (Hotfix)
-- 🐛 **FIXED:** AJAX upload handlers now properly registered
-- ✅ File upload functionality working correctly
-
-### Version 0.3.9 (FILE UPLOAD FEATURE!)
-- 🚀 **NEW:** Upload JSON files directly from admin panel!
-- 🚀 **NEW:** Chunked upload for large files (187MB cities.json!)
-- ⚡ Automatic 5MB chunks - no PHP upload limits!
-- 📊 Progress bar for large uploads
-- ✅ Upload countries.json, states.json, and cities.json
-- 🎯 Simple, user-friendly interface
+### Version 0.3.11
+- ♻️ Removed upload functionality (simplified to manual file placement)
+- ✅ Cleaner admin interface
+- 📂 Focus on FTP/manual upload method
 
 ### Version 0.3.8
 - 🐛 **FIXED:** Better error message when no data source configured
@@ -109,34 +102,26 @@ If you need to manually update:
 
 ## Configuration
 
-### JSON Data Files - Two Options
+### JSON Data Files - Manual Placement
 
-#### Option 1: Upload via Admin Panel (EASIEST! 🚀)
+**For better performance and to handle large files (185MB cities.json):**
 
-**NEW in v0.3.9:** Upload JSON files directly in WordPress admin!
+Manually place JSON data files in `/wp-content/plugins/world-time-ai/json/`:
+- `countries.json` (460 KB)
+- `states.json` (6.2 MB)
+- `cities.json` (185 MB) ⚠️ **Recommended!**
 
-Go to **World Time AI > Data & Import** → "Upload JSON Files" section:
-- Upload `countries.json` (460 KB)
-- Upload `states.json` (6.2 MB)
-- Upload `cities.json` (185 MB) - Uses automatic chunked upload!
+**How to:**
+1. Create directory `/wp-content/plugins/world-time-ai/json/` on your server
+2. Upload the JSON files via FTP/SSH/File Manager
+3. Plugin automatically detects and uses local files
+4. Leave GitHub URL fields empty in admin
 
 **Benefits:**
-- ✅ No FTP/SSH needed - upload right from WordPress
-- ✅ Automatic chunked upload for large files (5MB chunks)
-- ✅ Progress bar for large uploads
-- ✅ No PHP upload size limits!
-
-**For cities.json (185MB):**
-- File is automatically split into 5MB chunks
-- Uploaded progressively with real-time progress
-- Handles huge files without any memory issues
-
-#### Option 2: Manual File Placement
-
-If you prefer, manually place files in `/wp-content/plugins/world-time-ai/json/`:
-- `countries.json`
-- `states.json`
-- `cities.json`
+- ✅ Faster import (no download needed)
+- ✅ Handles huge files (185MB cities.json) without memory issues
+- ✅ Uses streaming parser for files > 50MB
+- ✅ Automatic chunked processing prevents timeouts
 
 **How it works:**
 1. Plugin checks for local files first

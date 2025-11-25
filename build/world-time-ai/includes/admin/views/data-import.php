@@ -20,101 +20,11 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 	<h1><?php esc_html_e( 'Data & Import', WTA_TEXT_DOMAIN ); ?></h1>
 
 	<div class="wta-admin-grid">
-		<!-- Upload JSON Files -->
+		<!-- Data Sources -->
 		<div class="wta-card wta-card-wide">
-			<h2><?php esc_html_e( 'Upload JSON Files', WTA_TEXT_DOMAIN ); ?></h2>
+			<h2><?php esc_html_e( 'Data Sources', WTA_TEXT_DOMAIN ); ?></h2>
 			<p class="description">
-				<?php esc_html_e( 'Upload JSON data files directly from your computer. Large files (185MB cities.json) are uploaded in chunks automatically.', WTA_TEXT_DOMAIN ); ?>
-			</p>
-			
-			<table class="form-table">
-				<tr>
-					<th scope="row">
-						<label for="wta_upload_countries">
-							<?php esc_html_e( 'Countries File', WTA_TEXT_DOMAIN ); ?>
-						</label>
-					</th>
-					<td>
-						<input type="file" id="wta_upload_countries" accept=".json" />
-						<button type="button" class="button wta-upload-btn" data-type="countries">
-							<?php esc_html_e( 'Upload', WTA_TEXT_DOMAIN ); ?>
-						</button>
-						<span class="wta-upload-status" id="wta-countries-status"></span>
-						<p class="description">
-							<?php 
-							$countries_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
-							if ( file_exists( $countries_file ) ) {
-								$size = size_format( filesize( $countries_file ) );
-								echo '✅ ' . sprintf( esc_html__( 'File exists (%s)', WTA_TEXT_DOMAIN ), $size );
-							} else {
-								echo '❌ ' . esc_html__( 'Not uploaded yet', WTA_TEXT_DOMAIN );
-							}
-							?>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<label for="wta_upload_states">
-							<?php esc_html_e( 'States File', WTA_TEXT_DOMAIN ); ?>
-						</label>
-					</th>
-					<td>
-						<input type="file" id="wta_upload_states" accept=".json" />
-						<button type="button" class="button wta-upload-btn" data-type="states">
-							<?php esc_html_e( 'Upload', WTA_TEXT_DOMAIN ); ?>
-						</button>
-						<span class="wta-upload-status" id="wta-states-status"></span>
-						<p class="description">
-							<?php 
-							$states_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
-							if ( file_exists( $states_file ) ) {
-								$size = size_format( filesize( $states_file ) );
-								echo '✅ ' . sprintf( esc_html__( 'File exists (%s)', WTA_TEXT_DOMAIN ), $size );
-							} else {
-								echo '❌ ' . esc_html__( 'Not uploaded yet', WTA_TEXT_DOMAIN );
-							}
-							?>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<label for="wta_upload_cities">
-							<?php esc_html_e( 'Cities File', WTA_TEXT_DOMAIN ); ?>
-						</label>
-					</th>
-					<td>
-						<input type="file" id="wta_upload_cities" accept=".json" />
-						<button type="button" class="button wta-upload-btn" data-type="cities">
-							<?php esc_html_e( 'Upload (Chunked)', WTA_TEXT_DOMAIN ); ?>
-						</button>
-						<span class="wta-upload-status" id="wta-cities-status"></span>
-						<div class="wta-upload-progress" id="wta-cities-progress" style="display:none;">
-							<div class="progress-bar" style="width: 0%"></div>
-							<span class="progress-text">0%</span>
-						</div>
-						<p class="description">
-							<?php 
-							$cities_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
-							if ( file_exists( $cities_file ) ) {
-								$size = size_format( filesize( $cities_file ) );
-								echo '✅ ' . sprintf( esc_html__( 'File exists (%s)', WTA_TEXT_DOMAIN ), $size );
-							} else {
-								echo '❌ ' . esc_html__( 'Not uploaded yet (will use chunked upload for large files)', WTA_TEXT_DOMAIN );
-							}
-							?>
-						</p>
-					</td>
-				</tr>
-			</table>
-		</div>
-
-		<!-- Data Sources (Optional) -->
-		<div class="wta-card wta-card-wide">
-			<h2><?php esc_html_e( 'Data Sources (GitHub URLs - Optional)', WTA_TEXT_DOMAIN ); ?></h2>
-			<p class="description">
-				<?php esc_html_e( 'These URLs are only used if you have not uploaded the JSON files above.', WTA_TEXT_DOMAIN ); ?>
+				<?php esc_html_e( 'Configure GitHub URLs for JSON data files, or leave empty if using local files.', WTA_TEXT_DOMAIN ); ?>
 			</p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'wta_data_import_settings_group' ); ?>
@@ -131,7 +41,15 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_countries_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php esc_html_e( 'URL to countries.json file', WTA_TEXT_DOMAIN ); ?>
+								<?php 
+								$countries_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
+								if ( file_exists( $countries_file ) ) {
+									$size = size_format( filesize( $countries_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} else {
+									esc_html_e( 'URL to countries.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
+								}
+								?>
 							</p>
 						</td>
 					</tr>
@@ -146,7 +64,15 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_states_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php esc_html_e( 'URL to states.json file', WTA_TEXT_DOMAIN ); ?>
+								<?php 
+								$states_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
+								if ( file_exists( $states_file ) ) {
+									$size = size_format( filesize( $states_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} else {
+									esc_html_e( 'URL to states.json file (optional if local file exists)', WTA_TEXT_DOMAIN );
+								}
+								?>
 							</p>
 						</td>
 					</tr>
@@ -161,7 +87,15 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								value="<?php echo esc_attr( get_option( 'wta_github_cities_url' ) ); ?>" 
 								class="large-text" />
 							<p class="description">
-								<?php esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, upload recommended)', WTA_TEXT_DOMAIN ); ?>
+								<?php 
+								$cities_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
+								if ( file_exists( $cities_file ) ) {
+									$size = size_format( filesize( $cities_file ) );
+									echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
+								} else {
+									esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, local placement recommended)', WTA_TEXT_DOMAIN );
+								}
+								?>
 							</p>
 						</td>
 					</tr>

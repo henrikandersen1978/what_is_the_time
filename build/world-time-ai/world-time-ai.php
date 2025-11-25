@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://example.com/world-time-ai
  * Description:       Import and display current local time for cities worldwide with AI-generated content. Hierarchical location pages with timezone support.
- * Version:           0.3.10
+ * Version:           0.3.11
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            World Time AI Team
@@ -30,7 +30,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '0.3.10' );
+define( 'WTA_VERSION', '0.3.11' );
 
 /**
  * GitHub repository for updates.
@@ -105,21 +105,20 @@ run_world_time_ai();
 
 /**
  * Initialize Plugin Update Checker for GitHub updates.
- * Load after main plugin execution to ensure clean activation.
  */
 add_action( 'plugins_loaded', function() {
 	$puc_file = WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
 	if ( file_exists( $puc_file ) ) {
 		require $puc_file;
 		
-		$wtaUpdateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+		$updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 			'https://github.com/' . WTA_GITHUB_REPO,
 			__FILE__,
 			'world-time-ai'
 		);
 		
-		// Use release assets from GitHub releases
-		$wtaUpdateChecker->getVcsApi()->enableReleaseAssets();
+		// Enable release assets - this will look for a zip file in the GitHub release
+		$updateChecker->getVcsApi()->enableReleaseAssets('world-time-ai.zip');
 	}
 }, 20 );
 
