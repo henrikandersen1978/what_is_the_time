@@ -70,8 +70,16 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
 		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
 
-		// Action Scheduler library
-		require_once WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
+		// Load Action Scheduler if not already loaded by another plugin
+		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
+			$action_scheduler_path = WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
+			if ( file_exists( $action_scheduler_path ) ) {
+				require_once $action_scheduler_path;
+			} else {
+				// Show admin notice if Action Scheduler is missing
+				add_action( 'admin_notices', array( $this, 'action_scheduler_missing_notice' ) );
+			}
+		}
 
 		$this->loader = new WTA_Loader();
 	}
@@ -178,6 +186,28 @@ class WTA_Core {
 		// AI processor
 		$ai_processor = new WTA_AI_Processor();
 		$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
+	}
+
+	/**
+	 * Display admin notice if Action Scheduler is missing.
+	 *
+	 * @since    2.0.0
+	 */
+	public function action_scheduler_missing_notice() {
+		?>
+		<div class="notice notice-error">
+			<p>
+				<strong><?php esc_html_e( 'World Time AI Error:', 'world-time-ai' ); ?></strong>
+				<?php
+				printf(
+					/* translators: %s: URL to setup instructions */
+					esc_html__( 'Action Scheduler library not found. Please see %s for installation instructions.', 'world-time-ai' ),
+					'<a href="https://github.com/henrikandersen1978/what_is_the_time/blob/main/EXTERNAL-LIBRARIES.md" target="_blank">EXTERNAL-LIBRARIES.md</a>'
+				);
+				?>
+			</p>
+		</div>
+		<?php
 	}
 
 	/**

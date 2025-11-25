@@ -2,9 +2,21 @@
 
 World Time AI 2.0 requires two external libraries that must be downloaded separately.
 
+## 📦 Check First: Do You Already Have Action Scheduler?
+
+Action Scheduler might already be available if you have any of these plugins installed:
+- WooCommerce
+- WP Mail SMTP
+- MonsterInsights
+- Many other popular plugins
+
+**To check:** Try activating World Time AI. If it works without errors, you already have Action Scheduler! ✅
+
+If you see an error about Action Scheduler being missing, continue below.
+
 ## ⚠️ REQUIRED: Download These Libraries
 
-### 1. Action Scheduler (Required)
+### 1. Action Scheduler (Required - unless already installed)
 
 **What it does:** Reliable background job processing
 

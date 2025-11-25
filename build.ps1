@@ -21,15 +21,15 @@ $allLibsOk = $true
 
 if (-not (Test-Path $actionScheduler)) {
     Write-Host "  [MISSING] Action Scheduler not found" -ForegroundColor Red
-    Write-Host "  Download from: https://github.com/woocommerce/action-scheduler" -ForegroundColor Yellow
-    Write-Host "  Extract to: includes\action-scheduler\" -ForegroundColor Yellow
+    Write-Host "  Required: Plugin will not work without it" -ForegroundColor Yellow
+    Write-Host "  Run: cd includes; git clone https://github.com/woocommerce/action-scheduler.git" -ForegroundColor Cyan
     $allLibsOk = $false
 }
 
 if (-not (Test-Path $pluginUpdater)) {
     Write-Host "  [MISSING] Plugin Update Checker not found" -ForegroundColor Red
-    Write-Host "  Download from: https://github.com/YahnisElsts/plugin-update-checker" -ForegroundColor Yellow
-    Write-Host "  Extract to: includes\plugin-update-checker\" -ForegroundColor Yellow
+    Write-Host "  Optional: Automatic updates will not work without it" -ForegroundColor Yellow
+    Write-Host "  Run: cd includes; git clone https://github.com/YahnisElsts/plugin-update-checker.git" -ForegroundColor Cyan
     $allLibsOk = $false
 }
 

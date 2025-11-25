@@ -91,15 +91,37 @@ run_world_time_ai();
 
 /**
  * Plugin Update Checker
+ * Only load if the library exists - automatic updates require this.
  */
-require WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
+$puc_path = WTA_PLUGIN_DIR . 'includes/plugin-update-checker/plugin-update-checker.php';
+if ( file_exists( $puc_path ) ) {
+	require $puc_path;
 
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+	use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-$updateChecker = PucFactory::buildUpdateChecker(
-	'https://github.com/henrikandersen1978/what_is_the_time',
-	__FILE__,
-	'world-time-ai'
-);
+	$updateChecker = PucFactory::buildUpdateChecker(
+		'https://github.com/henrikandersen1978/what_is_the_time',
+		__FILE__,
+		'world-time-ai'
+	);
 
-$updateChecker->getVcsApi()->enableReleaseAssets();
+	$updateChecker->getVcsApi()->enableReleaseAssets();
+} else {
+	// Show admin notice if Plugin Update Checker is missing
+	add_action( 'admin_notices', function() {
+		?>
+		<div class="notice notice-warning">
+			<p>
+				<strong><?php esc_html_e( 'World Time AI Warning:', 'world-time-ai' ); ?></strong>
+				<?php
+				printf(
+					/* translators: %s: URL to setup instructions */
+					esc_html__( 'Plugin Update Checker library not found. Automatic updates will not work. See %s for installation instructions.', 'world-time-ai' ),
+					'<a href="https://github.com/henrikandersen1978/what_is_the_time/blob/main/EXTERNAL-LIBRARIES.md" target="_blank">EXTERNAL-LIBRARIES.md</a>'
+				);
+				?>
+			</p>
+		</div>
+		<?php
+	});
+}
