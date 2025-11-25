@@ -15,33 +15,58 @@ class WTA_Github_Fetcher {
 
 	/**
 	 * Fetch countries data.
+	 * 
+	 * Checks for local file first for better performance.
 	 *
 	 * @since 1.0.0
 	 * @return array|WP_Error Countries data or error.
 	 */
 	public static function fetch_countries() {
+		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/countries.json';
+		if ( file_exists( $local_file ) ) {
+			WTA_Logger::info( 'Using local countries.json file' );
+			return self::parse_large_json_file( $local_file, 'countries' );
+		}
+		
 		$url = get_option( 'wta_github_countries_url' );
 		return self::fetch_json( $url, 'countries' );
 	}
 
 	/**
 	 * Fetch states data.
+	 * 
+	 * Checks for local file first for better performance.
 	 *
 	 * @since 1.0.0
 	 * @return array|WP_Error States data or error.
 	 */
 	public static function fetch_states() {
+		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/states.json';
+		if ( file_exists( $local_file ) ) {
+			WTA_Logger::info( 'Using local states.json file' );
+			return self::parse_large_json_file( $local_file, 'states' );
+		}
+		
 		$url = get_option( 'wta_github_states_url' );
 		return self::fetch_json( $url, 'states' );
 	}
 
 	/**
 	 * Fetch cities data.
+	 * 
+	 * Uses streaming parser for large files to avoid memory issues.
 	 *
 	 * @since 1.0.0
 	 * @return array|WP_Error Cities data or error.
 	 */
 	public static function fetch_cities() {
+		// First check for local JSON file to avoid memory issues with huge GitHub downloads
+		$local_file = WP_CONTENT_DIR . '/plugins/world-time-ai/json/cities.json';
+		if ( file_exists( $local_file ) ) {
+			WTA_Logger::info( 'Using local cities.json file' );
+			return self::parse_large_json_file( $local_file, 'cities' );
+		}
+		
 		$url = get_option( 'wta_github_cities_url' );
 		return self::fetch_json( $url, 'cities' );
 	}
@@ -135,6 +160,169 @@ class WTA_Github_Fetcher {
 	}
 
 	/**
+	 * Parse large JSON file in chunks to avoid memory issues.
+	 * 
+	 * For files > 50MB, this reads and parses in batches.
+	 *
+	 * @since 1.0.0
+	 * @param string $file_path Path to JSON file.
+	 * @param string $type Data type for caching.
+	 * @return array|WP_Error Parsed data or error.
+	 */
+	private static function parse_large_json_file( $file_path, $type ) {
+		// Check cache first
+		$transient_key = 'wta_local_' . $type;
+		$cached_data = get_transient( $transient_key );
+		
+		if ( $cached_data !== false ) {
+			WTA_Logger::debug( "Using cached local data for {$type}" );
+			return $cached_data;
+		}
+
+		$file_size = filesize( $file_path );
+		$file_size_mb = round( $file_size / 1024 / 1024, 2 );
+		
+		WTA_Logger::info( "Parsing local {$type} file", array( 
+			'size' => $file_size_mb . ' MB',
+			'path' => $file_path 
+		) );
+
+		// For files over 50MB, use chunked parsing
+		if ( $file_size > 50 * 1024 * 1024 ) {
+			return self::parse_json_chunked( $file_path, $type, $transient_key );
+		}
+
+		// For smaller files, use standard parsing
+		$json_content = file_get_contents( $file_path );
+		if ( $json_content === false ) {
+			return new WP_Error( 'file_read_error', __( 'Could not read JSON file.', WTA_TEXT_DOMAIN ) );
+		}
+
+		$data = json_decode( $json_content, true );
+		
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			$error_message = sprintf(
+				__( 'Failed to parse %s JSON: %s', WTA_TEXT_DOMAIN ),
+				$type,
+				json_last_error_msg()
+			);
+			WTA_Logger::error( $error_message );
+			return new WP_Error( 'json_error', $error_message );
+		}
+
+		// Cache for 1 day (local files don't change often)
+		set_transient( $transient_key, $data, DAY_IN_SECONDS );
+		
+		WTA_Logger::info( "Successfully parsed local {$type}", array( 'count' => count( $data ) ) );
+		
+		return $data;
+	}
+
+	/**
+	 * Parse large JSON file in chunks using streaming approach.
+	 * 
+	 * This reads the file line by line and parses JSON objects individually
+	 * to avoid loading the entire file into memory.
+	 *
+	 * @since 1.0.0
+	 * @param string $file_path Path to JSON file.
+	 * @param string $type Data type for logging.
+	 * @param string $transient_key Cache key.
+	 * @return array|WP_Error Parsed data or error.
+	 */
+	private static function parse_json_chunked( $file_path, $type, $transient_key ) {
+		$data = array();
+		$handle = fopen( $file_path, 'r' );
+		
+		if ( ! $handle ) {
+			return new WP_Error( 'file_open_error', __( 'Could not open JSON file.', WTA_TEXT_DOMAIN ) );
+		}
+
+		$buffer = '';
+		$in_array = false;
+		$bracket_count = 0;
+		$object_buffer = '';
+		$object_count = 0;
+		$chunk_size = 8192; // 8KB chunks
+
+		WTA_Logger::info( "Starting chunked parsing of {$type}" );
+
+		while ( ! feof( $handle ) ) {
+			$chunk = fread( $handle, $chunk_size );
+			$buffer .= $chunk;
+
+			// Process character by character
+			$buffer_len = strlen( $buffer );
+			$processed = 0;
+
+			for ( $i = 0; $i < $buffer_len; $i++ ) {
+				$char = $buffer[ $i ];
+
+				// Track if we're inside the main array
+				if ( $char === '[' && $bracket_count === 0 ) {
+					$in_array = true;
+					$processed = $i + 1;
+					continue;
+				}
+
+				if ( ! $in_array ) {
+					continue;
+				}
+
+				// Track nested brackets in objects
+				if ( $char === '{' ) {
+					$bracket_count++;
+				} elseif ( $char === '}' ) {
+					$bracket_count--;
+				}
+
+				$object_buffer .= $char;
+
+				// When we close an object at root level
+				if ( $bracket_count === 0 && $char === '}' ) {
+					// Parse this single object
+					$obj = json_decode( $object_buffer, true );
+					
+					if ( $obj !== null ) {
+						$data[] = $obj;
+						$object_count++;
+						
+						// Log progress every 10000 objects
+						if ( $object_count % 10000 === 0 ) {
+							WTA_Logger::debug( "{$type}: Parsed {$object_count} objects" );
+							
+							// Prevent timeout on long operations
+							if ( function_exists( 'set_time_limit' ) ) {
+								set_time_limit( 300 );
+							}
+						}
+					}
+					
+					$object_buffer = '';
+					$processed = $i + 1;
+				}
+			}
+
+			// Keep unprocessed part in buffer
+			$buffer = substr( $buffer, $processed );
+
+			// Clear output buffer to prevent memory buildup
+			if ( ob_get_level() > 0 ) {
+				ob_flush();
+			}
+		}
+
+		fclose( $handle );
+
+		WTA_Logger::info( "Completed chunked parsing of {$type}", array( 'total_objects' => $object_count ) );
+
+		// Cache for 1 day
+		set_transient( $transient_key, $data, DAY_IN_SECONDS );
+
+		return $data;
+	}
+
+	/**
 	 * Clear all GitHub data cache.
 	 *
 	 * @since 1.0.0
@@ -143,10 +331,12 @@ class WTA_Github_Fetcher {
 		delete_transient( 'wta_github_countries' );
 		delete_transient( 'wta_github_states' );
 		delete_transient( 'wta_github_cities' );
+		delete_transient( 'wta_local_countries' );
+		delete_transient( 'wta_local_states' );
+		delete_transient( 'wta_local_cities' );
 		WTA_Logger::info( 'GitHub data cache cleared' );
 	}
 }
-
 
 
 

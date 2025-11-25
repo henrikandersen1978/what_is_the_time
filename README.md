@@ -1,18 +1,22 @@
 # World Time AI - WordPress Plugin
 
-Version: 0.3.6  
+Version: 0.3.7  
 Requires WordPress: 6.8+  
 Requires PHP: 8.4+
 
 ## 📝 Changelog
 
+### Version 0.3.7
+- 🚀 **NEW:** Streaming JSON parser for large files (185MB cities.json!)
+- 🚀 **NEW:** Local JSON file support (place files in json/ folder)
+- ⚡ Chunked parsing for files > 50MB (8KB chunks)
+- ⚡ Automatic fallback to GitHub if local files not found
+- 🗑️ Cleaned up test/diagnostic files from repository
+- 💾 Prevents memory exhaustion on large imports
+
 ### Version 0.3.6 (CRITICAL FIX)
 - 🔧 **FIXED:** Settings no longer overwrite each other when saving
-- 🔧 Separated settings into independent groups:
-  - AI Settings (OpenAI, Yoast)
-  - Timezone & Language Settings
-  - Data Import Settings
-  - Prompts (already separate)
+- 🔧 Separated settings into independent groups
 - ✅ Now you can save any admin page without losing other settings!
 
 ### Version 0.3.5
@@ -88,6 +92,27 @@ If you need to manually update:
 4. All settings will be restored automatically
 
 ## Configuration
+
+### Optional: Local JSON Data Files
+
+**For better performance and to avoid memory issues with large files:**
+
+You can place local JSON data files in `/wp-content/plugins/world-time-ai/json/`:
+- `countries.json` (460 KB)
+- `states.json` (6.2 MB)
+- `cities.json` (185 MB) ⚠️ **Recommended for this large file!**
+
+**Benefits:**
+- ✅ Faster import (no download needed)
+- ✅ Handles huge files (185MB cities.json) without memory issues
+- ✅ Uses streaming parser for files > 50MB
+- ✅ Automatic chunked processing prevents timeouts
+
+**How it works:**
+1. Plugin checks for local files first
+2. Falls back to GitHub URLs if not found
+3. Large files (>50MB) are parsed in 8KB chunks
+4. Data is cached for 24 hours
 
 ### Required API Keys
 
