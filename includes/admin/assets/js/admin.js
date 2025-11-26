@@ -40,6 +40,17 @@
 		return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 	}
 
+	// Toggle between continent and country selectors
+	$('input[name="import_mode"]').on('change', function() {
+		if ($(this).val() === 'continents') {
+			$('#continent_selector').show();
+			$('#country_selector').hide();
+		} else {
+			$('#continent_selector').hide();
+			$('#country_selector').show();
+		}
+	});
+
 	// Prepare Import Queue button handler
 	$('#wta-prepare-import').on('click', function(e) {
 		e.preventDefault();
@@ -51,16 +62,27 @@
 		$button.prop('disabled', true).text('Processing...');
 		$resultDiv.hide().html('');
 		
-		// Collect form data
+		// Collect form data based on mode
+		var importMode = $('input[name="import_mode"]:checked').val();
 		var continents = [];
-		$('input[name="continents[]"]:checked').each(function() {
-			continents.push($(this).val());
-		});
+		var countries = [];
+		
+		if (importMode === 'continents') {
+			$('input[name="continents[]"]:checked').each(function() {
+				continents.push($(this).val());
+			});
+		} else {
+			$('#country_select option:selected').each(function() {
+				countries.push($(this).val());
+			});
+		}
 		
 		var data = {
 			action: 'wta_prepare_import',
 			nonce: wtaAdmin.nonce,
+			import_mode: importMode,
 			selected_continents: continents,
+			selected_countries: countries,
 			min_population: $('#min_population').val() || 0,
 			max_cities_per_country: $('#max_cities').val() || 0,
 			clear_queue: $('#clear_existing').is(':checked') ? 'yes' : 'no'

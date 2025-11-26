@@ -20,7 +20,9 @@ class WTA_Importer {
 	 */
 	public static function prepare_import( $options = array() ) {
 		$defaults = array(
+			'import_mode'         => 'continents',
 			'selected_continents' => array(),
+			'selected_countries'  => array(),
 			'min_population'      => 0,
 			'max_cities_per_country' => 0,
 			'clear_queue'         => true,
@@ -55,9 +57,17 @@ class WTA_Importer {
 			$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
 			$continent_code = WTA_Utils::get_continent_code( $continent );
 
-			// Filter by selected continents (by code)
-			if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
-				continue;
+			// Filter based on import mode
+			if ( $options['import_mode'] === 'countries' ) {
+				// Filter by selected countries (by ISO2 code)
+				if ( ! empty( $options['selected_countries'] ) && ! in_array( $country['iso2'], $options['selected_countries'], true ) ) {
+					continue;
+				}
+			} else {
+				// Filter by selected continents (by code)
+				if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
+					continue;
+				}
 			}
 
 			// Queue continent (deduplicated)
