@@ -14,11 +14,7 @@ class WTA_Post_Type {
 	 * @since    2.0.0
 	 */
 	public function __construct() {
-		// Filter the permalink structure
-		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
-		
-		// Handle URL parsing - intercept requests
-		add_filter( 'request', array( $this, 'parse_location_request' ), 10, 1 );
+		// No custom URL handling - use standard WordPress routing
 	}
 
 	/**
@@ -67,7 +63,6 @@ class WTA_Post_Type {
 				'slug'         => 'location',
 				'with_front'   => false,
 				'hierarchical' => true,
-				'feeds'        => false,
 			),
 			'capability_type'    => 'post',
 			'has_archive'        => false,
@@ -76,98 +71,9 @@ class WTA_Post_Type {
 			'menu_icon'          => 'dashicons-clock',
 			'supports'           => array( 'title', 'editor', 'author', 'page-attributes' ),
 			'show_in_rest'       => true, // Gutenberg support
-			'rest_base'          => WTA_POST_TYPE,
-			'rest_controller_class' => 'WP_REST_Posts_Controller',
 		);
 
 		register_post_type( WTA_POST_TYPE, $args );
-	}
-
-	/**
-	 * Parse location URLs and handle clean URLs without /location/ prefix.
-	 * 
-	 * This intercepts requests that would be 404s and checks if they're location posts.
-	 *
-	 * @since    2.2.1
-	 * @param    array $query_vars Query vars from WordPress.
-	 * @return   array Modified query vars.
-	 */
-	public function parse_location_request( $query_vars ) {
-		global $wpdb;
-		
-		// Skip if we already have a clear query (not a potential 404)
-		if ( ! empty( $query_vars['p'] ) || ! empty( $query_vars['page_id'] ) || ! empty( $query_vars['attachment'] ) ) {
-			return $query_vars;
-		}
-
-		// Get the request path
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-		$home_path = parse_url( home_url(), PHP_URL_PATH );
-		
-		// Remove home path from request
-		if ( $home_path && $home_path !== '/' ) {
-			$request_uri = str_replace( $home_path, '', $request_uri );
-		}
-		
-		$request = trim( $request_uri, '/' );
-		$request = strtok( $request, '?' ); // Remove query string
-		
-		if ( empty( $request ) ) {
-			return $query_vars;
-		}
-
-		// Split path into parts
-		$parts = explode( '/', $request );
-		
-		// Get the last part as slug
-		// For /europa/ → 'europa'
-		// For /europa/albanien/ → 'albanien' 
-		// For /europa/albanien/tirana/ → 'tirana'
-		
-		$slug = sanitize_title( end( $parts ) );
-		
-		// Direct database query to find published location with this slug
-		$post_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} 
-			WHERE post_name = %s 
-			AND post_type = %s 
-			AND post_status = 'publish' 
-			LIMIT 1",
-			$slug,
-			WTA_POST_TYPE
-		) );
-		
-		// If found, set query vars to load this post
-		if ( $post_id ) {
-			// Return ONLY these query vars (clear everything else)
-			return array(
-				WTA_POST_TYPE => $slug,
-				'post_type'    => WTA_POST_TYPE,
-				'name'         => $slug,
-			);
-		}
-		
-		// Not a location, return original query vars
-		return $query_vars;
-	}
-
-	/**
-	 * Filter the post type link to generate clean URLs (remove /location/ prefix).
-	 *
-	 * @since    2.0.0
-	 * @param    string  $post_link The post's permalink.
-	 * @param    WP_Post $post      The post object.
-	 * @return   string             The filtered permalink.
-	 */
-	public function filter_post_type_link( $post_link, $post ) {
-		if ( WTA_POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
-			return $post_link;
-		}
-
-		// Remove the /location/ prefix from the URL
-		$post_link = str_replace( '/location/', '/', $post_link );
-
-		return $post_link;
 	}
 }
 
