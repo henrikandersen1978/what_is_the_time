@@ -89,9 +89,15 @@ class WTA_Structure_Processor {
 	private function process_continent( $item ) {
 		$data = $item['payload'];
 
-		// Check if post already exists
-		$existing = get_page_by_path( sanitize_title( $data['name_local'] ), OBJECT, WTA_POST_TYPE );
-		if ( $existing ) {
+		// Check if post already exists (check both draft and published)
+		$existing = get_posts( array(
+			'name'        => sanitize_title( $data['name_local'] ),
+			'post_type'   => WTA_POST_TYPE,
+			'post_status' => array( 'publish', 'draft' ),
+			'numberposts' => 1,
+		) );
+		
+		if ( ! empty( $existing ) ) {
 			WTA_Logger::info( 'Continent post already exists', array( 'name' => $data['name_local'] ) );
 			WTA_Queue::mark_done( $item['id'] );
 			return;
@@ -140,11 +146,17 @@ class WTA_Structure_Processor {
 	private function process_country( $item ) {
 		$data = $item['payload'];
 
-		// Find parent continent post
+		// Find parent continent post (include draft posts!)
 		$continent_name_local = WTA_AI_Translator::translate( $data['continent'], 'continent' );
-		$parent = get_page_by_path( sanitize_title( $continent_name_local ), OBJECT, WTA_POST_TYPE );
+		
+		$parent_posts = get_posts( array(
+			'name'        => sanitize_title( $continent_name_local ),
+			'post_type'   => WTA_POST_TYPE,
+			'post_status' => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
+			'numberposts' => 1,
+		) );
 
-		if ( ! $parent ) {
+		if ( empty( $parent_posts ) ) {
 			WTA_Logger::warning( 'Parent continent not found', array(
 				'continent' => $data['continent'],
 				'country'   => $data['name'],
@@ -153,12 +165,15 @@ class WTA_Structure_Processor {
 			WTA_Queue::mark_failed( $item['id'], 'Parent continent not found' );
 			return;
 		}
+		
+		$parent = $parent_posts[0];
 
-		// Check if post already exists
+		// Check if post already exists (check both draft and published)
 		$existing = get_posts( array(
 			'name'        => sanitize_title( $data['name_local'] ),
 			'post_type'   => WTA_POST_TYPE,
 			'post_parent' => $parent->ID,
+			'post_status' => array( 'publish', 'draft' ),
 			'numberposts' => 1,
 		) );
 
@@ -227,9 +242,10 @@ class WTA_Structure_Processor {
 	private function process_city( $item ) {
 		$data = $item['payload'];
 
-		// Find parent country post
+		// Find parent country post (include draft posts!)
 		$country_post_id = get_posts( array(
 			'post_type'   => WTA_POST_TYPE,
+			'post_status' => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
 			'meta_key'    => 'wta_country_id',
 			'meta_value'  => $data['country_id'],
 			'numberposts' => 1,
@@ -247,11 +263,12 @@ class WTA_Structure_Processor {
 
 		$parent_id = $country_post_id[0];
 
-		// Check if post already exists
+		// Check if post already exists (check both draft and published)
 		$existing = get_posts( array(
 			'name'        => sanitize_title( $data['name_local'] ),
 			'post_type'   => WTA_POST_TYPE,
 			'post_parent' => $parent_id,
+			'post_status' => array( 'publish', 'draft' ),
 			'numberposts' => 1,
 		) );
 
