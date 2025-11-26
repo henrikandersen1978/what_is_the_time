@@ -62,7 +62,7 @@ class WTA_Post_Type {
 			'publicly_queryable' => true,
 			'show_ui'            => true,
 			'show_in_menu'       => false, // We add custom menu via admin class
-			'query_var'          => true,
+			'query_var'          => WTA_POST_TYPE, // IMPORTANT: Use post type name as query var
 			'rewrite'            => false, // We handle rewrite rules manually
 			'capability_type'    => 'post',
 			'has_archive'        => true,
@@ -85,21 +85,21 @@ class WTA_Post_Type {
 		// Match: /continent/country/city/
 		add_rewrite_rule(
 			'^([^/]+)/([^/]+)/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]&wta_path=$matches[1]/$matches[2]/$matches[3]',
+			'index.php?' . WTA_POST_TYPE . '=$matches[3]',
 			'top'
 		);
 
 		// Match: /continent/country/
 		add_rewrite_rule(
 			'^([^/]+)/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]&wta_path=$matches[1]/$matches[2]',
+			'index.php?' . WTA_POST_TYPE . '=$matches[2]',
 			'top'
 		);
 
 		// Match: /continent/
 		add_rewrite_rule(
 			'^([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]&wta_path=$matches[1]',
+			'index.php?' . WTA_POST_TYPE . '=$matches[1]',
 			'top'
 		);
 	}
