@@ -76,6 +76,8 @@ class WTA_Post_Type {
 			'menu_icon'          => 'dashicons-clock',
 			'supports'           => array( 'title', 'editor', 'author', 'page-attributes' ),
 			'show_in_rest'       => true, // Gutenberg support
+			'rest_base'          => WTA_POST_TYPE,
+			'rest_controller_class' => 'WP_REST_Posts_Controller',
 		);
 
 		register_post_type( WTA_POST_TYPE, $args );
