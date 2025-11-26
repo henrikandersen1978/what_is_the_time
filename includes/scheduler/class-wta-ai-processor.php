@@ -116,14 +116,121 @@ class WTA_AI_Processor {
 	}
 
 	/**
-	 * Generate AI content for post.
+	 * Generate AI content for post with structured sections.
 	 *
-	 * @since    2.0.0
+	 * @since    2.3.6
 	 * @param    int    $post_id Post ID.
 	 * @param    string $type    Location type.
 	 * @return   array|false     Generated content or false on failure.
 	 */
 	private function generate_ai_content( $post_id, $type ) {
+		// Use multi-section generation for continents
+		if ( 'continent' === $type ) {
+			return $this->generate_continent_content( $post_id );
+		}
+		
+		// Use standard generation for countries and cities (for now)
+		return $this->generate_standard_content( $post_id, $type );
+	}
+
+	/**
+	 * Generate structured content for continents with multiple sections.
+	 *
+	 * @since    2.3.6
+	 * @param    int $post_id Post ID.
+	 * @return   array|false  Generated content or false on failure.
+	 */
+	private function generate_continent_content( $post_id ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		$temperature = (float) get_option( 'wta_openai_temperature', 0.7 );
+		
+		$name_local = get_the_title( $post_id );
+		$name_original = get_post_meta( $post_id, 'wta_name_original', true );
+		
+		// Get child countries for the list
+		$children = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $post_id,
+			'posts_per_page' => 100,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'post_status'    => 'publish',
+		) );
+		
+		// Build country list HTML
+		$country_list = '<h2>Lande i ' . esc_html( $name_local ) . '</h2>' . "\n";
+		$country_list .= '<div class="wta-locations-grid"><ul>' . "\n";
+		foreach ( $children as $child ) {
+			$country_list .= '<li><a href="' . esc_url( get_permalink( $child->ID ) ) . '">' . esc_html( get_the_title( $child->ID ) ) . '</a></li>' . "\n";
+		}
+		$country_list .= '</ul></div>' . "\n\n";
+		
+		// Generate intro
+		$intro_system = 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
+		$intro_user = sprintf(
+			'Skriv en kort introduktion (80-100 ord) om hvad klokken er i %s og kontinentets tidszoner. Fokuser på SEO-søgeord som "hvad er klokken i %s" og "tidszoner i %s". Skriv direkte og informativt uden fraser som "velkommen til" eller "lad os udforske". KUN ren tekst, ingen overskrifter.',
+			$name_local,
+			$name_local,
+			$name_local
+		);
+		$intro = $this->call_openai_api( $api_key, $model, $temperature, 150, $intro_system, $intro_user );
+		
+		// Generate timezone section
+		$tz_system = 'Du er ekspert i tidszoner. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
+		$tz_user = sprintf(
+			'Skriv et afsnit (100-120 ord) om tidszonerne i %s. Forklar hvordan tidszoner fungerer på kontinentet, nævn specifikke tidszoner (fx CET, EET). Skriv naturligt og informativt. KUN ren tekst, ingen overskrifter.',
+			$name_local
+		);
+		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $tz_system, $tz_user );
+		
+		// Generate geography section
+		$geo_system = 'Du er geografi-ekspert. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
+		$geo_user = sprintf(
+			'Skriv et afsnit (100-120 ord) om geografien i %s. Inkluder størrelse, beliggenhed, vigtige geografiske træk. Skriv naturligt og faktuelt. KUN ren tekst, ingen overskrifter.',
+			$name_local
+		);
+		$geography_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $geo_system, $geo_user );
+		
+		// Generate facts section
+		$facts_system = 'Du er ekspert i kultur og historie. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
+		$facts_user = sprintf(
+			'Skriv et afsnit (100-120 ord) med interessante fakta om %s. Fokuser på kultur, sprog, befolkning eller historie. Skriv engagerende og informativt. KUN ren tekst, ingen overskrifter.',
+			$name_local
+		);
+		$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $facts_system, $facts_user );
+		
+		// Combine all sections
+		$full_content = $intro . "\n\n";
+		$full_content .= $country_list;
+		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Geografi og beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
+		$full_content .= '<h2>Interessante fakta om ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
+		
+		// Generate Yoast SEO meta
+		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
+		$yoast_desc = $this->generate_yoast_description( $post_id, $name_local, 'continent' );
+		
+		return array(
+			'content'     => $full_content,
+			'yoast_title' => $yoast_title,
+			'yoast_desc'  => $yoast_desc,
+		);
+	}
+
+	/**
+	 * Generate standard content (for countries and cities).
+	 *
+	 * @since    2.3.6
+	 * @param    int    $post_id Post ID.
+	 * @param    string $type    Location type.
+	 * @return   array|false     Generated content or false on failure.
+	 */
+	private function generate_standard_content( $post_id, $type ) {
 		// Get OpenAI settings
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
@@ -199,6 +306,56 @@ class WTA_AI_Processor {
 			'yoast_title' => $yoast_title,
 			'yoast_desc'  => $yoast_desc,
 		);
+	}
+
+	/**
+	 * Generate Yoast SEO title.
+	 *
+	 * @since    2.3.6
+	 * @param    int    $post_id Post ID.
+	 * @param    string $name    Location name.
+	 * @param    string $type    Location type.
+	 * @return   string|false    Generated title or false.
+	 */
+	private function generate_yoast_title( $post_id, $name, $type ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		$system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
+		$user = sprintf(
+			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
+			$name
+		);
+		
+		return $this->call_openai_api( $api_key, $model, 0.7, 100, $system, $user );
+	}
+
+	/**
+	 * Generate Yoast SEO description.
+	 *
+	 * @since    2.3.6
+	 * @param    int    $post_id Post ID.
+	 * @param    string $name    Location name.
+	 * @param    string $type    Location type.
+	 * @return   string|false    Generated description or false.
+	 */
+	private function generate_yoast_description( $post_id, $name, $type ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		$system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
+		$user = sprintf(
+			'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
+			$name
+		);
+		
+		return $this->call_openai_api( $api_key, $model, 0.7, 200, $system, $user );
 	}
 
 	/**
