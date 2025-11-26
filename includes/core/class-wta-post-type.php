@@ -73,7 +73,19 @@ class WTA_Post_Type {
 			'show_in_rest'       => true, // Gutenberg support
 		);
 
-		register_post_type( WTA_POST_TYPE, $args );
+		$result = register_post_type( WTA_POST_TYPE, $args );
+		
+		// Log if registration failed
+		if ( is_wp_error( $result ) ) {
+			WTA_Logger::error( 'Post type registration failed', array(
+				'error' => $result->get_error_message(),
+			) );
+		} else {
+			WTA_Logger::info( 'Post type registered successfully', array(
+				'post_type' => WTA_POST_TYPE,
+				'rest_enabled' => ! empty( $args['show_in_rest'] ),
+			) );
+		}
 	}
 }
 
