@@ -257,13 +257,17 @@ class WTA_Admin {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
+		$import_mode = isset( $_POST['import_mode'] ) ? sanitize_text_field( $_POST['import_mode'] ) : 'continents';
 		$selected_continents = isset( $_POST['selected_continents'] ) ? array_map( 'sanitize_text_field', $_POST['selected_continents'] ) : array();
+		$selected_countries = isset( $_POST['selected_countries'] ) ? array_map( 'sanitize_text_field', $_POST['selected_countries'] ) : array();
 		$min_population = isset( $_POST['min_population'] ) ? intval( $_POST['min_population'] ) : 0;
 		$max_cities_per_country = isset( $_POST['max_cities_per_country'] ) ? intval( $_POST['max_cities_per_country'] ) : 0;
 		$clear_queue = isset( $_POST['clear_queue'] ) && 'yes' === $_POST['clear_queue'];
 
 		$stats = WTA_Importer::prepare_import( array(
+			'import_mode'            => $import_mode,
 			'selected_continents'    => $selected_continents,
+			'selected_countries'     => $selected_countries,
 			'min_population'         => $min_population,
 			'max_cities_per_country' => $max_cities_per_country,
 			'clear_queue'            => $clear_queue,
