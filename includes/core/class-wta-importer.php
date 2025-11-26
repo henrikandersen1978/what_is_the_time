@@ -108,6 +108,9 @@ class WTA_Importer {
 			return $stats;
 		}
 
+		// CRITICAL: Use country_code (iso2) instead of id for matching cities
+		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
+		
 		WTA_Queue::add(
 			'cities_import',
 			array(
@@ -115,7 +118,7 @@ class WTA_Importer {
 				'min_population'  => $options['min_population'],
 				'max_cities_per_country' => $options['max_cities_per_country'],
 				'selected_continents' => $options['selected_continents'],
-				'filtered_countries' => array_column( $filtered_countries, 'id' ),
+				'filtered_country_codes' => $filtered_country_codes,
 			),
 			'cities_import_' . time()
 		);
@@ -141,14 +144,14 @@ class WTA_Importer {
 	public static function queue_cities_from_array( $cities, $options = array() ) {
 		$min_population = isset( $options['min_population'] ) ? (int) $options['min_population'] : 0;
 		$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? (int) $options['max_cities_per_country'] : 0;
-		$filtered_country_ids = isset( $options['filtered_countries'] ) ? $options['filtered_countries'] : array();
+		$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
 
 		$queued = 0;
 		$per_country = array();
 
 		foreach ( $cities as $city ) {
-			// Filter by country
-			if ( ! empty( $filtered_country_ids ) && ! in_array( $city['country_id'], $filtered_country_ids, true ) ) {
+			// Filter by country_code (iso2)
+			if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 				continue;
 			}
 

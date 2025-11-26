@@ -443,12 +443,14 @@ class WTA_Structure_Processor {
 		}
 
 		$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
-		$filtered_country_ids = isset( $options['filtered_countries'] ) ? $options['filtered_countries'] : array();
+		$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
+		$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? $options['max_cities_per_country'] : 0;
 		$base_language = get_option( 'wta_base_country_name', 'en' );
 		
 		$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 		file_put_contents( $debug_file, "Min population: $min_population\n", FILE_APPEND );
-		file_put_contents( $debug_file, "Filtered country IDs: " . implode( ', ', $filtered_country_ids ) . "\n", FILE_APPEND );
+		file_put_contents( $debug_file, "Max cities per country: $max_cities_per_country\n", FILE_APPEND );
+		file_put_contents( $debug_file, "Filtered country codes: " . implode( ', ', $filtered_country_codes ) . "\n", FILE_APPEND );
 		
 		$queued = 0;
 		$skipped = 0;
@@ -487,8 +489,8 @@ class WTA_Structure_Processor {
 				$first_city_logged = true;
 			}
 
-			// Filter by country
-			if ( ! empty( $filtered_country_ids ) && ! in_array( $city['country_id'], $filtered_country_ids, true ) ) {
+			// Filter by country_code (iso2)
+			if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 				$skipped_country++;
 				continue;
 			}
@@ -524,6 +526,8 @@ class WTA_Structure_Processor {
 		}
 
 		fclose( $handle );
+		
+		file_put_contents( $debug_file, "Total lines read: $line_number\n", FILE_APPEND );
 
 			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 			$summary = sprintf(
