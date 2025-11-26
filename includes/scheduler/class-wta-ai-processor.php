@@ -116,14 +116,40 @@ class WTA_AI_Processor {
 	}
 
 	/**
-	 * Generate AI content for post.
+	 * Generate AI content for post with improved structure.
 	 *
-	 * @since    2.0.0
+	 * @since    2.1.2
 	 * @param    int    $post_id Post ID.
 	 * @param    string $type    Location type.
 	 * @return   array|false     Generated content or false on failure.
 	 */
 	private function generate_ai_content( $post_id, $type ) {
+		// Generate structured content with multiple sections
+		$structured_content = $this->generate_structured_content( $post_id, $type );
+		
+		if ( false === $structured_content ) {
+			return false;
+		}
+
+		// Generate metadata
+		$metadata = $this->generate_metadata( $post_id, $type );
+		
+		return array(
+			'content'     => $structured_content,
+			'yoast_title' => $metadata['title'] ?? false,
+			'yoast_desc'  => $metadata['description'] ?? false,
+		);
+	}
+
+	/**
+	 * Generate structured content with sections, headings, and links.
+	 *
+	 * @since    2.1.2
+	 * @param    int    $post_id Post ID.
+	 * @param    string $type    Location type.
+	 * @return   string|false    Generated HTML content or false on failure.
+	 */
+	private function generate_structured_content( $post_id, $type ) {
 		// Get OpenAI settings
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {

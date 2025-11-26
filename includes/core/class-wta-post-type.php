@@ -17,6 +17,12 @@ class WTA_Post_Type {
 		// Add custom rewrite rules
 		add_action( 'init', array( $this, 'add_custom_rewrite_rules' ), 20 );
 		
+		// Register custom query vars
+		add_filter( 'query_vars', array( $this, 'add_query_vars' ) );
+		
+		// Parse request to find posts by slug
+		add_action( 'parse_request', array( $this, 'parse_custom_request' ) );
+		
 		// Filter the permalink structure
 		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
 	}
@@ -77,9 +83,23 @@ class WTA_Post_Type {
 	}
 
 	/**
+	 * Add custom query vars.
+	 *
+	 * @since    2.0.0
+	 * @param    array $vars Query vars.
+	 * @return   array       Modified query vars.
+	 */
+	public function add_query_vars( $vars ) {
+		$vars[] = 'wta_slug';
+		$vars[] = 'wta_parent1';
+		$vars[] = 'wta_parent2';
+		return $vars;
+	}
+
+	/**
 	 * Add custom rewrite rules for clean URLs.
 	 *
-	 * This creates rules that allow URLs like /europa/danmark/kobenhavn/
+	 * This creates rules that allow URLs like /europa/albanien/kobenhavn/
 	 * without the post type slug.
 	 *
 	 * @since    2.0.0
@@ -88,23 +108,69 @@ class WTA_Post_Type {
 		// Three-level hierarchy: /continent/country/city/
 		add_rewrite_rule(
 			'^([^/]+)/([^/]+)/([^/]+)/?$',
-			'index.php?world_time_location=$matches[3]&wta_parent1=$matches[2]&wta_parent2=$matches[1]',
+			'index.php?wta_slug=$matches[3]&wta_parent1=$matches[2]&wta_parent2=$matches[1]',
 			'top'
 		);
 
 		// Two-level hierarchy: /continent/country/
 		add_rewrite_rule(
 			'^([^/]+)/([^/]+)/?$',
-			'index.php?world_time_location=$matches[2]&wta_parent1=$matches[1]',
+			'index.php?wta_slug=$matches[2]&wta_parent1=$matches[1]',
 			'top'
 		);
 
 		// One-level: /continent/
 		add_rewrite_rule(
 			'^([^/]+)/?$',
-			'index.php?world_time_location=$matches[1]',
+			'index.php?wta_slug=$matches[1]',
 			'top'
 		);
+	}
+
+	/**
+	 * Parse custom request to find post by slug.
+	 *
+	 * @since    2.0.0
+	 * @param    WP $wp WordPress environment object.
+	 */
+	public function parse_custom_request( $wp ) {
+		if ( ! isset( $wp->query_vars['wta_slug'] ) ) {
+			return;
+		}
+
+		$slug = $wp->query_vars['wta_slug'];
+		
+		// Find post by slug
+		$args = array(
+			'name'        => $slug,
+			'post_type'   => WTA_POST_TYPE,
+			'post_status' => 'publish',
+			'numberposts' => 1,
+		);
+
+		// If we have parent info, use it to narrow search
+		if ( isset( $wp->query_vars['wta_parent1'] ) ) {
+			$parent_slug = $wp->query_vars['wta_parent1'];
+			$parent = get_page_by_path( $parent_slug, OBJECT, WTA_POST_TYPE );
+			
+			if ( $parent ) {
+				$args['post_parent'] = $parent->ID;
+			}
+		}
+
+		$posts = get_posts( $args );
+
+		if ( ! empty( $posts ) ) {
+			$post = $posts[0];
+			
+			// Set query vars for WordPress
+			$wp->query_vars['post_type'] = WTA_POST_TYPE;
+			$wp->query_vars['name'] = $slug;
+			$wp->query_vars['pagename'] = '';
+			
+			// Set as single post query
+			$wp->query_vars[WTA_POST_TYPE] = $slug;
+		}
 	}
 
 	/**
