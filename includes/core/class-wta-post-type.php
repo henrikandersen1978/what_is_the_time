@@ -67,13 +67,14 @@ class WTA_Post_Type {
 				'slug'         => 'location',
 				'with_front'   => false,
 				'hierarchical' => true,
+				'feeds'        => false,
 			),
 			'capability_type'    => 'post',
 			'has_archive'        => false,
 			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships
 			'menu_position'      => null,
 			'menu_icon'          => 'dashicons-clock',
-			'supports'           => array( 'title', 'editor', 'page-attributes' ),
+			'supports'           => array( 'title', 'editor', 'author', 'page-attributes' ),
 			'show_in_rest'       => true, // Gutenberg support
 		);
 
