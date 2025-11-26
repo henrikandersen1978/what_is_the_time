@@ -31,10 +31,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<p>
 				<button type="button" class="button" id="wta-reset-stuck"><?php esc_html_e( 'Reset Stuck Jobs', WTA_TEXT_DOMAIN ); ?></button>
 				<button type="button" class="button" id="wta-retry-failed"><?php esc_html_e( 'Retry Failed Items', WTA_TEXT_DOMAIN ); ?></button>
+				<button type="button" class="button" id="wta-view-queue-details"><?php esc_html_e( 'View Queue Details', WTA_TEXT_DOMAIN ); ?></button>
 				<span class="spinner"></span>
 			</p>
 			<p class="description"><?php esc_html_e( 'Reset stuck/processing jobs (5+ min) or retry failed items (max 3 attempts).', WTA_TEXT_DOMAIN ); ?></p>
 			<div id="wta-retry-result"></div>
+			<div id="wta-queue-details"></div>
 		</div>
 
 		<!-- Action Scheduler -->
@@ -227,6 +229,40 @@ jQuery(document).ready(function($) {
 			success: function(response) {
 				if (response.success) {
 					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// View queue details
+	$('#wta-view-queue-details').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.siblings('.spinner');
+		var $result = $('#wta-queue-details');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_view_queue_details',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html(response.data.html);
 				} else {
 					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
 				}

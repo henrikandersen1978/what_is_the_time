@@ -146,6 +146,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_test_openai_connection', $admin, 'ajax_test_openai_connection' );
 		$this->loader->add_action( 'wp_ajax_wta_test_timezonedb_connection', $admin, 'ajax_test_timezonedb_connection' );
 		$this->loader->add_action( 'wp_ajax_wta_reset_all_data', $admin, 'ajax_reset_all_data' );
+		$this->loader->add_action( 'wp_ajax_wta_view_queue_details', $admin, 'ajax_view_queue_details' );
 		$this->loader->add_action( 'wp_ajax_wta_reset_stuck_items', $admin, 'ajax_reset_stuck_items' );
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed_items', $admin, 'ajax_retry_failed_items' );
 		$this->loader->add_action( 'wp_ajax_wta_get_logs', $admin, 'ajax_get_logs' );

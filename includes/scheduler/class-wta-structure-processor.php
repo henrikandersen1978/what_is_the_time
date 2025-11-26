@@ -394,21 +394,33 @@ class WTA_Structure_Processor {
 	 * @param    array $item Queue item.
 	 */
 	private function process_cities_import( $item ) {
+		// CRITICAL: Write to separate debug file so logs don't get lost
+		$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
+		$log_msg = "\n\n=== CITIES_IMPORT DEBUG " . date('Y-m-d H:i:s') . " ===\n";
+		file_put_contents( $debug_file, $log_msg, FILE_APPEND );
+		
 		WTA_Logger::info( '=== CITIES_IMPORT STARTED ===' );
 		
 		try {
 			if ( ! isset( $item['payload'] ) ) {
-				throw new Exception( 'Missing payload in cities_import item' );
+				$error = 'Missing payload in cities_import item';
+				file_put_contents( $debug_file, "ERROR: $error\n", FILE_APPEND );
+				throw new Exception( $error );
 			}
 			
 			$options = $item['payload'];
+			$msg = 'Payload keys: ' . implode( ', ', array_keys( $options ) );
+			file_put_contents( $debug_file, "$msg\n", FILE_APPEND );
 			WTA_Logger::info( 'Payload received', array( 'keys' => array_keys( $options ) ) );
 			
 			if ( ! isset( $options['file_path'] ) ) {
-				throw new Exception( 'Missing file_path in payload' );
+				$error = 'Missing file_path in payload';
+				file_put_contents( $debug_file, "ERROR: $error\n", FILE_APPEND );
+				throw new Exception( $error );
 			}
 			
 			$file_path = $options['file_path'];
+			file_put_contents( $debug_file, "File path: $file_path\n", FILE_APPEND );
 			WTA_Logger::info( 'File path extracted', array( 'path' => $file_path ) );
 
 			if ( ! file_exists( $file_path ) ) {
@@ -491,6 +503,10 @@ class WTA_Structure_Processor {
 
 		fclose( $handle );
 
+			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
+			$summary = "COMPLETED: Queued=$queued, Skipped=$skipped, Min_pop=$min_population\n";
+			file_put_contents( $debug_file, $summary, FILE_APPEND );
+			
 			WTA_Logger::info( 'Cities import batch completed', array(
 				'cities_queued' => $queued,
 				'cities_skipped' => $skipped,
@@ -500,6 +516,15 @@ class WTA_Structure_Processor {
 			WTA_Queue::mark_done( $item['id'] );
 			
 		} catch ( Exception $e ) {
+			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
+			$error_msg = sprintf(
+				"EXCEPTION: %s in %s:%d\n",
+				$e->getMessage(),
+				$e->getFile(),
+				$e->getLine()
+			);
+			file_put_contents( $debug_file, $error_msg, FILE_APPEND );
+			
 			WTA_Logger::error( 'CRITICAL: cities_import failed', array(
 				'error' => $e->getMessage(),
 				'file' => $e->getFile(),

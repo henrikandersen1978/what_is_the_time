@@ -406,6 +406,76 @@ class WTA_Admin {
 	}
 
 	/**
+	 * AJAX: View queue details.
+	 *
+	 * @since    2.4.2
+	 */
+	public function ajax_view_queue_details() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . WTA_QUEUE_TABLE;
+
+		// Get last 10 cities_import jobs
+		$cities_import_jobs = $wpdb->get_results(
+			"SELECT * FROM $table_name 
+			WHERE type = 'cities_import' 
+			ORDER BY id DESC 
+			LIMIT 5",
+			ARRAY_A
+		);
+
+		// Get queue summary
+		$summary = $wpdb->get_results(
+			"SELECT type, status, COUNT(*) as count 
+			FROM $table_name 
+			GROUP BY type, status 
+			ORDER BY type, status",
+			ARRAY_A
+		);
+
+		$html = '<h3>Queue Summary</h3>';
+		$html .= '<table class="widefat">';
+		$html .= '<thead><tr><th>Type</th><th>Status</th><th>Count</th></tr></thead><tbody>';
+		foreach ( $summary as $row ) {
+			$html .= sprintf(
+				'<tr><td>%s</td><td>%s</td><td>%d</td></tr>',
+				esc_html( $row['type'] ),
+				esc_html( $row['status'] ),
+				intval( $row['count'] )
+			);
+		}
+		$html .= '</tbody></table>';
+
+		$html .= '<h3 style="margin-top: 20px;">Last 5 cities_import Jobs</h3>';
+		if ( empty( $cities_import_jobs ) ) {
+			$html .= '<p>No cities_import jobs found in queue.</p>';
+		} else {
+			$html .= '<table class="widefat">';
+			$html .= '<thead><tr><th>ID</th><th>Status</th><th>Attempts</th><th>Error</th><th>Created</th><th>Payload</th></tr></thead><tbody>';
+			foreach ( $cities_import_jobs as $job ) {
+				$payload = json_decode( $job['payload'], true );
+				$html .= sprintf(
+					'<tr><td>%d</td><td><strong>%s</strong></td><td>%d</td><td style="color:red;">%s</td><td>%s</td><td><pre style="font-size:10px;">%s</pre></td></tr>',
+					intval( $job['id'] ),
+					esc_html( $job['status'] ),
+					intval( $job['attempts'] ),
+					esc_html( $job['error_message'] ? $job['error_message'] : '-' ),
+					esc_html( $job['created_at'] ),
+					esc_html( print_r( $payload, true ) )
+				);
+			}
+			$html .= '</tbody></table>';
+		}
+
+		wp_send_json_success( array( 'html' => $html ) );
+	}
+
+	/**
 	 * AJAX: Reset stuck queue items.
 	 *
 	 * @since    2.3.9
