@@ -90,13 +90,15 @@ class WTA_Post_Type {
 	 * @return   array Modified query vars.
 	 */
 	public function parse_location_request( $query_vars ) {
-		// Skip if we already have query vars set (not a potential 404)
-		if ( ! empty( $query_vars['pagename'] ) || ! empty( $query_vars['name'] ) || ! empty( $query_vars['p'] ) ) {
+		global $wpdb;
+		
+		// Skip if we already have a clear query (not a potential 404)
+		if ( ! empty( $query_vars['p'] ) || ! empty( $query_vars['page_id'] ) || ! empty( $query_vars['attachment'] ) ) {
 			return $query_vars;
 		}
 
 		// Get the request path
-		$request_uri = $_SERVER['REQUEST_URI'];
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
 		$home_path = parse_url( home_url(), PHP_URL_PATH );
 		
 		// Remove home path from request
@@ -114,22 +116,31 @@ class WTA_Post_Type {
 		// Split path into parts
 		$parts = explode( '/', $request );
 		
-		// Try to find a location post by matching the path
-		// For /europa/ → check 'europa'
-		// For /europa/albanien/ → check 'albanien' 
-		// For /europa/albanien/tirana/ → check 'tirana'
+		// Get the last part as slug
+		// For /europa/ → 'europa'
+		// For /europa/albanien/ → 'albanien' 
+		// For /europa/albanien/tirana/ → 'tirana'
 		
 		$slug = sanitize_title( end( $parts ) );
 		
-		// Look for a published location with this slug
-		$post = get_page_by_path( $slug, OBJECT, WTA_POST_TYPE );
+		// Direct database query to find published location with this slug
+		$post_id = $wpdb->get_var( $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} 
+			WHERE post_name = %s 
+			AND post_type = %s 
+			AND post_status = 'publish' 
+			LIMIT 1",
+			$slug,
+			WTA_POST_TYPE
+		) );
 		
 		// If found, set query vars to load this post
-		if ( $post && $post->post_status === 'publish' ) {
+		if ( $post_id ) {
+			// Return ONLY these query vars (clear everything else)
 			return array(
-				'post_type' => WTA_POST_TYPE,
-				'name'      => $slug,
-				'p'         => $post->ID,
+				WTA_POST_TYPE => $slug,
+				'post_type'    => WTA_POST_TYPE,
+				'name'         => $slug,
 			);
 		}
 		
