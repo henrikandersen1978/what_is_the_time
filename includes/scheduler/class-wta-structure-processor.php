@@ -427,68 +427,59 @@ class WTA_Structure_Processor {
 				throw new Exception( 'cities.json not found at: ' . $file_path );
 			}
 
-			// Increase time limit for streaming large file
+			// Increase time limit and memory for large file
 			set_time_limit( 300 ); // 5 minutes
+			ini_set( 'memory_limit', '512M' );
 
 			$file_size = filesize( $file_path );
-			WTA_Logger::info( 'Starting cities_import batch (STREAMING)', array(
+			file_put_contents( $debug_file, "File size: " . round( $file_size / 1024 / 1024, 2 ) . " MB\n", FILE_APPEND );
+			WTA_Logger::info( 'Starting cities_import batch (LOAD FULL FILE)', array(
 				'file' => basename( $file_path ),
 				'size_mb' => round( $file_size / 1024 / 1024, 2 ),
 			) );
 
-		// Stream JSON file line-by-line to avoid memory issues
-		$handle = fopen( $file_path, 'r' );
-		if ( false === $handle ) {
-			throw new Exception( 'Could not open cities.json for reading' );
+		// Load entire JSON file into memory (cities.json has multi-line JSON objects)
+		file_put_contents( $debug_file, "Loading entire file into memory...\n", FILE_APPEND );
+		$json_content = file_get_contents( $file_path );
+		if ( false === $json_content ) {
+			throw new Exception( 'Could not read cities.json' );
 		}
+		
+		file_put_contents( $debug_file, "Parsing JSON...\n", FILE_APPEND );
+		$all_cities = json_decode( $json_content, true );
+		unset( $json_content ); // Free memory
+		
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			throw new Exception( 'JSON decode error: ' . json_last_error_msg() );
+		}
+		
+		if ( ! is_array( $all_cities ) ) {
+			throw new Exception( 'cities.json is not an array' );
+		}
+		
+		file_put_contents( $debug_file, "Total cities in file: " . count( $all_cities ) . "\n", FILE_APPEND );
 
 		$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
 		$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
 		$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? $options['max_cities_per_country'] : 0;
-		$base_language = get_option( 'wta_base_country_name', 'en' );
 		
-		$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 		file_put_contents( $debug_file, "Min population: $min_population\n", FILE_APPEND );
 		file_put_contents( $debug_file, "Max cities per country: $max_cities_per_country\n", FILE_APPEND );
 		file_put_contents( $debug_file, "Filtered country codes: " . implode( ', ', $filtered_country_codes ) . "\n", FILE_APPEND );
 		
 		$queued = 0;
-		$skipped = 0;
 		$skipped_country = 0;
 		$skipped_population = 0;
-		$line_number = 0;
-		$batch = array();
-		$batch_size = 100; // Process 100 cities at a time
+		$per_country = array();
 		
-		$first_city_logged = false;
-
-		while ( ! feof( $handle ) ) {
-			$line = fgets( $handle );
-			$line_number++;
-			
-			if ( empty( $line ) || $line_number === 1 ) {
-				continue; // Skip opening bracket
-			}
-
-			// Remove trailing comma and whitespace
-			$line = trim( $line );
-			if ( $line === '[' || $line === ']' ) {
-				continue;
-			}
-			$line = rtrim( $line, ',' );
-
-			// Decode single city JSON
-			$city = json_decode( $line, true );
-			if ( null === $city ) {
-				continue; // Skip invalid JSON lines
-			}
-			
-			// Log first city for debugging
-			if ( ! $first_city_logged ) {
-				file_put_contents( $debug_file, "First city structure: " . print_r( $city, true ) . "\n", FILE_APPEND );
-				$first_city_logged = true;
-			}
-
+		// Log first city for debugging
+		if ( ! empty( $all_cities ) ) {
+			file_put_contents( $debug_file, "First city: " . $all_cities[0]['name'] . " (" . $all_cities[0]['country_code'] . ")\n", FILE_APPEND );
+		}
+		
+		file_put_contents( $debug_file, "Starting filtering...\n", FILE_APPEND );
+		
+		foreach ( $all_cities as $city ) {
 			// Filter by country_code (iso2)
 			if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 				$skipped_country++;
@@ -501,33 +492,30 @@ class WTA_Structure_Processor {
 				continue;
 			}
 
-			// Add to batch
-			$batch[] = $city;
-			$skipped = 0; // Reset skipped counter (this was for total skipped)
-
-			// Process batch when it reaches batch_size
-			if ( count( $batch ) >= $batch_size ) {
-				$queued += $this->queue_cities_batch( $batch, $options );
-				$batch = array(); // Reset batch
-				
-				// Log progress every 1000 cities
-				if ( $queued % 1000 === 0 ) {
-					WTA_Logger::info( 'Cities streaming progress', array(
-						'queued' => $queued,
-						'skipped' => $skipped,
-					) );
+			// Max cities per country
+			if ( $max_cities_per_country > 0 ) {
+				$country_code = $city['country_code'];
+				if ( ! isset( $per_country[ $country_code ] ) ) {
+					$per_country[ $country_code ] = 0;
 				}
+
+				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+					continue;
+				}
+
+				$per_country[ $country_code ]++;
+			}
+
+			// Queue city using the helper method
+			$queued += $this->queue_cities_batch( array( $city ), $options );
+			
+			// Log progress every 100 cities
+			if ( $queued % 100 === 0 ) {
+				file_put_contents( $debug_file, "Progress: Queued $queued cities...\n", FILE_APPEND );
 			}
 		}
-
-		// Process remaining cities in batch
-		if ( ! empty( $batch ) ) {
-			$queued += $this->queue_cities_batch( $batch, $options );
-		}
-
-		fclose( $handle );
 		
-		file_put_contents( $debug_file, "Total lines read: $line_number\n", FILE_APPEND );
+		file_put_contents( $debug_file, "Filtering complete\n", FILE_APPEND );
 
 			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 			$summary = sprintf(
