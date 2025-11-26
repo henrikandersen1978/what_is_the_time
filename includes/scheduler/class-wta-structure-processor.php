@@ -42,11 +42,22 @@ class WTA_Structure_Processor {
 			foreach ( $countries as $item ) {
 				$this->process_item( $item );
 			}
-			// Don't continue to cities until all countries are done
+			// Don't continue until all countries are done
 			return;
 		}
 
-		// 3. Finally process cities (only after countries are done)
+		// 3. Process cities_import batch job (creates individual city jobs)
+		$cities_import = WTA_Queue::get_pending( 'cities_import', 10 );
+		if ( ! empty( $cities_import ) ) {
+			WTA_Logger::info( 'Processing cities_import batch', array( 'count' => count( $cities_import ) ) );
+			foreach ( $cities_import as $item ) {
+				$this->process_item( $item );
+			}
+			// Don't continue to individual cities until batch is done
+			return;
+		}
+
+		// 4. Finally process individual cities (only after cities_import is done)
 		$cities = WTA_Queue::get_pending( 'city', 50 );
 		if ( ! empty( $cities ) ) {
 			WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
