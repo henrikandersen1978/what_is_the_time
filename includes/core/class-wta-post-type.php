@@ -17,8 +17,8 @@ class WTA_Post_Type {
 		// Filter the permalink structure
 		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
 		
-		// Handle URL parsing
-		add_action( 'pre_get_posts', array( $this, 'parse_location_url' ), 1 );
+		// Handle URL parsing - intercept requests
+		add_filter( 'request', array( $this, 'parse_location_request' ), 10, 1 );
 	}
 
 	/**
@@ -81,56 +81,60 @@ class WTA_Post_Type {
 	}
 
 	/**
-	 * Parse location URLs and handle 404s.
+	 * Parse location URLs and handle clean URLs without /location/ prefix.
 	 * 
-	 * This allows clean URLs without /location/ prefix while not breaking other pages.
+	 * This intercepts requests that would be 404s and checks if they're location posts.
 	 *
-	 * @since    2.1.10
-	 * @param    WP_Query $query Main query.
+	 * @since    2.2.1
+	 * @param    array $query_vars Query vars from WordPress.
+	 * @return   array Modified query vars.
 	 */
-	public function parse_location_url( $query ) {
-		// Only on main query, frontend, and when it's a 404
-		if ( ! $query->is_main_query() || is_admin() || ! $query->is_404() ) {
-			return;
+	public function parse_location_request( $query_vars ) {
+		// Skip if we already have query vars set (not a potential 404)
+		if ( ! empty( $query_vars['pagename'] ) || ! empty( $query_vars['name'] ) || ! empty( $query_vars['p'] ) ) {
+			return $query_vars;
 		}
 
 		// Get the request path
-		$request = trim( $_SERVER['REQUEST_URI'], '/' );
+		$request_uri = $_SERVER['REQUEST_URI'];
+		$home_path = parse_url( home_url(), PHP_URL_PATH );
+		
+		// Remove home path from request
+		if ( $home_path && $home_path !== '/' ) {
+			$request_uri = str_replace( $home_path, '', $request_uri );
+		}
+		
+		$request = trim( $request_uri, '/' );
 		$request = strtok( $request, '?' ); // Remove query string
-		$request = trim( $request, '/' );
 		
 		if ( empty( $request ) ) {
-			return;
+			return $query_vars;
 		}
 
 		// Split path into parts
 		$parts = explode( '/', $request );
 		
-		// Try to find a location post by the path
-		$slug = end( $parts );
+		// Try to find a location post by matching the path
+		// For /europa/ → check 'europa'
+		// For /europa/albanien/ → check 'albanien' 
+		// For /europa/albanien/tirana/ → check 'tirana'
+		
+		$slug = sanitize_title( end( $parts ) );
 		
 		// Look for a published location with this slug
-		$args = array(
-			'name'        => sanitize_title( $slug ),
-			'post_type'   => WTA_POST_TYPE,
-			'post_status' => 'publish',
-			'numberposts' => 1,
-		);
+		$post = get_page_by_path( $slug, OBJECT, WTA_POST_TYPE );
 		
-		$posts = get_posts( $args );
-		
-		// If we found a location post, redirect to its proper URL
-		if ( ! empty( $posts ) ) {
-			$post = $posts[0];
-			
-			// Set query to show this post
-			$query->set( 'post_type', WTA_POST_TYPE );
-			$query->set( 'name', $slug );
-			$query->set( 'p', $post->ID );
-			$query->is_404 = false;
-			$query->is_single = true;
-			$query->is_singular = true;
+		// If found, set query vars to load this post
+		if ( $post && $post->post_status === 'publish' ) {
+			return array(
+				'post_type' => WTA_POST_TYPE,
+				'name'      => $slug,
+				'p'         => $post->ID,
+			);
 		}
+		
+		// Not a location, return original query vars
+		return $query_vars;
 	}
 
 	/**
