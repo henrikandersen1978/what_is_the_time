@@ -47,3 +47,5 @@ This will:
 3. Attach the .zip file from this directory
 4. WordPress Plugin Update Checker will find it automatically
 
+
+

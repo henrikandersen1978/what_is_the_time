@@ -170,3 +170,5 @@ Hvis problemet fortsætter, kontakt mig med output fra:
 ls -la /home/runcloud/webapps/whatisthetime/wp-content/plugins/time-zone-clock/includes/
 ```
 
+
+

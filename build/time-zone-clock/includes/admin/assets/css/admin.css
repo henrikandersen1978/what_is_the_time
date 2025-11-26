@@ -1,0 +1,154 @@
+/* World Time AI - Admin Styles */
+
+.wta-dashboard {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 20px;
+	margin-top: 20px;
+}
+
+.wta-admin-page {
+	max-width: 1200px;
+}
+
+.wta-card {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	box-shadow: 0 1px 1px rgba(0,0,0,.04);
+	padding: 20px;
+	margin-bottom: 20px;
+}
+
+.wta-card h2 {
+	margin-top: 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+}
+
+.wta-card-warning {
+	border-left: 4px solid #d63638;
+}
+
+.wta-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 15px;
+	margin: 15px 0;
+}
+
+.wta-stat {
+	text-align: center;
+	padding: 15px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.wta-stat-label {
+	display: block;
+	font-size: 12px;
+	color: #646970;
+	margin-bottom: 5px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.wta-stat-value {
+	display: block;
+	font-size: 32px;
+	font-weight: bold;
+	color: #1d2327;
+	line-height: 1;
+}
+
+.wta-stat-error .wta-stat-value {
+	color: #d63638;
+}
+
+.wta-card table {
+	margin-top: 15px;
+}
+
+.wta-card .widefat td,
+.wta-card .widefat th {
+	padding: 10px;
+}
+
+.wta-card pre {
+	background: #f6f7f7;
+	padding: 15px;
+	border-radius: 4px;
+	overflow-x: auto;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.wta-card code {
+	background: #f6f7f7;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-family: Monaco, Consolas, "Courier New", monospace;
+	font-size: 12px;
+}
+
+.wta-card .button {
+	margin-right: 5px;
+}
+
+.wta-card .spinner {
+	float: none;
+	margin: 0 0 0 5px;
+	vertical-align: middle;
+}
+
+#wta-import-result,
+#wta-test-result,
+#wta-timezone-test-result,
+#wta-retry-result,
+#wta-reset-result {
+	margin-top: 15px;
+}
+
+#wta-logs-container {
+	margin-top: 15px;
+}
+
+#wta-logs-container pre {
+	max-height: 500px;
+	overflow-y: auto;
+}
+
+/* Temperature slider */
+#wta_temperature_slider {
+	width: 200px;
+	vertical-align: middle;
+	margin: 0 10px;
+}
+
+#wta_temperature_display {
+	display: inline-block;
+	min-width: 30px;
+	font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+	.wta-dashboard {
+		grid-template-columns: 1fr;
+	}
+
+	.wta-stats-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.wta-stat-value {
+		font-size: 24px;
+	}
+}
+
+@media (max-width: 600px) {
+	.wta-stats-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+

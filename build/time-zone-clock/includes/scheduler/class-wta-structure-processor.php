@@ -15,7 +15,6 @@ class WTA_Structure_Processor {
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every minute.
-	 * CRITICAL: Process in order - continents first, then countries, then cities!
 	 *
 	 * @since    2.0.0
 	 */
@@ -23,48 +22,24 @@ class WTA_Structure_Processor {
 		// Reset any stuck items first
 		WTA_Queue::reset_stuck();
 
-		// CRITICAL: Process in hierarchical order!
-		// 1. First process ALL pending continents
-		$continents = WTA_Queue::get_pending( 'continent', 50 );
-		if ( ! empty( $continents ) ) {
-			WTA_Logger::info( 'Processing continents', array( 'count' => count( $continents ) ) );
-			foreach ( $continents as $item ) {
-				$this->process_item( $item );
-			}
-			// Don't continue to countries until all continents are done
+		// Get pending items (batch of 50)
+		$items = WTA_Queue::get_pending( null, 50 );
+
+		if ( empty( $items ) ) {
 			return;
 		}
 
-		// 2. Then process ALL pending countries (only after continents are done)
-		$countries = WTA_Queue::get_pending( 'country', 50 );
-		if ( ! empty( $countries ) ) {
-			WTA_Logger::info( 'Processing countries', array( 'count' => count( $countries ) ) );
-			foreach ( $countries as $item ) {
-				$this->process_item( $item );
-			}
-			// Don't continue until all countries are done
-			return;
+		WTA_Logger::info( 'Structure processor started', array(
+			'items' => count( $items ),
+		) );
+
+		foreach ( $items as $item ) {
+			$this->process_item( $item );
 		}
 
-		// 3. Process cities_import batch job (creates individual city jobs)
-		$cities_import = WTA_Queue::get_pending( 'cities_import', 10 );
-		if ( ! empty( $cities_import ) ) {
-			WTA_Logger::info( 'Processing cities_import batch', array( 'count' => count( $cities_import ) ) );
-			foreach ( $cities_import as $item ) {
-				$this->process_item( $item );
-			}
-			// Don't continue to individual cities until batch is done
-			return;
-		}
-
-		// 4. Finally process individual cities (only after cities_import is done)
-		$cities = WTA_Queue::get_pending( 'city', 50 );
-		if ( ! empty( $cities ) ) {
-			WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
-			foreach ( $cities as $item ) {
-				$this->process_item( $item );
-			}
-		}
+		WTA_Logger::info( 'Structure processor completed', array(
+			'processed' => count( $items ),
+		) );
 	}
 
 	/**
@@ -401,101 +376,24 @@ class WTA_Structure_Processor {
 			throw new Exception( 'cities.json not found' );
 		}
 
-		// Increase time limit for streaming large file
-		set_time_limit( 300 ); // 5 minutes
+		// Load cities
+		$content = file_get_contents( $file_path );
+		$cities = json_decode( $content, true );
 
-		$file_size = filesize( $file_path );
-		WTA_Logger::info( 'Starting cities_import batch (STREAMING)', array(
-			'file' => basename( $file_path ),
-			'size_mb' => round( $file_size / 1024 / 1024, 2 ),
-		) );
-
-		// Stream JSON file line-by-line to avoid memory issues
-		$handle = fopen( $file_path, 'r' );
-		if ( false === $handle ) {
-			throw new Exception( 'Could not open cities.json for reading' );
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			throw new Exception( 'JSON decode error: ' . json_last_error_msg() );
 		}
 
-		$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
-		$base_language = get_option( 'wta_base_country_name', 'en' );
-		
-		$queued = 0;
-		$skipped = 0;
-		$line_number = 0;
-		$batch = array();
-		$batch_size = 100; // Process 100 cities at a time
-
-		while ( ! feof( $handle ) ) {
-			$line = fgets( $handle );
-			$line_number++;
-			
-			if ( empty( $line ) || $line_number === 1 ) {
-				continue; // Skip opening bracket
-			}
-
-			// Remove trailing comma and whitespace
-			$line = trim( $line );
-			if ( $line === '[' || $line === ']' ) {
-				continue;
-			}
-			$line = rtrim( $line, ',' );
-
-			// Decode single city JSON
-			$city = json_decode( $line, true );
-			if ( null === $city ) {
-				continue; // Skip invalid JSON lines
-			}
-
-			// Apply population filter
-			if ( isset( $city['population'] ) && $city['population'] < $min_population ) {
-				$skipped++;
-				continue;
-			}
-
-			// Add to batch
-			$batch[] = $city;
-
-			// Process batch when it reaches batch_size
-			if ( count( $batch ) >= $batch_size ) {
-				$queued += $this->queue_cities_batch( $batch, $options );
-				$batch = array(); // Reset batch
-				
-				// Log progress every 1000 cities
-				if ( $queued % 1000 === 0 ) {
-					WTA_Logger::info( 'Cities streaming progress', array(
-						'queued' => $queued,
-						'skipped' => $skipped,
-					) );
-				}
-			}
-		}
-
-		// Process remaining cities in batch
-		if ( ! empty( $batch ) ) {
-			$queued += $this->queue_cities_batch( $batch, $options );
-		}
-
-		fclose( $handle );
+		// Queue individual cities
+		$queued = WTA_Importer::queue_cities_from_array( $cities, $options );
 
 		WTA_Logger::info( 'Cities import batch completed', array(
 			'cities_queued' => $queued,
-			'cities_skipped' => $skipped,
-			'min_population' => $min_population,
+			'total_cities'  => count( $cities ),
+			'min_population' => $options['min_population'],
 		) );
 
 		WTA_Queue::mark_done( $item['id'] );
-	}
-
-	/**
-	 * Queue a batch of cities.
-	 *
-	 * @since    2.3.8
-	 * @param    array $cities   Array of city data.
-	 * @param    array $options  Import options.
-	 * @return   int             Number of cities queued.
-	 */
-	private function queue_cities_batch( $cities, $options ) {
-		return WTA_Importer::queue_cities_from_array( $cities, $options );
 	}
 }
 

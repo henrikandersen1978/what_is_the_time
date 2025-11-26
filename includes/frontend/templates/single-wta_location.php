@@ -1,101 +1,79 @@
 <?php
 /**
- * Single location template - Theme-compatible version.
+ * Single location template - Simple theme-compatible version.
  *
- * This template respects your theme's layout and styling.
+ * This template uses minimal markup and lets the theme control everything.
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/frontend/templates
  */
 
+// Let's try to mimic a normal page/post as much as possible
 get_header(); ?>
 
-<div id="primary" class="content-area">
-	<main id="main" class="site-main">
+<?php
+while ( have_posts() ) :
+	the_post();
 
-		<?php
-		while ( have_posts() ) :
-			the_post();
-
-			$type = get_post_meta( get_the_ID(), 'wta_type', true );
-			$timezone = get_post_meta( get_the_ID(), 'wta_timezone', true );
-			$name_local = get_the_title();
+	$type = get_post_meta( get_the_ID(), 'wta_type', true );
+	$timezone = get_post_meta( get_the_ID(), 'wta_timezone', true );
+	
+	// Get child locations
+	$children = get_posts( array(
+		'post_type'      => WTA_POST_TYPE,
+		'post_parent'    => get_the_ID(),
+		'posts_per_page' => 100,
+		'orderby'        => 'title',
+		'order'          => 'ASC',
+		'post_status'    => 'publish',
+	) );
+	
+	// Add child list to content if exists
+	$child_list_html = '';
+	if ( ! empty( $children ) ) {
+		$child_heading = ( 'continent' === $type ) ? __( 'Lande', 'world-time-ai' ) : __( 'Byer', 'world-time-ai' );
+		
+		$child_list_html = '<div class="wta-children-list"><h2>' . esc_html( $child_heading ) . '</h2><ul class="wta-locations-grid">';
+		foreach ( $children as $child ) {
+			$child_list_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_permalink( $child->ID ) ),
+				esc_html( get_the_title( $child->ID ) )
+			);
+		}
+		$child_list_html .= '</ul></div>';
+	}
+	
+	// Add filter to append child list to content
+	add_filter( 'the_content', function( $content ) use ( $child_list_html ) {
+		return $content . $child_list_html;
+	}, 20 );
+	
+	// Use theme's template for single posts/pages
+	// This is the magic - let theme handle the layout completely
+	if ( function_exists( 'get_template_part' ) ) {
+		// Try to use theme's single template
+		get_template_part( 'template-parts/content', 'single' );
+		if ( ! did_action( 'loop_start' ) ) {
+			get_template_part( 'content', 'single' );
+		}
+		if ( ! did_action( 'loop_start' ) ) {
+			// Fallback: just output content the normal way
 			?>
-
 			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-				
 				<header class="entry-header">
-					<?php
-					// Title with optional prefix for cities
-					if ( 'city' === $type ) {
-						the_title( '<h1 class="entry-title">', '</h1>' );
-					} else {
-						the_title( '<h1 class="entry-title">', '</h1>' );
-					}
-					?>
+					<?php the_title( '<h1 class="entry-title">', '</h1>' ); ?>
 				</header>
-
-				<?php 
-				// Show clock for cities with timezone
-				if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) : 
-				?>
-				<div class="wta-clock-container">
-					<div class="wta-clock" data-timezone="<?php echo esc_attr( $timezone ); ?>">
-						<div class="wta-clock-time">--:--:--</div>
-						<div class="wta-clock-date">-</div>
-						<div class="wta-clock-timezone"><?php echo esc_html( $timezone ); ?></div>
-					</div>
-				</div>
-				<?php endif; ?>
-
 				<div class="entry-content">
 					<?php the_content(); ?>
 				</div>
-
-				<?php
-				// Show child locations (countries or cities)
-				$children = get_posts( array(
-					'post_type'      => WTA_POST_TYPE,
-					'post_parent'    => get_the_ID(),
-					'posts_per_page' => 100,
-					'orderby'        => 'title',
-					'order'          => 'ASC',
-					'post_status'    => 'publish',
-				) );
-
-				if ( ! empty( $children ) ) :
-					// Determine child type based on parent type
-					if ( 'continent' === $type ) {
-						$child_heading = __( 'Lande', 'world-time-ai' );
-					} elseif ( 'country' === $type ) {
-						$child_heading = __( 'Byer', 'world-time-ai' );
-					} else {
-						$child_heading = __( 'Locations', 'world-time-ai' );
-					}
-					?>
-					<div class="wta-children-list">
-						<h2><?php echo esc_html( $child_heading ); ?></h2>
-						<ul class="wta-locations-grid">
-							<?php foreach ( $children as $child ) : ?>
-							<li>
-								<a href="<?php echo esc_url( get_permalink( $child->ID ) ); ?>">
-									<?php echo esc_html( get_the_title( $child->ID ) ); ?>
-								</a>
-							</li>
-							<?php endforeach; ?>
-						</ul>
-					</div>
-				<?php endif; ?>
-
 			</article>
+			<?php
+		}
+	}
 
-		<?php endwhile; ?>
+endwhile;
 
-	</main>
-</div>
-
-<?php
-// Show sidebar if theme supports it
 get_sidebar();
 get_footer();
 

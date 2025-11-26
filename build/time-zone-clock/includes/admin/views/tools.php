@@ -1,0 +1,283 @@
+<?php
+/**
+ * Tools admin page.
+ *
+ * @package    WorldTimeAI
+ * @subpackage WorldTimeAI/includes/admin/views
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+?>
+
+<div class="wrap">
+	<h1><?php esc_html_e( 'Tools & Maintenance', WTA_TEXT_DOMAIN ); ?></h1>
+
+	<div class="wta-admin-page">
+		<!-- Logs -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Recent Logs', WTA_TEXT_DOMAIN ); ?></h2>
+			<p>
+				<button type="button" class="button" id="wta-load-logs"><?php esc_html_e( 'Load Recent Logs', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-logs-container"></div>
+		</div>
+
+		<!-- Queue Management -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Queue Management', WTA_TEXT_DOMAIN ); ?></h2>
+			<p>
+				<button type="button" class="button" id="wta-retry-failed"><?php esc_html_e( 'Retry Failed Items', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<p class="description"><?php esc_html_e( 'Reset failed queue items to pending status (max 3 attempts).', WTA_TEXT_DOMAIN ); ?></p>
+			<div id="wta-retry-result"></div>
+		</div>
+
+		<!-- Action Scheduler -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Scheduled Actions', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'View and manage Action Scheduler jobs.', WTA_TEXT_DOMAIN ); ?></p>
+			<p>
+				<a href="<?php echo esc_url( admin_url( 'tools.php?page=action-scheduler' ) ); ?>" class="button">
+					<?php esc_html_e( 'View Scheduled Actions', WTA_TEXT_DOMAIN ); ?>
+				</a>
+			</p>
+		</div>
+
+		<!-- Translation Cache -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Translation Cache', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'Clear cached AI translations. Use this when you change the base language or want to force fresh translations.', WTA_TEXT_DOMAIN ); ?></p>
+			<p>
+				<button type="button" class="button" id="wta-clear-translation-cache"><?php esc_html_e( 'Clear Translation Cache', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-translation-cache-result"></div>
+		</div>
+
+		<!-- Reset Data -->
+		<div class="wta-card wta-card-warning">
+			<h2><?php esc_html_e( 'Reset All Data', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><strong><?php esc_html_e( 'Warning:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'This will delete all location posts and clear the queue. This action cannot be undone!', WTA_TEXT_DOMAIN ); ?></p>
+			<p>
+				<button type="button" class="button button-secondary" id="wta-reset-data"><?php esc_html_e( 'Reset All Data', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-reset-result"></div>
+		</div>
+
+		<!-- Data Files -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Data Files', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'JSON data files location:', WTA_TEXT_DOMAIN ); ?> <code><?php echo esc_html( WTA_Github_Fetcher::get_data_directory() ); ?></code></p>
+			<p class="description"><?php esc_html_e( 'Files in this directory persist across plugin updates.', WTA_TEXT_DOMAIN ); ?></p>
+			<?php
+			$countries_info = WTA_Github_Fetcher::get_file_info( 'countries.json' );
+			$cities_info = WTA_Github_Fetcher::get_file_info( 'cities.json' );
+			?>
+			<ul>
+				<li>
+					<strong>countries.json:</strong>
+					<?php echo $countries_info ? '✅ ' . esc_html( $countries_info['size_formatted'] ) : '❌ Not found'; ?>
+				</li>
+				<li>
+					<strong>cities.json:</strong>
+					<?php echo $cities_info ? '✅ ' . esc_html( $cities_info['size_formatted'] ) : '❌ Not found'; ?>
+				</li>
+			</ul>
+		</div>
+
+		<!-- System Info -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'System Information', WTA_TEXT_DOMAIN ); ?></h2>
+			<table class="widefat">
+				<tbody>
+					<tr>
+						<td><strong><?php esc_html_e( 'Plugin Version', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( WTA_VERSION ); ?></td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'WordPress Version', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( get_bloginfo( 'version' ) ); ?></td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'PHP Version', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( phpversion() ); ?></td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'MySQL Version', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php global $wpdb; echo esc_html( $wpdb->db_version() ); ?></td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'Memory Limit', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( WP_MEMORY_LIMIT ); ?></td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'Max Execution Time', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( ini_get( 'max_execution_time' ) ); ?> seconds</td>
+					</tr>
+					<tr>
+						<td><strong><?php esc_html_e( 'Upload Max Size', WTA_TEXT_DOMAIN ); ?></strong></td>
+						<td><?php echo esc_html( ini_get( 'upload_max_filesize' ) ); ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<script>
+jQuery(document).ready(function($) {
+	// Load logs
+	$('#wta-load-logs').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $container = $('#wta-logs-container');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_get_logs',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					var logs = response.data.logs;
+					if (logs.length > 0) {
+						var html = '<pre style="background: #f1f1f1; padding: 10px; max-height: 400px; overflow-y: scroll;">';
+						logs.forEach(function(log) {
+							html += log + '\n';
+						});
+						html += '</pre>';
+						$container.html(html);
+					} else {
+						$container.html('<p>No logs found.</p>');
+					}
+				}
+			},
+			error: function() {
+				$container.html('<div class="notice notice-error"><p>Failed to load logs</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Clear translation cache
+	$('#wta-clear-translation-cache').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-translation-cache-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_clear_translation_cache',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Retry failed
+	$('#wta-retry-failed').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-retry-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_retry_failed_items',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Reset data
+	$('#wta-reset-data').on('click', function() {
+		if (!confirm('<?php echo esc_js( __( 'Are you sure you want to delete all location posts and clear the queue? This cannot be undone!', WTA_TEXT_DOMAIN ) ); ?>')) {
+			return;
+		}
+		
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-reset-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_reset_all_data',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + ' (' + response.data.deleted + ' posts deleted)</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+});
+</script>
+
+
