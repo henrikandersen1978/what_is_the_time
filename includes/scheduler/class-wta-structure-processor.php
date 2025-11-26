@@ -512,10 +512,39 @@ class WTA_Structure_Processor {
 					// Filter by country_code (iso2)
 					if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 						$skipped_country++;
-					} elseif ( $min_population > 0 && isset( $city['population'] ) && $city['population'] > 0 && $city['population'] < $min_population ) {
-						// Apply population filter
-						$skipped_population++;
-					} else {
+					} elseif ( $min_population > 0 ) {
+						// Apply population filter - SKIP cities with null or zero population OR below threshold
+						if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
+							$skipped_population++;
+							continue; // Skip to next iteration
+						}
+					}
+					
+					// Filter out municipalities, communes, and administrative divisions
+					if ( isset( $city['name'] ) ) {
+						$name_lower = strtolower( $city['name'] );
+						// Skip if name contains municipality/commune keywords
+						if ( strpos( $name_lower, 'kommune' ) !== false ||
+						     strpos( $name_lower, 'municipality' ) !== false ||
+						     strpos( $name_lower, 'commune' ) !== false ||
+						     strpos( $name_lower, 'district' ) !== false ||
+						     strpos( $name_lower, 'province' ) !== false ) {
+							$skipped_country++; // Use same counter for simplicity
+							continue;
+						}
+					}
+					
+					// Filter by type field if present
+					if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
+						// Skip non-city types
+						if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+							$skipped_country++;
+							continue;
+						}
+					}
+					
+					// If we reach here, city passed all filters
+					{
 						// Max cities per country
 						$should_queue = true;
 						if ( $max_cities_per_country > 0 ) {
@@ -532,14 +561,13 @@ class WTA_Structure_Processor {
 							}
 						}
 						
-						if ( $should_queue ) {
-							// Queue city using the helper method
-							$queued += $this->queue_cities_batch( array( $city ), $options );
-							
-							// Log progress every 100 cities
-							if ( $queued % 100 === 0 ) {
-								file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
-							}
+					if ( $should_queue ) {
+						// Queue city using the helper method
+						$queued += $this->queue_cities_batch( array( $city ), $options );
+						
+						// Log progress every 100 cities
+						if ( $queued % 100 === 0 ) {
+							file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
 						}
 					}
 				}
