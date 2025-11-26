@@ -406,6 +406,26 @@ class WTA_Admin {
 	}
 
 	/**
+	 * AJAX: Reset stuck queue items.
+	 *
+	 * @since    2.3.9
+	 */
+	public function ajax_reset_stuck_items() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		$count = WTA_Queue::reset_stuck();
+
+		wp_send_json_success( array(
+			'message' => "Reset $count stuck jobs to pending",
+			'count'   => $count,
+		) );
+	}
+
+	/**
 	 * AJAX: Retry failed queue items.
 	 *
 	 * @since    2.0.0

@@ -29,10 +29,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="wta-card">
 			<h2><?php esc_html_e( 'Queue Management', WTA_TEXT_DOMAIN ); ?></h2>
 			<p>
+				<button type="button" class="button" id="wta-reset-stuck"><?php esc_html_e( 'Reset Stuck Jobs', WTA_TEXT_DOMAIN ); ?></button>
 				<button type="button" class="button" id="wta-retry-failed"><?php esc_html_e( 'Retry Failed Items', WTA_TEXT_DOMAIN ); ?></button>
 				<span class="spinner"></span>
 			</p>
-			<p class="description"><?php esc_html_e( 'Reset failed queue items to pending status (max 3 attempts).', WTA_TEXT_DOMAIN ); ?></p>
+			<p class="description"><?php esc_html_e( 'Reset stuck/processing jobs (5+ min) or retry failed items (max 3 attempts).', WTA_TEXT_DOMAIN ); ?></p>
 			<div id="wta-retry-result"></div>
 		</div>
 
@@ -187,6 +188,40 @@ jQuery(document).ready(function($) {
 			type: 'POST',
 			data: {
 				action: 'wta_clear_translation_cache',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Reset stuck jobs
+	$('#wta-reset-stuck').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.siblings('.spinner');
+		var $result = $('#wta-retry-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_reset_stuck_items',
 				nonce: wtaAdmin.nonce
 			},
 			success: function(response) {
