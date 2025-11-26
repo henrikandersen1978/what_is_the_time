@@ -443,13 +443,22 @@ class WTA_Structure_Processor {
 		}
 
 		$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
+		$filtered_country_ids = isset( $options['filtered_countries'] ) ? $options['filtered_countries'] : array();
 		$base_language = get_option( 'wta_base_country_name', 'en' );
+		
+		$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
+		file_put_contents( $debug_file, "Min population: $min_population\n", FILE_APPEND );
+		file_put_contents( $debug_file, "Filtered country IDs: " . implode( ', ', $filtered_country_ids ) . "\n", FILE_APPEND );
 		
 		$queued = 0;
 		$skipped = 0;
+		$skipped_country = 0;
+		$skipped_population = 0;
 		$line_number = 0;
 		$batch = array();
 		$batch_size = 100; // Process 100 cities at a time
+		
+		$first_city_logged = false;
 
 		while ( ! feof( $handle ) ) {
 			$line = fgets( $handle );
@@ -471,15 +480,28 @@ class WTA_Structure_Processor {
 			if ( null === $city ) {
 				continue; // Skip invalid JSON lines
 			}
+			
+			// Log first city for debugging
+			if ( ! $first_city_logged ) {
+				file_put_contents( $debug_file, "First city structure: " . print_r( $city, true ) . "\n", FILE_APPEND );
+				$first_city_logged = true;
+			}
+
+			// Filter by country
+			if ( ! empty( $filtered_country_ids ) && ! in_array( $city['country_id'], $filtered_country_ids, true ) ) {
+				$skipped_country++;
+				continue;
+			}
 
 			// Apply population filter
-			if ( isset( $city['population'] ) && $city['population'] < $min_population ) {
-				$skipped++;
+			if ( $min_population > 0 && isset( $city['population'] ) && $city['population'] > 0 && $city['population'] < $min_population ) {
+				$skipped_population++;
 				continue;
 			}
 
 			// Add to batch
 			$batch[] = $city;
+			$skipped = 0; // Reset skipped counter (this was for total skipped)
 
 			// Process batch when it reaches batch_size
 			if ( count( $batch ) >= $batch_size ) {
@@ -504,12 +526,19 @@ class WTA_Structure_Processor {
 		fclose( $handle );
 
 			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
-			$summary = "COMPLETED: Queued=$queued, Skipped=$skipped, Min_pop=$min_population\n";
+			$summary = sprintf(
+				"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Min_pop=%d\n",
+				$queued,
+				$skipped_country,
+				$skipped_population,
+				$min_population
+			);
 			file_put_contents( $debug_file, $summary, FILE_APPEND );
 			
 			WTA_Logger::info( 'Cities import batch completed', array(
 				'cities_queued' => $queued,
-				'cities_skipped' => $skipped,
+				'skipped_country' => $skipped_country,
+				'skipped_population' => $skipped_population,
 				'min_population' => $min_population,
 			) );
 
