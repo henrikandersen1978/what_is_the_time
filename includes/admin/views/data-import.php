@@ -116,23 +116,71 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 				<table class="form-table">
 					<tr>
 						<th scope="row">
-							<?php esc_html_e( 'Select Continents', WTA_TEXT_DOMAIN ); ?>
+							<?php esc_html_e( 'Import Mode', WTA_TEXT_DOMAIN ); ?>
 						</th>
 						<td>
 							<fieldset>
 								<legend class="screen-reader-text">
-									<span><?php esc_html_e( 'Select Continents', WTA_TEXT_DOMAIN ); ?></span>
+									<span><?php esc_html_e( 'Import Mode', WTA_TEXT_DOMAIN ); ?></span>
 								</legend>
-								<?php foreach ( $continents as $code => $name ) : ?>
-								<label>
-									<input type="checkbox" name="continents[]" value="<?php echo esc_attr( $code ); ?>" 
-										<?php checked( in_array( $code, $selected_continents, true ) ); ?> />
-									<?php echo esc_html( $name ); ?>
-								</label><br />
-								<?php endforeach; ?>
-								<p class="description">
-									<?php esc_html_e( 'Leave all unchecked to import all continents', WTA_TEXT_DOMAIN ); ?>
-								</p>
+								<label style="margin-bottom: 10px; display: block;">
+									<input type="radio" name="import_mode" value="continents" id="mode_continents" checked />
+									<strong><?php esc_html_e( 'Import by Continents', WTA_TEXT_DOMAIN ); ?></strong>
+								</label>
+								<div id="continent_selector" style="margin-left: 25px; margin-bottom: 15px;">
+									<?php foreach ( $continents as $code => $name ) : ?>
+									<label>
+										<input type="checkbox" name="continents[]" value="<?php echo esc_attr( $code ); ?>" 
+											<?php checked( in_array( $code, $selected_continents, true ) ); ?> />
+										<?php echo esc_html( $name ); ?>
+									</label><br />
+									<?php endforeach; ?>
+									<p class="description">
+										<?php esc_html_e( 'Leave all unchecked to import all continents', WTA_TEXT_DOMAIN ); ?>
+									</p>
+								</div>
+								
+								<label style="margin-bottom: 10px; display: block;">
+									<input type="radio" name="import_mode" value="countries" id="mode_countries" />
+									<strong><?php esc_html_e( '🚀 Quick Test: Select Specific Countries', WTA_TEXT_DOMAIN ); ?></strong>
+								</label>
+								<div id="country_selector" style="margin-left: 25px; display: none;">
+									<p class="description" style="margin-bottom: 10px;">
+										<?php esc_html_e( 'Perfect for testing! Select only specific countries (e.g., Denmark).', WTA_TEXT_DOMAIN ); ?>
+									</p>
+									<select id="country_select" name="countries[]" multiple style="width: 100%; height: 150px;">
+										<?php
+										$countries = WTA_Github_Fetcher::fetch_countries();
+										if ( $countries ) {
+											// Group by continent for better UX
+											$by_continent = array();
+											foreach ( $countries as $country ) {
+												$continent = isset( $country['region'] ) ? $country['region'] : 'Other';
+												if ( ! isset( $by_continent[ $continent ] ) ) {
+													$by_continent[ $continent ] = array();
+												}
+												$by_continent[ $continent ][] = $country;
+											}
+											ksort( $by_continent );
+											
+											foreach ( $by_continent as $continent => $continent_countries ) {
+												echo '<optgroup label="' . esc_attr( $continent ) . '">';
+												foreach ( $continent_countries as $country ) {
+													printf(
+														'<option value="%s">%s</option>',
+														esc_attr( $country['iso2'] ),
+														esc_html( $country['name'] )
+													);
+												}
+												echo '</optgroup>';
+											}
+										}
+										?>
+									</select>
+									<p class="description">
+										<?php esc_html_e( 'Hold Ctrl (Windows) or Cmd (Mac) to select multiple countries.', WTA_TEXT_DOMAIN ); ?>
+									</p>
+								</div>
 							</fieldset>
 						</td>
 					</tr>
