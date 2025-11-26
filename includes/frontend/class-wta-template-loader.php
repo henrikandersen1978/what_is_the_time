@@ -17,9 +17,16 @@ class WTA_Template_Loader {
 	 */
 	public function load_template( $template ) {
 		if ( is_singular( WTA_POST_TYPE ) ) {
-			$custom_template = WTA_PLUGIN_DIR . 'includes/frontend/templates/single-world_time_location.php';
-			if ( file_exists( $custom_template ) ) {
-				return $custom_template;
+			// Try new template name first (wta_location)
+			$new_template = WTA_PLUGIN_DIR . 'includes/frontend/templates/single-wta_location.php';
+			if ( file_exists( $new_template ) ) {
+				return $new_template;
+			}
+			
+			// Fallback to old template name for backwards compatibility
+			$old_template = WTA_PLUGIN_DIR . 'includes/frontend/templates/single-world_time_location.php';
+			if ( file_exists( $old_template ) ) {
+				return $old_template;
 			}
 		}
 
