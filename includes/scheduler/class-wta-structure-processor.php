@@ -544,23 +544,22 @@ class WTA_Structure_Processor {
 					}
 					
 					// If we reach here, city passed all filters
-					{
-						// Max cities per country
-						$should_queue = true;
-						if ( $max_cities_per_country > 0 ) {
-							$country_code = $city['country_code'];
-							if ( ! isset( $per_country[ $country_code ] ) ) {
-								$per_country[ $country_code ] = 0;
-							}
-
-							if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-								$should_queue = false;
-								$skipped_max_reached++;
-							} else {
-								$per_country[ $country_code ]++;
-							}
+					// Max cities per country
+					$should_queue = true;
+					if ( $max_cities_per_country > 0 ) {
+						$country_code = $city['country_code'];
+						if ( ! isset( $per_country[ $country_code ] ) ) {
+							$per_country[ $country_code ] = 0;
 						}
-						
+
+						if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+							$should_queue = false;
+							$skipped_max_reached++;
+						} else {
+							$per_country[ $country_code ]++;
+						}
+					}
+					
 					if ( $should_queue ) {
 						// Queue city using the helper method
 						$queued += $this->queue_cities_batch( array( $city ), $options );
