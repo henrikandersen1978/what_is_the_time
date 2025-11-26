@@ -394,21 +394,35 @@ class WTA_Structure_Processor {
 	 * @param    array $item Queue item.
 	 */
 	private function process_cities_import( $item ) {
-		$options = $item['payload'];
-		$file_path = $options['file_path'];
+		WTA_Logger::info( '=== CITIES_IMPORT STARTED ===' );
+		
+		try {
+			if ( ! isset( $item['payload'] ) ) {
+				throw new Exception( 'Missing payload in cities_import item' );
+			}
+			
+			$options = $item['payload'];
+			WTA_Logger::info( 'Payload received', array( 'keys' => array_keys( $options ) ) );
+			
+			if ( ! isset( $options['file_path'] ) ) {
+				throw new Exception( 'Missing file_path in payload' );
+			}
+			
+			$file_path = $options['file_path'];
+			WTA_Logger::info( 'File path extracted', array( 'path' => $file_path ) );
 
-		if ( ! file_exists( $file_path ) ) {
-			throw new Exception( 'cities.json not found' );
-		}
+			if ( ! file_exists( $file_path ) ) {
+				throw new Exception( 'cities.json not found at: ' . $file_path );
+			}
 
-		// Increase time limit for streaming large file
-		set_time_limit( 300 ); // 5 minutes
+			// Increase time limit for streaming large file
+			set_time_limit( 300 ); // 5 minutes
 
-		$file_size = filesize( $file_path );
-		WTA_Logger::info( 'Starting cities_import batch (STREAMING)', array(
-			'file' => basename( $file_path ),
-			'size_mb' => round( $file_size / 1024 / 1024, 2 ),
-		) );
+			$file_size = filesize( $file_path );
+			WTA_Logger::info( 'Starting cities_import batch (STREAMING)', array(
+				'file' => basename( $file_path ),
+				'size_mb' => round( $file_size / 1024 / 1024, 2 ),
+			) );
 
 		// Stream JSON file line-by-line to avoid memory issues
 		$handle = fopen( $file_path, 'r' );
@@ -477,13 +491,22 @@ class WTA_Structure_Processor {
 
 		fclose( $handle );
 
-		WTA_Logger::info( 'Cities import batch completed', array(
-			'cities_queued' => $queued,
-			'cities_skipped' => $skipped,
-			'min_population' => $min_population,
-		) );
+			WTA_Logger::info( 'Cities import batch completed', array(
+				'cities_queued' => $queued,
+				'cities_skipped' => $skipped,
+				'min_population' => $min_population,
+			) );
 
-		WTA_Queue::mark_done( $item['id'] );
+			WTA_Queue::mark_done( $item['id'] );
+			
+		} catch ( Exception $e ) {
+			WTA_Logger::error( 'CRITICAL: cities_import failed', array(
+				'error' => $e->getMessage(),
+				'file' => $e->getFile(),
+				'line' => $e->getLine(),
+			) );
+			throw $e; // Re-throw to mark as failed
+		}
 	}
 
 	/**
