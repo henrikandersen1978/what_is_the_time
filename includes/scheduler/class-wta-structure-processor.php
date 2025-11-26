@@ -15,6 +15,7 @@ class WTA_Structure_Processor {
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every minute.
+	 * CRITICAL: Process in order - continents first, then countries, then cities!
 	 *
 	 * @since    2.0.0
 	 */
@@ -22,24 +23,37 @@ class WTA_Structure_Processor {
 		// Reset any stuck items first
 		WTA_Queue::reset_stuck();
 
-		// Get pending items (batch of 50)
-		$items = WTA_Queue::get_pending( null, 50 );
-
-		if ( empty( $items ) ) {
+		// CRITICAL: Process in hierarchical order!
+		// 1. First process ALL pending continents
+		$continents = WTA_Queue::get_pending( 'continent', 50 );
+		if ( ! empty( $continents ) ) {
+			WTA_Logger::info( 'Processing continents', array( 'count' => count( $continents ) ) );
+			foreach ( $continents as $item ) {
+				$this->process_item( $item );
+			}
+			// Don't continue to countries until all continents are done
 			return;
 		}
 
-		WTA_Logger::info( 'Structure processor started', array(
-			'items' => count( $items ),
-		) );
-
-		foreach ( $items as $item ) {
-			$this->process_item( $item );
+		// 2. Then process ALL pending countries (only after continents are done)
+		$countries = WTA_Queue::get_pending( 'country', 50 );
+		if ( ! empty( $countries ) ) {
+			WTA_Logger::info( 'Processing countries', array( 'count' => count( $countries ) ) );
+			foreach ( $countries as $item ) {
+				$this->process_item( $item );
+			}
+			// Don't continue to cities until all countries are done
+			return;
 		}
 
-		WTA_Logger::info( 'Structure processor completed', array(
-			'processed' => count( $items ),
-		) );
+		// 3. Finally process cities (only after countries are done)
+		$cities = WTA_Queue::get_pending( 'city', 50 );
+		if ( ! empty( $cities ) ) {
+			WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
+			foreach ( $cities as $item ) {
+				$this->process_item( $item );
+			}
+		}
 	}
 
 	/**
