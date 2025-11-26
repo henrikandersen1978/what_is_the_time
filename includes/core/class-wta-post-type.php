@@ -14,11 +14,11 @@ class WTA_Post_Type {
 	 * @since    2.0.0
 	 */
 	public function __construct() {
-		// Add custom rewrite rules
-		add_action( 'init', array( $this, 'add_rewrite_rules' ), 20 );
-		
 		// Filter the permalink structure
 		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
+		
+		// Handle URL parsing
+		add_action( 'pre_get_posts', array( $this, 'parse_location_url' ), 1 );
 	}
 
 	/**
@@ -62,10 +62,14 @@ class WTA_Post_Type {
 			'publicly_queryable' => true,
 			'show_ui'            => true,
 			'show_in_menu'       => false, // We add custom menu via admin class
-			'query_var'          => WTA_POST_TYPE, // IMPORTANT: Use post type name as query var
-			'rewrite'            => false, // We handle rewrite rules manually
+			'query_var'          => true,
+			'rewrite'            => array(
+				'slug'         => 'location',
+				'with_front'   => false,
+				'hierarchical' => true,
+			),
 			'capability_type'    => 'post',
-			'has_archive'        => true,
+			'has_archive'        => false,
 			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships
 			'menu_position'      => null,
 			'menu_icon'          => 'dashicons-clock',
@@ -77,35 +81,60 @@ class WTA_Post_Type {
 	}
 
 	/**
-	 * Add custom rewrite rules for hierarchical URLs without post type slug.
+	 * Parse location URLs and handle 404s.
+	 * 
+	 * This allows clean URLs without /location/ prefix while not breaking other pages.
 	 *
-	 * @since    2.1.8
+	 * @since    2.1.10
+	 * @param    WP_Query $query Main query.
 	 */
-	public function add_rewrite_rules() {
-		// Match: /continent/country/city/
-		add_rewrite_rule(
-			'^([^/]+)/([^/]+)/([^/]+)/?$',
-			'index.php?' . WTA_POST_TYPE . '=$matches[3]',
-			'top'
-		);
+	public function parse_location_url( $query ) {
+		// Only on main query, frontend, and when it's a 404
+		if ( ! $query->is_main_query() || is_admin() || ! $query->is_404() ) {
+			return;
+		}
 
-		// Match: /continent/country/
-		add_rewrite_rule(
-			'^([^/]+)/([^/]+)/?$',
-			'index.php?' . WTA_POST_TYPE . '=$matches[2]',
-			'top'
-		);
+		// Get the request path
+		$request = trim( $_SERVER['REQUEST_URI'], '/' );
+		$request = strtok( $request, '?' ); // Remove query string
+		$request = trim( $request, '/' );
+		
+		if ( empty( $request ) ) {
+			return;
+		}
 
-		// Match: /continent/
-		add_rewrite_rule(
-			'^([^/]+)/?$',
-			'index.php?' . WTA_POST_TYPE . '=$matches[1]',
-			'top'
+		// Split path into parts
+		$parts = explode( '/', $request );
+		
+		// Try to find a location post by the path
+		$slug = end( $parts );
+		
+		// Look for a published location with this slug
+		$args = array(
+			'name'        => sanitize_title( $slug ),
+			'post_type'   => WTA_POST_TYPE,
+			'post_status' => 'publish',
+			'numberposts' => 1,
 		);
+		
+		$posts = get_posts( $args );
+		
+		// If we found a location post, redirect to its proper URL
+		if ( ! empty( $posts ) ) {
+			$post = $posts[0];
+			
+			// Set query to show this post
+			$query->set( 'post_type', WTA_POST_TYPE );
+			$query->set( 'name', $slug );
+			$query->set( 'p', $post->ID );
+			$query->is_404 = false;
+			$query->is_single = true;
+			$query->is_singular = true;
+		}
 	}
 
 	/**
-	 * Filter the post type link to generate clean URLs.
+	 * Filter the post type link to generate clean URLs (remove /location/ prefix).
 	 *
 	 * @since    2.0.0
 	 * @param    string  $post_link The post's permalink.
@@ -117,23 +146,8 @@ class WTA_Post_Type {
 			return $post_link;
 		}
 
-		// Build hierarchical URL
-		$slug_parts = array();
-		$current_post = $post;
-
-		// Traverse up the hierarchy
-		while ( $current_post ) {
-			array_unshift( $slug_parts, $current_post->post_name );
-			
-			if ( $current_post->post_parent ) {
-				$current_post = get_post( $current_post->post_parent );
-			} else {
-				$current_post = null;
-			}
-		}
-
-		// Generate URL
-		$post_link = home_url( '/' . implode( '/', $slug_parts ) . '/' );
+		// Remove the /location/ prefix from the URL
+		$post_link = str_replace( '/location/', '/', $post_link );
 
 		return $post_link;
 	}
