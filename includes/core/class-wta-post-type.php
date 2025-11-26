@@ -14,6 +14,9 @@ class WTA_Post_Type {
 	 * @since    2.0.0
 	 */
 	public function __construct() {
+		// Add custom rewrite rules
+		add_action( 'init', array( $this, 'add_rewrite_rules' ), 20 );
+		
 		// Filter the permalink structure
 		add_filter( 'post_type_link', array( $this, 'filter_post_type_link' ), 10, 2 );
 	}
@@ -60,11 +63,7 @@ class WTA_Post_Type {
 			'show_ui'            => true,
 			'show_in_menu'       => false, // We add custom menu via admin class
 			'query_var'          => true,
-			'rewrite'            => array(
-				'slug'         => '',
-				'with_front'   => false,
-				'hierarchical' => true,
-			),
+			'rewrite'            => false, // We handle rewrite rules manually
 			'capability_type'    => 'post',
 			'has_archive'        => true,
 			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships
@@ -75,6 +74,34 @@ class WTA_Post_Type {
 		);
 
 		register_post_type( WTA_POST_TYPE, $args );
+	}
+
+	/**
+	 * Add custom rewrite rules for hierarchical URLs without post type slug.
+	 *
+	 * @since    2.1.8
+	 */
+	public function add_rewrite_rules() {
+		// Match: /continent/country/city/
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]&wta_path=$matches[1]/$matches[2]/$matches[3]',
+			'top'
+		);
+
+		// Match: /continent/country/
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]&wta_path=$matches[1]/$matches[2]',
+			'top'
+		);
+
+		// Match: /continent/
+		add_rewrite_rule(
+			'^([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]&wta_path=$matches[1]',
+			'top'
+		);
 	}
 
 	/**
