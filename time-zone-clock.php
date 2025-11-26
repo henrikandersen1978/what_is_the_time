@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.3.1
+ * Version:           2.3.2
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.3.1' );
+define( 'WTA_VERSION', '2.3.2' );
 
 /**
  * Plugin directory path.
@@ -44,7 +44,7 @@ define( 'WTA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 /**
  * Custom post type name.
  */
-define( 'WTA_POST_TYPE', 'world_time_location' );
+define( 'WTA_POST_TYPE', 'wta_location' );
 
 /**
  * Text domain for translations.
@@ -98,6 +98,29 @@ register_deactivation_hook( __FILE__, 'deactivate_world_time_ai' );
  * The core plugin class.
  */
 require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
+
+/**
+ * DIRECT post type registration for debugging.
+ * Register BEFORE anything else to ensure it works.
+ */
+add_action( 'init', function() {
+	register_post_type( 'wta_location', array(
+		'labels' => array(
+			'name' => 'Locations',
+			'singular_name' => 'Location',
+		),
+		'public' => true,
+		'publicly_queryable' => true,
+		'show_ui' => true,
+		'show_in_menu' => true,
+		'query_var' => true,
+		'rewrite' => array( 'slug' => 'location' ),
+		'has_archive' => false,
+		'hierarchical' => true,
+		'supports' => array( 'title', 'editor', 'author', 'page-attributes' ),
+		'show_in_rest' => true,
+	) );
+}, 0 );
 
 /**
  * Begins execution of the plugin.
