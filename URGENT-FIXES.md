@@ -200,3 +200,4 @@ private function generate_links_section( $post_id, $type ) {
 2. **Content structure** - forbedrer kvalitet og SEO markant
 
 
+

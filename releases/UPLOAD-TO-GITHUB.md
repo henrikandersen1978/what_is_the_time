@@ -125,3 +125,4 @@ git push origin vX.Y.Z
 **Note:** .zip filen er **IKKE** i git repository (gitignored), men findes lokalt i `releases/` mappen.
 
 
+

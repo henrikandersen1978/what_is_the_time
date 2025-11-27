@@ -268,11 +268,21 @@ class WTA_Structure_Processor {
 		$data = $item['payload'];
 
 		// Find parent country post (include draft posts!)
+		// CRITICAL: Use meta_query to filter by BOTH country_id AND type='country'
 		$country_post_id = get_posts( array(
 			'post_type'   => WTA_POST_TYPE,
 			'post_status' => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
-			'meta_key'    => 'wta_country_id',
-			'meta_value'  => $data['country_id'],
+			'meta_query'  => array(
+				'relation' => 'AND',
+				array(
+					'key'   => 'wta_country_id',
+					'value' => $data['country_id'],
+				),
+				array(
+					'key'   => 'wta_type',
+					'value' => 'country',
+				),
+			),
 			'numberposts' => 1,
 			'fields'      => 'ids',
 		) );
