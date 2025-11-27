@@ -36,14 +36,14 @@ class WTA_Shortcodes {
 		// Get current post ID
 		$post_id = get_the_ID();
 		if ( ! $post_id ) {
-			return '';
+			return '<!-- Major Cities: No post ID -->';
 		}
 		
 		// Get location type
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		
 		if ( empty( $type ) || ! in_array( $type, array( 'continent', 'country' ) ) ) {
-			return '';
+			return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
 		}
 		
 		// Get child posts (countries or cities)
@@ -57,19 +57,26 @@ class WTA_Shortcodes {
 			) );
 			
 			if ( empty( $children ) ) {
-				return '';
+				return '<!-- Major Cities: No child countries found for continent (ID: ' . $post_id . ') -->';
 			}
+			
+			$child_ids = wp_list_pluck( $children, 'ID' );
 			
 			// Then find major cities across all countries
 			$major_cities = get_posts( array(
 				'post_type'      => WTA_POST_TYPE,
 				'posts_per_page' => intval( $atts['count'] ),
-				'post_parent__in' => wp_list_pluck( $children, 'ID' ),
+				'post_parent__in' => $child_ids,
 				'orderby'        => 'meta_value_num',
 				'meta_key'       => 'wta_population',
 				'order'          => 'DESC',
 				'post_status'    => array( 'publish', 'draft' ),
 			) );
+			
+			// Debug info
+			if ( empty( $major_cities ) ) {
+				return '<!-- Major Cities: No cities found. Countries: ' . count( $children ) . ' (IDs: ' . implode( ', ', $child_ids ) . ') -->';
+			}
 		} else {
 			// For country: get direct child cities
 			$major_cities = get_posts( array(
@@ -81,10 +88,10 @@ class WTA_Shortcodes {
 				'order'          => 'DESC',
 				'post_status'    => array( 'publish', 'draft' ),
 			) );
-		}
-		
-		if ( empty( $major_cities ) ) {
-			return '<!-- No major cities found yet -->';
+			
+			if ( empty( $major_cities ) ) {
+				return '<!-- Major Cities: No cities found for country (ID: ' . $post_id . ') -->';
+			}
 		}
 		
 		// Build output
