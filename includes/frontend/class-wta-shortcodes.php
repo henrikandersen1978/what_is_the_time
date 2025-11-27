@@ -15,6 +15,84 @@ class WTA_Shortcodes {
 	 */
 	public function register_shortcodes() {
 		add_shortcode( 'wta_child_locations', array( $this, 'child_locations_shortcode' ) );
+		add_shortcode( 'wta_city_time', array( $this, 'city_time_shortcode' ) );
+	}
+
+	/**
+	 * Shortcode to display current time in a city.
+	 *
+	 * Usage: [wta_city_time city="London"]
+	 *
+	 * @since    2.9.2
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function city_time_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'city' => '',
+		), $atts );
+		
+		if ( empty( $atts['city'] ) ) {
+			return '';
+		}
+		
+		// Find city post by name
+		$city_posts = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'title'          => $atts['city'],
+			'posts_per_page' => 1,
+			'post_status'    => array( 'publish', 'draft' ),
+		) );
+		
+		if ( empty( $city_posts ) ) {
+			return '';
+		}
+		
+		$city_post = $city_posts[0];
+		$timezone = get_post_meta( $city_post->ID, 'wta_timezone', true );
+		
+		if ( empty( $timezone ) ) {
+			return '';
+		}
+		
+		// Get base country timezone
+		$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+		$base_country = get_option( 'wta_base_country_name', 'Danmark' );
+		
+		// Calculate time difference
+		try {
+			$city_tz = new DateTimeZone( $timezone );
+			$base_tz = new DateTimeZone( $base_timezone );
+			$now = new DateTime( 'now', $city_tz );
+			$base_time = new DateTime( 'now', $base_tz );
+			
+			$offset = $city_tz->getOffset( $now ) - $base_tz->getOffset( $base_time );
+			$hours_diff = $offset / 3600;
+			
+			$diff_text = '';
+			if ( $hours_diff > 0 ) {
+				$diff_text = sprintf( '%+.1f timer foran %s', $hours_diff, $base_country );
+			} elseif ( $hours_diff < 0 ) {
+				$diff_text = sprintf( '%.1f timer efter %s', abs( $hours_diff ), $base_country );
+			} else {
+				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+			}
+			
+			// Format time
+			$time_format = $now->format( 'H:i' );
+			
+			$output = sprintf(
+				'<span class="wta-inline-city-time"><strong>%s:</strong> %s (%s)</span>',
+				esc_html( $atts['city'] ),
+				esc_html( $time_format ),
+				esc_html( $diff_text )
+			);
+			
+			return $output;
+			
+		} catch ( Exception $e ) {
+			return '';
+		}
 	}
 
 	/**
@@ -134,8 +212,11 @@ class WTA_Shortcodes {
 		$output .= '<ul class="wta-grid-list">' . "\n";
 		
 		foreach ( $children as $child ) {
+			// Get simple title (not SEO H1) - use post_title directly
+			$simple_title = get_post_field( 'post_title', $child->ID );
+			
 			$output .= '<li class="wta-grid-item"><a class="wta-location-link" href="' . esc_url( get_permalink( $child->ID ) ) . '">';
-			$output .= esc_html( get_the_title( $child->ID ) );
+			$output .= esc_html( $simple_title );
 			$output .= '</a></li>' . "\n";
 		}
 		

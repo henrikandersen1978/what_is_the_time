@@ -58,6 +58,23 @@ div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-l
 	text-decoration: none !important;
 }
 
+/* Inline City Time Shortcode */
+span.wta-inline-city-time {
+	display: block !important;
+	margin: 0.5em 0 !important;
+	padding: 0.75em 1em !important;
+	background: #f8f9fa !important;
+	border-left: 3px solid #2271b1 !important;
+	border-radius: 3px !important;
+	font-size: 0.95em !important;
+	line-height: 1.6 !important;
+}
+
+span.wta-inline-city-time strong {
+	color: #2271b1 !important;
+	font-weight: 600 !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
 	div.wta-plugin-locations-grid ul.wta-grid-list {
@@ -68,6 +85,11 @@ div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-l
 	div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link {
 		padding: 0.75em !important;
 		font-size: 0.9em !important;
+	}
+	
+	span.wta-inline-city-time {
+		font-size: 0.9em !important;
+		padding: 0.6em 0.8em !important;
 	}
 }
 
