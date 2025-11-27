@@ -78,6 +78,15 @@ class WTA_Admin {
 			array( $this, 'display_tools_page' )
 		);
 
+		add_submenu_page(
+			'world-time-ai',
+			__( 'Debug Info', WTA_TEXT_DOMAIN ),
+			__( 'Debug Info', WTA_TEXT_DOMAIN ),
+			'manage_options',
+			'wta-debug',
+			array( $this, 'display_debug_page' )
+		);
+
 		// Add submenu for All Locations (CPT)
 		add_submenu_page(
 			'world-time-ai',

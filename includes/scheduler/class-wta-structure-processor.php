@@ -347,6 +347,11 @@ class WTA_Structure_Processor {
 		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
 		update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+		
+		// Save population (CRITICAL for major cities shortcode!)
+		if ( isset( $data['population'] ) && $data['population'] > 0 ) {
+			update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
+		}
 
 		if ( isset( $data['latitude'] ) ) {
 			update_post_meta( $post_id, 'wta_lat', $data['latitude'] );
