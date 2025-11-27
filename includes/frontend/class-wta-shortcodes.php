@@ -75,45 +75,66 @@ class WTA_Shortcodes {
 		
 		$count = count( $children );
 		
+		// Count unique timezones (estimate based on children)
+		$timezone_count = 'flere';
+		if ( 'continent' === $parent_type ) {
+			// Rough estimate: most continents have multiple timezones
+			$timezone_estimates = array(
+				'Europa'      => '4',
+				'Asien'       => '11',
+				'Afrika'      => '6',
+				'Nordamerika' => '6',
+				'Sydamerika'  => '4',
+				'Oceanien'    => '3',
+			);
+			$timezone_count = isset( $timezone_estimates[ $parent_name ] ) ? $timezone_estimates[ $parent_name ] : 'flere';
+		}
+		
 		// Build output
 		$output = '';
 		
 		// Heading
-		$output .= '<h2>' . ucfirst( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+		if ( 'continent' === $parent_type ) {
+			$output .= '<h2>Oversigt over ' . esc_html( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+		} elseif ( 'country' === $parent_type ) {
+			$output .= '<h2>Oversigt over ' . esc_html( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+		} else {
+			$output .= '<h2>' . ucfirst( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+		}
 		
 		// Intro text
-		$intro = sprintf(
-			'%s består af %d %s med forskellige tidszoner. Klik på %s %s for at se den nøjagtige tid og tidszone information.',
-			$parent_name,
-			$count,
-			$child_type_plural,
-			$count === 1 ? $child_type : 'et ' . $child_type,
-			$count === 1 ? '' : 'eller by'
-		);
-		
-		// Simplify intro based on type
 		if ( 'continent' === $parent_type ) {
 			$intro = sprintf(
-				'%s består af %d %s med forskellige tidszoner. Klik på et land for at se aktuel tid og tidszoner.',
+				'I %s er der %d %s og %s tidszoner. Klik på et land for at se aktuel tid og tidszoner.',
+				$parent_name,
+				$count,
+				$child_type_plural,
+				$timezone_count
+			);
+		} elseif ( 'country' === $parent_type ) {
+			$intro = sprintf(
+				'I %s finder du %d store %s. Klik på en by for at se aktuel tid og tidszoner.',
 				$parent_name,
 				$count,
 				$child_type_plural
 			);
-		} elseif ( 'country' === $parent_type ) {
+		} else {
 			$intro = sprintf(
-				'Se hvad klokken er i de største byer i %s. Klik på en by for at få aktuel tid og detaljeret information.',
-				$parent_name
+				'%s har %d %s. Klik for at se mere information.',
+				$parent_name,
+				$count,
+				$child_type_plural
 			);
 		}
 		
 		$output .= '<p>' . esc_html( $intro ) . '</p>' . "\n";
 		
-		// Locations grid
-		$output .= '<div class="wta-locations-grid">' . "\n";
-		$output .= '<ul>' . "\n";
+		// Locations grid (with very specific class to prevent theme override)
+		$output .= '<div class="wta-plugin-locations-grid wta-child-list">' . "\n";
+		$output .= '<ul class="wta-grid-list">' . "\n";
 		
 		foreach ( $children as $child ) {
-			$output .= '<li><a href="' . esc_url( get_permalink( $child->ID ) ) . '">';
+			$output .= '<li class="wta-grid-item"><a class="wta-location-link" href="' . esc_url( get_permalink( $child->ID ) ) . '">';
 			$output .= esc_html( get_the_title( $child->ID ) );
 			$output .= '</a></li>' . "\n";
 		}
