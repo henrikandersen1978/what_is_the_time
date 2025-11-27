@@ -91,6 +91,8 @@ class WTA_AI_Processor {
 			// Update Yoast SEO meta if available
 			if ( isset( $result['yoast_title'] ) ) {
 				update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+				// Also save as custom H1 field for Pilanto theme
+				update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
 			}
 			if ( isset( $result['yoast_desc'] ) ) {
 				update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );

@@ -147,6 +147,10 @@ class WTA_Structure_Processor {
 		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
 		update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['name'] ) );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+		
+		// Save SEO-friendly H1 title for theme to display
+		$seo_h1 = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+		update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 
 		// Queue AI content generation
 		WTA_Queue::add( 'ai_content', array(
