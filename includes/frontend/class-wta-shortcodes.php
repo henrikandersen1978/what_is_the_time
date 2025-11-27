@@ -134,7 +134,7 @@ class WTA_Shortcodes {
 		
 		// Get location type and names
 		$parent_type = get_post_meta( $post->ID, 'wta_type', true );
-		$parent_name = get_the_title( $post->ID );
+		$parent_name = get_post_field( 'post_title', $post->ID ); // Simple title, not SEO H1
 		
 		// Determine child type
 		$child_type = '';
