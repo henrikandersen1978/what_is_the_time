@@ -171,6 +171,10 @@ class WTA_Core {
 		// Enqueue frontend assets
 		$this->loader->add_action( 'wp_enqueue_scripts', $template_loader, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $template_loader, 'enqueue_scripts' );
+		
+		// Register shortcodes
+		$shortcodes = new WTA_Shortcodes();
+		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
 
 		// Shortcodes
 		$shortcodes = new WTA_Shortcodes();

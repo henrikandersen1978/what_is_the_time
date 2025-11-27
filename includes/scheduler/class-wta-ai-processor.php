@@ -163,28 +163,20 @@ class WTA_AI_Processor {
 			'{location_name_local}' => $name_local,
 		);
 		
-		// Get child countries for the list (include draft posts!)
+		// Use shortcode for dynamic child locations list
+		// This shortcode will display children (countries/cities) with heading and intro
+		$country_list = '[wta_child_locations]' . "\n\n";
+		
+		// Get major cities for context (for AI prompt)
 		$children = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_parent'    => $post_id,
 			'posts_per_page' => 100,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
-			'post_status'    => array( 'publish', 'draft' ), // Include drafts!
+			'post_status'    => array( 'publish', 'draft' ),
 		) );
 		
-		// Build country list HTML (auto-generated, not AI)
-		$country_list = '';
-		if ( ! empty( $children ) ) {
-			$country_list = '<h2>Lande i ' . esc_html( $name_local ) . '</h2>' . "\n";
-			$country_list .= '<div class="wta-locations-grid"><ul>' . "\n";
-			foreach ( $children as $child ) {
-				$country_list .= '<li><a href="' . esc_url( get_permalink( $child->ID ) ) . '">' . esc_html( get_the_title( $child->ID ) ) . '</a></li>' . "\n";
-			}
-			$country_list .= '</ul></div>' . "\n\n";
-		}
-		
-		// Get major cities for the cities section context
 		$major_cities = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
 			'posts_per_page' => 7,

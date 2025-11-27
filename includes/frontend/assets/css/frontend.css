@@ -1,5 +1,58 @@
 /* World Time AI - Frontend Styles */
 
+/* Child Locations Grid */
+.wta-locations-grid {
+	margin: 2em 0;
+}
+
+.wta-locations-grid ul {
+	list-style: none;
+	padding: 0;
+	margin: 1em 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 1em;
+}
+
+.wta-locations-grid li {
+	margin: 0;
+	padding: 0;
+}
+
+.wta-locations-grid a {
+	display: block;
+	padding: 1em;
+	background: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	text-decoration: none;
+	color: #333;
+	transition: all 0.2s ease;
+	text-align: center;
+	font-weight: 500;
+}
+
+.wta-locations-grid a:hover {
+	background: #fff;
+	border-color: #2271b1;
+	color: #2271b1;
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.wta-locations-grid ul {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 0.75em;
+	}
+	
+	.wta-locations-grid a {
+		padding: 0.75em;
+		font-size: 0.9em;
+	}
+}
+
 .wta-location-single {
 	max-width: 800px;
 	margin: 0 auto;

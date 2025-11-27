@@ -253,6 +253,10 @@ class WTA_Structure_Processor {
 			'post_id' => $post_id,
 			'type'    => 'country',
 		), 'ai_country_' . $post_id );
+		
+		// Check if parent continent needs content regeneration
+		// (to include this new country in the country list)
+		$this->maybe_regenerate_parent_content( $parent->ID );
 
 		WTA_Logger::info( 'Country post created', array(
 			'post_id' => $post_id,
