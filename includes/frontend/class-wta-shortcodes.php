@@ -16,6 +16,134 @@ class WTA_Shortcodes {
 	public function register_shortcodes() {
 		add_shortcode( 'wta_child_locations', array( $this, 'child_locations_shortcode' ) );
 		add_shortcode( 'wta_city_time', array( $this, 'city_time_shortcode' ) );
+		add_shortcode( 'wta_major_cities', array( $this, 'major_cities_shortcode' ) );
+	}
+
+	/**
+	 * Shortcode to display major cities with live clocks.
+	 *
+	 * Usage: [wta_major_cities count="12"]
+	 *
+	 * @since    2.9.7
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function major_cities_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'count' => 12,
+		), $atts );
+		
+		// Get current post ID
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return '';
+		}
+		
+		// Get location type
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		
+		if ( empty( $type ) || ! in_array( $type, array( 'continent', 'country' ) ) ) {
+			return '';
+		}
+		
+		// Get child posts (countries or cities)
+		if ( $type === 'continent' ) {
+			// For continent: get all child countries first
+			$children = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'post_parent'    => $post_id,
+				'posts_per_page' => -1,
+				'post_status'    => array( 'publish', 'draft' ),
+			) );
+			
+			if ( empty( $children ) ) {
+				return '';
+			}
+			
+			// Then find major cities across all countries
+			$major_cities = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'posts_per_page' => intval( $atts['count'] ),
+				'post_parent__in' => wp_list_pluck( $children, 'ID' ),
+				'orderby'        => 'meta_value_num',
+				'meta_key'       => 'wta_population',
+				'order'          => 'DESC',
+				'post_status'    => array( 'publish', 'draft' ),
+			) );
+		} else {
+			// For country: get direct child cities
+			$major_cities = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'posts_per_page' => intval( $atts['count'] ),
+				'post_parent'    => $post_id,
+				'orderby'        => 'meta_value_num',
+				'meta_key'       => 'wta_population',
+				'order'          => 'DESC',
+				'post_status'    => array( 'publish', 'draft' ),
+			) );
+		}
+		
+		if ( empty( $major_cities ) ) {
+			return '<!-- No major cities found yet -->';
+		}
+		
+		// Build output
+		$output = '<div class="wta-city-times-grid">' . "\n";
+		
+		foreach ( $major_cities as $city ) {
+			$city_name = get_post_field( 'post_title', $city->ID );
+			$timezone = get_post_meta( $city->ID, 'wta_timezone', true );
+			
+			if ( empty( $timezone ) ) {
+				continue;
+			}
+			
+			// Get base country timezone
+			$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+			
+			try {
+				$city_tz = new DateTimeZone( $timezone );
+				$base_tz = new DateTimeZone( $base_timezone );
+				$now = new DateTime( 'now', $city_tz );
+				$base_time = new DateTime( 'now', $base_tz );
+				
+				$offset = $city_tz->getOffset( $now ) - $base_tz->getOffset( $base_time );
+				$hours_diff = $offset / 3600;
+				
+				$diff_text = '';
+				if ( $hours_diff > 0 ) {
+					$diff_text = sprintf( '+%.1f timer foran', abs( $hours_diff ) );
+				} elseif ( $hours_diff < 0 ) {
+					$diff_text = sprintf( '%.1f timer efter', abs( $hours_diff ) );
+				} else {
+					$diff_text = 'Samme tid';
+				}
+				
+				// Initial time with seconds
+				$initial_time = $now->format( 'H:i:s' );
+				
+				// Build clock HTML
+				$output .= sprintf(
+					'<div class="wta-live-city-clock" data-timezone="%s" data-base-offset="%.1f">
+						<div class="wta-city-name">%s</div>
+						<div class="wta-time">%s</div>
+						<div class="wta-time-diff">%s</div>
+					</div>' . "\n",
+					esc_attr( $timezone ),
+					$hours_diff,
+					esc_html( $city_name ),
+					esc_html( $initial_time ),
+					esc_html( $diff_text )
+				);
+				
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+		
+		$output .= '</div>';
+		
+		return $output;
 	}
 
 	/**

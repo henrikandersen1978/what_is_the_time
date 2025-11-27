@@ -221,26 +221,9 @@ class WTA_AI_Processor {
 		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
 		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $cities_system, $cities_user );
 		
-		// Automatically add city time shortcodes after AI content (wrapped in grid)
-		// DEBUG: Log what we find
-		WTA_Logger::info( 'Major cities for continent', array(
-			'continent_id' => $post_id,
-			'continent_name' => $name_local,
-			'major_cities_count' => count( $major_cities ),
-			'major_cities_names' => ! empty( $major_cities ) ? implode( ', ', wp_list_pluck( $major_cities, 'post_title' ) ) : 'NONE',
-		) );
-		
-		if ( ! empty( $major_cities ) ) {
-			$cities_content .= "\n\n" . '<div class="wta-city-times-grid">' . "\n";
-			foreach ( $major_cities as $city ) {
-				$city_name = get_post_field( 'post_title', $city->ID );
-				$cities_content .= '[wta_city_time city="' . esc_attr( $city_name ) . '"]' . "\n";
-			}
-			$cities_content .= '</div>';
-		} else {
-			// If no cities found, add note for debugging
-			$cities_content .= "\n\n" . '<!-- DEBUG: No major cities found yet for this continent -->';
-		}
+		// Add dynamic shortcode to display major cities with live clocks
+		// This shortcode queries the database when the page loads, so no timing issues!
+		$cities_content .= "\n\n" . '[wta_major_cities count="12"]';
 		
 		// === 5. GEOGRAPHY ===
 		$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
