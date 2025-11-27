@@ -184,11 +184,16 @@ class WTA_AI_Processor {
 			'orderby'        => 'meta_value_num',
 			'meta_key'       => 'wta_population',
 			'order'          => 'DESC',
-			'post_status'    => 'publish',
+			'post_status'    => array( 'publish', 'draft' ), // Include drafts!
 		) );
 		$cities_list = '';
 		if ( ! empty( $major_cities ) ) {
-			$cities_list = 'Største byer: ' . implode( ', ', wp_list_pluck( $major_cities, 'post_title' ) );
+			// Get simple post titles (not SEO H1)
+			$city_names = array();
+			foreach ( $major_cities as $city ) {
+				$city_names[] = get_post_field( 'post_title', $city->ID );
+			}
+			$cities_list = implode( ', ', $city_names );
 		}
 		
 		// === 1. INTRO ===
