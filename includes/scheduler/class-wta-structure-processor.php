@@ -128,10 +128,11 @@ class WTA_Structure_Processor {
 			return;
 		}
 
-		// Create post with Danish name and slug
+		// Create post with SEO-friendly H1 title
+		$seo_title = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
 		$post_id = wp_insert_post( array(
-			'post_title'   => $data['name_local'],
-			'post_name'    => sanitize_title( $data['name_local'] ),
+			'post_title'   => $seo_title,
+			'post_name'    => sanitize_title( $data['name_local'] ), // Slug is just continent name
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft', // Will be published after AI content
 			'post_parent'  => 0,

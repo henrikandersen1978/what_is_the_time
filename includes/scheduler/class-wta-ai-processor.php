@@ -161,23 +161,26 @@ class WTA_AI_Processor {
 			'{location_name_local}' => $name_local,
 		);
 		
-		// Get child countries for the list
+		// Get child countries for the list (include draft posts!)
 		$children = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_parent'    => $post_id,
 			'posts_per_page' => 100,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
-			'post_status'    => 'publish',
+			'post_status'    => array( 'publish', 'draft' ), // Include drafts!
 		) );
 		
 		// Build country list HTML (auto-generated, not AI)
-		$country_list = '<h2>Lande i ' . esc_html( $name_local ) . '</h2>' . "\n";
-		$country_list .= '<div class="wta-locations-grid"><ul>' . "\n";
-		foreach ( $children as $child ) {
-			$country_list .= '<li><a href="' . esc_url( get_permalink( $child->ID ) ) . '">' . esc_html( get_the_title( $child->ID ) ) . '</a></li>' . "\n";
+		$country_list = '';
+		if ( ! empty( $children ) ) {
+			$country_list = '<h2>Lande i ' . esc_html( $name_local ) . '</h2>' . "\n";
+			$country_list .= '<div class="wta-locations-grid"><ul>' . "\n";
+			foreach ( $children as $child ) {
+				$country_list .= '<li><a href="' . esc_url( get_permalink( $child->ID ) ) . '">' . esc_html( get_the_title( $child->ID ) ) . '</a></li>' . "\n";
+			}
+			$country_list .= '</ul></div>' . "\n\n";
 		}
-		$country_list .= '</ul></div>' . "\n\n";
 		
 		// Get major cities for the cities section context
 		$major_cities = get_posts( array(
@@ -234,12 +237,19 @@ class WTA_AI_Processor {
 		$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $facts_system, $facts_user );
 		
 		// === COMBINE ALL SECTIONS ===
+		// Add paragraph breaks to make content more readable
+		$intro = $this->add_paragraph_breaks( $intro );
+		$timezone_content = $this->add_paragraph_breaks( $timezone_content );
+		$cities_content = $this->add_paragraph_breaks( $cities_content );
+		$geography_content = $this->add_paragraph_breaks( $geography_content );
+		$facts_content = $this->add_paragraph_breaks( $facts_content );
+		
 		$full_content = $intro . "\n\n";
 		$full_content .= $country_list;
-		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . ' - Komplet Oversigt</h2>' . "\n" . $timezone_content . "\n\n";
-		$full_content .= '<h2>Hvad er Klokken i de Største Byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
-		$full_content .= '<h2>Geografi og Beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
-		$full_content .= '<h2>Interessante Fakta om Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
+		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . ' – komplet oversigt</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Hvad er klokken i de største byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
+		$full_content .= '<h2>Geografi og beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
+		$full_content .= '<h2>Interessante fakta om tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
@@ -449,6 +459,54 @@ class WTA_AI_Processor {
 		
 		// Clean up the content
 		return $this->clean_ai_content( $content );
+	}
+
+	/**
+	 * Add paragraph breaks to AI content for better readability.
+	 *
+	 * Converts long text blocks into properly formatted paragraphs.
+	 *
+	 * @since    2.8.1
+	 * @param    string $content The AI-generated content.
+	 * @return   string          Content with paragraph breaks.
+	 */
+	private function add_paragraph_breaks( $content ) {
+		// If content already has paragraph tags, return as is
+		if ( strpos( $content, '<p>' ) !== false ) {
+			return $content;
+		}
+		
+		// Split by sentence boundaries (. followed by space and capital letter)
+		// Group sentences into paragraphs of 2-4 sentences
+		$sentences = preg_split( '/(?<=[.!?])\s+(?=[A-ZÆØÅ])/', $content );
+		
+		if ( count( $sentences ) <= 2 ) {
+			// Short content, wrap in single paragraph
+			return '<p>' . trim( $content ) . '</p>';
+		}
+		
+		$paragraphs = array();
+		$current_paragraph = array();
+		$sentence_count = 0;
+		
+		foreach ( $sentences as $sentence ) {
+			$current_paragraph[] = $sentence;
+			$sentence_count++;
+			
+			// Create a new paragraph every 2-3 sentences
+			if ( $sentence_count >= 2 && ( $sentence_count >= 3 || count( $sentences ) - count( $current_paragraph ) <= 2 ) ) {
+				$paragraphs[] = '<p>' . trim( implode( ' ', $current_paragraph ) ) . '</p>';
+				$current_paragraph = array();
+				$sentence_count = 0;
+			}
+		}
+		
+		// Add any remaining sentences
+		if ( ! empty( $current_paragraph ) ) {
+			$paragraphs[] = '<p>' . trim( implode( ' ', $current_paragraph ) ) . '</p>';
+		}
+		
+		return implode( "\n\n", $paragraphs );
 	}
 
 	/**
