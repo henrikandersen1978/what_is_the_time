@@ -246,10 +246,10 @@ class WTA_AI_Processor {
 		
 		$full_content = $intro . "\n\n";
 		$full_content .= $country_list;
-		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . ' – komplet oversigt</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
 		$full_content .= '<h2>Hvad er klokken i de største byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
 		$full_content .= '<h2>Geografi og beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
-		$full_content .= '<h2>Interessante fakta om tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
+		$full_content .= '<h2>Interessante fakta om ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
@@ -351,13 +351,22 @@ class WTA_AI_Processor {
 	/**
 	 * Generate Yoast SEO title.
 	 *
-	 * @since    2.3.6
+	 * For continents, creates SEO-friendly H1 like "Hvad er klokken i Europa? Tidszoner og aktuel tid"
+	 * For other types, uses AI generation.
+	 *
+	 * @since    2.8.2
 	 * @param    int    $post_id Post ID.
 	 * @param    string $name    Location name.
 	 * @param    string $type    Location type.
 	 * @return   string|false    Generated title or false.
 	 */
 	private function generate_yoast_title( $post_id, $name, $type ) {
+		// For continents, use SEO-friendly template
+		if ( 'continent' === $type ) {
+			return sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name );
+		}
+		
+		// For other types, use AI generation
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
 			return false;
