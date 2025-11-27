@@ -36,6 +36,9 @@ class WTA_Settings {
 		// AI Prompts
 		$prompt_types = array( 
 			'translate_name', 'city_title', 'city_content', 'country_title', 'country_content',
+			// Country page template (6 sections)
+			'country_intro', 'country_timezone', 'country_cities', 'country_weather', 'country_culture', 'country_travel',
+			// Continent page template (5 sections)
 			'continent_intro', 'continent_timezone', 'continent_cities', 'continent_geography', 'continent_facts',
 			'yoast_title', 'yoast_desc'
 		);

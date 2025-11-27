@@ -248,6 +248,10 @@ class WTA_Structure_Processor {
 			}
 		}
 
+		// Save SEO-friendly H1 title for theme to display
+		$seo_h1 = sprintf( 'Hvad er klokken i %s? Aktuel tid og tidszoner', $data['name_local'] );
+		update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+
 		// Queue AI content generation
 		WTA_Queue::add( 'ai_content', array(
 			'post_id' => $post_id,

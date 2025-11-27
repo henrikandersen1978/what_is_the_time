@@ -129,9 +129,11 @@ class WTA_AI_Processor {
 		// Use multi-section generation for continents
 		if ( 'continent' === $type ) {
 			return $this->generate_continent_content( $post_id );
+		} elseif ( 'country' === $type ) {
+			return $this->generate_country_content( $post_id );
 		}
 		
-		// Use standard generation for countries and cities (for now)
+		// Use standard generation for cities only
 		return $this->generate_standard_content( $post_id, $type );
 	}
 
@@ -266,7 +268,142 @@ class WTA_AI_Processor {
 	}
 
 	/**
-	 * Generate standard content (for countries and cities).
+	 * Generate structured content for countries with multiple sections.
+	 *
+	 * Uses customizable prompts from admin settings for each section.
+	 * Parallel structure to continent pages but tailored for country-specific content.
+	 *
+	 * @since    2.10.0
+	 * @param    int $post_id Post ID.
+	 * @return   array|false  Generated content or false on failure.
+	 */
+	private function generate_country_content( $post_id ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		$temperature = (float) get_option( 'wta_openai_temperature', 0.7 );
+		
+		$name_local = get_the_title( $post_id );
+		$name_original = get_post_meta( $post_id, 'wta_name_original', true );
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		
+		// Get parent continent name
+		$parent_id = wp_get_post_parent_id( $post_id );
+		$continent_name = $parent_id ? get_the_title( $parent_id ) : '';
+		
+		// Build variables for prompts
+		$variables = array(
+			'{location_name}'       => $name_original,
+			'{location_name_local}' => $name_local,
+			'{continent_name}'      => $continent_name,
+			'{timezone}'            => $timezone,
+			'{base_country_name}'   => get_option( 'wta_base_country_name', 'Danmark' ),
+		);
+		
+		// Use shortcode for dynamic child locations list (cities)
+		$city_list = '[wta_child_locations]' . "\n\n";
+		
+		// Get major cities for AI prompt context
+		$major_cities = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'posts_per_page' => 12,
+			'post_parent'    => $post_id,
+			'orderby'        => 'meta_value_num',
+			'meta_key'       => 'wta_population',
+			'order'          => 'DESC',
+			'post_status'    => array( 'publish', 'draft' ),
+		) );
+		
+		$cities_list = '';
+		if ( ! empty( $major_cities ) ) {
+			$city_names = array();
+			foreach ( $major_cities as $city ) {
+				$city_names[] = get_post_field( 'post_title', $city->ID );
+			}
+			$cities_list = implode( ', ', $city_names );
+		}
+		
+		// === 1. INTRO ===
+		$intro_system = get_option( 'wta_prompt_country_intro_system', '' );
+		$intro_user = get_option( 'wta_prompt_country_intro_user', '' );
+		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+		$intro = $this->call_openai_api( $api_key, $model, $temperature, 300, $intro_system, $intro_user );
+		
+		// === 2. CITY LIST (auto-generated shortcode) ===
+		
+		// === 3. TIMEZONE ===
+		$tz_system = get_option( 'wta_prompt_country_timezone_system', '' );
+		$tz_user = get_option( 'wta_prompt_country_timezone_user', '' );
+		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $tz_system, $tz_user );
+		
+		// === 4. MAJOR CITIES ===
+		$cities_system = get_option( 'wta_prompt_country_cities_system', '' );
+		$cities_user = get_option( 'wta_prompt_country_cities_user', '' );
+		$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
+		$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
+		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
+		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $cities_system, $cities_user );
+		
+		// Add dynamic shortcode for live city clocks (12 cities in 3x4 grid)
+		$cities_content .= "\n\n" . '[wta_major_cities count="12"]';
+		
+		// === 5. WEATHER & CLIMATE ===
+		$weather_system = get_option( 'wta_prompt_country_weather_system', '' );
+		$weather_user = get_option( 'wta_prompt_country_weather_user', '' );
+		$weather_system = str_replace( array_keys( $variables ), array_values( $variables ), $weather_system );
+		$weather_user = str_replace( array_keys( $variables ), array_values( $variables ), $weather_user );
+		$weather_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $weather_system, $weather_user );
+		
+		// === 6. CULTURE & TIME ===
+		$culture_system = get_option( 'wta_prompt_country_culture_system', '' );
+		$culture_user = get_option( 'wta_prompt_country_culture_user', '' );
+		$culture_system = str_replace( array_keys( $variables ), array_values( $variables ), $culture_system );
+		$culture_user = str_replace( array_keys( $variables ), array_values( $variables ), $culture_user );
+		$culture_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $culture_system, $culture_user );
+		
+		// === 7. TRAVEL INFO ===
+		$travel_system = get_option( 'wta_prompt_country_travel_system', '' );
+		$travel_user = get_option( 'wta_prompt_country_travel_user', '' );
+		$travel_system = str_replace( array_keys( $variables ), array_values( $variables ), $travel_system );
+		$travel_user = str_replace( array_keys( $variables ), array_values( $variables ), $travel_user );
+		$travel_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $travel_system, $travel_user );
+		
+		// === COMBINE ALL SECTIONS ===
+		// Add paragraph breaks to make content more readable
+		$intro = $this->add_paragraph_breaks( $intro );
+		$timezone_content = $this->add_paragraph_breaks( $timezone_content );
+		$cities_content = $this->add_paragraph_breaks( $cities_content );
+		$weather_content = $this->add_paragraph_breaks( $weather_content );
+		$culture_content = $this->add_paragraph_breaks( $culture_content );
+		$travel_content = $this->add_paragraph_breaks( $travel_content );
+		
+		$full_content = $intro . "\n\n";
+		$full_content .= $city_list;
+		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Hvad er klokken i de største byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
+		$full_content .= '<h2>Vejr og klima i ' . esc_html( $name_local ) . '</h2>' . "\n" . $weather_content . "\n\n";
+		$full_content .= '<h2>Tidskultur og dagligdag i ' . esc_html( $name_local ) . '</h2>' . "\n" . $culture_content . "\n\n";
+		$full_content .= '<h2>Hvad du skal vide om tid når du rejser til ' . esc_html( $name_local ) . '</h2>' . "\n" . $travel_content;
+		
+		// Generate Yoast SEO meta (this also becomes the H1!)
+		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
+		$yoast_desc = $this->generate_yoast_description( $post_id, $name_local, 'country' );
+		
+		return array(
+			'content'     => $full_content,
+			'yoast_title' => $yoast_title,
+			'yoast_desc'  => $yoast_desc,
+		);
+	}
+
+	/**
+	 * Generate standard content (for cities only).
 	 *
 	 * @since    2.3.6
 	 * @param    int    $post_id Post ID.

@@ -90,6 +90,135 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_prompts' ) ) {
 				</table>
 			</div>
 
+		<!-- Country Content Template -->
+		<div class="wta-card">
+			<h2>🗺️ <?php esc_html_e( 'Country Page Template (6 Sections)', WTA_TEXT_DOMAIN ); ?></h2>
+			
+			<div class="notice notice-info inline" style="margin: 15px 0;">
+				<p><strong>📌 <?php esc_html_e( 'Content Structure:', WTA_TEXT_DOMAIN ); ?></strong></p>
+				<ol>
+					<li><strong><?php esc_html_e( 'Intro', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI generated (configure below)', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'City List', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Auto-inserted [wta_child_locations] shortcode', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Tidszoner', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI generated (configure below)', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Major Cities', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI text + auto-inserted [wta_major_cities count="12"] shortcode', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Weather & Climate', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI generated (configure below)', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Culture & Time', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI generated (configure below)', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Travel Info', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'AI generated (configure below)', WTA_TEXT_DOMAIN ); ?></li>
+				</ol>
+			</div>
+
+			<!-- Section 1: Intro -->
+			<h3>📝 1. <?php esc_html_e( 'Introduction (2-3 short paragraphs)', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_intro_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_intro_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_intro_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_intro_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}, {continent_name}, {base_country_name}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- Section 2: Timezone -->
+			<h3>🕒 2. <?php esc_html_e( 'Tidszoner (H2: "Tidszoner i [land]")', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_timezone_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_timezone_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_timezone_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_timezone_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}, {timezone}, {base_country_name}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- Section 3: Major Cities -->
+			<h3>🏙️ 3. <?php esc_html_e( 'Store byer (H2: "Hvad er klokken i de største byer i [land]?")', WTA_TEXT_DOMAIN ); ?></h3>
+			<p class="description" style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107;">
+				<strong>ℹ️ <?php esc_html_e( 'Note:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( '[wta_major_cities count="12"] shortcode indsættes automatisk efter AI-tekst for at vise 12 live klokker i 3x4 grid.', WTA_TEXT_DOMAIN ); ?>
+			</p>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_cities_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_cities_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_cities_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_cities_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}, {cities_list}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- Section 4: Weather & Climate -->
+			<h3>☀️ 4. <?php esc_html_e( 'Vejr og klima (H2: "Vejr og klima i [land]")', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_weather_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_weather_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_weather_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_weather_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- Section 5: Culture & Time -->
+			<h3>🎭 5. <?php esc_html_e( 'Tidskultur (H2: "Tidskultur og dagligdag i [land]")', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_culture_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_culture_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_culture_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_culture_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}, {base_country_name}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- Section 6: Travel Info -->
+			<h3>✈️ 6. <?php esc_html_e( 'Rejseinformation (H2: "Hvad du skal vide om tid når du rejser til [land]")', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_travel_system" rows="3" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_travel_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_country_travel_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_country_travel_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Variables: {location_name_local}, {base_country_name}', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+		</div>
+
 		<!-- Continent Content Template -->
 		<div class="wta-card">
 			<h2>🌍 <?php esc_html_e( 'Continent Page Template', WTA_TEXT_DOMAIN ); ?></h2>

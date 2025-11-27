@@ -159,9 +159,73 @@ class WTA_Activator {
 		add_option( 'wta_prompt_country_title_system', 'Du er en SEO ekspert der skriver fængende sider på dansk.' );
 		add_option( 'wta_prompt_country_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.' );
 
-		// Country page content
+		// Country page content (OLD - kept for backward compatibility)
 		add_option( 'wta_prompt_country_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om lande. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
 		add_option( 'wta_prompt_country_content_user', 'Skriv 300-400 ord om {location_name_local} i {continent_name}. Inkluder konkrete fakta om tidszoner, geografi og kultur. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
+
+		// === COUNTRY PAGE TEMPLATE (Multi-section) ===
+		
+		// Country page - Section 1: Introduction
+		add_option( 'wta_prompt_country_intro_system', 'Du er en SEO-ekspert der skriver naturligt dansk indhold om lande og tidszoner. Skriv informativt og direkte til danske brugere. VIGTIG: Skriv KUN ren tekst uden overskrifter, uden markdown, uden ChatGPT-fraser. Alle sætninger SKAL afsluttes korrekt. Brug KORTE, varierede sætninger for god læsbarhed. Teksten opdeles automatisk i paragraffer.' );
+		add_option( 'wta_prompt_country_intro_user', 'Skriv 2-3 korte afsnit (max 150 ord) der introducerer {location_name_local} i {continent_name}. Fokuser på tidszone, geografisk placering og hvad klokken er i landet lige nu. Nævn tidsforskel til {base_country_name} hvis relevant. Skriv direkte og konkret.
+
+VIGTIGT: Skriv IKKE "velkommen til", "lad os udforske" eller lignende intro-fraser.' );
+
+		// Country page - Section 2: Timezones
+		add_option( 'wta_prompt_country_timezone_system', 'Du er ekspert i internationale tidszoner og tidsberegning. Skriv præcist og faktabaseret om tidszoner til danske brugere. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt. Brug varierede sætningslængder for god læsbarhed.' );
+		add_option( 'wta_prompt_country_timezone_user', 'Forklar tidszoner i {location_name_local}. Landet bruger timezone: {timezone}. Skriv 2-3 afsnit der forklarer:
+- Om landet har én eller flere tidszoner
+- Om der bruges sommertid/vintertid
+- Tidsforskel til {base_country_name}
+- Konkrete eksempler på hvornår det er hvilken tid
+
+VIGTIGT: Vær præcis og faktuel. Inkluder kun information du er sikker på.' );
+
+		// Country page - Section 3: Major Cities
+		add_option( 'wta_prompt_country_cities_system', 'Du er ekspert i byer og deres betydning for lande. Skriv engagerende om byer og deres rolle. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown, ingen lister. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_country_cities_user', 'Skriv 2 afsnit om de største byer i {location_name_local} og deres betydning: {cities_list}. 
+
+Forklar hvordan byerne spiller forskellige roller:
+- Hovedstad og administration
+- Økonomiske centre og erhvervsliv
+- Kulturelle og historiske betydning
+- Befolkningsfordeling
+
+VIGTIGT: Skriv IKKE "her er en liste" eller lignende. Gå direkte til indholdet.
+
+Efter din tekst vil der automatisk blive indsat en dynamisk boks der viser live tid for de 12 største byer i landet med befolkningstal og tidsforskel.' );
+
+		// Country page - Section 4: Weather & Climate
+		add_option( 'wta_prompt_country_weather_system', 'Du er klima-ekspert der forklarer sammenhænge mellem vejr, klima og tid. Skriv engagerende og præcist. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_country_weather_user', 'Skriv 2 afsnit om vejr og klima i {location_name_local}, med fokus på hvordan det påvirker tid og dagligdag:
+- Dagslængde gennem året (lange sommerdage, korte vinterdage)
+- Solop og solned tider
+- Særlige klimatiske forhold (midnatssol, mørketid, osv.)
+- Hvordan klimaet påvirker hverdagen og aktiviteter
+
+Gør det interessant og relevant for rejsende.' );
+
+		// Country page - Section 5: Culture & Time
+		add_option( 'wta_prompt_country_culture_system', 'Du er kultur-ekspert der beskriver hverdagsliv og sociale normer omkring tid. Skriv engagerende og indsigtsfuldt. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_country_culture_user', 'Skriv 2 afsnit om tidskultur og dagligdag i {location_name_local}:
+- Typiske arbejdstider og arbejdskultur
+- Måltider og spisetider (morgenmad, frokost, middag)
+- Siesta eller andre særlige tidsvaner
+- Butikkers åbningstider og hverdagsrytme
+- Sammenlign kort med {base_country_name} hvor relevant
+
+Gør det praktisk og kulturelt interessant.' );
+
+		// Country page - Section 6: Travel Info
+		add_option( 'wta_prompt_country_travel_system', 'Du er rejse-ekspert der giver praktiske og konkrete tips til rejsende. Skriv hjælpsomt og direkte. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown, ingen punktlister. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_country_travel_user', 'Skriv 2 afsnit med praktisk rejseinformation for danskere der rejser til {location_name_local}:
+- Tidsforskel fra {base_country_name} og jetlag-tips
+- Transport og rejsetider inden for landet
+- Åbningstider for attraktioner og seværdigheder
+- Bedste tidspunkt på dagen for forskellige aktiviteter
+- Praktiske tips relateret til tid (booking, transport, osv.)
+
+Vær konkret og brugbar - fokuser på ting rejsende faktisk har brug for at vide.' );
 
 		// Continent page - Section 1: Introduction
 		add_option( 'wta_prompt_continent_intro_system', 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv informativt og direkte til danske brugere. VIGTIG: Skriv KUN ren tekst uden overskrifter, uden markdown, uden ChatGPT-fraser som "velkommen til" eller "lad os udforske". Alle sætninger SKAL afsluttes korrekt - ingen afskæring midt i sætning. Brug KORTE, varierede sætninger for god læsbarhed. Teksten opdeles automatisk i paragraffer.' );
