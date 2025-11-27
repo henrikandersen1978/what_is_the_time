@@ -136,7 +136,10 @@ class WTA_AI_Processor {
 	/**
 	 * Generate structured content for continents with multiple sections.
 	 *
-	 * @since    2.3.6
+	 * Uses customizable prompts from admin settings for each section.
+	 * No token limits - OpenAI controls length based on prompt instructions.
+	 *
+	 * @since    2.8.0
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
@@ -152,6 +155,12 @@ class WTA_AI_Processor {
 		$name_local = get_the_title( $post_id );
 		$name_original = get_post_meta( $post_id, 'wta_name_original', true );
 		
+		// Build variables for prompts
+		$variables = array(
+			'{location_name}'       => $name_original,
+			'{location_name_local}' => $name_local,
+		);
+		
 		// Get child countries for the list
 		$children = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
@@ -162,7 +171,7 @@ class WTA_AI_Processor {
 			'post_status'    => 'publish',
 		) );
 		
-		// Build country list HTML
+		// Build country list HTML (auto-generated, not AI)
 		$country_list = '<h2>Lande i ' . esc_html( $name_local ) . '</h2>' . "\n";
 		$country_list .= '<div class="wta-locations-grid"><ul>' . "\n";
 		foreach ( $children as $child ) {
@@ -170,46 +179,67 @@ class WTA_AI_Processor {
 		}
 		$country_list .= '</ul></div>' . "\n\n";
 		
-		// Generate intro
-		$intro_system = 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
-		$intro_user = sprintf(
-			'Skriv en kort introduktion (80-100 ord) om hvad klokken er i %s og kontinentets tidszoner. Fokuser på SEO-søgeord som "hvad er klokken i %s" og "tidszoner i %s". Skriv direkte og informativt uden fraser som "velkommen til" eller "lad os udforske". KUN ren tekst, ingen overskrifter.',
-			$name_local,
-			$name_local,
-			$name_local
-		);
-		$intro = $this->call_openai_api( $api_key, $model, $temperature, 150, $intro_system, $intro_user );
+		// Get major cities for the cities section context
+		$major_cities = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'posts_per_page' => 7,
+			'post_parent__in' => wp_list_pluck( $children, 'ID' ),
+			'orderby'        => 'meta_value_num',
+			'meta_key'       => 'wta_population',
+			'order'          => 'DESC',
+			'post_status'    => 'publish',
+		) );
+		$cities_list = '';
+		if ( ! empty( $major_cities ) ) {
+			$cities_list = 'Største byer: ' . implode( ', ', wp_list_pluck( $major_cities, 'post_title' ) );
+		}
 		
-		// Generate timezone section
-		$tz_system = 'Du er ekspert i tidszoner. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
-		$tz_user = sprintf(
-			'Skriv et afsnit (100-120 ord) om tidszonerne i %s. Forklar hvordan tidszoner fungerer på kontinentet, nævn specifikke tidszoner (fx CET, EET). Skriv naturligt og informativt. KUN ren tekst, ingen overskrifter.',
-			$name_local
-		);
-		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $tz_system, $tz_user );
+		// === 1. INTRO ===
+		$intro_system = get_option( 'wta_prompt_continent_intro_system', '' );
+		$intro_user = get_option( 'wta_prompt_continent_intro_user', '' );
+		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+		$intro = $this->call_openai_api( $api_key, $model, $temperature, 500, $intro_system, $intro_user );
 		
-		// Generate geography section
-		$geo_system = 'Du er geografi-ekspert. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
-		$geo_user = sprintf(
-			'Skriv et afsnit (100-120 ord) om geografien i %s. Inkluder størrelse, beliggenhed, vigtige geografiske træk. Skriv naturligt og faktuelt. KUN ren tekst, ingen overskrifter.',
-			$name_local
-		);
-		$geography_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $geo_system, $geo_user );
+		// === 2. COUNTRY LIST (auto-generated above) ===
 		
-		// Generate facts section
-		$facts_system = 'Du er ekspert i kultur og historie. Skriv KUN teksten, ingen overskrifter, ingen markdown.';
-		$facts_user = sprintf(
-			'Skriv et afsnit (100-120 ord) med interessante fakta om %s. Fokuser på kultur, sprog, befolkning eller historie. Skriv engagerende og informativt. KUN ren tekst, ingen overskrifter.',
-			$name_local
-		);
-		$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 180, $facts_system, $facts_user );
+		// === 3. TIMEZONE ===
+		$tz_system = get_option( 'wta_prompt_continent_timezone_system', '' );
+		$tz_user = get_option( 'wta_prompt_continent_timezone_user', '' );
+		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 600, $tz_system, $tz_user );
 		
-		// Combine all sections
+		// === 4. MAJOR CITIES ===
+		$cities_system = get_option( 'wta_prompt_continent_cities_system', '' );
+		$cities_user = get_option( 'wta_prompt_continent_cities_user', '' );
+		// Add cities list to variables for this section
+		$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
+		$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
+		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
+		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $cities_system, $cities_user );
+		
+		// === 5. GEOGRAPHY ===
+		$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
+		$geo_user = get_option( 'wta_prompt_continent_geography_user', '' );
+		$geo_system = str_replace( array_keys( $variables ), array_values( $variables ), $geo_system );
+		$geo_user = str_replace( array_keys( $variables ), array_values( $variables ), $geo_user );
+		$geography_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $geo_system, $geo_user );
+		
+		// === 6. FACTS ===
+		$facts_system = get_option( 'wta_prompt_continent_facts_system', '' );
+		$facts_user = get_option( 'wta_prompt_continent_facts_user', '' );
+		$facts_system = str_replace( array_keys( $variables ), array_values( $variables ), $facts_system );
+		$facts_user = str_replace( array_keys( $variables ), array_values( $variables ), $facts_user );
+		$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $facts_system, $facts_user );
+		
+		// === COMBINE ALL SECTIONS ===
 		$full_content = $intro . "\n\n";
 		$full_content .= $country_list;
-		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
-		$full_content .= '<h2>Geografi og beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
-		$full_content .= '<h2>Interessante fakta om ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
+		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . ' - Komplet Oversigt</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Hvad er Klokken i de Største Byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
+		$full_content .= '<h2>Geografi og Beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
+		$full_content .= '<h2>Interessante Fakta om Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );

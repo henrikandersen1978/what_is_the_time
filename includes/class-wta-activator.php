@@ -163,13 +163,25 @@ class WTA_Activator {
 		add_option( 'wta_prompt_country_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om lande. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
 		add_option( 'wta_prompt_country_content_user', 'Skriv 300-400 ord om {location_name_local} i {continent_name}. Inkluder konkrete fakta om tidszoner, geografi og kultur. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
 
-		// Continent page title
-		add_option( 'wta_prompt_continent_title_system', 'Du er en SEO ekspert der skriver fængende sider på dansk.' );
-		add_option( 'wta_prompt_continent_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.' );
-
-		// Continent page content
-		add_option( 'wta_prompt_continent_content_system', '{base_language_description}. Du skriver naturligt, autentisk og informativt indhold om kontinenter. Undgå klichéer, generiske indledninger og kunstige vendinger.' );
-		add_option( 'wta_prompt_continent_content_user', 'Skriv 400-500 ord om {location_name_local}. Inkluder konkrete fakta om tidszoner, geografi og interessante forhold. Undgå fraser som "velkommen til", "lad os udforske", "i denne artikel" og lignende. Skriv direkte og naturligt.' );
+		// Continent page - Section 1: Introduction
+		add_option( 'wta_prompt_continent_intro_system', 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv informativt og direkte til danske brugere. VIGTIG: Skriv KUN ren tekst uden overskrifter, uden markdown, uden ChatGPT-fraser som "velkommen til" eller "lad os udforske". Alle sætninger SKAL afsluttes korrekt - ingen afskæring midt i sætning. Teksten skal være klar til at indsættes direkte i WordPress blok-editor.' );
+		add_option( 'wta_prompt_continent_intro_user', 'Skriv en SEO-optimeret introduktion på 120-150 ord om hvad klokken er i {location_name_local}. FOKUS: Besvaring af søgeintentionen "hvad er klokken i {location_name_local}". Inkluder naturligt disse SEO-søgeord: "hvad er klokken i {location_name_local}", "tidszoner i {location_name_local}", "aktuel tid i {location_name_local}". Start direkte med information (ikke "velkommen" eller lignende). Nævn kort: antal tidszoner, geografisk udstrækning, største lande. Skriv naturligt og flydende - ikke keyword stuffing. Afslut ALLE sætninger korrekt. KUN ren tekst - ingen overskrifter, ingen markdown.' );
+		
+		// Continent page - Section 2: Timezones
+		add_option( 'wta_prompt_continent_timezone_system', 'Du er ekspert i internationale tidszoner og tidsberegning. Skriv præcist og faktabaseret om tidszoner til danske brugere. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_continent_timezone_user', 'Skriv et detaljeret afsnit på 150-200 ord om tidszonerne i {location_name_local}. Indhold der SKAL inkluderes: 1) Liste de vigtigste tidszoner (fx CET, EET, GMT+X), 2) Forklar tidsforskelle i forhold til dansk tid (CET/CEST), 3) Nævn om sommertid/vintertid anvendes, 4) Eventuelle særlige tidszoner (halve timer, etc.). SEO-fokus på: "tidszoner i {location_name_local}" og "tidsforskelle {location_name_local}". Skriv faktabaseret og præcist, men forståeligt. Afslut ALLE sætninger korrekt - ingen afskæring. KUN ren tekst - ingen overskrifter.' );
+		
+		// Continent page - Section 3: Major Cities
+		add_option( 'wta_prompt_continent_cities_system', 'Du er ekspert i verdens storbyer og deres tidszoner. Skriv engagerende om byer og deres lokale tid. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown, ingen lister. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_continent_cities_user', 'Skriv et afsnit på 100-120 ord om de største byer i {location_name_local} og deres tidszoner. Du får automatisk liste over byerne - beskriv kort: Hvilke tidszoner de ligger i, Hvordan tiden adskiller sig mellem byerne (hvis relevant), Eventuelle interessante tidszone-aspekter for rejsende. SEO-fokus på: "hvad er klokken i [by-navn]". Skriv naturligt og rejsevejleder-agtigt. Afslut ALLE sætninger korrekt. KUN ren tekst - ingen overskrifter, ingen punktopstillinger. Kontekst: {cities_list}' );
+		
+		// Continent page - Section 4: Geography
+		add_option( 'wta_prompt_continent_geography_system', 'Du er geografi-ekspert med fokus på hvordan geografi påvirker tid. Skriv kortfattet og faktuelt. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_continent_geography_user', 'Skriv et kort afsnit på 80-100 ord om geografien i {location_name_local} og hvordan det påvirker tidszoner. Inkluder: Geografisk udstrækning (øst-vest især relevant for tidszoner), Størrelse i km² eller sammenligning, Hvorfor geografien giver X antal tidszoner. Skriv faktabaseret men tilgængeligt. Afslut ALLE sætninger korrekt. KUN ren tekst - ingen overskrifter.' );
+		
+		// Continent page - Section 5: Facts
+		add_option( 'wta_prompt_continent_facts_system', 'Du er ekspert i kultur, historie og interessante fakta om tid og tidszoner. Skriv engagerende og lærerigt om tidszoner-relaterede fakta. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_continent_facts_user', 'Skriv et afsnit på 100-120 ord med interessante fakta SPECIFIKT om tidszoner og tid i {location_name_local}. Fokuser på: Særlige tidszoner (fx halve eller kvart timers forskelle), Historiske ændringer i tidszoner, Kulturelle aspekter af tid (fx siesta, arbejdstider), Fun facts om tid og tidszoner. UNDGÅ generiske fakta om kultur/historie der ikke relaterer til tid. Skriv engagerende og informativt. Afslut ALLE sætninger korrekt. KUN ren tekst - ingen overskrifter.' );
 
 		// Yoast SEO title
 		add_option( 'wta_prompt_yoast_title_system', 'Du er en SEO ekspert der skriver meta titles på dansk.' );
