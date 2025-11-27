@@ -18,6 +18,12 @@
 		widgetClocks.forEach(function(clock) {
 			updateWidgetClock(clock);
 		});
+		
+		// City time clocks (live grid)
+		const cityClocks = document.querySelectorAll('.wta-live-city-clock[data-timezone]');
+		cityClocks.forEach(function(clock) {
+			updateCityClock(clock);
+		});
 	}
 
 	// Update main clock (single location page)
@@ -120,6 +126,36 @@
 			console.error('Error updating widget clock:', error);
 			const timeEl = clock.querySelector('.wta-time');
 			if (timeEl) timeEl.textContent = 'Error';
+		}
+	}
+
+	// Update city clock (live grid display)
+	function updateCityClock(clock) {
+		const timezone = clock.getAttribute('data-timezone');
+		
+		try {
+			const now = new Date();
+			
+			// Format time with seconds
+			const timeFormatter = new Intl.DateTimeFormat('da-DK', {
+				timeZone: timezone,
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false
+			});
+			const timeString = timeFormatter.format(now);
+			
+			// Update DOM
+			const timeEl = clock.querySelector('.wta-time');
+			if (timeEl) {
+				timeEl.textContent = timeString;
+			}
+			
+		} catch (error) {
+			console.error('Error updating city clock:', error);
+			const timeEl = clock.querySelector('.wta-time');
+			if (timeEl) timeEl.textContent = '--:--:--';
 		}
 	}
 

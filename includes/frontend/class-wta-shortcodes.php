@@ -19,11 +19,11 @@ class WTA_Shortcodes {
 	}
 
 	/**
-	 * Shortcode to display current time in a city.
+	 * Shortcode to display live clock for a city.
 	 *
 	 * Usage: [wta_city_time city="London"]
 	 *
-	 * @since    2.9.2
+	 * @since    2.9.5
 	 * @param    array $atts Shortcode attributes.
 	 * @return   string      HTML output.
 	 */
@@ -71,20 +71,27 @@ class WTA_Shortcodes {
 			
 			$diff_text = '';
 			if ( $hours_diff > 0 ) {
-				$diff_text = sprintf( '%+.1f timer foran %s', $hours_diff, $base_country );
+				$diff_text = sprintf( '+%.1f timer foran', abs( $hours_diff ) );
 			} elseif ( $hours_diff < 0 ) {
-				$diff_text = sprintf( '%.1f timer efter %s', abs( $hours_diff ), $base_country );
+				$diff_text = sprintf( '%.1f timer efter', abs( $hours_diff ) );
 			} else {
-				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+				$diff_text = 'Samme tid';
 			}
 			
-			// Format time
-			$time_format = $now->format( 'H:i' );
+			// Initial time with seconds
+			$initial_time = $now->format( 'H:i:s' );
 			
+			// Build live clock HTML
 			$output = sprintf(
-				'<span class="wta-inline-city-time"><strong>%s:</strong> %s (%s)</span>',
+				'<div class="wta-live-city-clock" data-timezone="%s" data-base-offset="%.1f">
+					<div class="wta-city-name">%s</div>
+					<div class="wta-time">%s</div>
+					<div class="wta-time-diff">%s</div>
+				</div>',
+				esc_attr( $timezone ),
+				$hours_diff,
 				esc_html( $atts['city'] ),
-				esc_html( $time_format ),
+				esc_html( $initial_time ),
 				esc_html( $diff_text )
 			);
 			

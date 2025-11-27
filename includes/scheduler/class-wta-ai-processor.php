@@ -179,7 +179,7 @@ class WTA_AI_Processor {
 		
 		$major_cities = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
-			'posts_per_page' => 7,
+			'posts_per_page' => 12, // 3x4 grid = 12 cities
 			'post_parent__in' => wp_list_pluck( $children, 'ID' ),
 			'orderby'        => 'meta_value_num',
 			'meta_key'       => 'wta_population',
@@ -220,6 +220,16 @@ class WTA_AI_Processor {
 		$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
 		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
 		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $cities_system, $cities_user );
+		
+		// Automatically add city time shortcodes after AI content (wrapped in grid)
+		if ( ! empty( $major_cities ) ) {
+			$cities_content .= "\n\n" . '<div class="wta-city-times-grid">' . "\n";
+			foreach ( $major_cities as $city ) {
+				$city_name = get_post_field( 'post_title', $city->ID );
+				$cities_content .= '[wta_city_time city="' . esc_attr( $city_name ) . '"]' . "\n";
+			}
+			$cities_content .= '</div>';
+		}
 		
 		// === 5. GEOGRAPHY ===
 		$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );

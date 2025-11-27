@@ -58,24 +58,68 @@ div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-l
 	text-decoration: none !important;
 }
 
-/* Inline City Time Shortcode */
-span.wta-inline-city-time {
-	display: block !important;
-	margin: 0.5em 0 !important;
-	padding: 0.75em 1em !important;
-	background: #f8f9fa !important;
-	border-left: 3px solid #2271b1 !important;
-	border-radius: 3px !important;
-	font-size: 0.95em !important;
-	line-height: 1.6 !important;
+/* City Times Grid (3x4 for 12 cities) */
+div.wta-city-times-grid {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 1.5em !important;
+	margin: 2em 0 !important;
+	padding: 0 !important;
 }
 
-span.wta-inline-city-time strong {
-	color: #2271b1 !important;
+/* Individual Live City Clock */
+div.wta-live-city-clock {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 1.5em 1em !important;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+	border-radius: 8px !important;
+	color: white !important;
+	text-align: center !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+	transition: transform 0.2s ease !important;
+	min-height: 140px !important;
+}
+
+div.wta-live-city-clock:hover {
+	transform: translateY(-4px) !important;
+	box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+div.wta-city-name {
+	font-size: 1.1em !important;
 	font-weight: 600 !important;
+	margin-bottom: 0.5em !important;
+	color: white !important;
+}
+
+div.wta-time {
+	font-size: 2em !important;
+	font-family: 'Courier New', Courier, monospace !important;
+	font-weight: 700 !important;
+	margin: 0.3em 0 !important;
+	letter-spacing: 0.05em !important;
+	color: white !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+div.wta-time-diff {
+	font-size: 0.85em !important;
+	opacity: 0.9 !important;
+	color: white !important;
+	margin-top: 0.3em !important;
 }
 
 /* Responsive */
+@media (max-width: 968px) {
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1.2em !important;
+	}
+}
+
 @media (max-width: 768px) {
 	div.wta-plugin-locations-grid ul.wta-grid-list {
 		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
@@ -87,9 +131,25 @@ span.wta-inline-city-time strong {
 		font-size: 0.9em !important;
 	}
 	
-	span.wta-inline-city-time {
-		font-size: 0.9em !important;
-		padding: 0.6em 0.8em !important;
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-time {
+		font-size: 1.8em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	div.wta-city-times-grid {
+		grid-template-columns: 1fr !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-live-city-clock {
+		padding: 1.2em 1em !important;
+		min-height: 120px !important;
 	}
 }
 
