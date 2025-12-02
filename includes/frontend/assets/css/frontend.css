@@ -13,7 +13,7 @@ div.wta-plugin-locations-grid ul.wta-grid-list {
 	padding: 0 !important;
 	margin: 1em 0 !important;
 	display: grid !important;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
 	gap: 1em !important;
 	background: none !important;
 	border: none !important;
@@ -38,7 +38,7 @@ div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-l
 	display: flex !important;
 	align-items: center !important;
 	justify-content: center !important;
-	min-height: 60px !important;
+	height: 100px !important;
 	padding: 0.75em 1em !important;
 	background: #f5f5f5 !important;
 	border: 1px solid #e0e0e0 !important;
@@ -55,6 +55,7 @@ div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-l
 	hyphens: auto !important;
 	-webkit-hyphens: auto !important;
 	-ms-hyphens: auto !important;
+	overflow: hidden !important;
 }
 
 div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link:hover {

@@ -64,9 +64,9 @@ class WTA_Importer {
 					continue;
 				}
 			} else {
-				// Filter by selected continents (by code)
-				if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
-					continue;
+			// Filter by selected continents (by code)
+			if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
+				continue;
 				}
 			}
 
@@ -130,7 +130,7 @@ class WTA_Importer {
 
 		// CRITICAL: Use country_code (iso2) instead of id for matching cities
 		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
-		
+
 		WTA_Queue::add(
 			'cities_import',
 			array(
@@ -213,20 +213,20 @@ class WTA_Importer {
 			$wikidata_id 
 		);
 		
-		$city_payload = array(
-			'name'         => $city['name'],
+			$city_payload = array(
+				'name'         => $city['name'],
 			'name_local'   => $name_local,
-			'city_id'      => $city['id'],
-			'country_id'   => $city['country_id'],
-			'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,
-			'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
-			'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
-			'population'   => isset( $city['population'] ) ? $city['population'] : null,
+				'city_id'      => $city['id'],
+				'country_id'   => $city['country_id'],
+				'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,
+				'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
+				'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
+				'population'   => isset( $city['population'] ) ? $city['population'] : null,
 			'wikidata_id'  => $wikidata_id,
-		);
+			);
 
-		WTA_Queue::add( 'city', $city_payload, 'city_' . $city['id'] );
-		$queued++;
+			WTA_Queue::add( 'city', $city_payload, 'city_' . $city['id'] );
+			$queued++;
 
 			// Prevent timeout
 			if ( $queued % 100 === 0 ) {

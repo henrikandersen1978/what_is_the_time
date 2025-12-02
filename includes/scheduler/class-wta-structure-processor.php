@@ -62,8 +62,8 @@ class WTA_Structure_Processor {
 		if ( ! empty( $cities ) ) {
 			WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
 			foreach ( $cities as $item ) {
-				$this->process_item( $item );
-			}
+			$this->process_item( $item );
+		}
 		}
 	}
 
@@ -194,7 +194,7 @@ class WTA_Structure_Processor {
 			WTA_Queue::mark_failed( $item['id'], 'Parent continent not found' );
 			return;
 		}
-		
+
 		$parent = $parent_posts[0];
 
 		// Check if post already exists (check both draft and published)
@@ -225,14 +225,14 @@ class WTA_Structure_Processor {
 			throw new Exception( $post_id->get_error_message() );
 		}
 
-	// Save meta
-	update_post_meta( $post_id, 'wta_type', 'country' );
-	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-	update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
-	update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
-	update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
-	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+		// Save meta
+		update_post_meta( $post_id, 'wta_type', 'country' );
+		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
+		update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
+		update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
+		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
+		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 	
 	// Save Wikidata ID if available
 	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
@@ -347,15 +347,15 @@ class WTA_Structure_Processor {
 		$country_code = get_post_meta( $parent_id, 'wta_country_code', true );
 		$continent_code = get_post_meta( $parent_id, 'wta_continent_code', true );
 
-	// Save meta
-	update_post_meta( $post_id, 'wta_type', 'city' );
-	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-	update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-	update_post_meta( $post_id, 'wta_continent_code', $continent_code );
-	update_post_meta( $post_id, 'wta_country_code', $country_code );
-	update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
-	update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
-	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+		// Save meta
+		update_post_meta( $post_id, 'wta_type', 'city' );
+		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
+		update_post_meta( $post_id, 'wta_continent_code', $continent_code );
+		update_post_meta( $post_id, 'wta_country_code', $country_code );
+		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
+		update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
+		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 	
 	// Save population (CRITICAL for major cities shortcode!)
 	if ( isset( $data['population'] ) && $data['population'] > 0 ) {
@@ -445,7 +445,7 @@ class WTA_Structure_Processor {
 				throw new Exception( $error );
 			}
 			
-			$options = $item['payload'];
+		$options = $item['payload'];
 			$msg = 'Payload keys: ' . implode( ', ', array_keys( $options ) );
 			file_put_contents( $debug_file, "$msg\n", FILE_APPEND );
 			WTA_Logger::info( 'Payload received', array( 'keys' => array_keys( $options ) ) );
@@ -456,13 +456,13 @@ class WTA_Structure_Processor {
 				throw new Exception( $error );
 			}
 			
-			$file_path = $options['file_path'];
+		$file_path = $options['file_path'];
 			file_put_contents( $debug_file, "File path: $file_path\n", FILE_APPEND );
 			WTA_Logger::info( 'File path extracted', array( 'path' => $file_path ) );
 
-			if ( ! file_exists( $file_path ) ) {
+		if ( ! file_exists( $file_path ) ) {
 				throw new Exception( 'cities.json not found at: ' . $file_path );
-			}
+		}
 
 			// Increase time limit for streaming large file
 			set_time_limit( 300 ); // 5 minutes
@@ -519,7 +519,7 @@ class WTA_Structure_Processor {
 			
 			// Track braces to know when we have a complete object
 			$brace_count += substr_count( $line, '{' ) - substr_count( $line, '}' );
-			
+
 			if ( strpos( $line, '{' ) !== false ) {
 				$in_object = true;
 			}
@@ -569,8 +569,8 @@ class WTA_Structure_Processor {
 							$skipped_country++; // Use same counter for simplicity
 							continue;
 						}
-					}
-					
+		}
+
 					// Filter by type field if present
 					if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
 						// Skip non-city types
@@ -627,16 +627,16 @@ class WTA_Structure_Processor {
 				$total_read
 			);
 			file_put_contents( $debug_file, $summary, FILE_APPEND );
-			
-			WTA_Logger::info( 'Cities import batch completed', array(
-				'cities_queued' => $queued,
+
+		WTA_Logger::info( 'Cities import batch completed', array(
+			'cities_queued' => $queued,
 				'skipped_country' => $skipped_country,
 				'skipped_population' => $skipped_population,
 				'skipped_max_reached' => $skipped_max_reached,
 				'total_read' => $total_read,
-			) );
+		) );
 
-			WTA_Queue::mark_done( $item['id'] );
+		WTA_Queue::mark_done( $item['id'] );
 			
 		} catch ( Exception $e ) {
 			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
