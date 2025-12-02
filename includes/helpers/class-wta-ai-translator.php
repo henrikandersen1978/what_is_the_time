@@ -65,7 +65,14 @@ class WTA_AI_Translator {
 			return $static_translation;
 		}
 
-		// 3. Use AI as last resort
+		// 3. Use AI as last resort - BUT NOT FOR CITIES!
+		// Cities should keep their original names unless found in Wikidata or Quick_Translate
+		// This prevents AI from translating city names like "Ojo de Agua" to "Øje de Agua"
+		if ( 'city' === $type ) {
+			set_transient( $cache_key, $name, DAY_IN_SECONDS );
+			return $name;
+		}
+		
 		$ai_translation = self::translate_with_ai( $name, $type, $target_lang );
 		
 		if ( false !== $ai_translation && ! empty( $ai_translation ) ) {
