@@ -94,8 +94,8 @@ class WTA_Shortcodes {
 			}
 		}
 		
-		// Build output
-		$output = '<div class="wta-city-times-grid">' . "\n";
+		// Build output with anchor ID for navigation
+		$output = '<div id="major-cities" class="wta-city-times-grid">' . "\n";
 		
 		foreach ( $major_cities as $city ) {
 			$city_name = get_post_field( 'post_title', $city->ID );

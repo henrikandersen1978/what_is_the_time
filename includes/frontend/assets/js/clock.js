@@ -177,4 +177,48 @@
 
 })();
 
+/**
+ * Smooth scroll for quick navigation buttons
+ */
+(function() {
+	'use strict';
+
+	function initSmoothScroll() {
+		// Find all smooth scroll links
+		const smoothScrollLinks = document.querySelectorAll('.wta-smooth-scroll');
+		
+		if (smoothScrollLinks.length === 0) {
+			return;
+		}
+
+		smoothScrollLinks.forEach(function(link) {
+			link.addEventListener('click', function(e) {
+				e.preventDefault();
+				
+				const targetId = this.getAttribute('href');
+				const targetElement = document.querySelector(targetId);
+				
+				if (targetElement) {
+					// Calculate offset for fixed headers (if any)
+					const offset = 80; // Adjust based on your theme's header height
+					const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
+					
+					window.scrollTo({
+						top: targetPosition,
+						behavior: 'smooth'
+					});
+				}
+			});
+		});
+	}
+
+	// Initialize when DOM is ready
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initSmoothScroll);
+	} else {
+		initSmoothScroll();
+	}
+
+})();
+
 

@@ -14,9 +14,74 @@ while ( have_posts() ) :
 	$type = get_post_meta( get_the_ID(), 'wta_type', true );
 	$timezone = get_post_meta( get_the_ID(), 'wta_timezone', true );
 	$name_local = get_the_title();
+	$post_id = get_the_ID();
+	
+	// Build breadcrumb
+	$breadcrumb_items = array();
+	$breadcrumb_items[] = array(
+		'name' => 'Forside',
+		'url'  => home_url( '/' ),
+	);
+	
+	// Add parent hierarchy
+	$ancestors = array();
+	$parent_id = wp_get_post_parent_id( $post_id );
+	while ( $parent_id ) {
+		$ancestors[] = $parent_id;
+		$parent_id = wp_get_post_parent_id( $parent_id );
+	}
+	$ancestors = array_reverse( $ancestors );
+	
+	foreach ( $ancestors as $ancestor_id ) {
+		$breadcrumb_items[] = array(
+			'name' => get_the_title( $ancestor_id ),
+			'url'  => get_permalink( $ancestor_id ),
+		);
+	}
+	
+	// Add current page
+	$breadcrumb_items[] = array(
+		'name' => $name_local,
+		'url'  => get_permalink( $post_id ),
+	);
+	
+	// Check if page has child locations or major cities
+	$has_children = false;
+	$has_major_cities = false;
+	
+	if ( in_array( $type, array( 'continent', 'country' ) ) ) {
+		$children = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $post_id,
+			'posts_per_page' => 1,
+			'post_status'    => array( 'publish', 'draft' ),
+		) );
+		$has_children = ! empty( $children );
+		$has_major_cities = true; // Continents and countries always show major cities
+	}
 	?>
 
 	<article id="post-<?php the_ID(); ?>" <?php post_class( 'wta-location-single' ); ?>>
+		
+		<?php if ( count( $breadcrumb_items ) > 1 ) : ?>
+		<!-- Breadcrumb Navigation -->
+		<nav class="wta-breadcrumb" aria-label="Breadcrumb">
+			<ol class="wta-breadcrumb-list">
+				<?php foreach ( $breadcrumb_items as $index => $item ) : ?>
+					<?php if ( $index === count( $breadcrumb_items ) - 1 ) : ?>
+						<li class="wta-breadcrumb-item wta-breadcrumb-current" aria-current="page">
+							<span><?php echo esc_html( $item['name'] ); ?></span>
+						</li>
+					<?php else : ?>
+						<li class="wta-breadcrumb-item">
+							<a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['name'] ); ?></a>
+						</li>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</ol>
+		</nav>
+		<?php endif; ?>
+		
 		<header class="wta-location-header">
 			<?php
 			if ( 'city' === $type ) {
@@ -26,6 +91,25 @@ while ( have_posts() ) :
 			}
 			?>
 		</header>
+		
+		<?php if ( $has_children || $has_major_cities ) : ?>
+		<!-- Quick Navigation -->
+		<div class="wta-quick-nav">
+			<?php if ( $has_children ) : ?>
+				<?php 
+				$child_label = ( 'continent' === $type ) ? '📍 Se alle lande' : '📍 Se alle steder';
+				?>
+				<a href="#child-locations" class="wta-quick-nav-btn wta-smooth-scroll">
+					<?php echo esc_html( $child_label ); ?>
+				</a>
+			<?php endif; ?>
+			<?php if ( $has_major_cities ) : ?>
+				<a href="#major-cities" class="wta-quick-nav-btn wta-smooth-scroll">
+					🕐 Live tidspunkter
+				</a>
+			<?php endif; ?>
+		</div>
+		<?php endif; ?>
 
 		<?php if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) : ?>
 		<div class="wta-clock-container">
@@ -49,12 +133,13 @@ while ( have_posts() ) :
 			'posts_per_page' => 100,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
+			'post_status'    => array( 'publish', 'draft' ),
 		) );
 
 		if ( ! empty( $children ) ) :
 			$child_type = ( 'continent' === $type ) ? __( 'Countries', 'world-time-ai' ) : __( 'Cities', 'world-time-ai' );
 			?>
-			<div class="wta-children-list">
+			<div id="child-locations" class="wta-children-list">
 				<h2><?php echo esc_html( $child_type ); ?></h2>
 				<ul class="wta-locations-grid">
 					<?php foreach ( $children as $child ) : ?>
@@ -68,10 +153,32 @@ while ( have_posts() ) :
 			</div>
 		<?php endif; ?>
 	</article>
+	
+	<?php
+	// Output Schema.org JSON-LD breadcrumb
+	if ( count( $breadcrumb_items ) > 1 ) :
+		$schema = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'BreadcrumbList',
+			'itemListElement' => array(),
+		);
+		
+		foreach ( $breadcrumb_items as $index => $item ) {
+			$schema['itemListElement'][] = array(
+				'@type'    => 'ListItem',
+				'position' => $index + 1,
+				'name'     => $item['name'],
+				'item'     => $item['url'],
+			);
+		}
+		?>
+		<script type="application/ld+json">
+		<?php echo wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ); ?>
+		</script>
+	<?php endif; ?>
 
 	<?php
 endwhile;
 
 get_footer();
-
 
