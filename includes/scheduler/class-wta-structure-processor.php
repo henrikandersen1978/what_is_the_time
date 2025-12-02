@@ -238,6 +238,14 @@ class WTA_Structure_Processor {
 	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
 		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
 	}
+	
+	// Save GPS coordinates
+	if ( isset( $data['latitude'] ) && ! empty( $data['latitude'] ) ) {
+		update_post_meta( $post_id, 'wta_latitude', floatval( $data['latitude'] ) );
+	}
+	if ( isset( $data['longitude'] ) && ! empty( $data['longitude'] ) ) {
+		update_post_meta( $post_id, 'wta_longitude', floatval( $data['longitude'] ) );
+	}
 
 		// Determine timezone
 		if ( WTA_Timezone_Helper::is_complex_country( $data['country_code'] ) ) {
@@ -367,12 +375,13 @@ class WTA_Structure_Processor {
 		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
 	}
 
-		if ( isset( $data['latitude'] ) ) {
-			update_post_meta( $post_id, 'wta_lat', $data['latitude'] );
-		}
-		if ( isset( $data['longitude'] ) ) {
-			update_post_meta( $post_id, 'wta_lng', $data['longitude'] );
-		}
+	// Save GPS coordinates (CRITICAL for nearby cities shortcode!)
+	if ( isset( $data['latitude'] ) && ! empty( $data['latitude'] ) ) {
+		update_post_meta( $post_id, 'wta_latitude', floatval( $data['latitude'] ) );
+	}
+	if ( isset( $data['longitude'] ) && ! empty( $data['longitude'] ) ) {
+		update_post_meta( $post_id, 'wta_longitude', floatval( $data['longitude'] ) );
+	}
 
 		// Handle timezone
 		$needs_timezone_api = false;
