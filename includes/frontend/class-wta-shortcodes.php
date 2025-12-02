@@ -17,6 +17,8 @@ class WTA_Shortcodes {
 		add_shortcode( 'wta_child_locations', array( $this, 'child_locations_shortcode' ) );
 		add_shortcode( 'wta_city_time', array( $this, 'city_time_shortcode' ) );
 		add_shortcode( 'wta_major_cities', array( $this, 'major_cities_shortcode' ) );
+		add_shortcode( 'wta_nearby_cities', array( $this, 'nearby_cities_shortcode' ) );
+		add_shortcode( 'wta_nearby_countries', array( $this, 'nearby_countries_shortcode' ) );
 	}
 
 	/**
@@ -366,6 +368,261 @@ class WTA_Shortcodes {
 		$output .= '</div>' . "\n";
 		
 		return $output;
+	}
+
+	/**
+	 * Shortcode to display nearby cities with distance.
+	 *
+	 * Usage: [wta_nearby_cities count="5"]
+	 *
+	 * @since    2.20.0
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function nearby_cities_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'count' => 5,
+		), $atts );
+		
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return '';
+		}
+		
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'city' !== $type ) {
+			return '';
+		}
+		
+		$latitude = get_post_meta( $post_id, 'wta_latitude', true );
+		$longitude = get_post_meta( $post_id, 'wta_longitude', true );
+		
+		if ( empty( $latitude ) || empty( $longitude ) ) {
+			return '';
+		}
+		
+		// Get parent country
+		$parent_country_id = wp_get_post_parent_id( $post_id );
+		if ( ! $parent_country_id ) {
+			return '';
+		}
+		
+		// Find nearby cities
+		$nearby_cities = $this->find_nearby_cities( $post_id, $parent_country_id, $latitude, $longitude, intval( $atts['count'] ) );
+		
+		if ( empty( $nearby_cities ) ) {
+			return '<p class="wta-no-nearby">Der er ingen andre byer i databasen endnu.</p>';
+		}
+		
+		// Build output
+		$output = '<div class="wta-nearby-list wta-nearby-cities-list">' . "\n";
+		
+		foreach ( $nearby_cities as $city ) {
+			$city_name = get_post_field( 'post_title', $city['id'] );
+			$city_link = get_permalink( $city['id'] );
+			$distance = round( $city['distance'] );
+			$population = get_post_meta( $city['id'], 'wta_population', true );
+			
+			// Build description
+			$description = '';
+			if ( $population && $population > 100000 ) {
+				$description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
+			} elseif ( $distance < 50 ) {
+				$description = 'Tæt på';
+			} else {
+				$description = 'By i regionen';
+			}
+			
+			$output .= '<div class="wta-nearby-item">' . "\n";
+			$output .= '  <div class="wta-nearby-icon">🏙️</div>' . "\n";
+			$output .= '  <div class="wta-nearby-content">' . "\n";
+			$output .= '    <a href="' . esc_url( $city_link ) . '" class="wta-nearby-title">' . esc_html( $city_name ) . '</a>' . "\n";
+			$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . ' • ' . esc_html( $distance ) . ' km</div>' . "\n";
+			$output .= '  </div>' . "\n";
+			$output .= '</div>' . "\n";
+		}
+		
+		$output .= '</div>' . "\n";
+		
+		return $output;
+	}
+
+	/**
+	 * Shortcode to display nearby countries.
+	 *
+	 * Usage: [wta_nearby_countries count="5"]
+	 *
+	 * @since    2.20.0
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function nearby_countries_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'count' => 5,
+		), $atts );
+		
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return '';
+		}
+		
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'city' !== $type ) {
+			return '';
+		}
+		
+		// Get parent country and continent
+		$parent_country_id = wp_get_post_parent_id( $post_id );
+		if ( ! $parent_country_id ) {
+			return '';
+		}
+		
+		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
+		if ( ! $parent_continent_id ) {
+			return '';
+		}
+		
+		// Find nearby countries
+		$nearby_countries = $this->find_nearby_countries( $parent_continent_id, $parent_country_id, intval( $atts['count'] ) );
+		
+		if ( empty( $nearby_countries ) ) {
+			return '<p class="wta-no-nearby">Der er ingen andre lande i databasen endnu.</p>';
+		}
+		
+		// Build output
+		$output = '<div class="wta-nearby-list wta-nearby-countries-list">' . "\n";
+		
+		foreach ( $nearby_countries as $country_id ) {
+			$country_name = get_post_field( 'post_title', $country_id );
+			$country_link = get_permalink( $country_id );
+			
+			// Count cities in country
+			$cities_count = count( get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'post_parent'    => $country_id,
+				'posts_per_page' => -1,
+				'post_status'    => array( 'publish', 'draft' ),
+				'fields'         => 'ids',
+			) ) );
+			
+			$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
+			
+			$output .= '<div class="wta-nearby-item">' . "\n";
+			$output .= '  <div class="wta-nearby-icon">🌍</div>' . "\n";
+			$output .= '  <div class="wta-nearby-content">' . "\n";
+			$output .= '    <a href="' . esc_url( $country_link ) . '" class="wta-nearby-title">' . esc_html( $country_name ) . '</a>' . "\n";
+			$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
+			$output .= '  </div>' . "\n";
+			$output .= '</div>' . "\n";
+		}
+		
+		$output .= '</div>' . "\n";
+		
+		return $output;
+	}
+
+	/**
+	 * Find nearby cities within same country using GPS distance.
+	 *
+	 * @since    2.20.0
+	 * @param    int    $current_city_id Current city post ID.
+	 * @param    int    $country_id      Parent country ID.
+	 * @param    float  $lat             Latitude.
+	 * @param    float  $lon             Longitude.
+	 * @param    int    $count           Number of cities to return.
+	 * @return   array                   Array of cities with distance.
+	 */
+	private function find_nearby_cities( $current_city_id, $country_id, $lat, $lon, $count = 5 ) {
+		// Get all cities in same country
+		$cities = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $country_id,
+			'posts_per_page' => -1,
+			'post__not_in'   => array( $current_city_id ),
+			'post_status'    => array( 'publish', 'draft' ),
+		) );
+		
+		if ( empty( $cities ) ) {
+			return array();
+		}
+		
+		$cities_with_distance = array();
+		
+		foreach ( $cities as $city ) {
+			$city_lat = get_post_meta( $city->ID, 'wta_latitude', true );
+			$city_lon = get_post_meta( $city->ID, 'wta_longitude', true );
+			
+			if ( empty( $city_lat ) || empty( $city_lon ) ) {
+				continue;
+			}
+			
+			$distance = $this->calculate_distance( $lat, $lon, $city_lat, $city_lon );
+			
+			// Only include cities within 500km
+			if ( $distance <= 500 ) {
+				$cities_with_distance[] = array(
+					'id'       => $city->ID,
+					'distance' => $distance,
+				);
+			}
+		}
+		
+		// Sort by distance
+		usort( $cities_with_distance, function( $a, $b ) {
+			return $a['distance'] <=> $b['distance'];
+		} );
+		
+		// Return top N
+		return array_slice( $cities_with_distance, 0, $count );
+	}
+
+	/**
+	 * Find nearby countries in same continent.
+	 *
+	 * @since    2.20.0
+	 * @param    int $continent_id       Continent post ID.
+	 * @param    int $current_country_id Current country ID to exclude.
+	 * @param    int $count              Number of countries to return.
+	 * @return   array                   Array of country IDs.
+	 */
+	private function find_nearby_countries( $continent_id, $current_country_id, $count = 5 ) {
+		$countries = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $continent_id,
+			'posts_per_page' => $count + 1,
+			'post__not_in'   => array( $current_country_id ),
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'post_status'    => array( 'publish', 'draft' ),
+			'fields'         => 'ids',
+		) );
+		
+		return array_slice( $countries, 0, $count );
+	}
+
+	/**
+	 * Calculate distance between two GPS coordinates using Haversine formula.
+	 *
+	 * @since    2.20.0
+	 * @param    float $lat1 Latitude 1.
+	 * @param    float $lon1 Longitude 1.
+	 * @param    float $lat2 Latitude 2.
+	 * @param    float $lon2 Longitude 2.
+	 * @return   float       Distance in kilometers.
+	 */
+	private function calculate_distance( $lat1, $lon1, $lat2, $lon2 ) {
+		$earth_radius = 6371; // km
+		
+		$d_lat = deg2rad( $lat2 - $lat1 );
+		$d_lon = deg2rad( $lon2 - $lon1 );
+		
+		$a = sin( $d_lat / 2 ) * sin( $d_lat / 2 ) +
+			cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) *
+			sin( $d_lon / 2 ) * sin( $d_lon / 2 );
+		
+		$c = 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+		
+		return $earth_radius * $c;
 	}
 }
 

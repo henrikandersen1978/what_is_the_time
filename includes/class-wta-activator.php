@@ -290,28 +290,32 @@ Inkluder:
 Fokuser på generel regional info hvis specifics mangler. Max 200 ord.' );
 
 		// City page - Section 5: Nearby Cities
-		add_option( 'wta_prompt_city_nearby_cities_system', 'Du anbefaler nærliggende byer. KRITISK: Du må KUN nævne de PRÆCIS angivne bynavne - INGEN andre! Brug NØJAGTIGT de navne der er givet. Nævn ALLE de angivne byer. Ingen spekulationer om afstande eller rejsetider. KUN ren tekst.' );
-		add_option( 'wta_prompt_city_nearby_cities_user', 'Skriv en kort anbefaling (2-3 sætninger) om at besøge nærliggende byer når man er i {location_name_local}.
+		add_option( 'wta_prompt_city_nearby_cities_system', 'Du skriver generelle, inspirerende introduktionstekster om at udforske en regions byer. VIGTIG: Nævn INGEN specifikke bynavne - de vises automatisk nedenfor. Fokuser på generelle fordele ved at besøge nærliggende byer. KUN ren tekst, ingen overskrifter.' );
+		add_option( 'wta_prompt_city_nearby_cities_user', 'Skriv 2-3 korte sætninger der inspirerer til at udforske andre byer omkring {location_name_local} i {country_name}.
 
-Du SKAL nævne PRÆCIS disse byer (og INGEN andre):
-{nearby_cities_list}
+VIGTIG: Nævn INGEN specifikke bynavne! Fokuser på:
+- Hvad gør området interessant at udforske
+- Fordele ved at besøge flere byer i regionen
+- Generel opfordring til at udforske
 
 Eksempel tone:
-"Når du besøger Cannes, er der flere spændende byer i nærheden. Nice ligger tæt på kysten, mens Antibes og Monaco også er nemme at besøge."
+"Når du er i området, er der mange spændende byer værd at udforske. Regionen byder på varieret kultur og historie, og afstandene er nemme at rejse."
 
-Skriv naturligt men nævn KUN de angivne byer. Max 60 ord.' );
+Max 40-50 ord. Generisk og inspirerende.' );
 
 		// City page - Section 6: Nearby Countries
-		add_option( 'wta_prompt_city_nearby_countries_system', 'Du anbefaler nærliggende lande at udforske. KRITISK: Du må KUN nævne de PRÆCIS angivne lande - INGEN andre! Brug NØJAGTIGT de navne der er givet. Skriv kort om at udforske regionen. KUN ren tekst.' );
-		add_option( 'wta_prompt_city_nearby_countries_user', 'Skriv en kort anbefaling (2-3 sætninger) om at udforske lande i nærheden af {location_name_local}, {country_name}.
+		add_option( 'wta_prompt_city_nearby_countries_system', 'Du skriver generelle, inspirerende introduktionstekster om at udforske en regions lande. VIGTIG: Nævn INGEN specifikke landenavne - de vises automatisk nedenfor. Fokuser på regionale fordele. KUN ren tekst, ingen overskrifter.' );
+		add_option( 'wta_prompt_city_nearby_countries_user', 'Skriv 2-3 korte sætninger der inspirerer til at udforske andre lande når man besøger {country_name}.
 
-Du SKAL nævne PRÆCIS disse lande (og INGEN andre):
-{nearby_countries_list}
+VIGTIG: Nævn INGEN specifikke landenavne! Fokuser på:
+- Hvad gør {continent_name} interessant at udforske
+- Fordele ved at kombinere flere lande på rejsen
+- Generel opfordring til regional udforskning
 
 Eksempel:
-"Fra Frankrig er det nemt at udforske Sydeuropa. Italien, Schweiz og Spanien ligger alle i nærheden og tilbyder unikke oplevelser."
+"Når du er i regionen, ligger flere spændende lande inden for kort afstand. {continent_name} byder på enorm variation i kultur, natur og oplevelser."
 
-Max 60 ord. Nævn KUN de angivne lande.' );
+Max 40-50 ord. Generisk og inspirerende.' );
 
 		// Continent page - Section 1: Introduction
 		add_option( 'wta_prompt_continent_intro_system', 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv informativt og direkte til danske brugere. VIGTIG: Skriv KUN ren tekst uden overskrifter, uden markdown, uden ChatGPT-fraser som "velkommen til" eller "lad os udforske". Alle sætninger SKAL afsluttes korrekt - ingen afskæring midt i sætning. Brug KORTE, varierede sætninger for god læsbarhed. Teksten opdeles automatisk i paragraffer.' );

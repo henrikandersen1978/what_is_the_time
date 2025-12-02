@@ -432,19 +432,7 @@ class WTA_AI_Processor {
 		$parent_continent_id = $parent_country_id ? wp_get_post_parent_id( $parent_country_id ) : 0;
 		$continent_name = $parent_continent_id ? get_the_title( $parent_continent_id ) : '';
 		
-		// Find nearby cities (within 500km, same country)
-		$nearby_cities_data = $this->get_nearby_cities( $post_id, $latitude, $longitude, 4 );
-		$nearby_cities_list = implode( ', ', array_map( function( $city ) {
-			return get_post_field( 'post_title', $city['id'] );
-		}, $nearby_cities_data ) );
-		
-		// Find nearby countries (same continent)
-		$nearby_countries_data = $this->get_nearby_countries( $parent_continent_id, $parent_country_id, 5 );
-		$nearby_countries_list = implode( ', ', array_map( function( $country_id ) {
-			return get_the_title( $country_id );
-		}, $nearby_countries_data ) );
-		
-		// Build variables for prompts
+		// Build variables for prompts (no longer need specific city/country lists)
 		$variables = array(
 			'{location_name}'       => $name_original,
 			'{location_name_local}' => $name_local,
@@ -454,8 +442,6 @@ class WTA_AI_Processor {
 			'{latitude}'            => $latitude,
 			'{longitude}'           => $longitude,
 			'{base_country_name}'   => get_option( 'wta_base_country_name', 'Danmark' ),
-			'{nearby_cities_list}'  => $nearby_cities_list,
-			'{nearby_countries_list}' => $nearby_countries_list,
 		);
 		
 		// === 1. INTRO ===
@@ -486,29 +472,19 @@ class WTA_AI_Processor {
 		$pract_user = str_replace( array_keys( $variables ), array_values( $variables ), $pract_user );
 		$practical_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $pract_system, $pract_user );
 		
-		// === 5. NEARBY CITIES (will be auto-linked) ===
+		// === 5. NEARBY CITIES (generic intro only - shortcode displays actual cities) ===
 		$near_cities_system = get_option( 'wta_prompt_city_nearby_cities_system', '' );
 		$near_cities_user = get_option( 'wta_prompt_city_nearby_cities_user', '' );
 		$near_cities_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_system );
 		$near_cities_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_user );
-		$nearby_cities_content = '';
-		if ( ! empty( $nearby_cities_list ) ) {
-			$nearby_cities_content = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_cities_system, $near_cities_user );
-			// Auto-link city names
-			$nearby_cities_content = $this->auto_link_locations( $nearby_cities_content, $nearby_cities_data, 'city' );
-		}
+		$nearby_cities_intro = $this->call_openai_api( $api_key, $model, $temperature, 100, $near_cities_system, $near_cities_user );
 		
-		// === 6. NEARBY COUNTRIES (will be auto-linked) ===
+		// === 6. NEARBY COUNTRIES (generic intro only - shortcode displays actual countries) ===
 		$near_countries_system = get_option( 'wta_prompt_city_nearby_countries_system', '' );
 		$near_countries_user = get_option( 'wta_prompt_city_nearby_countries_user', '' );
 		$near_countries_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_system );
 		$near_countries_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_user );
-		$nearby_countries_content = '';
-		if ( ! empty( $nearby_countries_list ) ) {
-			$nearby_countries_content = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_countries_system, $near_countries_user );
-			// Auto-link country names
-			$nearby_countries_content = $this->auto_link_locations( $nearby_countries_content, $nearby_countries_data, 'country' );
-		}
+		$nearby_countries_intro = $this->call_openai_api( $api_key, $model, $temperature, 100, $near_countries_system, $near_countries_user );
 		
 		// === COMBINE ALL SECTIONS ===
 		$intro = $this->add_paragraph_breaks( $intro );
@@ -521,13 +497,19 @@ class WTA_AI_Processor {
 		$full_content .= '<h2>Seværdigheder og aktiviteter i ' . esc_html( $name_local ) . '</h2>' . "\n" . $attractions_content . "\n\n";
 		$full_content .= '<h2>Praktisk information for besøgende</h2>' . "\n" . $practical_content . "\n\n";
 		
-		if ( ! empty( $nearby_cities_content ) ) {
-			$full_content .= '<div id="nearby-cities"><h2>Nærliggende byer værd at besøge</h2>' . "\n<p>" . $nearby_cities_content . "</p></div>\n\n";
+		// Nearby cities section with dynamic shortcode
+		$full_content .= '<div id="nearby-cities"><h2>Nærliggende byer værd at besøge</h2>' . "\n";
+		if ( ! empty( $nearby_cities_intro ) ) {
+			$full_content .= '<p>' . $nearby_cities_intro . "</p>\n";
 		}
+		$full_content .= '[wta_nearby_cities count="5"]' . "\n</div>\n\n";
 		
-		if ( ! empty( $nearby_countries_content ) ) {
-			$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n<p>" . $nearby_countries_content . "</p></div>";
+		// Nearby countries section with dynamic shortcode
+		$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
+		if ( ! empty( $nearby_countries_intro ) ) {
+			$full_content .= '<p>' . $nearby_countries_intro . "</p>\n";
 		}
+		$full_content .= '[wta_nearby_countries count="5"]' . "\n</div>";
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );
