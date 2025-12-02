@@ -225,14 +225,19 @@ class WTA_Structure_Processor {
 			throw new Exception( $post_id->get_error_message() );
 		}
 
-		// Save meta
-		update_post_meta( $post_id, 'wta_type', 'country' );
-		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-		update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
-		update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
-		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
-		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	// Save meta
+	update_post_meta( $post_id, 'wta_type', 'country' );
+	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+	update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
+	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
+	update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
+	update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
+	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	
+	// Save Wikidata ID if available
+	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
+		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
+	}
 
 		// Determine timezone
 		if ( WTA_Timezone_Helper::is_complex_country( $data['country_code'] ) ) {
@@ -342,20 +347,25 @@ class WTA_Structure_Processor {
 		$country_code = get_post_meta( $parent_id, 'wta_country_code', true );
 		$continent_code = get_post_meta( $parent_id, 'wta_continent_code', true );
 
-		// Save meta
-		update_post_meta( $post_id, 'wta_type', 'city' );
-		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-		update_post_meta( $post_id, 'wta_continent_code', $continent_code );
-		update_post_meta( $post_id, 'wta_country_code', $country_code );
-		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
-		update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
-		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
-		
-		// Save population (CRITICAL for major cities shortcode!)
-		if ( isset( $data['population'] ) && $data['population'] > 0 ) {
-			update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
-		}
+	// Save meta
+	update_post_meta( $post_id, 'wta_type', 'city' );
+	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+	update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
+	update_post_meta( $post_id, 'wta_continent_code', $continent_code );
+	update_post_meta( $post_id, 'wta_country_code', $country_code );
+	update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
+	update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
+	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	
+	// Save population (CRITICAL for major cities shortcode!)
+	if ( isset( $data['population'] ) && $data['population'] > 0 ) {
+		update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
+	}
+	
+	// Save Wikidata ID if available
+	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
+		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
+	}
 
 		if ( isset( $data['latitude'] ) ) {
 			update_post_meta( $post_id, 'wta_lat', $data['latitude'] );

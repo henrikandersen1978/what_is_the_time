@@ -12,25 +12,34 @@
 class WTA_AI_Translator {
 
 	/**
-	 * Translate a location name using AI.
+	 * Translate a location name with intelligent fallback system.
 	 *
-	 * Uses OpenAI to translate with fallback to static translations.
-	 * Results are cached in WordPress transients.
+	 * Translation priority:
+	 * 1. Wikidata (if wikidata_id provided) - 100% accurate official names
+	 * 2. Static Quick_Translate table - manually curated translations
+	 * 3. OpenAI API - AI-powered translation
+	 * 4. Original name - fallback for small towns (correct behavior)
 	 *
 	 * @since    2.0.0
+	 * @since    2.11.0  Added Wikidata support with wikidata_id parameter.
 	 * @param    string $name        Original name.
 	 * @param    string $type        Location type (continent, country, city).
 	 * @param    string $target_lang Target language code (e.g., 'da-DK').
+	 * @param    string $wikidata_id Optional. Wikidata Q-ID (e.g., "Q1748").
 	 * @return   string              Translated name or original if translation fails.
 	 */
-	public static function translate( $name, $type, $target_lang = null ) {
+	public static function translate( $name, $type, $target_lang = null, $wikidata_id = null ) {
 		// Get target language from settings if not provided
 		if ( null === $target_lang ) {
 			$target_lang = get_option( 'wta_base_language', 'da-DK' );
 		}
 
-		// Generate cache key
-		$cache_key = 'wta_trans_' . md5( $name . '_' . $type . '_' . $target_lang );
+		// Convert 'da-DK' to 'da' for Wikidata
+		$wikidata_lang = strtok( $target_lang, '-' ); // Extract 'da' from 'da-DK'
+
+		// Generate cache key (include wikidata_id if provided)
+		$cache_suffix = ! empty( $wikidata_id ) ? $wikidata_id : $name;
+		$cache_key = 'wta_trans_' . md5( $cache_suffix . '_' . $type . '_' . $target_lang );
 
 		// Check cache first
 		$cached = get_transient( $cache_key );
@@ -38,7 +47,17 @@ class WTA_AI_Translator {
 			return $cached;
 		}
 
-		// Try static translation first (fast and free)
+		// 1. Try Wikidata first (most accurate!)
+		if ( ! empty( $wikidata_id ) ) {
+			$wikidata_translation = WTA_Wikidata_Translator::get_label( $wikidata_id, $wikidata_lang );
+			if ( false !== $wikidata_translation ) {
+				// Wikidata translation found, cache and return
+				set_transient( $cache_key, $wikidata_translation, YEAR_IN_SECONDS );
+				return $wikidata_translation;
+			}
+		}
+
+		// 2. Try static translation (fast and free)
 		$static_translation = WTA_Quick_Translate::translate( $name, $type, $target_lang );
 		if ( $static_translation !== $name ) {
 			// Static translation found, cache and return
@@ -46,7 +65,7 @@ class WTA_AI_Translator {
 			return $static_translation;
 		}
 
-		// No static translation, use AI
+		// 3. Use AI as last resort
 		$ai_translation = self::translate_with_ai( $name, $type, $target_lang );
 		
 		if ( false !== $ai_translation && ! empty( $ai_translation ) ) {
@@ -55,7 +74,7 @@ class WTA_AI_Translator {
 			return $ai_translation;
 		}
 
-		// If AI fails, cache and return original name
+		// 4. Return original name (correct for small towns that don't have translations!)
 		set_transient( $cache_key, $name, DAY_IN_SECONDS ); // Shorter cache for fallback
 		return $name;
 	}

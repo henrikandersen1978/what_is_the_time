@@ -92,16 +92,26 @@ class WTA_Importer {
 
 		// Queue countries
 		foreach ( $filtered_countries as $country ) {
+			// Use Wikidata for translation if available
+			$wikidata_id = isset( $country['wikiDataId'] ) ? $country['wikiDataId'] : null;
+			$name_local = WTA_AI_Translator::translate( 
+				$country['name'], 
+				'country', 
+				null, 
+				$wikidata_id 
+			);
+			
 			WTA_Queue::add(
 				'country',
 				array(
 					'name'         => $country['name'],
-					'name_local'   => WTA_AI_Translator::translate( $country['name'], 'country' ),
+					'name_local'   => $name_local,
 					'country_code' => $country['iso2'],
 					'country_id'   => $country['id'],
 					'continent'    => $country['region'],
 					'latitude'     => isset( $country['latitude'] ) ? $country['latitude'] : null,
 					'longitude'    => isset( $country['longitude'] ) ? $country['longitude'] : null,
+					'wikidata_id'  => $wikidata_id,
 				),
 				'country_' . $country['id']
 			);
@@ -194,20 +204,29 @@ class WTA_Importer {
 				$per_country[ $country_id ]++;
 			}
 
-			// Queue city
-			$city_payload = array(
-				'name'         => $city['name'],
-				'name_local'   => WTA_AI_Translator::translate( $city['name'], 'city' ),
-				'city_id'      => $city['id'],
-				'country_id'   => $city['country_id'],
-				'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,
-				'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
-				'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
-				'population'   => isset( $city['population'] ) ? $city['population'] : null,
-			);
+		// Queue city with Wikidata support
+		$wikidata_id = isset( $city['wikiDataId'] ) ? $city['wikiDataId'] : null;
+		$name_local = WTA_AI_Translator::translate( 
+			$city['name'], 
+			'city', 
+			null, 
+			$wikidata_id 
+		);
+		
+		$city_payload = array(
+			'name'         => $city['name'],
+			'name_local'   => $name_local,
+			'city_id'      => $city['id'],
+			'country_id'   => $city['country_id'],
+			'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,
+			'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
+			'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
+			'population'   => isset( $city['population'] ) ? $city['population'] : null,
+			'wikidata_id'  => $wikidata_id,
+		);
 
-			WTA_Queue::add( 'city', $city_payload, 'city_' . $city['id'] );
-			$queued++;
+		WTA_Queue::add( 'city', $city_payload, 'city_' . $city['id'] );
+		$queued++;
 
 			// Prevent timeout
 			if ( $queued % 100 === 0 ) {

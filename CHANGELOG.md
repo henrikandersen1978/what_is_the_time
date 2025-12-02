@@ -1,0 +1,323 @@
+# Changelog
+
+All notable changes to World Time AI will be documented in this file.
+
+## [2.12.0] - 2025-01-02
+
+### Fixed
+- **Critical Fix**: Corrected Git tag naming to use `v` prefix (e.g., `v2.12.0`) for WordPress update detection
+- Plugin updates now properly detected by WordPress auto-updater
+
+### Added
+- Same features as 2.11.0 (re-released with correct tag format)
+
+## [2.11.0] - 2025-01-02 (Git tag issue - superseded by 2.12.0)
+
+### Added
+- **Wikidata Integration**: Plugin now uses Wikidata API for 100% accurate official translations of location names
+- New `WTA_Wikidata_Translator` class for fetching official localized names from Wikidata
+- Support for `wikiDataId` field from JSON data sources for precise translation lookups
+- Intelligent fallback system: Wikidata → Static translations → AI → Original name
+- Cache system for Wikidata translations (1 year for successful lookups, 30 days for missing translations)
+- `wta_wikidata_id` meta field stored for all countries and cities
+
+### Changed
+- **Translation Priority**: Wikidata now takes priority over AI translations, ensuring more reliable and accurate Danish location names
+- `WTA_AI_Translator::translate()` now accepts optional `wikidata_id` parameter
+- Country and city imports now include Wikidata ID in payload for improved translation accuracy
+- Updated translation flow to try Wikidata first, then static Quick_Translate, then AI, and finally return original name
+
+### Fixed
+- Resolved issue where AI would hallucinate incorrect translations for place names
+- Small towns now correctly keep their original names when no official Danish translation exists (proper Danish convention)
+
+### Technical Details
+- Wikidata API endpoint: `https://www.wikidata.org/wiki/Special:EntityData/{Q-ID}.json`
+- Translations cached in WordPress transients with prefix `wta_wikidata_`
+- Rate limiting: 100ms delay between API calls to respect Wikidata limits
+- Comprehensive logging for translation sources and success/failure tracking
+
+---
+
+## [2.10.0] - 2025-01-02
+
+### Added
+- **Country Page Template**: New 6-section AI content structure for country landing pages
+  - Section 1: Introduction
+  - Section 2: Timezones Overview
+  - Section 3: Major Cities
+  - Section 4: Weather & Climate
+  - Section 5: Culture & Time
+  - Section 6: Travel Information
+- Admin UI prompts for all 6 country page sections with editable system and user prompts
+- H1 title custom field (`_pilanto_page_h1`) support for country pages
+- `[wta_major_cities count="12"]` shortcode now adapts to show cities from current country (not continent)
+- Automatic content regeneration for parent location when child is added
+
+### Changed
+- Country pages now use multi-prompt AI generation system (same approach as continents)
+- `generate_country_content()` function mirrors continent structure with 6 prompts instead of 5
+- Updated admin prompts interface with separate "Country Page Template" section
+
+### Fixed
+- Country AI content generation routing now correctly uses `generate_country_content()`
+- Ensured H1 titles are saved for both continent and country pages
+
+---
+
+## [2.9.10] - 2025-01-01
+
+### Fixed
+- **Critical Fix**: `wta_population` meta is now correctly saved during city import
+  - Added `update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );` in `process_city()`
+  - This fixes the `[wta_major_cities]` shortcode not displaying cities due to NULL population values
+- Major cities shortcode now correctly filters and displays cities with population data
+
+---
+
+## [2.9.8] - 2025-01-01
+
+### Added
+- Debug logging in `major_cities_shortcode()` to troubleshoot city display issues
+- Logging for major cities query, found cities, and parent post type
+
+---
+
+## [2.9.7] - 2025-01-01
+
+### Changed
+- **Improved Reliability**: Replaced AI-generated individual `[wta_city_time]` shortcodes with a single dynamic `[wta_major_cities count="12"]` shortcode
+- Shortcode is now inserted directly in `generate_continent_content()` instead of relying on AI to generate it
+- This ensures the shortcode is always present and correctly formatted
+
+---
+
+## [2.9.6] - 2025-01-01
+
+### Added
+- Additional debug logging in `generate_continent_content()` for major cities detection
+- Logs number of major cities found and their IDs for troubleshooting
+
+---
+
+## [2.9.5] - 2025-01-01
+
+### Added
+- Comprehensive CSS styling for `wta-city-times-grid` (3x4 responsive grid layout)
+- Individual `wta-live-city-clock` styling with gradient backgrounds
+- Extended `clock.js` to update `wta-live-city-clock` elements with real-time updates including seconds
+
+---
+
+## [2.9.4] - 2025-01-01
+
+### Fixed
+- `[wta_major_cities]` shortcode now correctly displays cities by including `post_status => array('publish', 'draft')` in query
+- Major cities are now found even when they are still in draft status during continent content generation
+
+---
+
+## [2.9.3] - 2025-01-01
+
+### Fixed
+- `[wta_child_locations]` shortcode heading now uses simple `post_title` instead of SEO H1 title
+- Heading now shows "Oversigt over lande i Europa" instead of "Oversigt over lande i Hvad er klokken i Europa?..."
+
+---
+
+## [2.9.2] - 2025-01-01
+
+### Added
+- `[wta_city_time city="London"]` shortcode to display live time for a specific city
+- Styling for inline city time display (`wta-inline-city-time`)
+
+### Fixed
+- `[wta_child_locations]` shortcode links now use simple country/city names instead of SEO H1 titles
+- Changed from `get_the_title()` to `get_post_field('post_title')` for link text
+
+---
+
+## [2.9.1] - 2025-01-01
+
+### Fixed
+- Increased CSS specificity for `.wta-locations-grid` to prevent theme style overrides
+- Added `!important` flags for critical grid layout properties
+
+---
+
+## [2.9.0] - 2025-01-01
+
+### Added
+- `[wta_child_locations]` shortcode to display grid of child countries/cities with dynamic heading and intro text
+- CSS styling for locations grid layout
+- Dynamic heading: "Oversigt over lande i [continent]" or "Oversigt over byer i [country]"
+- Intro text with count of child locations and timezones
+
+---
+
+## [2.8.4] - 2024-12-30
+
+### Added
+- PHP filter (`the_title`) and JavaScript fallback to automatically replace H1 titles for `wta_location` posts
+- H1 title now automatically uses `_pilanto_page_h1` custom field without requiring theme modifications
+
+---
+
+## [2.8.3] - 2024-12-30
+
+### Added
+- `THEME-INTEGRATION.md` documentation for theme developers
+- H1 custom field (`_pilanto_page_h1`) is now saved during continent and country post creation
+
+### Changed
+- Theme integration guide explains how to use `_pilanto_page_h1` meta key for custom H1 display
+
+---
+
+## [2.8.2] - 2024-12-30
+
+### Fixed
+- `post_title` for continents and countries now uses simple names (e.g., "Europa", "Danmark")
+- SEO-friendly H1 title stored in separate custom field for display
+
+---
+
+## [2.8.1] - 2024-12-30
+
+### Added
+- `add_paragraph_breaks()` function to format AI content into readable paragraphs
+- All AI-generated content now automatically formatted with proper line breaks
+
+### Changed
+- H2 headings now use Danish grammatical capitalization (only proper nouns capitalized)
+- Continent content generation query now includes `post_status => array('publish', 'draft')` to find child countries
+
+### Fixed
+- Fixed missing country list on continent pages by including draft posts in query
+- Resolved "klumpet tekst" issue - AI content now displays in well-formatted paragraphs
+
+---
+
+## [2.8.0] - 2024-12-30
+
+### Added
+- **Multi-Prompt System for Continent Pages**: Continent pages now use 5 separate AI prompts for different sections:
+  - Section 1: Introduction (200-300 words)
+  - Section 2: Timezones in [Continent]
+  - Section 3: Major Cities in [Continent]
+  - Section 4: Geography & Climate
+  - Section 5: Interesting Facts
+- Editable prompts in admin UI - each section has separate system and user prompts
+- Default prompt templates pre-filled with SEO-optimized instructions
+- Support for dynamic variables in prompts: `{continent_name_local}`, `{num_countries}`, `{country_list}`
+
+### Changed
+- Redesigned "Continent Page Template" section in admin prompts interface
+- `generate_continent_content()` now calls OpenAI 5 times (once per section) instead of generating all content in one call
+- Each section has its own temperature and token settings for optimal output
+- Max tokens removed from PHP (now controlled in prompts)
+
+---
+
+## [2.7.3] - 2024-12-29
+
+### Fixed
+- **Critical Fix**: Cities now correctly assigned to parent country instead of other cities
+  - Modified `get_posts` query in `process_city()` to filter by `wta_type = 'country'`
+  - Prevents incorrect parent assignments where cities became children of other cities
+
+---
+
+## [2.7.2] - 2024-12-29
+
+### Fixed
+- Syntax error in streaming parser (removed extra curly brace on line 547)
+
+---
+
+## [2.7.1] - 2024-12-29
+
+### Fixed
+- Improved municipality/commune filtering:
+  - Now filters by `name` field to exclude entries containing "kommune", "municipality", "commune", etc.
+  - Added `type` field filtering to exclude non-city administrative divisions
+- Population filter now correctly skips cities with `null` or `0` population when `min_population` is set
+
+---
+
+## [2.7.0] - 2024-12-29
+
+### Changed
+- **Major Performance Fix**: Reverted to chunk-based streaming parser for `cities.json` to avoid memory exhaustion
+  - Reads and parses one JSON object (city) at a time
+  - Drastically reduced memory usage (from 512MB+ to <100MB)
+  - Can now handle 185MB `cities.json` file without hitting memory limits
+
+---
+
+## [2.6.1] - 2024-12-29
+
+### Fixed
+- "Prepare Import Queue" AJAX button now correctly handles "Quick Test Mode" parameters
+- Updated `ajax_prepare_import()` to receive and pass `import_mode` and `selected_countries`
+
+---
+
+## [2.5.0] - 2024-12-28
+
+### Fixed
+- **Critical Fix**: City import now correctly filters by `country_code` (ISO2) instead of `country_id`
+  - This ensures cities are matched to the correct WordPress post IDs for parent countries
+  - Resolves issue where 0 cities were queued despite countries being imported
+
+---
+
+## [2.4.0] - 2024-12-28
+
+### Added
+- Comprehensive debug logging for `cities_import` job
+- Separate debug log file: `wp-content/uploads/wta-cities-import-debug.log`
+- Try-catch blocks with detailed error messages
+
+---
+
+## [2.3.0] - 2024-12-28
+
+### Added
+- "Quick Test Mode" in data import interface
+  - Option to select specific countries (e.g., Denmark) for fast testing
+  - Country selector organized by continent for better UX
+- `import_mode` parameter: `continents` or `countries`
+
+---
+
+## [2.2.0] - 2024-12-28
+
+### Changed
+- Improved admin grid layout: Changed from `minmax(300px, 1fr)` to `minmax(500px, 1fr)` for better readability
+
+---
+
+## [2.1.0] - 2024-12-27
+
+### Added
+- OpenAI API integration for AI-powered content generation
+- Action Scheduler for background job processing
+- Multi-stage import system: Structure → Timezone Resolution → AI Content Generation
+- Custom post type: `wta_location` for continents, countries, and cities
+- Hierarchical location structure with parent-child relationships
+- AI-powered translation of location names to Danish
+- Static translation table (`WTA_Quick_Translate`) for common locations
+- Custom queue system with progress tracking
+- Admin interface for data import, AI settings, and prompts management
+
+---
+
+## [2.0.0] - 2024-12-25
+
+### Added
+- Initial release of World Time AI plugin
+- Basic time display functionality
+- GitHub data source integration for countries, states, and cities
+
+

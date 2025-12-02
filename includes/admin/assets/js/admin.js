@@ -68,9 +68,9 @@
 		var countries = [];
 		
 		if (importMode === 'continents') {
-			$('input[name="continents[]"]:checked').each(function() {
-				continents.push($(this).val());
-			});
+		$('input[name="continents[]"]:checked').each(function() {
+			continents.push($(this).val());
+		});
 		} else {
 			$('#country_select option:selected').each(function() {
 				countries.push($(this).val());

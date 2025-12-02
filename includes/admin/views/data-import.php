@@ -128,16 +128,16 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 									<strong><?php esc_html_e( 'Import by Continents', WTA_TEXT_DOMAIN ); ?></strong>
 								</label>
 								<div id="continent_selector" style="margin-left: 25px; margin-bottom: 15px;">
-									<?php foreach ( $continents as $code => $name ) : ?>
-									<label>
-										<input type="checkbox" name="continents[]" value="<?php echo esc_attr( $code ); ?>" 
-											<?php checked( in_array( $code, $selected_continents, true ) ); ?> />
-										<?php echo esc_html( $name ); ?>
-									</label><br />
-									<?php endforeach; ?>
-									<p class="description">
-										<?php esc_html_e( 'Leave all unchecked to import all continents', WTA_TEXT_DOMAIN ); ?>
-									</p>
+								<?php foreach ( $continents as $code => $name ) : ?>
+								<label>
+									<input type="checkbox" name="continents[]" value="<?php echo esc_attr( $code ); ?>" 
+										<?php checked( in_array( $code, $selected_continents, true ) ); ?> />
+									<?php echo esc_html( $name ); ?>
+								</label><br />
+								<?php endforeach; ?>
+								<p class="description">
+									<?php esc_html_e( 'Leave all unchecked to import all continents', WTA_TEXT_DOMAIN ); ?>
+								</p>
 								</div>
 								
 								<label style="margin-bottom: 10px; display: block;">

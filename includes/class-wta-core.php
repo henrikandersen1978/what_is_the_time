@@ -54,12 +54,13 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-github-fetcher.php';
 		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-importer.php';
 
-		// Helpers
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
+	// Helpers
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-wikidata-translator.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
 
 		// Action Scheduler Processors
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
