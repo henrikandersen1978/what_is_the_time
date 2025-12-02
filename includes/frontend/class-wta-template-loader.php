@@ -89,14 +89,14 @@ class WTA_Template_Loader {
 		
 		foreach ( $ancestors as $ancestor_id ) {
 			$breadcrumb_items[] = array(
-				'name' => get_the_title( $ancestor_id ),
+				'name' => get_post_field( 'post_title', $ancestor_id ), // Use simple title, not SEO H1
 				'url'  => get_permalink( $ancestor_id ),
 			);
 		}
 		
-		// Add current page
+		// Add current page (use simple title, not SEO H1)
 		$breadcrumb_items[] = array(
-			'name' => $name_local,
+			'name' => get_post_field( 'post_title', $post_id ),
 			'url'  => get_permalink( $post_id ),
 		);
 		

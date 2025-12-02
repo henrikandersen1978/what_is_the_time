@@ -1,55 +1,67 @@
 /* World Time AI - Frontend Styles */
 
-/* Breadcrumb Navigation */
-.wta-breadcrumb {
-	margin: 0 0 1.5em 0 !important;
-	padding: 0.75em 0 !important;
-	border-bottom: 1px solid #e0e0e0 !important;
+/* Breadcrumb Navigation - High Specificity */
+nav.wta-breadcrumb {
+	margin: 0 0 2em 0 !important;
+	padding: 1em 0 !important;
+	border-bottom: 2px solid #e8e8e8 !important;
+	background: none !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
 }
 
-.wta-breadcrumb-list {
+nav.wta-breadcrumb ol.wta-breadcrumb-list {
 	list-style: none !important;
+	list-style-type: none !important;
 	padding: 0 !important;
 	margin: 0 !important;
 	display: flex !important;
 	flex-wrap: wrap !important;
 	align-items: center !important;
-	gap: 0.5em !important;
+	gap: 0.3em !important;
+	background: none !important;
 }
 
-.wta-breadcrumb-item {
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item {
 	display: inline-flex !important;
 	align-items: center !important;
 	font-size: 0.9em !important;
-	color: #646970 !important;
+	color: #666 !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	background: none !important;
+	line-height: 1.5 !important;
 }
 
-.wta-breadcrumb-item::before {
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item::before {
 	content: none !important;
 	display: none !important;
 }
 
-.wta-breadcrumb-item:not(:last-child)::after {
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item:not(:last-child)::after {
 	content: "›" !important;
-	margin-left: 0.5em !important;
+	margin: 0 0.4em !important;
 	color: #999 !important;
 	font-weight: normal !important;
+	font-size: 1.1em !important;
 }
 
-.wta-breadcrumb-item a {
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a {
 	color: #2271b1 !important;
 	text-decoration: none !important;
 	transition: color 0.2s !important;
+	font-weight: 400 !important;
 }
 
-.wta-breadcrumb-item a:hover {
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a:hover {
 	color: #135e96 !important;
 	text-decoration: underline !important;
 }
 
-.wta-breadcrumb-current span {
-	color: #1d2327 !important;
-	font-weight: 500 !important;
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-current span {
+	color: #333 !important;
+	font-weight: 600 !important;
 }
 
 /* Quick Navigation */

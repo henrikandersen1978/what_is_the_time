@@ -350,7 +350,7 @@ class WTA_Shortcodes {
 		$output .= '<p>' . esc_html( $intro ) . '</p>' . "\n";
 		
 		// Locations grid (with very specific class to prevent theme override)
-		$output .= '<div class="wta-plugin-locations-grid wta-child-list">' . "\n";
+		$output .= '<div id="child-locations" class="wta-plugin-locations-grid wta-child-list">' . "\n";
 		$output .= '<ul class="wta-grid-list">' . "\n";
 		
 		foreach ( $children as $child ) {
