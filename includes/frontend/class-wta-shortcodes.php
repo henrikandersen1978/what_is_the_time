@@ -333,7 +333,7 @@ class WTA_Shortcodes {
 			);
 		} elseif ( 'country' === $parent_type ) {
 			$intro = sprintf(
-				'I %s finder du %d store %s. Klik på en by for at se aktuel tid og tidszoner.',
+				'I %s kan du se hvad klokken er i følgende %d %s:',
 				$parent_name,
 				$count,
 				$child_type_plural
