@@ -286,8 +286,8 @@ class WTA_Shortcodes {
 			$child_type = 'land';
 			$child_type_plural = 'lande';
 		} elseif ( 'country' === $parent_type ) {
-			$child_type = 'by';
-			$child_type_plural = 'byer';
+			$child_type = 'sted';
+			$child_type_plural = 'steder';
 		} else {
 			$child_type = 'lokation';
 			$child_type_plural = 'lokationer';
