@@ -16,6 +16,9 @@ class WTA_Template_Loader {
 	public function __construct() {
 		// Filter title for location posts to show custom H1
 		add_filter( 'the_title', array( $this, 'filter_location_title' ), 10, 2 );
+		
+		// Inject breadcrumb and quick nav before content
+		add_filter( 'the_content', array( $this, 'inject_navigation' ), 5 );
 	}
 
 	/**
@@ -47,6 +50,134 @@ class WTA_Template_Loader {
 		}
 		
 		return $title;
+	}
+
+	/**
+	 * Inject breadcrumb navigation and quick nav before content.
+	 *
+	 * @since    2.18.1
+	 * @param    string $content Post content.
+	 * @return   string          Modified content with navigation.
+	 */
+	public function inject_navigation( $content ) {
+		// Only for location posts in singular view
+		if ( ! is_singular( WTA_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+			return $content;
+		}
+		
+		$post_id = get_the_ID();
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		$name_local = get_the_title();
+		
+		$navigation_html = '';
+		
+		// Build breadcrumb
+		$breadcrumb_items = array();
+		$breadcrumb_items[] = array(
+			'name' => 'Forside',
+			'url'  => home_url( '/' ),
+		);
+		
+		// Add parent hierarchy
+		$ancestors = array();
+		$parent_id = wp_get_post_parent_id( $post_id );
+		while ( $parent_id ) {
+			$ancestors[] = $parent_id;
+			$parent_id = wp_get_post_parent_id( $parent_id );
+		}
+		$ancestors = array_reverse( $ancestors );
+		
+		foreach ( $ancestors as $ancestor_id ) {
+			$breadcrumb_items[] = array(
+				'name' => get_the_title( $ancestor_id ),
+				'url'  => get_permalink( $ancestor_id ),
+			);
+		}
+		
+		// Add current page
+		$breadcrumb_items[] = array(
+			'name' => $name_local,
+			'url'  => get_permalink( $post_id ),
+		);
+		
+		// Output breadcrumb
+		if ( count( $breadcrumb_items ) > 1 ) {
+			$navigation_html .= '<nav class="wta-breadcrumb" aria-label="Breadcrumb">';
+			$navigation_html .= '<ol class="wta-breadcrumb-list">';
+			
+			foreach ( $breadcrumb_items as $index => $item ) {
+				if ( $index === count( $breadcrumb_items ) - 1 ) {
+					$navigation_html .= '<li class="wta-breadcrumb-item wta-breadcrumb-current" aria-current="page">';
+					$navigation_html .= '<span>' . esc_html( $item['name'] ) . '</span>';
+					$navigation_html .= '</li>';
+				} else {
+					$navigation_html .= '<li class="wta-breadcrumb-item">';
+					$navigation_html .= '<a href="' . esc_url( $item['url'] ) . '">' . esc_html( $item['name'] ) . '</a>';
+					$navigation_html .= '</li>';
+				}
+			}
+			
+			$navigation_html .= '</ol>';
+			$navigation_html .= '</nav>';
+			
+			// Add Schema.org JSON-LD breadcrumb
+			$schema = array(
+				'@context'        => 'https://schema.org',
+				'@type'           => 'BreadcrumbList',
+				'itemListElement' => array(),
+			);
+			
+			foreach ( $breadcrumb_items as $index => $item ) {
+				$schema['itemListElement'][] = array(
+					'@type'    => 'ListItem',
+					'position' => $index + 1,
+					'name'     => $item['name'],
+					'item'     => $item['url'],
+				);
+			}
+			
+			$navigation_html .= '<script type="application/ld+json">';
+			$navigation_html .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+			$navigation_html .= '</script>';
+		}
+		
+		// Check if page has child locations or major cities
+		$has_children = false;
+		$has_major_cities = false;
+		
+		if ( in_array( $type, array( 'continent', 'country' ) ) ) {
+			$children = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'post_parent'    => $post_id,
+				'posts_per_page' => 1,
+				'post_status'    => array( 'publish', 'draft' ),
+			) );
+			$has_children = ! empty( $children );
+			$has_major_cities = true; // Continents and countries always show major cities
+		}
+		
+		// Output quick navigation
+		if ( $has_children || $has_major_cities ) {
+			$navigation_html .= '<div class="wta-quick-nav">';
+			
+			if ( $has_children ) {
+				$child_label = ( 'continent' === $type ) ? '📍 Se alle lande' : '📍 Se alle steder';
+				$navigation_html .= '<a href="#child-locations" class="wta-quick-nav-btn wta-smooth-scroll">';
+				$navigation_html .= esc_html( $child_label );
+				$navigation_html .= '</a>';
+			}
+			
+			if ( $has_major_cities ) {
+				$navigation_html .= '<a href="#major-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
+				$navigation_html .= '🕐 Live tidspunkter';
+				$navigation_html .= '</a>';
+			}
+			
+			$navigation_html .= '</div>';
+		}
+		
+		// Prepend navigation to content
+		return $navigation_html . $content;
 	}
 
 	/**
