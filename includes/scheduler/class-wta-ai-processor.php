@@ -126,14 +126,16 @@ class WTA_AI_Processor {
 	 * @return   array|false     Generated content or false on failure.
 	 */
 	private function generate_ai_content( $post_id, $type ) {
-		// Use multi-section generation for continents
+		// Use multi-section generation for continents, countries, and cities
 		if ( 'continent' === $type ) {
 			return $this->generate_continent_content( $post_id );
 		} elseif ( 'country' === $type ) {
 			return $this->generate_country_content( $post_id );
+		} elseif ( 'city' === $type ) {
+			return $this->generate_city_content( $post_id );
 		}
 		
-		// Use standard generation for cities only
+		// Use standard generation for cities only (legacy fallback)
 		return $this->generate_standard_content( $post_id, $type );
 	}
 
@@ -400,6 +402,299 @@ class WTA_AI_Processor {
 			'yoast_title' => $yoast_title,
 			'yoast_desc'  => $yoast_desc,
 		);
+	}
+
+	/**
+	 * Generate city content (6 sections with auto-linked recommendations).
+	 *
+	 * @since    2.19.0
+	 * @param    int $post_id Post ID.
+	 * @return   array|false  Generated content or false on failure.
+	 */
+	private function generate_city_content( $post_id ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		$temperature = (float) get_option( 'wta_openai_temperature', 0.7 );
+		
+		$name_local = get_the_title( $post_id );
+		$name_original = get_post_meta( $post_id, 'wta_name_original', true );
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		$latitude = get_post_meta( $post_id, 'wta_latitude', true );
+		$longitude = get_post_meta( $post_id, 'wta_longitude', true );
+		
+		// Get parent country and continent names
+		$parent_country_id = wp_get_post_parent_id( $post_id );
+		$country_name = $parent_country_id ? get_the_title( $parent_country_id ) : '';
+		$parent_continent_id = $parent_country_id ? wp_get_post_parent_id( $parent_country_id ) : 0;
+		$continent_name = $parent_continent_id ? get_the_title( $parent_continent_id ) : '';
+		
+		// Find nearby cities (within 500km, same country)
+		$nearby_cities_data = $this->get_nearby_cities( $post_id, $latitude, $longitude, 4 );
+		$nearby_cities_list = implode( ', ', array_map( function( $city ) {
+			return get_post_field( 'post_title', $city['id'] );
+		}, $nearby_cities_data ) );
+		
+		// Find nearby countries (same continent)
+		$nearby_countries_data = $this->get_nearby_countries( $parent_continent_id, $parent_country_id, 5 );
+		$nearby_countries_list = implode( ', ', array_map( function( $country_id ) {
+			return get_the_title( $country_id );
+		}, $nearby_countries_data ) );
+		
+		// Build variables for prompts
+		$variables = array(
+			'{location_name}'       => $name_original,
+			'{location_name_local}' => $name_local,
+			'{country_name}'        => $country_name,
+			'{continent_name}'      => $continent_name,
+			'{timezone}'            => $timezone,
+			'{latitude}'            => $latitude,
+			'{longitude}'           => $longitude,
+			'{base_country_name}'   => get_option( 'wta_base_country_name', 'Danmark' ),
+			'{nearby_cities_list}'  => $nearby_cities_list,
+			'{nearby_countries_list}' => $nearby_countries_list,
+		);
+		
+		// === 1. INTRO ===
+		$intro_system = get_option( 'wta_prompt_city_intro_system', '' );
+		$intro_user = get_option( 'wta_prompt_city_intro_user', '' );
+		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+		$intro = $this->call_openai_api( $api_key, $model, $temperature, 300, $intro_system, $intro_user );
+		
+		// === 2. TIMEZONE ===
+		$tz_system = get_option( 'wta_prompt_city_timezone_system', '' );
+		$tz_user = get_option( 'wta_prompt_city_timezone_user', '' );
+		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $tz_system, $tz_user );
+		
+		// === 3. ATTRACTIONS ===
+		$attr_system = get_option( 'wta_prompt_city_attractions_system', '' );
+		$attr_user = get_option( 'wta_prompt_city_attractions_user', '' );
+		$attr_system = str_replace( array_keys( $variables ), array_values( $variables ), $attr_system );
+		$attr_user = str_replace( array_keys( $variables ), array_values( $variables ), $attr_user );
+		$attractions_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $attr_system, $attr_user );
+		
+		// === 4. PRACTICAL ===
+		$pract_system = get_option( 'wta_prompt_city_practical_system', '' );
+		$pract_user = get_option( 'wta_prompt_city_practical_user', '' );
+		$pract_system = str_replace( array_keys( $variables ), array_values( $variables ), $pract_system );
+		$pract_user = str_replace( array_keys( $variables ), array_values( $variables ), $pract_user );
+		$practical_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $pract_system, $pract_user );
+		
+		// === 5. NEARBY CITIES (will be auto-linked) ===
+		$near_cities_system = get_option( 'wta_prompt_city_nearby_cities_system', '' );
+		$near_cities_user = get_option( 'wta_prompt_city_nearby_cities_user', '' );
+		$near_cities_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_system );
+		$near_cities_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_user );
+		$nearby_cities_content = '';
+		if ( ! empty( $nearby_cities_list ) ) {
+			$nearby_cities_content = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_cities_system, $near_cities_user );
+			// Auto-link city names
+			$nearby_cities_content = $this->auto_link_locations( $nearby_cities_content, $nearby_cities_data, 'city' );
+		}
+		
+		// === 6. NEARBY COUNTRIES (will be auto-linked) ===
+		$near_countries_system = get_option( 'wta_prompt_city_nearby_countries_system', '' );
+		$near_countries_user = get_option( 'wta_prompt_city_nearby_countries_user', '' );
+		$near_countries_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_system );
+		$near_countries_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_user );
+		$nearby_countries_content = '';
+		if ( ! empty( $nearby_countries_list ) ) {
+			$nearby_countries_content = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_countries_system, $near_countries_user );
+			// Auto-link country names
+			$nearby_countries_content = $this->auto_link_locations( $nearby_countries_content, $nearby_countries_data, 'country' );
+		}
+		
+		// === COMBINE ALL SECTIONS ===
+		$intro = $this->add_paragraph_breaks( $intro );
+		$timezone_content = $this->add_paragraph_breaks( $timezone_content );
+		$attractions_content = $this->add_paragraph_breaks( $attractions_content );
+		$practical_content = $this->add_paragraph_breaks( $practical_content );
+		
+		$full_content = $intro . "\n\n";
+		$full_content .= '<h2>Tidszone i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>Seværdigheder og aktiviteter i ' . esc_html( $name_local ) . '</h2>' . "\n" . $attractions_content . "\n\n";
+		$full_content .= '<h2>Praktisk information for besøgende</h2>' . "\n" . $practical_content . "\n\n";
+		
+		if ( ! empty( $nearby_cities_content ) ) {
+			$full_content .= '<h2>Nærliggende byer værd at besøge</h2>' . "\n<p>" . $nearby_cities_content . "</p>\n\n";
+		}
+		
+		if ( ! empty( $nearby_countries_content ) ) {
+			$full_content .= '<h2>Udforsk nærliggende lande</h2>' . "\n<p>" . $nearby_countries_content . "</p>";
+		}
+		
+		// Generate Yoast SEO meta
+		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );
+		$yoast_desc = $this->generate_yoast_description( $post_id, $name_local, 'city' );
+		
+		return array(
+			'content'     => $full_content,
+			'yoast_title' => $yoast_title,
+			'yoast_desc'  => $yoast_desc,
+		);
+	}
+
+	/**
+	 * Find nearby cities within distance threshold.
+	 *
+	 * @since    2.19.0
+	 * @param    int    $current_city_id Current city ID.
+	 * @param    float  $lat             Current latitude.
+	 * @param    float  $lon             Current longitude.
+	 * @param    int    $count           Number of cities to return.
+	 * @return   array                   Array of city data with id and distance.
+	 */
+	private function get_nearby_cities( $current_city_id, $lat, $lon, $count = 4 ) {
+		if ( empty( $lat ) || empty( $lon ) ) {
+			return array();
+		}
+		
+		$parent_country_id = wp_get_post_parent_id( $current_city_id );
+		if ( ! $parent_country_id ) {
+			return array();
+		}
+		
+		// Get all cities in same country
+		$cities = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $parent_country_id,
+			'posts_per_page' => -1,
+			'post__not_in'   => array( $current_city_id ),
+			'post_status'    => array( 'publish', 'draft' ),
+			'meta_query'     => array(
+				array(
+					'key'     => 'wta_latitude',
+					'compare' => 'EXISTS'
+				),
+				array(
+					'key'     => 'wta_longitude',
+					'compare' => 'EXISTS'
+				)
+			)
+		) );
+		
+		$cities_with_distance = array();
+		foreach ( $cities as $city ) {
+			$city_lat = get_post_meta( $city->ID, 'wta_latitude', true );
+			$city_lon = get_post_meta( $city->ID, 'wta_longitude', true );
+			
+			if ( empty( $city_lat ) || empty( $city_lon ) ) {
+				continue;
+			}
+			
+			$distance = $this->calculate_distance( $lat, $lon, $city_lat, $city_lon );
+			
+			// Only include cities within 500km
+			if ( $distance <= 500 ) {
+				$cities_with_distance[] = array(
+					'id'       => $city->ID,
+					'distance' => $distance
+				);
+			}
+		}
+		
+		// Sort by distance
+		usort( $cities_with_distance, function( $a, $b ) {
+			return $a['distance'] <=> $b['distance'];
+		});
+		
+		return array_slice( $cities_with_distance, 0, $count );
+	}
+
+	/**
+	 * Calculate distance between two GPS coordinates (Haversine formula).
+	 *
+	 * @since    2.19.0
+	 * @param    float $lat1 Latitude 1.
+	 * @param    float $lon1 Longitude 1.
+	 * @param    float $lat2 Latitude 2.
+	 * @param    float $lon2 Longitude 2.
+	 * @return   float       Distance in kilometers.
+	 */
+	private function calculate_distance( $lat1, $lon1, $lat2, $lon2 ) {
+		$earth_radius = 6371; // km
+		
+		$dLat = deg2rad( $lat2 - $lat1 );
+		$dLon = deg2rad( $lon2 - $lon1 );
+		
+		$a = sin( $dLat / 2 ) * sin( $dLat / 2 ) +
+			 cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) *
+			 sin( $dLon / 2 ) * sin( $dLon / 2 );
+		
+		$c = 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+		
+		return $earth_radius * $c;
+	}
+
+	/**
+	 * Find nearby countries in same continent.
+	 *
+	 * @since    2.19.0
+	 * @param    int $continent_id      Continent ID.
+	 * @param    int $current_country_id Current country ID to exclude.
+	 * @param    int $count              Number of countries to return.
+	 * @return   array                   Array of country IDs.
+	 */
+	private function get_nearby_countries( $continent_id, $current_country_id, $count = 5 ) {
+		if ( ! $continent_id ) {
+			return array();
+		}
+		
+		$countries = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $continent_id,
+			'posts_per_page' => $count + 1,
+			'post__not_in'   => array( $current_country_id ),
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'post_status'    => array( 'publish', 'draft' ),
+		) );
+		
+		$country_ids = array();
+		foreach ( $countries as $country ) {
+			$country_ids[] = $country->ID;
+			if ( count( $country_ids ) >= $count ) {
+				break;
+			}
+		}
+		
+		return $country_ids;
+	}
+
+	/**
+	 * Auto-link location names in content.
+	 *
+	 * @since    2.19.0
+	 * @param    string $content      Content to process.
+	 * @param    array  $locations    Array of location data (city: id/distance, country: just IDs).
+	 * @param    string $type         Type: 'city' or 'country'.
+	 * @return   string               Content with auto-linked location names.
+	 */
+	private function auto_link_locations( $content, $locations, $type = 'city' ) {
+		foreach ( $locations as $location ) {
+			$location_id = ( $type === 'city' ) ? $location['id'] : $location;
+			$location_name = get_post_field( 'post_title', $location_id );
+			$location_url = get_permalink( $location_id );
+			
+			if ( empty( $location_name ) || empty( $location_url ) ) {
+				continue;
+			}
+			
+			// Use word boundaries to avoid partial matches
+			// Only link first occurrence to avoid over-linking
+			$pattern = '/(?<!<a[^>]*>)(?<!href=")(?<!title=")\b' . preg_quote( $location_name, '/' ) . '\b(?![^<]*<\/a>)/u';
+			$replacement = '<a href="' . esc_url( $location_url ) . '" class="wta-auto-link">' . esc_html( $location_name ) . '</a>';
+			
+			$content = preg_replace( $pattern, $replacement, $content, 1 );
+		}
+		
+		return $content;
 	}
 
 	/**

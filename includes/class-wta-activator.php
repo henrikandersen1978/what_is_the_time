@@ -227,6 +227,92 @@ Gør det praktisk og kulturelt interessant.' );
 
 Vær konkret og brugbar - fokuser på ting rejsende faktisk har brug for at vide.' );
 
+		// === CITY PAGE TEMPLATE (6 sections) ===
+		
+		// City page - Section 1: Intro
+		add_option( 'wta_prompt_city_intro_system', 'Du er en faktuel rejseekspert. KRITISK: Skriv KUN om den SPECIFIKKE by der er angivet. Verificer ALTID byens placering i det angivne land med GPS-koordinater. Nævn ALDRIG andre byer med samme navn. Hvis du er usikker på facts, skriv IKKE om det. Fokuser på objektive, verificerbare facts. Undgå spekulationer og generaliseringer. Skriv kort, præcist og faktabaseret. KUN ren tekst, ingen overskrifter, ingen markdown.' );
+		add_option( 'wta_prompt_city_intro_user', 'VERIFICÉR FØRST: Byen ligger i {country_name}, {continent_name}. Koordinater: {latitude}, {longitude}. Tidszone: {timezone}.
+
+Skriv 2-3 korte afsnit om {location_name_local} i {country_name}.
+
+Fokuser på:
+- Byens beliggenhed i {country_name}
+- Hvad byen er kendt for
+- Tidszonen ({timezone})
+- Eventuel regional betydning
+
+Undgå:
+- At nævne andre byer med samme navn
+- At gætte på facts du ikke er sikker på
+- Historiske facts uden relevans for tiden
+
+Max 150 ord. Skriv KUN om DENNE specifikke by.' );
+
+		// City page - Section 2: Timezone
+		add_option( 'wta_prompt_city_timezone_system', 'Du er tidszone-ekspert der forklarer præcist og praktisk. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_city_timezone_user', 'Skriv 2-3 afsnit om tidszonen i {location_name_local}.
+
+Forklar:
+- Tidszonen ({timezone}) - hvad er UTC-offset
+- Sommertid/vintertid og hvornår skiftet sker
+- Forskel til {base_country_name} og praktiske implikationer
+- Bedste tid at kontakte nogen i {location_name_local}
+- Sammenligning med andre store byer i regionen
+
+Max 200 ord. Vær praktisk og brugbar.' );
+
+		// City page - Section 3: Attractions
+		add_option( 'wta_prompt_city_attractions_system', 'Du er faktuel rejseguide der ALDRIG spekulerer. KRITISK: Hvis du ikke kender specifikke seværdigheder, fokuser på bytype og regional karakter. Undgå påstande du ikke kan verificere. Skriv om regionen hvis bydata mangler. KUN ren tekst, ingen overskrifter, ingen markdown.' );
+		add_option( 'wta_prompt_city_attractions_user', 'VERIFY: {location_name_local} i {country_name}, koordinater {latitude},{longitude}.
+
+Skriv 2-3 korte afsnit om seværdigheder i {location_name_local}.
+
+Hvis byen er kendt: Nævn specifikke attraktioner, kultur, events
+Hvis byen er mindre kendt: Fokuser på regional karakter og generel information
+
+Fokuser på:
+- Hvad området er kendt for
+- Kulturelle eller naturlige highlights
+- Regional betydning
+
+Max 200 ord. KUN om denne by i {country_name}.' );
+
+		// City page - Section 4: Practical
+		add_option( 'wta_prompt_city_practical_system', 'Du giver praktiske, verificerbare rejsetips. VIGTIG: KUN ren tekst, ingen overskrifter, ingen markdown. Alle sætninger SKAL afsluttes korrekt.' );
+		add_option( 'wta_prompt_city_practical_user', 'Skriv 2-3 afsnit med praktisk info om at besøge {location_name_local}.
+
+Inkluder:
+- Transport (lufthavn, tog, bus)
+- Vejr og klima generelt
+- Bedste rejsetid
+- Praktiske tips for besøgende
+
+Fokuser på generel regional info hvis specifics mangler. Max 200 ord.' );
+
+		// City page - Section 5: Nearby Cities
+		add_option( 'wta_prompt_city_nearby_cities_system', 'Du anbefaler nærliggende byer. KRITISK: Du må KUN nævne de PRÆCIS angivne bynavne - INGEN andre! Brug NØJAGTIGT de navne der er givet. Nævn ALLE de angivne byer. Ingen spekulationer om afstande eller rejsetider. KUN ren tekst.' );
+		add_option( 'wta_prompt_city_nearby_cities_user', 'Skriv en kort anbefaling (2-3 sætninger) om at besøge nærliggende byer når man er i {location_name_local}.
+
+Du SKAL nævne PRÆCIS disse byer (og INGEN andre):
+{nearby_cities_list}
+
+Eksempel tone:
+"Når du besøger Cannes, er der flere spændende byer i nærheden. Nice ligger tæt på kysten, mens Antibes og Monaco også er nemme at besøge."
+
+Skriv naturligt men nævn KUN de angivne byer. Max 60 ord.' );
+
+		// City page - Section 6: Nearby Countries
+		add_option( 'wta_prompt_city_nearby_countries_system', 'Du anbefaler nærliggende lande at udforske. KRITISK: Du må KUN nævne de PRÆCIS angivne lande - INGEN andre! Brug NØJAGTIGT de navne der er givet. Skriv kort om at udforske regionen. KUN ren tekst.' );
+		add_option( 'wta_prompt_city_nearby_countries_user', 'Skriv en kort anbefaling (2-3 sætninger) om at udforske lande i nærheden af {location_name_local}, {country_name}.
+
+Du SKAL nævne PRÆCIS disse lande (og INGEN andre):
+{nearby_countries_list}
+
+Eksempel:
+"Fra Frankrig er det nemt at udforske Sydeuropa. Italien, Schweiz og Spanien ligger alle i nærheden og tilbyder unikke oplevelser."
+
+Max 60 ord. Nævn KUN de angivne lande.' );
+
 		// Continent page - Section 1: Introduction
 		add_option( 'wta_prompt_continent_intro_system', 'Du er en SEO-ekspert der skriver naturligt dansk indhold om tidszoner og geografi. Skriv informativt og direkte til danske brugere. VIGTIG: Skriv KUN ren tekst uden overskrifter, uden markdown, uden ChatGPT-fraser som "velkommen til" eller "lad os udforske". Alle sætninger SKAL afsluttes korrekt - ingen afskæring midt i sætning. Brug KORTE, varierede sætninger for god læsbarhed. Teksten opdeles automatisk i paragraffer.' );
 		add_option( 'wta_prompt_continent_intro_user', 'Skriv en SEO-optimeret introduktion på 120-150 ord om hvad klokken er i {location_name_local}. FOKUS: Besvaring af søgeintentionen "hvad er klokken i {location_name_local}". Inkluder naturligt disse SEO-søgeord: "hvad er klokken i {location_name_local}", "tidszoner i {location_name_local}", "aktuel tid i {location_name_local}". Start direkte med information (ikke "velkommen" eller lignende). Nævn kort: antal tidszoner, geografisk udstrækning, største lande. Skriv med korte, varierede sætninger for god læsbarhed. Veksl mellem korte (5-10 ord) og lidt længere sætninger (15-20 ord). Afslut ALLE sætninger korrekt. KUN ren tekst - ingen overskrifter, ingen markdown.' );

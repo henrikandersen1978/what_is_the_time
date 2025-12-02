@@ -34,12 +34,14 @@ class WTA_Settings {
 		register_setting( 'wta_timezone_language', 'wta_complex_countries', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 
 		// AI Prompts
-		$prompt_types = array( 
+		$prompt_types = array(
 			'translate_name', 'city_title', 'city_content', 'country_title', 'country_content',
 			// Country page template (6 sections)
 			'country_intro', 'country_timezone', 'country_cities', 'country_weather', 'country_culture', 'country_travel',
 			// Continent page template (5 sections)
 			'continent_intro', 'continent_timezone', 'continent_cities', 'continent_geography', 'continent_facts',
+			// City page template (6 sections)
+			'city_intro', 'city_timezone', 'city_attractions', 'city_practical', 'city_nearby_cities', 'city_nearby_countries',
 			'yoast_title', 'yoast_desc'
 		);
 		foreach ( $prompt_types as $type ) {

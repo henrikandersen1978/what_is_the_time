@@ -15,6 +15,8 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_prompts' ) ) {
 	$prompt_types = array( 
 		'translate_name', 'city_title', 'city_content', 'country_title', 'country_content', 
 		'continent_intro', 'continent_timezone', 'continent_cities', 'continent_geography', 'continent_facts',
+		'country_intro', 'country_timezone', 'country_cities', 'country_weather', 'country_culture', 'country_travel',
+		'city_intro', 'city_timezone', 'city_attractions', 'city_practical', 'city_nearby_cities', 'city_nearby_countries',
 		'yoast_title', 'yoast_desc' 
 	);
 	
@@ -339,6 +341,148 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_prompts' ) ) {
 					<td>
 						<textarea id="wta_prompt_continent_facts_user" name="wta_prompt_continent_facts_user" rows="5" class="large-text"><?php echo esc_textarea( get_option( 'wta_prompt_continent_facts_user' ) ); ?></textarea>
 						<p class="description"><?php esc_html_e( 'Interesting facts specifically about timezones and time.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<!-- CITY PAGE TEMPLATE -->
+		<div class="wta-card">
+			<h2>🏙️ <?php esc_html_e( 'City Page Template (6 Sections)', WTA_TEXT_DOMAIN ); ?></h2>
+			
+			<div class="notice notice-info inline" style="margin: 15px 0;">
+				<p><strong>📌 <?php esc_html_e( 'Content Structure:', WTA_TEXT_DOMAIN ); ?></strong></p>
+				<ol>
+					<li><strong><?php esc_html_e( 'Intro', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Basic info about city and timezone', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Timezone Details', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'DST, time differences, practical info', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Attractions', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Sightseeing and activities', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Practical Info', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Travel, transport, climate', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Nearby Cities', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'PHP finds + AI writes + auto-linked', WTA_TEXT_DOMAIN ); ?></li>
+					<li><strong><?php esc_html_e( 'Nearby Countries', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'PHP finds + AI writes + auto-linked', WTA_TEXT_DOMAIN ); ?></li>
+				</ol>
+				<p>⚠️ <strong><?php esc_html_e( 'City/country names in sections 5-6 are automatically linked to their pages.', WTA_TEXT_DOMAIN ); ?></strong></p>
+			</div>
+			
+			<p class="description">
+				<?php esc_html_e( 'Variables: {location_name_local}, {location_name}, {country_name}, {continent_name}, {timezone}, {latitude}, {longitude}, {nearby_cities_list}, {nearby_countries_list}', WTA_TEXT_DOMAIN ); ?>
+			</p>
+
+			<!-- 1. Intro -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">📝 <?php esc_html_e( '1. Intro (2-3 korte afsnit)', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_intro_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_intro_system' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Factual expert, never speculates, uses GPS coordinates for verification', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_intro_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_intro_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Basic city info, location, timezone. Max 150 words.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- 2. Timezone -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">🕐 <?php esc_html_e( '2. Tidszone og praktisk info', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_timezone_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_timezone_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_timezone_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_timezone_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Timezone details, DST, time differences. Max 200 words.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- 3. Attractions -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">🎭 <?php esc_html_e( '3. Seværdigheder og aktiviteter', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_attractions_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_attractions_system' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'NEVER speculates, focuses on regional info if specifics unknown', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_attractions_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_attractions_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Tourist attractions, culture, events. Max 200 words.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- 4. Practical -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">✈️ <?php esc_html_e( '4. Praktisk rejseinformation', WTA_TEXT_DOMAIN ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_practical_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_practical_system' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_practical_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_practical_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Transport, weather, travel tips. Max 200 words.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- 5. Nearby Cities -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">🏙️ <?php esc_html_e( '5. Nærliggende byer (Auto-linked)', WTA_TEXT_DOMAIN ); ?></h3>
+			<div style="background: #f0f0f1; padding: 15px; margin: 10px 0; border-left: 4px solid #2271b1;">
+				<p><strong>⚠️ <?php esc_html_e( 'CRITICAL: PHP finds nearby cities (<500km), AI mentions ONLY those cities, PHP auto-links them.', WTA_TEXT_DOMAIN ); ?></strong></p>
+				<p><?php esc_html_e( 'Variable {nearby_cities_list} contains comma-separated city names that AI MUST use.', WTA_TEXT_DOMAIN ); ?></p>
+			</div>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_nearby_cities_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_nearby_cities_system' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'MUST ONLY mention cities in {nearby_cities_list} - NO others!', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_nearby_cities_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_nearby_cities_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Recommend visiting nearby cities. Use EXACT names from {nearby_cities_list}. Max 60 words.', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<!-- 6. Nearby Countries -->
+			<h3 style="margin-top: 25px; border-top: 2px solid #ddd; padding-top: 20px;">🌍 <?php esc_html_e( '6. Nærliggende lande (Auto-linked)', WTA_TEXT_DOMAIN ); ?></h3>
+			<div style="background: #f0f0f1; padding: 15px; margin: 10px 0; border-left: 4px solid #2271b1;">
+				<p><strong>⚠️ <?php esc_html_e( 'CRITICAL: PHP finds nearby countries (same continent), AI mentions ONLY those countries, PHP auto-links them.', WTA_TEXT_DOMAIN ); ?></strong></p>
+				<p><?php esc_html_e( 'Variable {nearby_countries_list} contains comma-separated country names that AI MUST use.', WTA_TEXT_DOMAIN ); ?></p>
+			</div>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'System Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_nearby_countries_system" rows="4" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_nearby_countries_system' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'MUST ONLY mention countries in {nearby_countries_list} - NO others!', WTA_TEXT_DOMAIN ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'User Prompt', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<textarea name="wta_prompt_city_nearby_countries_user" rows="5" class="large-text code"><?php echo esc_textarea( get_option( 'wta_prompt_city_nearby_countries_user' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'Recommend exploring nearby countries. Use EXACT names from {nearby_countries_list}. Max 60 words.', WTA_TEXT_DOMAIN ); ?></p>
 					</td>
 				</tr>
 			</table>
