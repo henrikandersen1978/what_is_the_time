@@ -55,7 +55,7 @@ class WTA_Shortcodes {
 				'post_type'      => WTA_POST_TYPE,
 				'post_parent'    => $post_id,
 				'posts_per_page' => -1,
-				'post_status'    => array( 'publish', 'draft' ),
+				'post_status'    => 'publish',
 			) );
 			
 			if ( empty( $children ) ) {
@@ -72,7 +72,7 @@ class WTA_Shortcodes {
 				'orderby'        => 'meta_value_num',
 				'meta_key'       => 'wta_population',
 				'order'          => 'DESC',
-				'post_status'    => array( 'publish', 'draft' ),
+				'post_status'    => 'publish',
 			) );
 			
 			// Debug info
@@ -88,7 +88,7 @@ class WTA_Shortcodes {
 				'orderby'        => 'meta_value_num',
 				'meta_key'       => 'wta_population',
 				'order'          => 'DESC',
-				'post_status'    => array( 'publish', 'draft' ),
+				'post_status'    => 'publish',
 			) );
 			
 			if ( empty( $major_cities ) ) {
@@ -178,7 +178,7 @@ class WTA_Shortcodes {
 			'post_type'      => WTA_POST_TYPE,
 			'title'          => $atts['city'],
 			'posts_per_page' => 1,
-			'post_status'    => array( 'publish', 'draft' ),
+			'post_status'    => 'publish',
 		) );
 		
 		if ( empty( $city_posts ) ) {
@@ -269,7 +269,7 @@ class WTA_Shortcodes {
 			'posts_per_page' => (int) $atts['limit'],
 			'orderby'        => $atts['orderby'],
 			'order'          => $atts['order'],
-			'post_status'    => array( 'publish', 'draft' ),
+			'post_status'    => 'publish',
 		) );
 		
 		if ( empty( $children ) ) {
@@ -501,7 +501,7 @@ class WTA_Shortcodes {
 				'post_type'      => WTA_POST_TYPE,
 				'post_parent'    => $country_id,
 				'posts_per_page' => -1,
-				'post_status'    => array( 'publish', 'draft' ),
+				'post_status'    => 'publish',
 				'fields'         => 'ids',
 			) ) );
 			
@@ -539,7 +539,7 @@ class WTA_Shortcodes {
 			'post_parent'    => $country_id,
 			'posts_per_page' => -1,
 			'post__not_in'   => array( $current_city_id ),
-			'post_status'    => array( 'publish', 'draft' ),
+			'post_status'    => 'publish',
 		) );
 		
 		if ( empty( $cities ) ) {
@@ -593,7 +593,7 @@ class WTA_Shortcodes {
 			'post__not_in'   => array( $current_country_id ),
 			'orderby'        => 'title',
 			'order'          => 'ASC',
-			'post_status'    => array( 'publish', 'draft' ),
+			'post_status'    => 'publish',
 			'fields'         => 'ids',
 		) );
 		
