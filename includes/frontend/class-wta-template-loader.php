@@ -68,6 +68,7 @@ class WTA_Template_Loader {
 		$post_id = get_the_ID();
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		$name_local = get_the_title();
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 		
 		$navigation_html = '';
 		
@@ -141,9 +142,21 @@ class WTA_Template_Loader {
 			$navigation_html .= '</script>';
 		}
 		
+		// Add live clock for cities (after breadcrumb, before quick nav)
+		if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) {
+			$navigation_html .= '<div class="wta-clock-container">';
+			$navigation_html .= '<div class="wta-clock" data-timezone="' . esc_attr( $timezone ) . '">';
+			$navigation_html .= '<div class="wta-clock-time">--:--:--</div>';
+			$navigation_html .= '<div class="wta-clock-date">-</div>';
+			$navigation_html .= '<div class="wta-clock-timezone">' . esc_html( $timezone ) . '</div>';
+			$navigation_html .= '</div>';
+			$navigation_html .= '</div>';
+		}
+		
 		// Check if page has child locations or major cities
 		$has_children = false;
 		$has_major_cities = false;
+		$has_nearby_sections = false;
 		
 		if ( in_array( $type, array( 'continent', 'country' ) ) ) {
 			$children = get_posts( array(
@@ -154,10 +167,13 @@ class WTA_Template_Loader {
 			) );
 			$has_children = ! empty( $children );
 			$has_major_cities = true; // Continents and countries always show major cities
+		} elseif ( 'city' === $type ) {
+			// Cities have nearby sections
+			$has_nearby_sections = true;
 		}
 		
 		// Output quick navigation
-		if ( $has_children || $has_major_cities ) {
+		if ( $has_children || $has_major_cities || $has_nearby_sections ) {
 			$navigation_html .= '<div class="wta-quick-nav">';
 			
 			if ( $has_children ) {
@@ -170,6 +186,15 @@ class WTA_Template_Loader {
 			if ( $has_major_cities ) {
 				$navigation_html .= '<a href="#major-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
 				$navigation_html .= '🕐 Live tidspunkter';
+				$navigation_html .= '</a>';
+			}
+			
+			if ( $has_nearby_sections ) {
+				$navigation_html .= '<a href="#nearby-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
+				$navigation_html .= '🏙️ Nærliggende byer';
+				$navigation_html .= '</a>';
+				$navigation_html .= '<a href="#nearby-countries" class="wta-quick-nav-btn wta-smooth-scroll">';
+				$navigation_html .= '🌍 Nærliggende lande';
 				$navigation_html .= '</a>';
 			}
 			

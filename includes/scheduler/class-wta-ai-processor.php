@@ -522,11 +522,11 @@ class WTA_AI_Processor {
 		$full_content .= '<h2>Praktisk information for besøgende</h2>' . "\n" . $practical_content . "\n\n";
 		
 		if ( ! empty( $nearby_cities_content ) ) {
-			$full_content .= '<h2>Nærliggende byer værd at besøge</h2>' . "\n<p>" . $nearby_cities_content . "</p>\n\n";
+			$full_content .= '<div id="nearby-cities"><h2>Nærliggende byer værd at besøge</h2>' . "\n<p>" . $nearby_cities_content . "</p></div>\n\n";
 		}
 		
 		if ( ! empty( $nearby_countries_content ) ) {
-			$full_content .= '<h2>Udforsk nærliggende lande</h2>' . "\n<p>" . $nearby_countries_content . "</p>";
+			$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n<p>" . $nearby_countries_content . "</p></div>";
 		}
 		
 		// Generate Yoast SEO meta
