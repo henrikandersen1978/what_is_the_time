@@ -3,7 +3,7 @@
  * Timezone processor for Action Scheduler.
  *
  * Resolves timezones using TimeZoneDB API.
- * Respects rate limit: 1 request/second.
+ * Conservative rate limiting: 1.5 second base delay with exponential backoff for retries.
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/scheduler
@@ -15,13 +15,14 @@ class WTA_Timezone_Processor {
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every 5 minutes.
-	 * Processes 5 items with 200ms delay between each (rate limiting).
+	 * Processes up to 8 items with exponential backoff based on retry count.
+	 * Stops processing at 55 seconds to respect 60-second time limit.
 	 *
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// Get pending timezone items (batch size optimized for 60-second time limit)
-		$items = WTA_Queue::get_pending( 'timezone', 25 );
+		// Conservative batch size for reliable processing
+		$items = WTA_Queue::get_pending( 'timezone', 8 );
 
 		if ( empty( $items ) ) {
 			return;
@@ -35,12 +36,38 @@ class WTA_Timezone_Processor {
 
 		$processed = 0;
 		foreach ( $items as $item ) {
+			// Get retry count for exponential backoff calculation
+			$data = $item['payload'];
+			$post_id = isset( $data['post_id'] ) ? $data['post_id'] : 0;
+			$retry_count = $post_id ? intval( get_post_meta( $post_id, '_wta_timezone_retry_count', true ) ) : 0;
+
+			// Process item
 			$this->process_item( $item );
 			$processed++;
 
-			// Rate limiting: Wait 1.1 seconds between requests (respects 1 req/sec limit)
+			// Apply exponential backoff delay between requests
 			if ( $processed < count( $items ) ) {
-				usleep( 1100000 ); // 1.1 seconds in microseconds
+				$base_delay = 1500000; // 1.5 seconds in microseconds
+				$multiplier = 1 + ( $retry_count * 0.5 ); // 1x, 1.5x, 2x, 2.5x
+				$actual_delay = intval( $base_delay * $multiplier );
+
+				usleep( $actual_delay );
+
+				WTA_Logger::debug( 'Rate limit delay applied', array(
+					'retry_count' => $retry_count,
+					'delay_seconds' => round( $actual_delay / 1000000, 2 ),
+				) );
+			}
+
+			// Safety check: Stop early to respect time limit
+			$elapsed = microtime( true ) - $start_time;
+			if ( $elapsed > 55 ) {
+				WTA_Logger::warning( 'Timezone batch stopped early to respect time limit', array(
+					'processed' => $processed,
+					'remaining' => count( $items ) - $processed,
+					'elapsed_seconds' => round( $elapsed, 2 ),
+				) );
+				break;
 			}
 		}
 
@@ -86,23 +113,49 @@ class WTA_Timezone_Processor {
 				return;
 			}
 
-			// Resolve timezone via API
-			$timezone = WTA_Timezone_Helper::resolve_timezone_api( $lat, $lng );
+		// Resolve timezone via API
+		$timezone = WTA_Timezone_Helper::resolve_timezone_api( $lat, $lng );
 
-			if ( false === $timezone ) {
-				// API call failed - retry later
-				WTA_Logger::warning( 'Timezone API call failed', array(
+		if ( false === $timezone ) {
+			// API call failed - implement retry logic with exponential backoff
+			$retry_count = intval( get_post_meta( $post_id, '_wta_timezone_retry_count', true ) );
+
+			if ( $retry_count < 3 ) {
+				// Increment retry counter
+				$retry_count++;
+				update_post_meta( $post_id, '_wta_timezone_retry_count', $retry_count );
+
+				$next_delay = 1.5 * ( 1 + ( $retry_count * 0.5 ) );
+
+				WTA_Logger::warning( 'Timezone API call failed, will retry with backoff', array(
+					'post_id'      => $post_id,
+					'lat'          => $lat,
+					'lng'          => $lng,
+					'retry_count'  => $retry_count,
+					'next_delay'   => $next_delay . ' seconds',
+				) );
+
+				WTA_Queue::mark_failed( $item['id'], 'API call failed (retry ' . $retry_count . '/3, next delay: ' . $next_delay . 's)' );
+			} else {
+				// Max retries reached - mark as permanently failed
+				WTA_Logger::error( 'Timezone resolution failed after 3 retries', array(
 					'post_id' => $post_id,
 					'lat'     => $lat,
 					'lng'     => $lng,
 				) );
-				WTA_Queue::mark_failed( $item['id'], 'TimeZoneDB API call failed' );
-				return;
-			}
 
-			// Save timezone
-			update_post_meta( $post_id, 'wta_timezone', $timezone );
-			update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+				update_post_meta( $post_id, 'wta_timezone_status', 'failed' );
+				delete_post_meta( $post_id, '_wta_timezone_retry_count' );
+
+				WTA_Queue::mark_failed( $item['id'], 'TimeZoneDB API failed after 3 retries' );
+			}
+			return;
+		}
+
+		// Success - clear retry count and save timezone
+		delete_post_meta( $post_id, '_wta_timezone_retry_count' );
+		update_post_meta( $post_id, 'wta_timezone', $timezone );
+		update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 
 			WTA_Logger::info( 'Timezone resolved', array(
 				'post_id'  => $post_id,
