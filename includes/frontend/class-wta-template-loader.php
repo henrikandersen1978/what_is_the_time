@@ -184,9 +184,38 @@ class WTA_Template_Loader {
 		
 		// Determine hemisphere and season
 		$lat = get_post_meta( $post_id, 'wta_latitude', true );
+		$lng = get_post_meta( $post_id, 'wta_longitude', true );
 		$hemisphere_text = '';
 		$season_text = '';
-		if ( ! empty( $lat ) ) {
+		$gps_text = '';
+		
+		if ( ! empty( $lat ) && ! empty( $lng ) ) {
+			$lat = floatval( $lat );
+			$lng = floatval( $lng );
+			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
+			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
+			
+			// Format GPS coordinates (degrees and minutes)
+			$lat_abs = abs( $lat );
+			$lat_deg = floor( $lat_abs );
+			$lat_min = round( ( $lat_abs - $lat_deg ) * 60, 1 );
+			$lat_dir = $lat >= 0 ? 'N' : 'S';
+			
+			$lng_abs = abs( $lng );
+			$lng_deg = floor( $lng_abs );
+			$lng_min = round( ( $lng_abs - $lng_deg ) * 60, 1 );
+			$lng_dir = $lng >= 0 ? 'Ø' : 'V';
+			
+			$gps_text = sprintf(
+				'Den geografiske placering er %d° %.1f\' %s %d° %.1f\' %s',
+				$lat_deg,
+				$lat_min,
+				$lat_dir,
+				$lng_deg,
+				$lng_min,
+				$lng_dir
+			);
+		} elseif ( ! empty( $lat ) ) {
 			$lat = floatval( $lat );
 			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
 			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
@@ -253,6 +282,12 @@ class WTA_Template_Loader {
 			$navigation_html .= sprintf(
 				'<p class="wta-dst-change">%s</p>',
 				esc_html( $next_dst_text )
+			);
+		}
+		if ( ! empty( $gps_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-gps-statement">%s</p>',
+				esc_html( $gps_text )
 			);
 		}
 		if ( ! empty( $hemisphere_text ) ) {
