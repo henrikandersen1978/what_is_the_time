@@ -286,10 +286,8 @@ class WTA_Template_Loader {
 				),
 			);
 			
-			// Add timezone if available and not multiple
-			if ( ! empty( $timezone ) && 'multiple' !== $timezone ) {
-				$place_schema['timeZone'] = $timezone;
-			}
+			// Note: timeZone is not a valid property for Place schema according to schema.org
+			// Timezone info is displayed in the UI instead
 			
 			// Add address with country if available
 			if ( ! empty( $country_code ) ) {
