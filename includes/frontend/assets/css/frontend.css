@@ -124,10 +124,32 @@ nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-current span {
 }
 
 .wta-time-diff-statement {
-	margin: 0 !important;
+	margin: 0 0 1em 0 !important;
 	font-size: 1em !important;
 	color: rgba(255,255,255,0.9) !important;
 	font-weight: 500 !important;
+	padding-bottom: 1em !important;
+	border-bottom: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.wta-dst-statement,
+.wta-dst-change,
+.wta-hemisphere-statement,
+.wta-season-statement {
+	margin: 0.3em 0 !important;
+	font-size: 0.95em !important;
+	color: rgba(255,255,255,0.85) !important;
+	line-height: 1.5 !important;
+}
+
+.wta-dst-change {
+	font-size: 0.9em !important;
+	color: rgba(255,255,255,0.75) !important;
+}
+
+.wta-hemisphere-statement,
+.wta-season-statement {
+	font-size: 0.95em !important;
 }
 
 /* Quick Navigation */

@@ -163,44 +163,171 @@ class WTA_Template_Loader {
 				? intval( $hours_abs ) 
 				: number_format( $hours_abs, 1, ',', '' );
 			
-			$diff_text = '';
-			if ( $hours_diff > 0 ) {
-				$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
-			} elseif ( $hours_diff < 0 ) {
-				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
-			} else {
-				$diff_text = sprintf( 'Samme tid som %s', $base_country );
-			}
-			
-			$navigation_html .= '<div class="wta-seo-direct-answer">';
-			$navigation_html .= sprintf(
-				'<p class="wta-current-time-statement"><strong>Den aktuelle tid i %s er <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
-				esc_html( $name_local ),
-				esc_attr( $timezone ),
-				$now->format( 'H:i:s' )
-			);
-			$navigation_html .= sprintf(
-				'<p class="wta-current-date-statement">Datoen er <span class="wta-live-date" data-timezone="%s">%s</span></p>',
-				esc_attr( $timezone ),
-				$now->format( 'l j F Y' )
-			);
-			$navigation_html .= sprintf(
-				'<p class="wta-timezone-statement">Tidszone: <span class="wta-timezone-name">%s</span></p>',
-				esc_html( $timezone )
-			);
-			if ( ! empty( $diff_text ) ) {
-				$navigation_html .= sprintf(
-					'<p class="wta-time-diff-statement">%s</p>',
-					esc_html( $diff_text )
+		$diff_text = '';
+		if ( $hours_diff > 0 ) {
+			$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
+		} elseif ( $hours_diff < 0 ) {
+			$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
+		} else {
+			$diff_text = sprintf( 'Samme tid som %s', $base_country );
+		}
+		
+		// Get UTC offset for display
+		$utc_offset_seconds = $city_tz->getOffset( $now );
+		$utc_offset_hours = $utc_offset_seconds / 3600;
+		$offset_formatted = sprintf( 'UTC%+d', $utc_offset_hours );
+		
+		// Determine DST status and next change
+		$dst_active = false;
+		$dst_text = '';
+		$next_dst_text = '';
+		try {
+			$transitions = $city_tz->getTransitions( time(), time() + ( 180 * 86400 ) ); // Next 180 days
+			if ( count( $transitions ) > 1 ) {
+				$dst_active = $transitions[0]['isdst'];
+				$dst_text = $dst_active ? 'Sommertid er aktiv' : 'Vintertid (normaltid) er aktiv';
+				
+				// Next transition
+				$next_transition = $transitions[1];
+				$change_type = $dst_active ? 'Vintertid starter' : 'Sommertid starter';
+				$next_dst_text = sprintf(
+					'%s: %s',
+					$change_type,
+					date_i18n( 'l j. F Y \k\l. H:i', $next_transition['ts'] )
 				);
 			}
-			$navigation_html .= '</div>';
 		} catch ( Exception $e ) {
-			// Silently fail if timezone is invalid
+			// Ignore if DST info not available
 		}
+		
+		// Determine hemisphere and season
+		$lat = get_post_meta( $post_id, 'wta_latitude', true );
+		$hemisphere_text = '';
+		$season_text = '';
+		if ( ! empty( $lat ) ) {
+			$lat = floatval( $lat );
+			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
+			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
+			
+			// Determine season based on month and hemisphere
+			$month = intval( $now->format( 'n' ) );
+			if ( $lat > 0 ) {
+				// Northern hemisphere
+				if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+					$season = 'vinter';
+				} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+					$season = 'forår';
+				} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+					$season = 'sommer';
+				} else {
+					$season = 'efterår';
+				}
+			} else {
+				// Southern hemisphere (seasons reversed)
+				if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+					$season = 'sommer';
+				} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+					$season = 'efterår';
+				} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+					$season = 'vinter';
+				} else {
+					$season = 'forår';
+				}
+			}
+			$season_text = 'Nuværende sæson: ' . ucfirst( $season );
+		}
+		
+		// Build Direct Answer HTML
+		$navigation_html .= '<div class="wta-seo-direct-answer">';
+		$navigation_html .= sprintf(
+			'<p class="wta-current-time-statement"><strong>Den aktuelle tid i %s er <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
+			esc_html( $name_local ),
+			esc_attr( $timezone ),
+			$now->format( 'H:i:s' )
+		);
+		$navigation_html .= sprintf(
+			'<p class="wta-current-date-statement">Datoen er <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+			esc_attr( $timezone ),
+			$now->format( 'l j. F Y' )
+		);
+		$navigation_html .= sprintf(
+			'<p class="wta-timezone-statement">Tidszone: <span class="wta-timezone-name">%s (%s)</span></p>',
+			esc_html( $timezone ),
+			esc_html( $offset_formatted )
+		);
+		if ( ! empty( $diff_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-time-diff-statement">%s</p>',
+				esc_html( $diff_text )
+			);
+		}
+		if ( ! empty( $dst_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-dst-statement">%s</p>',
+				esc_html( $dst_text )
+			);
+		}
+		if ( ! empty( $next_dst_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-dst-change">%s</p>',
+				esc_html( $next_dst_text )
+			);
+		}
+		if ( ! empty( $hemisphere_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-hemisphere-statement">%s</p>',
+				esc_html( $hemisphere_text )
+			);
+		}
+		if ( ! empty( $season_text ) ) {
+			$navigation_html .= sprintf(
+				'<p class="wta-season-statement">%s</p>',
+				esc_html( $season_text )
+			);
+		}
+		$navigation_html .= '</div>';
+		
+		// Add Place Schema for better SEO
+		$lat = get_post_meta( $post_id, 'wta_latitude', true );
+		$lng = get_post_meta( $post_id, 'wta_longitude', true );
+		$country_code = get_post_meta( $post_id, 'wta_country_code', true );
+		
+		if ( ! empty( $lat ) && ! empty( $lng ) ) {
+			$place_schema = array(
+				'@context' => 'https://schema.org',
+				'@type'    => 'Place',
+				'name'     => $name_local,
+				'geo'      => array(
+					'@type'     => 'GeoCoordinates',
+					'latitude'  => floatval( $lat ),
+					'longitude' => floatval( $lng ),
+				),
+			);
+			
+			// Add timezone if available
+			if ( ! empty( $timezone ) && 'multiple' !== $timezone ) {
+				$place_schema['timeZone'] = $timezone;
+			}
+			
+			// Add address with country if available
+			if ( ! empty( $country_code ) ) {
+				$place_schema['address'] = array(
+					'@type'          => 'PostalAddress',
+					'addressCountry' => strtoupper( $country_code ),
+				);
+			}
+			
+			$navigation_html .= '<script type="application/ld+json">';
+			$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+			$navigation_html .= '</script>';
+		}
+		
+	} catch ( Exception $e ) {
+		// Silently fail if timezone is invalid
 	}
-	
-	// Note: Large purple clock removed - all info now in Direct Answer box
+}
+
+// Note: Large purple clock removed - all info now in Direct Answer box
 	
 	// Check if page has child locations or major cities (skip old clock logic)
 	if ( false && 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) {
