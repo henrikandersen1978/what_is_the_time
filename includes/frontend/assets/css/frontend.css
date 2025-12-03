@@ -64,46 +64,70 @@ nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-current span {
 	font-weight: 600 !important;
 }
 
-/* SEO Direct Answer Section */
+/* SEO Direct Answer Section - Enhanced */
 .wta-seo-direct-answer {
-	margin: 1.5em 0 !important;
-	padding: 2em !important;
-	background: linear-gradient(135deg, #f8f9ff, #fff8f6) !important;
-	border-left: 4px solid #667eea !important;
-	border-radius: 8px !important;
+	margin: 1.5em 0 2em 0 !important;
+	padding: 2.5em !important;
+	background: linear-gradient(135deg, #667eea, #764ba2) !important;
+	border-radius: 12px !important;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
-	box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+	box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3) !important;
+	color: #ffffff !important;
+	text-align: center !important;
 }
 
 .wta-current-time-statement {
-	margin: 0 0 0.5em 0 !important;
-	font-size: 1.3em !important;
+	margin: 0 0 0.3em 0 !important;
+	font-size: 1.2em !important;
 	line-height: 1.4 !important;
-	color: #2c3e50 !important;
+	color: rgba(255,255,255,0.95) !important;
 }
 
 .wta-current-time-statement strong {
-	font-weight: 700 !important;
-	color: #1a1a1a !important;
+	font-weight: 600 !important;
+	color: #ffffff !important;
 }
 
 .wta-live-time {
-	color: #667eea !important;
+	display: block !important;
+	font-size: 3.5em !important;
 	font-weight: 700 !important;
-	font-size: 1.1em !important;
-	letter-spacing: 0.5px !important;
+	letter-spacing: 2px !important;
+	margin: 0.2em 0 !important;
+	color: #ffffff !important;
+	text-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
 }
 
 .wta-current-date-statement {
-	margin: 0 !important;
-	font-size: 1.1em !important;
-	color: #555 !important;
+	margin: 0 0 1em 0 !important;
+	font-size: 1.2em !important;
+	color: rgba(255,255,255,0.9) !important;
 	line-height: 1.4 !important;
 }
 
 .wta-live-date {
 	font-weight: 600 !important;
-	color: #333 !important;
+	color: #ffffff !important;
+}
+
+.wta-timezone-statement {
+	margin: 1em 0 0.3em 0 !important;
+	font-size: 0.95em !important;
+	color: rgba(255,255,255,0.85) !important;
+	padding-top: 1em !important;
+	border-top: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.wta-timezone-name {
+	font-weight: 600 !important;
+	color: rgba(255,255,255,0.95) !important;
+}
+
+.wta-time-diff-statement {
+	margin: 0 !important;
+	font-size: 1em !important;
+	color: rgba(255,255,255,0.9) !important;
+	font-weight: 500 !important;
 }
 
 /* Quick Navigation */
