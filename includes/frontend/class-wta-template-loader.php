@@ -279,12 +279,40 @@ class WTA_Template_Loader {
 				'@context' => 'https://schema.org',
 				'@type'    => 'Place',
 				'name'     => $name_local,
+				'url'      => get_permalink( $post_id ),
 				'geo'      => array(
 					'@type'     => 'GeoCoordinates',
 					'latitude'  => floatval( $lat ),
 					'longitude' => floatval( $lng ),
 				),
 			);
+			
+			// Add description
+			$description = sprintf( 
+				'Aktuel tid og tidszone for %s',
+				$name_local
+			);
+			if ( 'city' === $type && ! empty( $country_code ) ) {
+				// Add country name for cities
+				$parent_id = wp_get_post_parent_id( $post_id );
+				if ( $parent_id ) {
+					$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
+					if ( ! empty( $parent_name ) ) {
+						$description = sprintf( 
+							'Aktuel tid og tidszone for %s, %s',
+							$name_local,
+							$parent_name
+						);
+					}
+				}
+			}
+			$place_schema['description'] = $description;
+			
+			// Add Wikidata link if available
+			$wikidata_id = get_post_meta( $post_id, 'wta_wikidata_id', true );
+			if ( ! empty( $wikidata_id ) ) {
+				$place_schema['sameAs'] = 'https://www.wikidata.org/wiki/' . $wikidata_id;
+			}
 			
 			// Note: timeZone is not a valid property for Place schema according to schema.org
 			// Timezone info is displayed in the UI instead
@@ -295,6 +323,19 @@ class WTA_Template_Loader {
 					'@type'          => 'PostalAddress',
 					'addressCountry' => strtoupper( $country_code ),
 				);
+			}
+			
+			// Add containedInPlace for cities (link to parent country)
+			if ( 'city' === $type ) {
+				$parent_id = wp_get_post_parent_id( $post_id );
+				if ( $parent_id ) {
+					$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
+					$place_schema['containedInPlace'] = array(
+						'@type' => 'Country',
+						'@id'   => get_permalink( $parent_id ) . '#place',
+						'name'  => ! empty( $parent_name ) ? $parent_name : get_the_title( $parent_id ),
+					);
+				}
 			}
 			
 			$navigation_html .= '<script type="application/ld+json">';
