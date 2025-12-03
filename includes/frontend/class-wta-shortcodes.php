@@ -159,6 +159,12 @@ class WTA_Shortcodes {
 		
 		$output .= '</div>';
 		
+		// Add ItemList schema
+		$parent_name = get_post_field( 'post_title', $post_id );
+		$schema_name = sprintf( 'Største byer i %s', $parent_name );
+		$schema_description = sprintf( 'Se hvad klokken er i de største byer i %s', $parent_name );
+		$output .= $this->generate_item_list_schema( $major_cities, $schema_name, $schema_description );
+		
 		return $output;
 	}
 
@@ -380,6 +386,20 @@ class WTA_Shortcodes {
 		$output .= '</ul>' . "\n";
 		$output .= '</div>' . "\n";
 		
+		// Add ItemList schema
+		$schema_name = '';
+		$schema_description = '';
+		
+		if ( 'continent' === $parent_type ) {
+			$schema_name = sprintf( 'Lande i %s', $parent_name );
+			$schema_description = sprintf( 'Se hvad klokken er i forskellige lande i %s', $parent_name );
+		} elseif ( 'country' === $parent_type ) {
+			$schema_name = sprintf( 'Steder i %s', $parent_name );
+			$schema_description = sprintf( 'Se hvad klokken er i forskellige steder i %s', $parent_name );
+		}
+		
+		$output .= $this->generate_item_list_schema( $children, $schema_name, $schema_description );
+		
 		return $output;
 	}
 
@@ -457,6 +477,18 @@ class WTA_Shortcodes {
 		
 		$output .= '</div>' . "\n";
 		
+		// Add ItemList schema
+		$city_name = get_post_field( 'post_title', $post_id );
+		$schema_name = sprintf( 'Byer i nærheden af %s', $city_name );
+		
+		// Convert nearby cities array to WP_Post objects for schema
+		$nearby_posts = array();
+		foreach ( $nearby_cities as $city_data ) {
+			$nearby_posts[] = get_post( $city_data['id'] );
+		}
+		
+		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
+		
 		return $output;
 	}
 
@@ -530,6 +562,18 @@ class WTA_Shortcodes {
 		}
 		
 		$output .= '</div>' . "\n";
+		
+		// Add ItemList schema
+		$city_name = get_post_field( 'post_title', $post_id );
+		$schema_name = sprintf( 'Lande i nærheden af %s', $city_name );
+		
+		// Convert country IDs to WP_Post objects for schema
+		$nearby_posts = array();
+		foreach ( $nearby_countries as $country_id ) {
+			$nearby_posts[] = get_post( $country_id );
+		}
+		
+		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
 		
 		return $output;
 	}
@@ -636,6 +680,64 @@ class WTA_Shortcodes {
 		$c = 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
 		
 		return $earth_radius * $c;
+	}
+
+	/**
+	 * Generate ItemList schema for a list of locations.
+	 *
+	 * @since    2.24.0
+	 * @param    array  $items       Array of WP_Post objects.
+	 * @param    string $list_name   Name of the list.
+	 * @param    string $description Description of the list.
+	 * @return   string              JSON-LD script tag.
+	 */
+	private function generate_item_list_schema( $items, $list_name, $description = '' ) {
+		if ( empty( $items ) ) {
+			return '';
+		}
+
+		$item_list_elements = array();
+		$position = 1;
+
+		foreach ( $items as $item ) {
+			$item_type = get_post_meta( $item->ID, 'wta_type', true );
+			
+			// Determine schema type
+			$schema_type = 'Place';
+			if ( 'country' === $item_type ) {
+				$schema_type = 'Country';
+			} elseif ( 'continent' === $item_type ) {
+				$schema_type = 'Continent';
+			}
+
+			$item_list_elements[] = array(
+				'@type'    => 'ListItem',
+				'position' => $position++,
+				'item'     => array(
+					'@type' => $schema_type,
+					'@id'   => get_permalink( $item->ID ),
+					'name'  => get_post_field( 'post_title', $item->ID ),
+				),
+			);
+		}
+
+		$schema = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'ItemList',
+			'name'            => $list_name,
+			'numberOfItems'   => count( $items ),
+			'itemListElement' => $item_list_elements,
+		);
+
+		if ( ! empty( $description ) ) {
+			$schema['description'] = $description;
+		}
+
+		$output = '<script type="application/ld+json">';
+		$output .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+		$output .= '</script>';
+
+		return $output;
 	}
 }
 
