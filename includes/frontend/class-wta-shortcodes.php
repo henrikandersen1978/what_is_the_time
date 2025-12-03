@@ -223,7 +223,7 @@ class WTA_Shortcodes {
 			if ( $hours_diff > 0 ) {
 				$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
 			} elseif ( $hours_diff < 0 ) {
-				$diff_text = sprintf( '%s timer efter %s', $hours_formatted, $base_country );
+				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
 			} else {
 				$diff_text = sprintf( 'Samme tid som %s', $base_country );
 			}
