@@ -20,8 +20,8 @@ class WTA_Timezone_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// Get pending timezone items (small batch due to API rate limit)
-		$items = WTA_Queue::get_pending( 'timezone', 5 );
+		// Get pending timezone items (larger batch with safe rate limiting)
+		$items = WTA_Queue::get_pending( 'timezone', 50 );
 
 		if ( empty( $items ) ) {
 			return;
@@ -36,9 +36,9 @@ class WTA_Timezone_Processor {
 			$this->process_item( $item );
 			$processed++;
 
-			// Rate limiting: Wait 200ms between requests (allows 5 requests/second, well within limit)
+			// Rate limiting: Wait 1.1 seconds between requests (respects 1 req/sec limit)
 			if ( $processed < count( $items ) ) {
-				usleep( 200000 ); // 200ms in microseconds
+				usleep( 1100000 ); // 1.1 seconds in microseconds
 			}
 		}
 

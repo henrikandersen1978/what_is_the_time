@@ -403,11 +403,34 @@ class WTA_Structure_Processor {
 				}
 			}
 		} else {
-			// Simple country
+			// Simple country - try to get from hardcoded list first
 			$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
 			if ( $timezone ) {
+				// Found in hardcoded list
 				update_post_meta( $post_id, 'wta_timezone', $timezone );
 				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+			} else {
+				// Country not in list - fallback to API lookup
+				if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
+					$needs_timezone_api = true;
+					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+					
+					WTA_Queue::add( 'timezone', array(
+						'post_id' => $post_id,
+						'lat'     => $data['latitude'],
+						'lng'     => $data['longitude'],
+					), 'timezone_' . $post_id );
+					
+					WTA_Logger::info( 'Country timezone not in list, using API fallback', array(
+						'country_code' => $country_code,
+						'city'         => $data['name'],
+					) );
+				} else {
+					WTA_Logger::warning( 'No timezone data available', array(
+						'country_code' => $country_code,
+						'city'         => $data['name'],
+					) );
+				}
 			}
 		}
 
