@@ -302,6 +302,41 @@ class WTA_Template_Loader {
 		}
 	}
 	
+	// Calculate moon phase using PHP
+	$moon_text = '';
+	$known_new_moon = strtotime('2024-12-01 06:21:00'); // Known new moon reference
+	$current_time = time();
+	$days_since = ($current_time - $known_new_moon) / 86400;
+	$moon_cycle = 29.530588; // Average lunar cycle in days
+	$phase_days = fmod($days_since, $moon_cycle);
+	
+	// Calculate illumination percentage
+	$illumination = (1 - cos($phase_days / $moon_cycle * 2 * M_PI)) / 2 * 100;
+	
+	// Determine phase name based on days in cycle
+	$phase_name = '';
+	if ($phase_days < 1.84566) {
+		$phase_name = 'Nymåne';
+	} elseif ($phase_days < 7.38265) {
+		$phase_name = 'Tiltagende månesejl';
+	} elseif ($phase_days < 14.76529) {
+		$phase_name = 'Første kvarter';
+	} elseif ($phase_days < 22.14794) {
+		$phase_name = 'Tiltagende måne';
+	} elseif ($phase_days < 23.99323) {
+		$phase_name = 'Fuldmåne';
+	} elseif ($phase_days < 27.68735) {
+		$phase_name = 'Aftagende måne';
+	} else {
+		$phase_name = 'Aftagende månesejl';
+	}
+	
+	$moon_text = sprintf(
+		'Månefase: %.1f%% (%s)',
+		$illumination,
+		$phase_name
+	);
+	
 	// Build Direct Answer HTML
 	$navigation_html .= '<div class="wta-seo-direct-answer">';
 		$navigation_html .= sprintf(
@@ -348,6 +383,12 @@ class WTA_Template_Loader {
 		$navigation_html .= sprintf(
 			'<p class="wta-sun-statement">%s</p>',
 			esc_html( $sun_text )
+		);
+	}
+	if ( ! empty( $moon_text ) ) {
+		$navigation_html .= sprintf(
+			'<p class="wta-moon-statement">%s</p>',
+			esc_html( $moon_text )
 		);
 	}
 	if ( ! empty( $hemisphere_text ) ) {
