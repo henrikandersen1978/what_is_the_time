@@ -88,15 +88,18 @@ class WTA_AI_Processor {
 				'post_status'  => 'publish', // PUBLISH the post!
 			) );
 
-			// Update Yoast SEO meta if available
-			if ( isset( $result['yoast_title'] ) ) {
-				update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
-				// Also save as custom H1 field for Pilanto theme
+		// Update Yoast SEO meta if available
+		if ( isset( $result['yoast_title'] ) ) {
+			update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+			// Only update H1 for continents and countries, NOT cities (cities keep their structured H1)
+			$type = get_post_meta( $post_id, 'wta_type', true );
+			if ( 'city' !== $type ) {
 				update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
 			}
-			if ( isset( $result['yoast_desc'] ) ) {
-				update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
-			}
+		}
+		if ( isset( $result['yoast_desc'] ) ) {
+			update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
+		}
 
 			// Mark as done
 			update_post_meta( $post_id, 'wta_ai_status', 'done' );
@@ -791,10 +794,31 @@ class WTA_AI_Processor {
 
 		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
 		$system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
-		$user = sprintf(
-			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
-			$name
-		);
+		
+		// For cities, include country name in prompt
+		if ( 'city' === $type ) {
+			$parent_id = wp_get_post_parent_id( $post_id );
+			if ( $parent_id ) {
+				$country_name = get_post_field( 'post_title', $parent_id );
+				$user = sprintf(
+					'Skriv en SEO meta title (max 60 tegn) der SKAL starte med "Hvad er klokken i %s, %s" og fortsæt med relevant SEO tekst der passer inden for 60 tegn. KUN titlen.',
+					$name,
+					$country_name
+				);
+			} else {
+				$user = sprintf(
+					'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Start med "Hvad er klokken i %s". KUN titlen.',
+					$name,
+					$name
+				);
+			}
+		} else {
+			// For countries
+			$user = sprintf(
+				'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
+				$name
+			);
+		}
 		
 		return $this->call_openai_api( $api_key, $model, 0.7, 100, $system, $user );
 	}
