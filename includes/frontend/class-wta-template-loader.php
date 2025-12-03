@@ -272,11 +272,38 @@ class WTA_Template_Loader {
 					$season = 'forår';
 				}
 			}
-			$season_text = 'Nuværende sæson: ' . ucfirst( $season );
-		}
+		$season_text = 'Nuværende sæson: ' . ucfirst( $season );
+	}
+	
+	// Calculate sunrise/sunset using PHP's built-in function
+	$sun_text = '';
+	if ( ! empty( $lat ) && ! empty( $lng ) ) {
+		$sun_info = date_sun_info( time(), $lat, $lng );
 		
-		// Build Direct Answer HTML
-		$navigation_html .= '<div class="wta-seo-direct-answer">';
+		if ( $sun_info && isset( $sun_info['sunrise'] ) && isset( $sun_info['sunset'] ) ) {
+			// Format times in the location's timezone
+			$sunrise_time = new DateTime( '@' . $sun_info['sunrise'] );
+			$sunset_time = new DateTime( '@' . $sun_info['sunset'] );
+			$sunrise_time->setTimezone( $city_tz );
+			$sunset_time->setTimezone( $city_tz );
+			
+			// Calculate day length
+			$day_length_seconds = $sun_info['sunset'] - $sun_info['sunrise'];
+			$hours = floor( $day_length_seconds / 3600 );
+			$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
+			
+			$sun_text = sprintf(
+				'Solopgang: %s, Solnedgang: %s, Dagens længde: %02d:%02d',
+				$sunrise_time->format( 'H:i' ),
+				$sunset_time->format( 'H:i' ),
+				$hours,
+				$minutes
+			);
+		}
+	}
+	
+	// Build Direct Answer HTML
+	$navigation_html .= '<div class="wta-seo-direct-answer">';
 		$navigation_html .= sprintf(
 			'<p class="wta-current-time-statement"><strong>Den aktuelle tid i %s er <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
 			esc_html( $name_local ),
@@ -311,18 +338,24 @@ class WTA_Template_Loader {
 				esc_html( $next_dst_text )
 			);
 		}
-		if ( ! empty( $gps_text ) ) {
-			$navigation_html .= sprintf(
-				'<p class="wta-gps-statement">%s</p>',
-				esc_html( $gps_text )
-			);
-		}
-		if ( ! empty( $hemisphere_text ) ) {
-			$navigation_html .= sprintf(
-				'<p class="wta-hemisphere-statement">%s</p>',
-				esc_html( $hemisphere_text )
-			);
-		}
+	if ( ! empty( $gps_text ) ) {
+		$navigation_html .= sprintf(
+			'<p class="wta-gps-statement">%s</p>',
+			esc_html( $gps_text )
+		);
+	}
+	if ( ! empty( $sun_text ) ) {
+		$navigation_html .= sprintf(
+			'<p class="wta-sun-statement">%s</p>',
+			esc_html( $sun_text )
+		);
+	}
+	if ( ! empty( $hemisphere_text ) ) {
+		$navigation_html .= sprintf(
+			'<p class="wta-hemisphere-statement">%s</p>',
+			esc_html( $hemisphere_text )
+		);
+	}
 		if ( ! empty( $season_text ) ) {
 			$navigation_html .= sprintf(
 				'<p class="wta-season-statement">%s</p>',
