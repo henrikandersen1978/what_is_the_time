@@ -73,11 +73,11 @@ class WTA_Core {
 			require_once WTA_PLUGIN_DIR . 'includes/admin/class-wta-settings.php';
 		}
 
-	// Frontend
-	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
-	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
+		// Frontend
+		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
+		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
 
-	// Load Action Scheduler if not already loaded by another plugin
+		// Load Action Scheduler if not already loaded by another plugin
 		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
 			$action_scheduler_path = WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
 			if ( file_exists( $action_scheduler_path ) ) {
@@ -177,10 +177,10 @@ class WTA_Core {
 		$shortcodes = new WTA_Shortcodes();
 		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
 
-	// Shortcodes
-	$shortcodes = new WTA_Shortcodes();
-	$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
-}
+		// Shortcodes
+		$shortcodes = new WTA_Shortcodes();
+		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
+	}
 
 	/**
 	 * Register Action Scheduler hooks.

@@ -1,0 +1,591 @@
+/* World Time AI - Frontend Styles */
+
+/* Breadcrumb Navigation - High Specificity */
+nav.wta-breadcrumb {
+	margin: 0 0 2em 0 !important;
+	padding: 1em 0 !important;
+	border-bottom: 2px solid #e8e8e8 !important;
+	background: none !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list {
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 0.3em !important;
+	background: none !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item {
+	display: inline-flex !important;
+	align-items: center !important;
+	font-size: 0.9em !important;
+	color: #666 !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	background: none !important;
+	line-height: 1.5 !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item::before {
+	content: none !important;
+	display: none !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item:not(:last-child)::after {
+	content: "›" !important;
+	margin: 0 0.4em !important;
+	color: #999 !important;
+	font-weight: normal !important;
+	font-size: 1.1em !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a {
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	transition: color 0.2s !important;
+	font-weight: 400 !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a:hover {
+	color: #135e96 !important;
+	text-decoration: underline !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-current span {
+	color: #333 !important;
+	font-weight: 600 !important;
+}
+
+/* Quick Navigation */
+.wta-quick-nav {
+	display: flex !important;
+	gap: 1em !important;
+	margin: 1.5em 0 2em 0 !important;
+	padding: 1.5em !important;
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)) !important;
+	border-radius: 8px !important;
+	justify-content: center !important;
+	flex-wrap: wrap !important;
+	border: 1px solid rgba(102, 126, 234, 0.15) !important;
+}
+
+.wta-quick-nav-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 0.5em !important;
+	padding: 0.75em 1.5em !important;
+	background: white !important;
+	border: 2px solid #667eea !important;
+	border-radius: 6px !important;
+	color: #667eea !important;
+	text-decoration: none !important;
+	font-weight: 600 !important;
+	font-size: 0.95em !important;
+	transition: all 0.3s ease !important;
+	cursor: pointer !important;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.wta-quick-nav-btn:hover {
+	background: #667eea !important;
+	color: white !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+	text-decoration: none !important;
+}
+
+.wta-quick-nav-btn:active {
+	transform: translateY(0) !important;
+}
+
+/* Smooth scroll behavior */
+html {
+	scroll-behavior: smooth !important;
+}
+
+/* Responsive Breadcrumb & Quick Nav */
+@media (max-width: 768px) {
+	.wta-breadcrumb {
+		font-size: 0.9em !important;
+	}
+	
+	.wta-breadcrumb-item {
+		font-size: 0.85em !important;
+	}
+	
+	.wta-quick-nav {
+		flex-direction: column !important;
+		padding: 1em !important;
+	}
+	
+	.wta-quick-nav-btn {
+		width: 100% !important;
+		justify-content: center !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-breadcrumb-list {
+		font-size: 0.85em !important;
+	}
+}
+
+/* Child Locations Grid - High Specificity to Override Theme */
+div.wta-plugin-locations-grid.wta-child-list {
+	margin: 2em 0 !important;
+	padding: 0 !important;
+	clear: both;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list {
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 1em 0 !important;
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+	gap: 1em !important;
+	background: none !important;
+	border: none !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item {
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	background: none !important;
+	border: none !important;
+	display: block !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item::before {
+	content: none !important;
+	display: none !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	height: 100px !important;
+	padding: 0.75em 1em !important;
+	background: #f5f5f5 !important;
+	border: 1px solid #e0e0e0 !important;
+	border-radius: 4px !important;
+	text-decoration: none !important;
+	color: #333 !important;
+	transition: all 0.2s ease !important;
+	text-align: center !important;
+	font-weight: 500 !important;
+	font-size: 0.95em !important;
+	line-height: 1.3 !important;
+	box-sizing: border-box !important;
+	word-break: break-word !important;
+	hyphens: auto !important;
+	-webkit-hyphens: auto !important;
+	-ms-hyphens: auto !important;
+	overflow: hidden !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link:hover {
+	background: #fff !important;
+	border-color: #2271b1 !important;
+	color: #2271b1 !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+	text-decoration: none !important;
+}
+
+/* City Times Grid (3x4 for 12 cities) */
+div.wta-city-times-grid {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 1.5em !important;
+	margin: 2em 0 !important;
+	padding: 0 !important;
+}
+
+/* Individual Live City Clock */
+div.wta-live-city-clock {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 1.5em 1em !important;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+	border-radius: 8px !important;
+	color: white !important;
+	text-align: center !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+	transition: transform 0.2s ease !important;
+	min-height: 140px !important;
+}
+
+div.wta-live-city-clock:hover {
+	transform: translateY(-4px) !important;
+	box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+div.wta-city-name {
+	font-size: 1.1em !important;
+	font-weight: 600 !important;
+	margin-bottom: 0.5em !important;
+	color: white !important;
+}
+
+div.wta-time {
+	font-size: 2em !important;
+	font-family: 'Courier New', Courier, monospace !important;
+	font-weight: 700 !important;
+	margin: 0.3em 0 !important;
+	letter-spacing: 0.05em !important;
+	color: white !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+div.wta-time-diff {
+	font-size: 0.85em !important;
+	opacity: 0.9 !important;
+	color: white !important;
+	margin-top: 0.3em !important;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1.2em !important;
+	}
+}
+
+@media (max-width: 768px) {
+	div.wta-plugin-locations-grid ul.wta-grid-list {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+		gap: 0.75em !important;
+	}
+	
+	div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link {
+		padding: 0.75em !important;
+		font-size: 0.9em !important;
+	}
+	
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-time {
+		font-size: 1.8em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	div.wta-city-times-grid {
+		grid-template-columns: 1fr !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-live-city-clock {
+		padding: 1.2em 1em !important;
+		min-height: 120px !important;
+	}
+}
+
+.wta-location-single {
+	max-width: 800px;
+	margin: 0 auto;
+	padding: 40px 20px;
+}
+
+.wta-location-header {
+	text-align: center;
+	margin-bottom: 40px;
+}
+
+.wta-location-title {
+	font-size: 2.5em;
+	margin: 0 0 20px 0;
+	color: #1d2327;
+}
+
+/* Clock Container */
+.wta-clock-container {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 20px;
+	padding: 40px;
+	margin: 40px 0;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+	text-align: center;
+}
+
+.wta-clock {
+	color: #fff;
+}
+
+.wta-clock-time {
+	font-size: 4em;
+	font-weight: 700;
+	font-family: 'Courier New', Courier, monospace;
+	letter-spacing: 0.05em;
+	margin-bottom: 10px;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.wta-clock-date {
+	font-size: 1.5em;
+	margin-bottom: 10px;
+	opacity: 0.9;
+}
+
+.wta-clock-timezone {
+	font-size: 1em;
+	opacity: 0.7;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+
+/* Clock Widget (Shortcode) */
+.wta-clock-widget {
+	background: #f6f7f7;
+	border: 2px solid #ddd;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+	max-width: 300px;
+	margin: 20px auto;
+}
+
+.wta-clock-widget .wta-time {
+	font-size: 2.5em;
+	font-weight: 700;
+	font-family: 'Courier New', Courier, monospace;
+	color: #1d2327;
+}
+
+.wta-clock-widget .wta-date {
+	font-size: 1.2em;
+	color: #646970;
+	margin-top: 10px;
+}
+
+.wta-clock-title {
+	font-size: 1.3em;
+	margin: 0 0 15px 0;
+	color: #1d2327;
+}
+
+/* Content */
+.wta-location-content {
+	font-size: 1.1em;
+	line-height: 1.8;
+	margin: 40px 0;
+}
+
+.wta-location-content p {
+	margin-bottom: 1.5em;
+}
+
+/* Children List */
+.wta-children-list {
+	margin-top: 60px;
+	padding-top: 40px;
+	border-top: 2px solid #eee;
+}
+
+.wta-children-list h2 {
+	font-size: 2em;
+	margin-bottom: 30px;
+	color: #1d2327;
+}
+
+.wta-locations-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 15px;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.wta-locations-grid li {
+	background: #f6f7f7;
+	border-radius: 8px;
+	transition: all 0.3s ease;
+}
+
+.wta-locations-grid li:hover {
+	background: #e8e9ea;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.wta-locations-grid a {
+	display: block;
+	padding: 15px 20px;
+	color: #2271b1;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.wta-locations-grid a:hover {
+	color: #135e96;
+}
+
+/* Error */
+.wta-error {
+	background: #ffebee;
+	color: #c62828;
+	padding: 15px;
+	border-radius: 5px;
+	border-left: 4px solid #c62828;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.wta-location-title {
+		font-size: 2em;
+	}
+
+	.wta-clock-time {
+		font-size: 3em;
+	}
+
+	.wta-clock-date {
+		font-size: 1.2em;
+	}
+
+	.wta-clock-container {
+		padding: 30px 20px;
+	}
+
+	.wta-locations-grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-location-title {
+		font-size: 1.5em;
+	}
+
+	.wta-clock-time {
+		font-size: 2.5em;
+	}
+
+	.wta-locations-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Auto-linked Location Names (City Pages) */
+a.wta-auto-link {
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	border-bottom: 1px dotted #2271b1 !important;
+	transition: all 0.2s ease !important;
+	font-weight: 500 !important;
+}
+
+a.wta-auto-link:hover {
+	color: #135e96 !important;
+	border-bottom-style: solid !important;
+	border-bottom-width: 2px !important;
+}
+
+/* ========================================
+   Nearby Cities/Countries Lists
+   ======================================== */
+
+div.wta-nearby-list {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 1em !important;
+	margin: 1.5em 0 !important;
+	padding: 0 !important;
+}
+
+div.wta-nearby-item {
+	display: flex !important;
+	align-items: flex-start !important;
+	gap: 1em !important;
+	padding: 1em !important;
+	background: #f9f9f9 !important;
+	border-left: 3px solid #2271b1 !important;
+	border-radius: 4px !important;
+	transition: all 0.2s ease !important;
+}
+
+div.wta-nearby-item:hover {
+	background: #f0f5fa !important;
+	border-left-color: #135e96 !important;
+	transform: translateX(3px) !important;
+}
+
+div.wta-nearby-icon {
+	font-size: 1.5em !important;
+	line-height: 1 !important;
+	flex-shrink: 0 !important;
+}
+
+div.wta-nearby-content {
+	flex: 1 !important;
+	min-width: 0 !important;
+}
+
+a.wta-nearby-title {
+	display: block !important;
+	font-size: 1.1em !important;
+	font-weight: 600 !important;
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	margin: 0 0 0.3em 0 !important;
+	line-height: 1.3 !important;
+}
+
+a.wta-nearby-title:hover {
+	color: #135e96 !important;
+	text-decoration: underline !important;
+}
+
+div.wta-nearby-meta {
+	font-size: 0.9em !important;
+	color: #666 !important;
+	line-height: 1.4 !important;
+}
+
+p.wta-no-nearby {
+	padding: 1em !important;
+	background: #fff3cd !important;
+	border-left: 3px solid #ffc107 !important;
+	color: #856404 !important;
+	font-style: italic !important;
+	border-radius: 4px !important;
+	margin: 1em 0 !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+	div.wta-nearby-item {
+		padding: 0.8em !important;
+		gap: 0.8em !important;
+	}
+	
+	div.wta-nearby-icon {
+		font-size: 1.3em !important;
+	}
+	
+	a.wta-nearby-title {
+		font-size: 1em !important;
+	}
+}
+
+
