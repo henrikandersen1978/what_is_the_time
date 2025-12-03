@@ -206,16 +206,43 @@ class WTA_Template_Loader {
 			$lng_min = round( ( $lng_abs - $lng_deg ) * 60, 1 );
 			$lng_dir = $lng >= 0 ? 'Ø' : 'V';
 			
-			$gps_text = sprintf(
-				'Den geografiske placering er %d° %.1f\' %s %d° %.1f\' %s',
-				$lat_deg,
-				$lat_min,
-				$lat_dir,
-				$lng_deg,
-				$lng_min,
-				$lng_dir
-			);
-		} elseif ( ! empty( $lat ) ) {
+		$gps_text = sprintf(
+			'Den geografiske placering er %d° %.1f\' %s %d° %.1f\' %s',
+			$lat_deg,
+			$lat_min,
+			$lat_dir,
+			$lng_deg,
+			$lng_min,
+			$lng_dir
+		);
+		
+		// Determine season based on month and hemisphere
+		$month = intval( $now->format( 'n' ) );
+		if ( $lat > 0 ) {
+			// Northern hemisphere
+			if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+				$season = 'vinter';
+			} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+				$season = 'forår';
+			} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+				$season = 'sommer';
+			} else {
+				$season = 'efterår';
+			}
+		} else {
+			// Southern hemisphere (seasons reversed)
+			if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+				$season = 'sommer';
+			} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+				$season = 'efterår';
+			} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+				$season = 'vinter';
+			} else {
+				$season = 'forår';
+			}
+		}
+		$season_text = 'Nuværende sæson: ' . ucfirst( $season );
+	} elseif ( ! empty( $lat ) ) {
 			$lat = floatval( $lat );
 			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
 			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
