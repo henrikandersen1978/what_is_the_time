@@ -269,112 +269,113 @@ class WTA_Template_Loader {
 		}
 		$navigation_html .= '</div>';
 		
-		// Add Place/Country/Continent schema as separate JSON-LD (simple and reliable method)
-		$lat = get_post_meta( $post_id, 'wta_latitude', true );
-		$lng = get_post_meta( $post_id, 'wta_longitude', true );
-		$country_code = get_post_meta( $post_id, 'wta_country_code', true );
-		$wikidata_id = get_post_meta( $post_id, 'wta_wikidata_id', true );
-		
-		// Determine if we should add schema (all types get schema, but GPS only for cities)
-		$add_schema = true;
-		
-		if ( $add_schema ) {
-			// Determine schema type based on location type
-			$schema_type = 'Place'; // Default
-			if ( 'country' === $type ) {
-				$schema_type = 'Country';
-			} elseif ( 'continent' === $type ) {
-				$schema_type = 'Continent';
-			}
-			
-			$place_schema = array(
-				'@context' => 'https://schema.org',
-				'@type'    => $schema_type,
-				'name'     => $name_local,
-				'url'      => get_permalink( $post_id ),
-			);
-			
-			// Add GPS coordinates if available (typically only cities)
-			if ( ! empty( $lat ) && ! empty( $lng ) ) {
-				$place_schema['geo'] = array(
-					'@type'     => 'GeoCoordinates',
-					'latitude'  => floatval( $lat ),
-					'longitude' => floatval( $lng ),
-				);
-			}
-			
-			// Add description based on type
-			$description = sprintf( 
-				'Aktuel tid og tidszone for %s',
-				$name_local
-			);
-			if ( 'city' === $type && ! empty( $country_code ) ) {
-				// Add country name for cities
-				$parent_id = wp_get_post_parent_id( $post_id );
-				if ( $parent_id ) {
-					$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
-					if ( ! empty( $parent_name ) ) {
-						$description = sprintf( 
-							'Aktuel tid og tidszone for %s, %s',
-							$name_local,
-							$parent_name
-						);
-					}
-				}
-			} elseif ( 'continent' === $type ) {
-				$description = sprintf( 
-					'Tidszoner og aktuel tid i %s',
-					$name_local
-				);
-			}
-			$place_schema['description'] = $description;
-			
-			// Add Wikidata link if available
-			if ( ! empty( $wikidata_id ) ) {
-				$place_schema['sameAs'] = 'https://www.wikidata.org/wiki/' . $wikidata_id;
-			}
-			
-			// Note: timeZone is not a valid property for Place schema according to schema.org
-			// Timezone info is displayed in the UI instead
-			
-			// Add address with country if available (for cities and countries)
-			if ( ! empty( $country_code ) ) {
-				$place_schema['address'] = array(
-					'@type'          => 'PostalAddress',
-					'addressCountry' => strtoupper( $country_code ),
-				);
-			}
-			
-			// Add containedInPlace for hierarchical structure
-			$parent_id = wp_get_post_parent_id( $post_id );
-			if ( $parent_id ) {
-				$parent_type = get_post_meta( $parent_id, 'wta_type', true );
-				$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
-				
-				// Determine parent schema type
-				$parent_schema_type = 'Place';
-				if ( 'country' === $parent_type ) {
-					$parent_schema_type = 'Country';
-				} elseif ( 'continent' === $parent_type ) {
-					$parent_schema_type = 'Continent';
-				}
-				
-				$place_schema['containedInPlace'] = array(
-					'@type' => $parent_schema_type,
-					'@id'   => get_permalink( $parent_id ) . '#place',
-					'name'  => ! empty( $parent_name ) ? $parent_name : get_the_title( $parent_id ),
-				);
-			}
-			
-			$navigation_html .= '<script type="application/ld+json">';
-			$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-			$navigation_html .= '</script>';
-		}
-		
 	} catch ( Exception $e ) {
 		// Silently fail if timezone is invalid
 	}
 }
+
+	// Add Place/Country/Continent schema as separate JSON-LD (simple and reliable method)
+	// NOTE: This is OUTSIDE the timezone check so it works for continents and countries too
+	$lat = get_post_meta( $post_id, 'wta_latitude', true );
+	$lng = get_post_meta( $post_id, 'wta_longitude', true );
+	$country_code = get_post_meta( $post_id, 'wta_country_code', true );
+	$wikidata_id = get_post_meta( $post_id, 'wta_wikidata_id', true );
+	
+	// Determine if we should add schema (all types get schema, but GPS only for cities)
+	$add_schema = true;
+	
+	if ( $add_schema ) {
+		// Determine schema type based on location type
+		$schema_type = 'Place'; // Default
+		if ( 'country' === $type ) {
+			$schema_type = 'Country';
+		} elseif ( 'continent' === $type ) {
+			$schema_type = 'Continent';
+		}
+		
+		$place_schema = array(
+			'@context' => 'https://schema.org',
+			'@type'    => $schema_type,
+			'name'     => $name_local,
+			'url'      => get_permalink( $post_id ),
+		);
+		
+		// Add GPS coordinates if available (typically only cities)
+		if ( ! empty( $lat ) && ! empty( $lng ) ) {
+			$place_schema['geo'] = array(
+				'@type'     => 'GeoCoordinates',
+				'latitude'  => floatval( $lat ),
+				'longitude' => floatval( $lng ),
+			);
+		}
+		
+		// Add description based on type
+		$description = sprintf( 
+			'Aktuel tid og tidszone for %s',
+			$name_local
+		);
+		if ( 'city' === $type && ! empty( $country_code ) ) {
+			// Add country name for cities
+			$parent_id = wp_get_post_parent_id( $post_id );
+			if ( $parent_id ) {
+				$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
+				if ( ! empty( $parent_name ) ) {
+					$description = sprintf( 
+						'Aktuel tid og tidszone for %s, %s',
+						$name_local,
+						$parent_name
+					);
+				}
+			}
+		} elseif ( 'continent' === $type ) {
+			$description = sprintf( 
+				'Tidszoner og aktuel tid i %s',
+				$name_local
+			);
+		}
+		$place_schema['description'] = $description;
+		
+		// Add Wikidata link if available
+		if ( ! empty( $wikidata_id ) ) {
+			$place_schema['sameAs'] = 'https://www.wikidata.org/wiki/' . $wikidata_id;
+		}
+		
+		// Note: timeZone is not a valid property for Place schema according to schema.org
+		// Timezone info is displayed in the UI instead
+		
+		// Add address with country if available (for cities and countries)
+		if ( ! empty( $country_code ) ) {
+			$place_schema['address'] = array(
+				'@type'          => 'PostalAddress',
+				'addressCountry' => strtoupper( $country_code ),
+			);
+		}
+		
+		// Add containedInPlace for hierarchical structure
+		$parent_id = wp_get_post_parent_id( $post_id );
+		if ( $parent_id ) {
+			$parent_type = get_post_meta( $parent_id, 'wta_type', true );
+			$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
+			
+			// Determine parent schema type
+			$parent_schema_type = 'Place';
+			if ( 'country' === $parent_type ) {
+				$parent_schema_type = 'Country';
+			} elseif ( 'continent' === $parent_type ) {
+				$parent_schema_type = 'Continent';
+			}
+			
+			$place_schema['containedInPlace'] = array(
+				'@type' => $parent_schema_type,
+				'@id'   => get_permalink( $parent_id ) . '#place',
+				'name'  => ! empty( $parent_name ) ? $parent_name : get_the_title( $parent_id ),
+			);
+		}
+		
+		$navigation_html .= '<script type="application/ld+json">';
+		$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+		$navigation_html .= '</script>';
+	}
 
 // Note: Large purple clock removed - all info now in Direct Answer box
 	
