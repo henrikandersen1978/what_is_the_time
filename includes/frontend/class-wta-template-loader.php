@@ -65,10 +65,10 @@ class WTA_Template_Loader {
 			return $content;
 		}
 		
-		$post_id = get_the_ID();
-		$type = get_post_meta( $post_id, 'wta_type', true );
-		$name_local = get_the_title();
-		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+	$post_id = get_the_ID();
+	$type = get_post_meta( $post_id, 'wta_type', true );
+	$name_local = get_post_field( 'post_title', $post_id ); // Get original title, not SEO H1
+	$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 		
 		$navigation_html = '';
 		
