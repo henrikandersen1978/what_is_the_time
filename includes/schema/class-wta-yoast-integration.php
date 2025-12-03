@@ -44,8 +44,19 @@ class WTA_Yoast_Integration {
 		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 		$country_code = get_post_meta( $post_id, 'wta_country_code', true );
 
+		WTA_Logger::debug( 'Yoast Place schema filter called', array(
+			'post_id'      => $post_id,
+			'has_lat'      => ! empty( $lat ),
+			'has_lng'      => ! empty( $lng ),
+			'timezone'     => $timezone,
+			'country_code' => $country_code,
+		) );
+
 		// Only add if we have GPS data
 		if ( empty( $lat ) || empty( $lng ) ) {
+			WTA_Logger::warning( 'Place schema skipped - missing GPS data', array(
+				'post_id' => $post_id,
+			) );
 			return $pieces;
 		}
 
@@ -55,6 +66,11 @@ class WTA_Yoast_Integration {
 			'lng'          => floatval( $lng ),
 			'timezone'     => $timezone,
 			'country_code' => $country_code,
+		) );
+
+		WTA_Logger::info( 'Place schema added to Yoast @graph', array(
+			'post_id'  => $post_id,
+			'location' => get_the_title(),
 		) );
 
 		return $pieces;

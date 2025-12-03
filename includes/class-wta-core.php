@@ -77,12 +77,6 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
 	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
 
-	// Schema / SEO Integration
-	if ( defined( 'WPSEO_VERSION' ) ) {
-		require_once WTA_PLUGIN_DIR . 'includes/schema/class-wta-yoast-integration.php';
-		WTA_Yoast_Integration::init();
-	}
-
 	// Load Action Scheduler if not already loaded by another plugin
 		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
 			$action_scheduler_path = WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
@@ -186,6 +180,9 @@ class WTA_Core {
 		// Shortcodes
 		$shortcodes = new WTA_Shortcodes();
 		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
+		
+		// Yoast SEO Schema integration (load after plugins_loaded to ensure Yoast is ready)
+		$this->loader->add_action( 'plugins_loaded', $this, 'init_yoast_integration', 15 );
 	}
 
 	/**
@@ -264,6 +261,35 @@ class WTA_Core {
 	 */
 	public function increase_time_limit( $time_limit ) {
 		return 60; // 60 seconds to safely process timezone lookups
+	}
+
+	/**
+	 * Initialize Yoast SEO schema integration.
+	 *
+	 * Loads after plugins_loaded to ensure Yoast classes are available.
+	 *
+	 * @since    2.23.2
+	 */
+	public function init_yoast_integration() {
+		// Check if Yoast SEO is active and classes are available
+		if ( ! defined( 'WPSEO_VERSION' ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'WPSEO_Graph_Piece' ) ) {
+			WTA_Logger::warning( 'Yoast SEO active but WPSEO_Graph_Piece class not found', array(
+				'yoast_version' => WPSEO_VERSION,
+			) );
+			return;
+		}
+
+		// Load and initialize Yoast integration
+		require_once WTA_PLUGIN_DIR . 'includes/schema/class-wta-yoast-integration.php';
+		WTA_Yoast_Integration::init();
+
+		WTA_Logger::info( 'Yoast SEO schema integration initialized', array(
+			'yoast_version' => WPSEO_VERSION,
+		) );
 	}
 
 	/**
