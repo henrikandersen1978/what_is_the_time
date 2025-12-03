@@ -20,12 +20,14 @@ class WTA_Timezone_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// Get pending timezone items (larger batch with safe rate limiting)
-		$items = WTA_Queue::get_pending( 'timezone', 50 );
+		// Get pending timezone items (batch size optimized for 60-second time limit)
+		$items = WTA_Queue::get_pending( 'timezone', 25 );
 
 		if ( empty( $items ) ) {
 			return;
 		}
+
+		$start_time = microtime( true );
 
 		WTA_Logger::info( 'Timezone processor started', array(
 			'items' => count( $items ),
@@ -42,8 +44,12 @@ class WTA_Timezone_Processor {
 			}
 		}
 
+		$duration = round( microtime( true ) - $start_time, 2 );
+
 		WTA_Logger::info( 'Timezone processor completed', array(
 			'processed' => $processed,
+			'duration_seconds' => $duration,
+			'avg_per_item' => round( $duration / max( $processed, 1 ), 2 ),
 		) );
 	}
 

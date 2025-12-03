@@ -189,6 +189,9 @@ class WTA_Core {
 	 * @access   private
 	 */
 	private function define_action_scheduler_hooks() {
+		// Increase Action Scheduler time limit for API-heavy operations
+		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
+
 		// Structure processor
 		$structure_processor = new WTA_Structure_Processor();
 		$this->loader->add_action( 'wta_process_structure', $structure_processor, 'process_batch' );
@@ -240,6 +243,21 @@ class WTA_Core {
 				WTA_Logger::info( "Auto-scheduled missing action: $action" );
 			}
 		}
+	}
+
+	/**
+	 * Increase Action Scheduler time limit.
+	 *
+	 * Default is 30 seconds, but timezone API calls need more time.
+	 * With batch size of 25 items × 1.1 seconds = 27.5 seconds needed,
+	 * we set 60 seconds to allow buffer for network delays.
+	 *
+	 * @since    2.21.3
+	 * @param    int $time_limit Current time limit in seconds.
+	 * @return   int             New time limit in seconds.
+	 */
+	public function increase_time_limit( $time_limit ) {
+		return 60; // 60 seconds to safely process timezone lookups
 	}
 
 	/**

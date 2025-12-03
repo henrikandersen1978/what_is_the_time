@@ -47,6 +47,7 @@ class WTA_Timezone_Helper {
 		'VN' => 'Asia/Ho_Chi_Minh',
 		'MY' => 'Asia/Kuala_Lumpur',
 		'PH' => 'Asia/Manila',
+		'IN' => 'Asia/Kolkata',
 		'IL' => 'Asia/Jerusalem',
 		'TR' => 'Europe/Istanbul',
 		'EG' => 'Africa/Cairo',
