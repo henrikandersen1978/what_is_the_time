@@ -313,22 +313,21 @@ class WTA_Template_Loader {
 	// Calculate illumination percentage
 	$illumination = (1 - cos($phase_days / $moon_cycle * 2 * M_PI)) / 2 * 100;
 	
-	// Determine phase name based on days in cycle
+	// Determine if waxing (tiltagende) or waning (aftagende)
+	$is_waxing = $phase_days < ($moon_cycle / 2);
+	
+	// Determine phase name based on illumination percentage and direction
 	$phase_name = '';
-	if ($phase_days < 1.84566) {
+	if ($illumination < 5) {
 		$phase_name = 'Nymåne';
-	} elseif ($phase_days < 7.38265) {
-		$phase_name = 'Tiltagende månesejl';
-	} elseif ($phase_days < 14.76529) {
-		$phase_name = 'Første kvarter';
-	} elseif ($phase_days < 22.14794) {
-		$phase_name = 'Tiltagende måne';
-	} elseif ($phase_days < 23.99323) {
-		$phase_name = 'Fuldmåne';
-	} elseif ($phase_days < 27.68735) {
-		$phase_name = 'Aftagende måne';
+	} elseif ($illumination < 45) {
+		$phase_name = $is_waxing ? 'Tiltagende månesejl' : 'Aftagende månesejl';
+	} elseif ($illumination < 55) {
+		$phase_name = $is_waxing ? 'Første kvarter' : 'Sidste kvarter';
+	} elseif ($illumination < 95) {
+		$phase_name = $is_waxing ? 'Tiltagende måne' : 'Aftagende måne';
 	} else {
-		$phase_name = 'Aftagende månesejl';
+		$phase_name = 'Fuldmåne';
 	}
 	
 	$moon_text = sprintf(
