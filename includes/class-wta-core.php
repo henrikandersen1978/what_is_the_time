@@ -73,11 +73,17 @@ class WTA_Core {
 			require_once WTA_PLUGIN_DIR . 'includes/admin/class-wta-settings.php';
 		}
 
-		// Frontend
-		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
-		require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
+	// Frontend
+	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-template-loader.php';
+	require_once WTA_PLUGIN_DIR . 'includes/frontend/class-wta-shortcodes.php';
 
-		// Load Action Scheduler if not already loaded by another plugin
+	// Schema / SEO Integration
+	if ( defined( 'WPSEO_VERSION' ) ) {
+		require_once WTA_PLUGIN_DIR . 'includes/schema/class-wta-yoast-integration.php';
+		WTA_Yoast_Integration::init();
+	}
+
+	// Load Action Scheduler if not already loaded by another plugin
 		if ( ! function_exists( 'as_schedule_recurring_action' ) ) {
 			$action_scheduler_path = WTA_PLUGIN_DIR . 'includes/action-scheduler/action-scheduler.php';
 			if ( file_exists( $action_scheduler_path ) ) {

@@ -118,28 +118,10 @@ class WTA_Template_Loader {
 				}
 			}
 			
-			$navigation_html .= '</ol>';
-			$navigation_html .= '</nav>';
-			
-			// Add Schema.org JSON-LD breadcrumb
-			$schema = array(
-				'@context'        => 'https://schema.org',
-				'@type'           => 'BreadcrumbList',
-				'itemListElement' => array(),
-			);
-			
-			foreach ( $breadcrumb_items as $index => $item ) {
-				$schema['itemListElement'][] = array(
-					'@type'    => 'ListItem',
-					'position' => $index + 1,
-					'name'     => $item['name'],
-					'item'     => $item['url'],
-				);
-			}
-			
-			$navigation_html .= '<script type="application/ld+json">';
-			$navigation_html .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-		$navigation_html .= '</script>';
+		$navigation_html .= '</ol>';
+		$navigation_html .= '</nav>';
+		
+		// Note: BreadcrumbList schema is handled by Yoast SEO for better integration
 	}
 	
 	// Add Direct Answer section for SEO (Featured Snippet optimization)
@@ -287,40 +269,7 @@ class WTA_Template_Loader {
 		}
 		$navigation_html .= '</div>';
 		
-		// Add Place Schema for better SEO
-		$lat = get_post_meta( $post_id, 'wta_latitude', true );
-		$lng = get_post_meta( $post_id, 'wta_longitude', true );
-		$country_code = get_post_meta( $post_id, 'wta_country_code', true );
-		
-		if ( ! empty( $lat ) && ! empty( $lng ) ) {
-			$place_schema = array(
-				'@context' => 'https://schema.org',
-				'@type'    => 'Place',
-				'name'     => $name_local,
-				'geo'      => array(
-					'@type'     => 'GeoCoordinates',
-					'latitude'  => floatval( $lat ),
-					'longitude' => floatval( $lng ),
-				),
-			);
-			
-			// Add timezone if available
-			if ( ! empty( $timezone ) && 'multiple' !== $timezone ) {
-				$place_schema['timeZone'] = $timezone;
-			}
-			
-			// Add address with country if available
-			if ( ! empty( $country_code ) ) {
-				$place_schema['address'] = array(
-					'@type'          => 'PostalAddress',
-					'addressCountry' => strtoupper( $country_code ),
-				);
-			}
-			
-			$navigation_html .= '<script type="application/ld+json">';
-			$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-			$navigation_html .= '</script>';
-		}
+		// Note: Place schema is integrated into Yoast SEO's @graph via WTA_Yoast_Integration
 		
 	} catch ( Exception $e ) {
 		// Silently fail if timezone is invalid
