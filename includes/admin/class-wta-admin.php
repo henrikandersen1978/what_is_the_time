@@ -255,6 +255,15 @@ class WTA_Admin {
 	}
 
 	/**
+	 * Display debug page.
+	 *
+	 * @since    2.0.0
+	 */
+	public function display_debug_page() {
+		include WTA_PLUGIN_DIR . 'includes/admin/views/debug.php';
+	}
+
+	/**
 	 * AJAX: Prepare import queue.
 	 *
 	 * @since    2.0.0
