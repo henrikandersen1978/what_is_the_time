@@ -144,11 +144,46 @@ class WTA_Template_Loader {
 		
 		// Add live clock for cities (after breadcrumb, before quick nav)
 		if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) {
+			// Calculate time difference to base country
+			$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+			$base_country = get_option( 'wta_base_country_name', 'Danmark' );
+			
+			try {
+				$city_tz = new DateTimeZone( $timezone );
+				$base_tz = new DateTimeZone( $base_timezone );
+				$now = new DateTime( 'now', $city_tz );
+				$base_time = new DateTime( 'now', $base_tz );
+				
+				$offset = $city_tz->getOffset( $now ) - $base_tz->getOffset( $base_time );
+				$hours_diff = $offset / 3600;
+				
+				// Format hours: show decimal only if not a whole number
+				$hours_abs = abs( $hours_diff );
+				$hours_formatted = ( $hours_abs == floor( $hours_abs ) ) 
+					? intval( $hours_abs ) 
+					: number_format( $hours_abs, 1, ',', '' );
+				
+				$diff_text = '';
+				if ( $hours_diff > 0 ) {
+					$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
+				} elseif ( $hours_diff < 0 ) {
+					$diff_text = sprintf( '%s timer efter %s', $hours_formatted, $base_country );
+				} else {
+					$diff_text = sprintf( 'Samme tid som %s', $base_country );
+				}
+			} catch ( Exception $e ) {
+				$diff_text = '';
+				$hours_diff = 0;
+			}
+			
 			$navigation_html .= '<div class="wta-clock-container">';
-			$navigation_html .= '<div class="wta-clock" data-timezone="' . esc_attr( $timezone ) . '">';
+			$navigation_html .= '<div class="wta-clock" data-timezone="' . esc_attr( $timezone ) . '" data-base-offset="' . esc_attr( $hours_diff ) . '">';
 			$navigation_html .= '<div class="wta-clock-time">--:--:--</div>';
 			$navigation_html .= '<div class="wta-clock-date">-</div>';
 			$navigation_html .= '<div class="wta-clock-timezone">' . esc_html( $timezone ) . '</div>';
+			if ( ! empty( $diff_text ) ) {
+				$navigation_html .= '<div class="wta-time-diff">' . esc_html( $diff_text ) . '</div>';
+			}
 			$navigation_html .= '</div>';
 			$navigation_html .= '</div>';
 		}
