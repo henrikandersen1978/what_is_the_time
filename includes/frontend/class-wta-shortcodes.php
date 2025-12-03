@@ -120,20 +120,20 @@ class WTA_Shortcodes {
 				$offset = $city_tz->getOffset( $now ) - $base_tz->getOffset( $base_time );
 				$hours_diff = $offset / 3600;
 				
-				// Format hours: show decimal only if not a whole number
-				$hours_abs = abs( $hours_diff );
-				$hours_formatted = ( $hours_abs == floor( $hours_abs ) ) 
-					? intval( $hours_abs ) 
-					: number_format( $hours_abs, 1, ',', '' );
-				
-				$diff_text = '';
-				if ( $hours_diff > 0 ) {
-					$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
-				} elseif ( $hours_diff < 0 ) {
-					$diff_text = sprintf( '%s timer efter %s', $hours_formatted, $base_country );
-				} else {
-					$diff_text = sprintf( 'Samme tid som %s', $base_country );
-				}
+			// Format hours: show decimal only if not a whole number
+			$hours_abs = abs( $hours_diff );
+			$hours_formatted = ( $hours_abs == floor( $hours_abs ) ) 
+				? intval( $hours_abs ) 
+				: number_format( $hours_abs, 1, ',', '' );
+			
+			$diff_text = '';
+			if ( $hours_diff > 0 ) {
+				$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
+			} elseif ( $hours_diff < 0 ) {
+				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
+			} else {
+				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+			}
 				
 				// Initial time with seconds
 				$initial_time = $now->format( 'H:i:s' );
