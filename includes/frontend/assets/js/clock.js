@@ -7,6 +7,9 @@
 
 	// Update all clocks on page
 	function updateClocks() {
+		// SEO Direct Answer elements
+		updateDirectAnswer();
+		
 		// Main location clocks
 		const mainClocks = document.querySelectorAll('.wta-clock[data-timezone]');
 		mainClocks.forEach(function(clock) {
@@ -24,6 +27,45 @@
 		cityClocks.forEach(function(clock) {
 			updateCityClock(clock);
 		});
+	}
+	
+	// Update SEO Direct Answer section
+	function updateDirectAnswer() {
+		const timeEl = document.querySelector('.wta-live-time[data-timezone]');
+		const dateEl = document.querySelector('.wta-live-date[data-timezone]');
+		
+		if (!timeEl && !dateEl) return;
+		
+		const timezone = timeEl ? timeEl.getAttribute('data-timezone') : dateEl.getAttribute('data-timezone');
+		if (!timezone) return;
+		
+		try {
+			const now = new Date();
+			
+			if (timeEl) {
+				const timeFormatter = new Intl.DateTimeFormat('da-DK', {
+					timeZone: timezone,
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false
+				});
+				timeEl.textContent = timeFormatter.format(now);
+			}
+			
+			if (dateEl) {
+				const dateFormatter = new Intl.DateTimeFormat('da-DK', {
+					timeZone: timezone,
+					weekday: 'long',
+					day: 'numeric',
+					month: 'long',
+					year: 'numeric'
+				});
+				dateEl.textContent = dateFormatter.format(now);
+			}
+		} catch (error) {
+			console.error('Error updating direct answer:', error);
+		}
 	}
 
 	// Update main clock (single location page)

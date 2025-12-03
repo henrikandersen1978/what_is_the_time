@@ -139,11 +139,35 @@ class WTA_Template_Loader {
 			
 			$navigation_html .= '<script type="application/ld+json">';
 			$navigation_html .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-			$navigation_html .= '</script>';
+		$navigation_html .= '</script>';
+	}
+	
+	// Add Direct Answer section for SEO (Featured Snippet optimization)
+	if ( ! empty( $timezone ) && 'multiple' !== $timezone ) {
+		try {
+			$city_tz = new DateTimeZone( $timezone );
+			$now = new DateTime( 'now', $city_tz );
+			
+			$navigation_html .= '<div class="wta-seo-direct-answer">';
+			$navigation_html .= sprintf(
+				'<p class="wta-current-time-statement"><strong>Den aktuelle tid i %s er <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
+				esc_html( $name_local ),
+				esc_attr( $timezone ),
+				$now->format( 'H:i:s' )
+			);
+			$navigation_html .= sprintf(
+				'<p class="wta-current-date-statement">Datoen er <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+				esc_attr( $timezone ),
+				$now->format( 'l j F Y' )
+			);
+			$navigation_html .= '</div>';
+		} catch ( Exception $e ) {
+			// Silently fail if timezone is invalid
 		}
-		
-		// Add live clock for cities (after breadcrumb, before quick nav)
-		if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) {
+	}
+	
+	// Add live clock for cities (after direct answer, before quick nav)
+	if ( 'city' === $type && ! empty( $timezone ) && 'multiple' !== $timezone ) {
 			// Calculate time difference to base country
 			$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
 			$base_country = get_option( 'wta_base_country_name', 'Danmark' );

@@ -283,9 +283,9 @@ class WTA_Structure_Processor {
 			}
 		}
 
-		// Save SEO-friendly H1 title for theme to display
-		$seo_h1 = sprintf( 'Hvad er klokken i %s? Aktuel tid og tidszoner', $data['name_local'] );
-		update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+	// Save SEO-friendly H1 title matching search intent
+	$seo_h1 = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 
 		// Queue AI content generation
 		WTA_Queue::add( 'ai_content', array(
@@ -456,21 +456,28 @@ class WTA_Structure_Processor {
 			}
 		}
 
-		// Queue AI content generation (only if timezone is resolved or not needed)
-		if ( ! $needs_timezone_api ) {
-			WTA_Queue::add( 'ai_content', array(
-				'post_id' => $post_id,
-				'type'    => 'city',
-			), 'ai_city_' . $post_id );
-		}
+	// Get parent country name for SEO H1
+	$parent_country_name = get_post_field( 'post_title', $parent_id );
+	
+	// Save SEO-friendly H1 title matching search intent
+	$seo_h1 = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 
-		WTA_Logger::info( 'City post created', array(
+	// Queue AI content generation (only if timezone is resolved or not needed)
+	if ( ! $needs_timezone_api ) {
+		WTA_Queue::add( 'ai_content', array(
 			'post_id' => $post_id,
-			'name'    => $data['name_local'],
-		) );
-
-		WTA_Queue::mark_done( $item['id'] );
+			'type'    => 'city',
+		), 'ai_city_' . $post_id );
 	}
+
+	WTA_Logger::info( 'City post created', array(
+		'post_id' => $post_id,
+		'name'    => $data['name_local'],
+	) );
+
+	WTA_Queue::mark_done( $item['id'] );
+}
 
 	/**
 	 * Process cities import batch job.
