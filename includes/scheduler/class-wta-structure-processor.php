@@ -612,17 +612,20 @@ class WTA_Structure_Processor {
 						$first_city_logged = true;
 					}
 					
-					// Filter by country_code (iso2)
-					if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
-						$skipped_country++;
-					} elseif ( $min_population > 0 ) {
-						// Apply population filter - SKIP cities with null or zero population OR below threshold
-						if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
-							$skipped_population++;
-							continue; // Skip to next iteration
-						}
+				// Filter by country_code (iso2)
+				if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
+					$skipped_country++;
+					continue; // Skip this city
+				}
+				
+				// Apply population filter - SKIP cities with null or zero population OR below threshold
+				if ( $min_population > 0 ) {
+					if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
+						$skipped_population++;
+						continue; // Skip to next iteration
 					}
-					
+				}
+				
 				// Filter out municipalities, communes, and administrative divisions
 				if ( isset( $city['name'] ) ) {
 					$name_lower = strtolower( $city['name'] );
