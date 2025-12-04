@@ -111,6 +111,8 @@ class WTA_Wikidata_Translator {
 		' kommune',          // Danish/Norwegian
 		' kommun',           // Swedish
 		' kunta',            // Finnish
+		' kommuna',          // Icelandic
+		' kummuna',          // Maltese
 		
 		// English
 		' municipality',
@@ -121,43 +123,77 @@ class WTA_Wikidata_Translator {
 		' state',
 		' borough',
 		' township',
+		' region',
 		
 		// Spanish/Portuguese
 		' municipio',
 		' município',
 		' departamento',
 		' provincia',
+		' concelho',
 		
-		// German
+		// German/Austrian
 		' gemeinde',
 		' landkreis',
 		' kreis',
+		' bezirk',
+		' stadtkreis',
 		
-		// French
+		// French/Belgian
 		' commune',
 		' arrondissement',
 		' canton',
+		' département',
 		
-		// Other
-		' prefecture',
-		' governorate',
-		' oblast',
-		' rayon',
+		// Italian
+		' comune',
+		' provincia',
+		
+		// Eastern European
+		' oblast',           // Russian/Ukrainian
+		' rayon',            // Russian/Azerbaijani
+		' gmina',            // Polish
+		' powiat',           // Polish
+		' voivodeship',      // Polish
+		' okrug',            // Russian
+		
+		// Asian
+		' prefecture',       // Japanese
+		' governorate',      // Arabic
+		' shi',              // Chinese/Japanese (city)
+		' gun',              // Korean (county)
+		
+		// Other patterns
+		' urban area',
+		' metropolitan area',
+		' metro area',
+		' area',
 	);
 	
-	// Case-insensitive removal of suffixes
+	// Case-insensitive removal of suffixes - try multiple times for compound suffixes
 	$label_lower = mb_strtolower( $label, 'UTF-8' );
 	$suffix_removed = false;
 	$removed_suffix = '';
+	$max_iterations = 3; // Allow removing up to 3 suffixes (e.g., "City Municipality District")
 	
-	foreach ( $admin_suffixes as $suffix ) {
-		if ( mb_substr( $label_lower, -mb_strlen( $suffix, 'UTF-8' ), null, 'UTF-8' ) === $suffix ) {
-			// Remove the suffix (preserve original case for the city name part)
-			$label = mb_substr( $label, 0, mb_strlen( $label, 'UTF-8' ) - mb_strlen( $suffix, 'UTF-8' ), 'UTF-8' );
-			$label = trim( $label );
-			$suffix_removed = true;
-			$removed_suffix = $suffix;
-			break; // Only remove one suffix
+	for ( $i = 0; $i < $max_iterations; $i++ ) {
+		$found = false;
+		$label_lower = mb_strtolower( $label, 'UTF-8' );
+		
+		foreach ( $admin_suffixes as $suffix ) {
+			if ( mb_substr( $label_lower, -mb_strlen( $suffix, 'UTF-8' ), null, 'UTF-8' ) === $suffix ) {
+				// Remove the suffix (preserve original case for the city name part)
+				$label = mb_substr( $label, 0, mb_strlen( $label, 'UTF-8' ) - mb_strlen( $suffix, 'UTF-8' ), 'UTF-8' );
+				$label = trim( $label );
+				$suffix_removed = true;
+				$removed_suffix .= ( $removed_suffix ? ', ' : '' ) . $suffix;
+				$found = true;
+				break; // Try again with remaining text
+			}
+		}
+		
+		if ( ! $found ) {
+			break; // No more suffixes found
 		}
 	}
 	

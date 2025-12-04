@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.27.9] - 2025-12-04
+
+### Fixed
+- **CRITICAL: Population Filter Fixed**: Cities with null/missing population are now INCLUDED (not excluded)
+- Previously 656 cities were incorrectly filtered out due to missing population data
+- Now imports all cities over threshold PLUS cities with unknown population
+- **Enhanced Wikidata Suffix Removal**: Expanded to 40+ administrative suffixes across all languages
+- Multi-pass suffix removal (removes up to 3 compound suffixes like "City Municipality District")
+- Added Nordic languages (Swedish "kommun", Finnish "kunta", Icelandic "kommuna")
+- Added Eastern European (Polish "gmina", Russian "oblast", Ukrainian variants)
+- Added Asian languages (Japanese "shi", Korean "gun", Arabic "governorate")
+- All Wikidata city names now properly cleaned without administrative designations
+
+### Technical Details
+- Population filter logic inverted: only exclude if population explicitly set AND below threshold
+- Suffix removal now iterates up to 3 times to handle compound administrative names
+- Expanded suffix dictionary from 15 to 40+ entries covering global administrative terms
+
 ## [2.27.8] - 2025-12-04
 
 ### Fixed
