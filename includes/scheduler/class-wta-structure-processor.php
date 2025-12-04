@@ -563,6 +563,7 @@ class WTA_Structure_Processor {
 		$skipped_max_reached = 0;
 		$per_country = array();
 		$total_read = 0;
+		$json_errors = 0; // Track JSON errors
 		
 		$json_buffer = '';
 		$in_object = false;
@@ -598,8 +599,8 @@ class WTA_Structure_Processor {
 		if ( $in_object && $brace_count === 0 ) {
 			$total_read++;
 			
-			// Log progress every 10k objects to detect stalls
-			if ( $total_read % 10000 === 0 ) {
+			// Log progress every 50k objects to detect stalls
+			if ( $total_read % 50000 === 0 ) {
 				$memory_now = round( memory_get_usage( true ) / 1024 / 1024, 2 );
 				file_put_contents( $debug_file, sprintf(
 					"[PROGRESS] Processed %d objects | Memory: %s MB\n",
@@ -615,16 +616,21 @@ class WTA_Structure_Processor {
 			// Parse this single city object
 			$city = json_decode( $json_buffer, true );
 			
-			// Check for JSON parsing errors
+			// Check for JSON parsing errors (log only first 10)
 			if ( null === $city ) {
 				$json_error = json_last_error();
 				if ( $json_error !== JSON_ERROR_NONE ) {
-					file_put_contents( $debug_file, sprintf(
-						"[JSON ERROR] Object #%d failed to parse: %s (first 200 chars: %s)\n",
-						$total_read,
-						json_last_error_msg(),
-						substr($json_buffer, 0, 200)
-					), FILE_APPEND );
+					$json_errors++;
+					// Only log first 10 JSON errors to prevent huge log files
+					if ( $json_errors <= 10 ) {
+						file_put_contents( $debug_file, sprintf(
+							"[JSON ERROR #%d] Object #%d failed to parse: %s (first 200 chars: %s)\n",
+							$json_errors,
+							$total_read,
+							json_last_error_msg(),
+							substr($json_buffer, 0, 200)
+						), FILE_APPEND );
+					}
 				}
 			}
 			
@@ -634,53 +640,10 @@ class WTA_Structure_Processor {
 						file_put_contents( $debug_file, "First city: " . $city['name'] . " (" . $city['country_code'] . ")\n", FILE_APPEND );
 						$first_city_logged = true;
 					}
-					
-		// DEBUG: Log MEGA cities (>500k) globally to find Oslo
-		if ( isset($city['population']) && is_numeric($city['population']) && intval($city['population']) > 500000 ) {
-			$country = isset($city['country_code']) ? $city['country_code'] : 'NONE';
-			file_put_contents( $debug_file, sprintf(
-				"[MEGA CITY >500K] '%s' | pop:%d | country:'%s' (len:%d, ascii:%s)\n",
-				$city['name'],
-				intval($city['population']),
-				$country,
-				strlen($country),
-				isset($city['country_code']) ? bin2hex($city['country_code']) : 'none'
-			), FILE_APPEND );
-		}
-		
-		// DEBUG: Log ALL Norwegian cities (regardless of population)
-		if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-			$pop_value = isset($city['population']) ? $city['population'] : 'NOT_SET';
-			$pop_type = isset($city['population']) ? gettype($city['population']) : 'N/A';
-			
-			file_put_contents( $debug_file, sprintf(
-				"[NO ALL] '%s' | pop:%s (type:%s) | wiki:%s | code:'%s'\n",
-				$city['name'],
-				$pop_value,
-				$pop_type,
-				isset($city['wikiDataId']) ? $city['wikiDataId'] : 'none',
-				$city['country_code']
-			), FILE_APPEND );
-			
-			// Extra logging for large cities
-			if ( isset($city['population']) && is_numeric($city['population']) && intval($city['population']) > 50000 ) {
-				file_put_contents( $debug_file, sprintf(
-					"  → LARGE CITY DETECTED: '%s' with %d people\n",
-					$city['name'],
-					intval($city['population'])
-				), FILE_APPEND );
-			}
-		}
 			
 		// Filter by country_code (iso2)
 		if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 			$skipped_country++;
-			if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-				file_put_contents( $debug_file, sprintf(
-					"  → COUNTRY FILTER REJECTED '%s'\n",
-					$city['name']
-				), FILE_APPEND );
-			}
 			continue; // Skip this city
 		}
 			
@@ -688,14 +651,6 @@ class WTA_Structure_Processor {
 			if ( $min_population > 0 ) {
 				if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
 					$skipped_population++;
-					if ( $city['country_code'] === 'NO' ) {
-						file_put_contents( $debug_file, sprintf(
-							"  → SKIPPED '%s': Population %s < %d\n",
-							$city['name'],
-							isset($city['population']) ? $city['population'] : 'null',
-							$min_population
-						), FILE_APPEND );
-					}
 					continue; // Skip to next iteration
 				}
 			}
@@ -736,13 +691,6 @@ class WTA_Structure_Processor {
 			foreach ( $admin_keywords as $keyword ) {
 				if ( strpos( $name_lower, $keyword ) !== false ) {
 					$skipped_country++;
-					if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-						file_put_contents( $debug_file, sprintf(
-							"  → ADMIN KEYWORD REJECTED '%s': Contains '%s'\n",
-							$city['name'],
-							$keyword
-						), FILE_APPEND );
-					}
 					continue 2; // Skip to next city in outer loop
 				}
 			}
@@ -756,14 +704,6 @@ class WTA_Structure_Processor {
 						continue;
 					}
 				}
-					
-	// If we reach here, city passed all filters
-	if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-		file_put_contents( $debug_file, sprintf(
-			"  ✓ PASSED ALL FILTERS: '%s'\n",
-			$city['name']
-		), FILE_APPEND );
-	}
 		
 		// Max cities per country
 			$should_queue = true;
@@ -776,32 +716,17 @@ class WTA_Structure_Processor {
 				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
 					$should_queue = false;
 					$skipped_max_reached++;
-					if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-						file_put_contents( $debug_file, sprintf(
-							"  → MAX LIMIT REACHED '%s': %d/%d cities\n",
-							$city['name'],
-							$per_country[ $country_code ],
-							$max_cities_per_country
-						), FILE_APPEND );
-					}
 				} else {
 					$per_country[ $country_code ]++;
 				}
 			}
 					
 			if ( $should_queue ) {
-				if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
-					file_put_contents( $debug_file, sprintf(
-						"  ✓✓ QUEUING: '%s'\n",
-						$city['name']
-					), FILE_APPEND );
-				}
-				
 				// Queue city using the helper method
 				$queued += $this->queue_cities_batch( array( $city ), $options );
 					
-					// Log progress every 100 cities
-					if ( $queued % 100 === 0 ) {
+					// Log progress every 500 cities
+					if ( $queued % 500 === 0 ) {
 						file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
 					}
 				}
@@ -824,13 +749,13 @@ class WTA_Structure_Processor {
 		$memory_peak
 	), FILE_APPEND );
 
-			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 			$summary = sprintf(
-				"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_max=%d, Total_read=%d\n",
+				"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_max=%d, JSON_errors=%d, Total_read=%d\n",
 				$queued,
 				$skipped_country,
 				$skipped_population,
 				$skipped_max_reached,
+				$json_errors,
 				$total_read
 			);
 			file_put_contents( $debug_file, $summary, FILE_APPEND );
@@ -840,6 +765,7 @@ class WTA_Structure_Processor {
 				'skipped_country' => $skipped_country,
 				'skipped_population' => $skipped_population,
 				'skipped_max_reached' => $skipped_max_reached,
+				'json_errors' => $json_errors,
 				'total_read' => $total_read,
 		) );
 

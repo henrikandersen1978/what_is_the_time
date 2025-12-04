@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.27.7] - 2025-12-04
+
+### Fixed
+- **Log Size Reduction**: Drastically reduced debug log file size during city imports (95-99% smaller)
+- JSON parsing errors now limited to first 10 entries instead of logging thousands
+- Removed excessive per-city debug logging
+- Progress logging reduced from every 100 to every 500 cities
+- Object tracking reduced from every 10k to every 50k objects
+
+### Technical Details
+- Added `$json_errors` counter to track total errors without logging each one
+- Removed debug logging for all Norwegian cities, mega cities (>500k), and filter rejections
+- Log file now contains only critical information and error summaries
+- Import process now generates manageable log files even for 150k+ cities
+
 ## [2.12.0] - 2025-01-02
 
 ### Fixed
