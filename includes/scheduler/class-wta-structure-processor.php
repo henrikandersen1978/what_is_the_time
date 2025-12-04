@@ -594,18 +594,41 @@ class WTA_Structure_Processor {
 				$json_buffer .= $line;
 			}
 			
-			// When we have a complete object (brace_count returns to 0)
-			if ( $in_object && $brace_count === 0 ) {
-				$total_read++;
-				
-				// Remove trailing comma
-				$json_buffer = rtrim( $json_buffer );
-				$json_buffer = rtrim( $json_buffer, ',' );
-				
-				// Parse this single city object
-				$city = json_decode( $json_buffer, true );
-				
-				if ( null !== $city && is_array( $city ) ) {
+		// When we have a complete object (brace_count returns to 0)
+		if ( $in_object && $brace_count === 0 ) {
+			$total_read++;
+			
+			// Log progress every 10k objects to detect stalls
+			if ( $total_read % 10000 === 0 ) {
+				$memory_now = round( memory_get_usage( true ) / 1024 / 1024, 2 );
+				file_put_contents( $debug_file, sprintf(
+					"[PROGRESS] Processed %d objects | Memory: %s MB\n",
+					$total_read,
+					$memory_now
+				), FILE_APPEND );
+			}
+			
+			// Remove trailing comma
+			$json_buffer = rtrim( $json_buffer );
+			$json_buffer = rtrim( $json_buffer, ',' );
+			
+			// Parse this single city object
+			$city = json_decode( $json_buffer, true );
+			
+			// Check for JSON parsing errors
+			if ( null === $city ) {
+				$json_error = json_last_error();
+				if ( $json_error !== JSON_ERROR_NONE ) {
+					file_put_contents( $debug_file, sprintf(
+						"[JSON ERROR] Object #%d failed to parse: %s (first 200 chars: %s)\n",
+						$total_read,
+						json_last_error_msg(),
+						substr($json_buffer, 0, 200)
+					), FILE_APPEND );
+				}
+			}
+			
+			if ( null !== $city && is_array( $city ) ) {
 					// Log first city for debugging
 					if ( ! $first_city_logged ) {
 						file_put_contents( $debug_file, "First city: " . $city['name'] . " (" . $city['country_code'] . ")\n", FILE_APPEND );
@@ -790,8 +813,15 @@ class WTA_Structure_Processor {
 			}
 		}
 		
-		fclose( $handle );
-		file_put_contents( $debug_file, "Streaming complete. Total objects read: $total_read\n", FILE_APPEND );
+	fclose( $handle );
+	
+	// Log completion stats
+	$memory_peak = round( memory_get_peak_usage( true ) / 1024 / 1024, 2 );
+	file_put_contents( $debug_file, sprintf(
+		"Streaming complete. Total objects read: %d | Peak memory: %s MB\n",
+		$total_read,
+		$memory_peak
+	), FILE_APPEND );
 
 			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 			$summary = sprintf(
