@@ -623,28 +623,55 @@ class WTA_Structure_Processor {
 						}
 					}
 					
-					// Filter out municipalities, communes, and administrative divisions
-					if ( isset( $city['name'] ) ) {
-						$name_lower = strtolower( $city['name'] );
-						// Skip if name contains municipality/commune keywords
-						if ( strpos( $name_lower, 'kommune' ) !== false ||
-						     strpos( $name_lower, 'municipality' ) !== false ||
-						     strpos( $name_lower, 'commune' ) !== false ||
-						     strpos( $name_lower, 'district' ) !== false ||
-						     strpos( $name_lower, 'province' ) !== false ) {
-							$skipped_country++; // Use same counter for simplicity
-							continue;
-						}
-		}
-
-					// Filter by type field if present
-					if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
-						// Skip non-city types
-						if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+				// Filter out municipalities, communes, and administrative divisions
+				if ( isset( $city['name'] ) ) {
+					$name_lower = strtolower( $city['name'] );
+					
+					// Expanded list of administrative keywords (global coverage)
+					$admin_keywords = array(
+						'kommune',          // Danish/Norwegian
+						'municipality',     // English
+						'commune',          // French
+						'district',         // Global
+						'province',         // Global
+						'county',           // English
+						'departamento',     // Spanish/Portuguese
+						'landkreis',        // German
+						'kreis',            // German
+						'prefecture',       // Japanese
+						'arrondissement',   // French/Belgian
+						'concelho',         // Portuguese
+						'municipio',        // Spanish
+						'regierungsbezirk', // German
+						'canton',           // Swiss/French
+						'oblast',           // Russian
+						'rayon',            // Russian/Azerbaijani
+						'governorate',      // Arabic countries
+						' gov.',            // Abbreviation
+						' prov.',           // Abbreviation
+						' dist.',           // Abbreviation
+						'region of',        // English
+						'area of',          // English
+						'territory of',     // English
+					);
+					
+					// Check if any keyword is present in city name
+					foreach ( $admin_keywords as $keyword ) {
+						if ( strpos( $name_lower, $keyword ) !== false ) {
 							$skipped_country++;
-							continue;
+							continue 2; // Skip to next city in outer loop
 						}
 					}
+				}
+
+				// Filter by type field if present
+				if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
+					// Skip non-city types
+					if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+						$skipped_country++;
+						continue;
+					}
+				}
 					
 					// If we reach here, city passed all filters
 					// Max cities per country
