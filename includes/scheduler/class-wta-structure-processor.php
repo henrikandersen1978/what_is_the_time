@@ -806,11 +806,11 @@ class WTA_Structure_Processor {
 					}
 				}
 				}
-				
-				// Reset for next object
-				$json_buffer = '';
-				$in_object = false;
-			}
+			
+			// CRITICAL FIX: Always reset buffer after reading a complete object
+			// even if JSON parsing failed - prevents chain reaction of errors!
+			$json_buffer = '';
+			$in_object = false;
 		}
 		
 	fclose( $handle );
