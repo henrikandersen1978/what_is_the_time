@@ -811,7 +811,8 @@ class WTA_Structure_Processor {
 			// even if JSON parsing failed - prevents chain reaction of errors!
 			$json_buffer = '';
 			$in_object = false;
-		}
+		} // Close if ( $in_object && $brace_count === 0 )
+	} // Close while ( ! feof( $handle ) )
 		
 	fclose( $handle );
 	
