@@ -626,46 +626,46 @@ class WTA_Structure_Processor {
 					}
 				}
 				
-				// Filter out municipalities, communes, and administrative divisions
-				if ( isset( $city['name'] ) ) {
-					$name_lower = strtolower( $city['name'] );
-					
-					// Expanded list of administrative keywords (global coverage)
-					$admin_keywords = array(
-						'kommune',          // Danish/Norwegian
-						'municipality',     // English
-						'commune',          // French
-						'district',         // Global
-						'province',         // Global
-						'county',           // English
-						'departamento',     // Spanish/Portuguese
-						'landkreis',        // German
-						'kreis',            // German
-						'prefecture',       // Japanese
-						'arrondissement',   // French/Belgian
-						'concelho',         // Portuguese
-						'municipio',        // Spanish
-						'regierungsbezirk', // German
-						'canton',           // Swiss/French
-						'oblast',           // Russian
-						'rayon',            // Russian/Azerbaijani
-						'governorate',      // Arabic countries
-						' gov.',            // Abbreviation
-						' prov.',           // Abbreviation
-						' dist.',           // Abbreviation
-						'region of',        // English
-						'area of',          // English
-						'territory of',     // English
-					);
-					
-					// Check if any keyword is present in city name
-					foreach ( $admin_keywords as $keyword ) {
-						if ( strpos( $name_lower, $keyword ) !== false ) {
-							$skipped_country++;
-							continue 2; // Skip to next city in outer loop
-						}
-					}
+			// Filter out municipalities, communes, and administrative divisions
+			if ( isset( $city['name'] ) ) {
+				$name_lower = strtolower( $city['name'] );
+				
+				// Expanded list of administrative keywords (global coverage)
+				$admin_keywords = array(
+					'kommune',          // Danish/Norwegian
+					'municipality',     // English
+					'commune',          // French
+					'district',         // Global
+					'province',         // Global
+					'county',           // English
+					'departamento',     // Spanish/Portuguese
+					'landkreis',        // German
+					'kreis',            // German
+					'prefecture',       // Japanese
+					'arrondissement',   // French/Belgian
+					'concelho',         // Portuguese
+					'municipio',        // Spanish
+					'regierungsbezirk', // German
+					'canton',           // Swiss/French
+					'oblast',           // Russian
+					'rayon',            // Russian/Azerbaijani
+					'governorate',      // Arabic countries
+					' gov.',            // Abbreviation
+					' prov.',           // Abbreviation
+					' dist.',           // Abbreviation
+					'region of',        // English
+					'area of',          // English
+					'territory of',     // English
+				);
+				
+			// Check if any keyword is present in city name
+			foreach ( $admin_keywords as $keyword ) {
+				if ( strpos( $name_lower, $keyword ) !== false ) {
+					$skipped_country++;
+					continue 2; // Skip to next city in outer loop
 				}
+			}
+			}
 
 				// Filter by type field if present
 				if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
@@ -676,22 +676,22 @@ class WTA_Structure_Processor {
 					}
 				}
 					
-					// If we reach here, city passed all filters
-					// Max cities per country
-					$should_queue = true;
-					if ( $max_cities_per_country > 0 ) {
-						$country_code = $city['country_code'];
-						if ( ! isset( $per_country[ $country_code ] ) ) {
-							$per_country[ $country_code ] = 0;
-						}
-
-						if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-							$should_queue = false;
-							$skipped_max_reached++;
-						} else {
-							$per_country[ $country_code ]++;
-						}
+			// If we reach here, city passed all filters
+			// Max cities per country
+				$should_queue = true;
+				if ( $max_cities_per_country > 0 ) {
+					$country_code = $city['country_code'];
+					if ( ! isset( $per_country[ $country_code ] ) ) {
+						$per_country[ $country_code ] = 0;
 					}
+
+					if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+						$should_queue = false;
+						$skipped_max_reached++;
+					} else {
+						$per_country[ $country_code ]++;
+					}
+				}
 					
 					if ( $should_queue ) {
 						// Queue city using the helper method

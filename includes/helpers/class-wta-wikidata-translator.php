@@ -86,21 +86,76 @@ class WTA_Wikidata_Translator {
 			return false;
 		}
 
-		$label = $data['entities'][ $wikidata_id ]['labels'][ $target_lang ]['value'];
+	$label = $data['entities'][ $wikidata_id ]['labels'][ $target_lang ]['value'];
 
-		// Validate label
-		if ( empty( $label ) || strlen( $label ) > 200 ) {
-			WTA_Logger::warning( 'Wikidata label validation failed', array(
-				'wikidata_id' => $wikidata_id,
-				'label'       => $label,
-			) );
-			// Cache failure for 1 day
-			set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
-			return false;
+	// Validate label
+	if ( empty( $label ) || strlen( $label ) > 200 ) {
+		WTA_Logger::warning( 'Wikidata label validation failed', array(
+			'wikidata_id' => $wikidata_id,
+			'label'       => $label,
+		) );
+		// Cache failure for 1 day
+		set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+		return false;
+	}
+
+	// Clean label (remove unexpected formatting)
+	$label = trim( $label );
+	
+	// Remove administrative suffixes from city names
+	// Wikidata often includes "Kommune", "Municipality", etc. in localized labels
+	// We want clean city names without these administrative designations
+	$admin_suffixes = array(
+		// Nordic languages
+		' kommune',          // Danish/Norwegian
+		' kommun',           // Swedish
+		' kunta',            // Finnish
+		
+		// English
+		' municipality',
+		' city',
+		' county',
+		' district',
+		' province',
+		' state',
+		' borough',
+		' township',
+		
+		// Spanish/Portuguese
+		' municipio',
+		' município',
+		' departamento',
+		' provincia',
+		
+		// German
+		' gemeinde',
+		' landkreis',
+		' kreis',
+		
+		// French
+		' commune',
+		' arrondissement',
+		' canton',
+		
+		// Other
+		' prefecture',
+		' governorate',
+		' oblast',
+		' rayon',
+	);
+	
+	// Case-insensitive removal of suffixes
+	$label_lower = mb_strtolower( $label, 'UTF-8' );
+	foreach ( $admin_suffixes as $suffix ) {
+		if ( mb_substr( $label_lower, -mb_strlen( $suffix, 'UTF-8' ), null, 'UTF-8' ) === $suffix ) {
+			// Remove the suffix (preserve original case for the city name part)
+			$label = mb_substr( $label, 0, mb_strlen( $label, 'UTF-8' ) - mb_strlen( $suffix, 'UTF-8' ), 'UTF-8' );
+			$label = trim( $label );
+			break; // Only remove one suffix
 		}
-
-		// Clean label (remove unexpected formatting)
-		$label = trim( $label );
+	}
+	
+	$label = trim( $label );
 
 		// Cache successful result for 1 year
 		set_transient( $cache_key, $label, YEAR_IN_SECONDS );
