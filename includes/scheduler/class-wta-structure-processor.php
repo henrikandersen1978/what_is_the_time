@@ -535,20 +535,14 @@ class WTA_Structure_Processor {
 
 			$file_size = filesize( $file_path );
 			file_put_contents( $debug_file, "File size: " . round( $file_size / 1024 / 1024, 2 ) . " MB\n", FILE_APPEND );
-			WTA_Logger::info( 'Starting cities_import batch (CHUNK STREAMING)', array(
+			WTA_Logger::info( 'Starting cities_import batch (JSON DECODE)', array(
 				'file' => basename( $file_path ),
 				'size_mb' => round( $file_size / 1024 / 1024, 2 ),
 			) );
 
-		// Stream JSON file chunk-by-chunk (reading one JSON object at a time)
-		file_put_contents( $debug_file, "Opening file for streaming...\n", FILE_APPEND );
-		$handle = fopen( $file_path, 'r' );
-		if ( false === $handle ) {
-			throw new Exception( 'Could not open cities.json for reading' );
-		}
+		// Load and parse entire JSON file (185MB is manageable with 256M memory limit)
+		file_put_contents( $debug_file, "Loading JSON file into memory...\n", FILE_APPEND );
 		
-		file_put_contents( $debug_file, "Starting chunk-based streaming...\n", FILE_APPEND );
-
 		$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
 		$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
 		$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? $options['max_cities_per_country'] : 0;
@@ -563,83 +557,54 @@ class WTA_Structure_Processor {
 		$skipped_max_reached = 0;
 		$per_country = array();
 		$total_read = 0;
-		$json_errors = 0; // Track JSON errors
 		
-		$json_buffer = '';
-		$in_object = false;
-		$brace_count = 0;
-		$first_city_logged = false;
+		// Read entire JSON file at once (more reliable than manual parsing)
+		$json_content = file_get_contents( $file_path );
+		if ( false === $json_content ) {
+			throw new Exception( 'Failed to read cities.json' );
+		}
 		
-		// Read file line by line and build complete JSON objects
-		while ( ! feof( $handle ) ) {
-			$line = fgets( $handle );
-			
-			// Skip opening array bracket
-			if ( trim( $line ) === '[' ) {
-				continue;
-			}
-			
-			// Stop at closing array bracket
-			if ( trim( $line ) === ']' ) {
-				break;
-			}
-			
-			// Track braces to know when we have a complete object
-			$brace_count += substr_count( $line, '{' ) - substr_count( $line, '}' );
-
-			if ( strpos( $line, '{' ) !== false ) {
-				$in_object = true;
-			}
-			
-			if ( $in_object ) {
-				$json_buffer .= $line;
-			}
-			
-		// When we have a complete object (brace_count returns to 0)
-		if ( $in_object && $brace_count === 0 ) {
+		file_put_contents( $debug_file, "Parsing JSON array...\n", FILE_APPEND );
+		$cities = json_decode( $json_content, true );
+		
+		// Check for JSON parsing errors
+		if ( null === $cities || JSON_ERROR_NONE !== json_last_error() ) {
+			throw new Exception( 'JSON parsing failed: ' . json_last_error_msg() );
+		}
+		
+		// Free memory
+		unset( $json_content );
+		
+		$total_cities = count( $cities );
+		file_put_contents( $debug_file, sprintf(
+			"Successfully parsed %d cities. Starting filtering...\n",
+			$total_cities
+		), FILE_APPEND );
+		
+		// Process each city
+		foreach ( $cities as $index => $city ) {
 			$total_read++;
 			
-			// Log progress every 50k objects to detect stalls
+			// Log progress every 50k objects
 			if ( $total_read % 50000 === 0 ) {
 				$memory_now = round( memory_get_usage( true ) / 1024 / 1024, 2 );
 				file_put_contents( $debug_file, sprintf(
-					"[PROGRESS] Processed %d objects | Memory: %s MB\n",
+					"[PROGRESS] Processed %d/%d cities | Memory: %s MB\n",
 					$total_read,
+					$total_cities,
 					$memory_now
 				), FILE_APPEND );
 			}
 			
-			// Remove trailing comma
-			$json_buffer = rtrim( $json_buffer );
-			$json_buffer = rtrim( $json_buffer, ',' );
-			
-			// Parse this single city object
-			$city = json_decode( $json_buffer, true );
-			
-			// Check for JSON parsing errors (log only first 10)
-			if ( null === $city ) {
-				$json_error = json_last_error();
-				if ( $json_error !== JSON_ERROR_NONE ) {
-					$json_errors++;
-					// Only log first 10 JSON errors to prevent huge log files
-					if ( $json_errors <= 10 ) {
-						file_put_contents( $debug_file, sprintf(
-							"[JSON ERROR #%d] Object #%d failed to parse: %s (first 200 chars: %s)\n",
-							$json_errors,
-							$total_read,
-							json_last_error_msg(),
-							substr($json_buffer, 0, 200)
-						), FILE_APPEND );
-					}
-				}
+			// Skip if not an array
+			if ( ! is_array( $city ) ) {
+				continue;
 			}
 			
-			if ( null !== $city && is_array( $city ) ) {
-					// Log first city for debugging
-					if ( ! $first_city_logged ) {
-						file_put_contents( $debug_file, "First city: " . $city['name'] . " (" . $city['country_code'] . ")\n", FILE_APPEND );
-						$first_city_logged = true;
-					}
+			// Log first city
+			if ( $total_read === 1 ) {
+				file_put_contents( $debug_file, "First city: " . $city['name'] . " (" . $city['country_code'] . ")\n", FILE_APPEND );
+			}
 			
 		// Filter by country_code (iso2)
 		if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
@@ -647,45 +612,45 @@ class WTA_Structure_Processor {
 			continue; // Skip this city
 		}
 			
-			// Apply population filter - SKIP cities with null or zero population OR below threshold
-			if ( $min_population > 0 ) {
-				if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
-					$skipped_population++;
-					continue; // Skip to next iteration
-				}
+		// Apply population filter - SKIP cities with null or zero population OR below threshold
+		if ( $min_population > 0 ) {
+			if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
+				$skipped_population++;
+				continue; // Skip to next iteration
 			}
+		}
 				
-			// Filter out municipalities, communes, and administrative divisions
-			if ( isset( $city['name'] ) ) {
-				$name_lower = strtolower( $city['name'] );
+		// Filter out municipalities, communes, and administrative divisions
+		if ( isset( $city['name'] ) ) {
+			$name_lower = strtolower( $city['name'] );
 				
-				// Expanded list of administrative keywords (global coverage)
-				$admin_keywords = array(
-					'kommune',          // Danish/Norwegian
-					'municipality',     // English
-					'commune',          // French
-					'district',         // Global
-					'province',         // Global
-					'county',           // English
-					'departamento',     // Spanish/Portuguese
-					'landkreis',        // German
-					'kreis',            // German
-					'prefecture',       // Japanese
-					'arrondissement',   // French/Belgian
-					'concelho',         // Portuguese
-					'municipio',        // Spanish
-					'regierungsbezirk', // German
-					'canton',           // Swiss/French
-					'oblast',           // Russian
-					'rayon',            // Russian/Azerbaijani
-					'governorate',      // Arabic countries
-					' gov.',            // Abbreviation
-					' prov.',           // Abbreviation
-					' dist.',           // Abbreviation
-					'region of',        // English
-					'area of',          // English
-					'territory of',     // English
-				);
+			// Expanded list of administrative keywords (global coverage)
+			$admin_keywords = array(
+				'kommune',          // Danish/Norwegian
+				'municipality',     // English
+				'commune',          // French
+				'district',         // Global
+				'province',         // Global
+				'county',           // English
+				'departamento',     // Spanish/Portuguese
+				'landkreis',        // German
+				'kreis',            // German
+				'prefecture',       // Japanese
+				'arrondissement',   // French/Belgian
+				'concelho',         // Portuguese
+				'municipio',        // Spanish
+				'regierungsbezirk', // German
+				'canton',           // Swiss/French
+				'oblast',           // Russian
+				'rayon',            // Russian/Azerbaijani
+				'governorate',      // Arabic countries
+				' gov.',            // Abbreviation
+				' prov.',           // Abbreviation
+				' dist.',           // Abbreviation
+				'region of',        // English
+				'area of',          // English
+				'territory of',     // English
+			);
 				
 			// Check if any keyword is present in city name
 			foreach ( $admin_keywords as $keyword ) {
@@ -696,78 +661,67 @@ class WTA_Structure_Processor {
 			}
 		}
 
-				// Filter by type field if present
-				if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
-					// Skip non-city types
-					if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
-						$skipped_country++;
-						continue;
-					}
-				}
+		// Filter by type field if present
+		if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
+			// Skip non-city types
+			if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+				$skipped_country++;
+				continue;
+			}
+		}
 		
 		// Max cities per country
-			$should_queue = true;
-			if ( $max_cities_per_country > 0 ) {
-				$country_code = $city['country_code'];
-				if ( ! isset( $per_country[ $country_code ] ) ) {
-					$per_country[ $country_code ] = 0;
-				}
-
-				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-					$should_queue = false;
-					$skipped_max_reached++;
-				} else {
-					$per_country[ $country_code ]++;
-				}
+		$should_queue = true;
+		if ( $max_cities_per_country > 0 ) {
+			$country_code = $city['country_code'];
+			if ( ! isset( $per_country[ $country_code ] ) ) {
+				$per_country[ $country_code ] = 0;
 			}
+
+			if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+				$should_queue = false;
+				$skipped_max_reached++;
+			} else {
+				$per_country[ $country_code ]++;
+			}
+		}
 					
-			if ( $should_queue ) {
-				// Queue city using the helper method
-				$queued += $this->queue_cities_batch( array( $city ), $options );
+		if ( $should_queue ) {
+			// Queue city using the helper method
+			$queued += $this->queue_cities_batch( array( $city ), $options );
 					
-					// Log progress every 500 cities
-					if ( $queued % 500 === 0 ) {
-						file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
-					}
-				}
-				}
-			
-			// CRITICAL FIX: Always reset buffer after reading a complete object
-			// even if JSON parsing failed - prevents chain reaction of errors!
-			$json_buffer = '';
-			$in_object = false;
-		} // Close if ( $in_object && $brace_count === 0 )
-	} // Close while ( ! feof( $handle ) )
-		
-	fclose( $handle );
+			// Log progress every 500 cities
+			if ( $queued % 500 === 0 ) {
+				file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
+			}
+		}
+	} // Close foreach loop
 	
 	// Log completion stats
 	$memory_peak = round( memory_get_peak_usage( true ) / 1024 / 1024, 2 );
 	file_put_contents( $debug_file, sprintf(
-		"Streaming complete. Total objects read: %d | Peak memory: %s MB\n",
+		"Processing complete. Total cities processed: %d | Peak memory: %s MB\n",
 		$total_read,
 		$memory_peak
 	), FILE_APPEND );
 
-			$summary = sprintf(
-				"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_max=%d, JSON_errors=%d, Total_read=%d\n",
-				$queued,
-				$skipped_country,
-				$skipped_population,
-				$skipped_max_reached,
-				$json_errors,
-				$total_read
-			);
-			file_put_contents( $debug_file, $summary, FILE_APPEND );
+	$summary = sprintf(
+		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_max=%d, Total_read=%d\n",
+		$queued,
+		$skipped_country,
+		$skipped_population,
+		$skipped_max_reached,
+		$total_read
+	);
+	file_put_contents( $debug_file, $summary, FILE_APPEND );
 
-		WTA_Logger::info( 'Cities import batch completed', array(
-			'cities_queued' => $queued,
-				'skipped_country' => $skipped_country,
-				'skipped_population' => $skipped_population,
-				'skipped_max_reached' => $skipped_max_reached,
-				'json_errors' => $json_errors,
-				'total_read' => $total_read,
-		) );
+	WTA_Logger::info( 'Cities import batch completed', array(
+		'cities_queued' => $queued,
+		'skipped_country' => $skipped_country,
+		'skipped_population' => $skipped_population,
+		'skipped_max_reached' => $skipped_max_reached,
+		'total_read' => $total_read,
+	) );
 
 		WTA_Queue::mark_done( $item['id'] );
 			
