@@ -512,7 +512,10 @@ class WTA_AI_Processor {
 		if ( ! empty( $nearby_countries_intro ) ) {
 			$full_content .= '<p>' . $nearby_countries_intro . "</p>\n";
 		}
-		$full_content .= '[wta_nearby_countries count="5"]' . "\n</div>";
+		$full_content .= '[wta_nearby_countries count="5"]' . "\n</div>\n\n";
+		
+		// Global time comparison section
+		$full_content .= '[wta_global_time_comparison]';
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );

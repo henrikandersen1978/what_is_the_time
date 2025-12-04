@@ -19,6 +19,7 @@ class WTA_Shortcodes {
 		add_shortcode( 'wta_major_cities', array( $this, 'major_cities_shortcode' ) );
 		add_shortcode( 'wta_nearby_cities', array( $this, 'nearby_cities_shortcode' ) );
 		add_shortcode( 'wta_nearby_countries', array( $this, 'nearby_countries_shortcode' ) );
+		add_shortcode( 'wta_global_time_comparison', array( $this, 'global_time_comparison_shortcode' ) );
 	}
 
 	/**
@@ -680,6 +681,336 @@ class WTA_Shortcodes {
 		$c = 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
 		
 		return $earth_radius * $c;
+	}
+
+	/**
+	 * Global time comparison shortcode - shows 24 cities from around the world.
+	 *
+	 * Usage: [wta_global_time_comparison]
+	 *
+	 * @since    2.26.0
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function global_time_comparison_shortcode( $atts ) {
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return '';
+		}
+		
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'city' !== $type ) {
+			return '';
+		}
+		
+		$current_city_name = get_post_field( 'post_title', $post_id );
+		$current_timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		
+		if ( empty( $current_timezone ) || 'multiple' === $current_timezone ) {
+			return '';
+		}
+		
+		// Get globally distributed cities (cached for 24 hours)
+		$cache_key = 'wta_global_cities_' . $post_id;
+		$comparison_cities = get_transient( $cache_key );
+		
+		if ( false === $comparison_cities ) {
+			$comparison_cities = $this->select_global_cities( $post_id, $current_timezone );
+			set_transient( $cache_key, $comparison_cities, DAY_IN_SECONDS );
+		}
+		
+		if ( empty( $comparison_cities ) ) {
+			return '';
+		}
+		
+		// Get AI-generated intro text (cached for 1 month)
+		$intro_cache_key = 'wta_comparison_intro_' . $post_id;
+		$intro_text = get_transient( $intro_cache_key );
+		
+		if ( false === $intro_text ) {
+			$intro_text = $this->generate_comparison_intro( $current_city_name );
+			if ( ! empty( $intro_text ) ) {
+				set_transient( $intro_cache_key, $intro_text, MONTH_IN_SECONDS );
+			}
+		}
+		
+		// Build output
+		$output = '<div id="global-time-comparison" class="wta-comparison-section">' . "\n";
+		$output .= sprintf( '<h2>Tidsforskel: Sammenlign %s med verdensur i andre byer</h2>' . "\n", esc_html( $current_city_name ) );
+		
+		if ( ! empty( $intro_text ) ) {
+			$output .= '<p class="wta-comparison-intro">' . esc_html( $intro_text ) . '</p>' . "\n";
+		}
+		
+		// Build table
+		$output .= '<div class="wta-table-wrapper">' . "\n";
+		$output .= '<table class="wta-time-comparison-table">' . "\n";
+		$output .= '<thead><tr>' . "\n";
+		$output .= '<th>By</th><th>Land</th><th>Tidsforskel</th><th>Lokal tid</th>' . "\n";
+		$output .= '</tr></thead>' . "\n";
+		$output .= '<tbody>' . "\n";
+		
+		foreach ( $comparison_cities as $city ) {
+			$city_name = get_post_field( 'post_title', $city->ID );
+			$city_timezone = get_post_meta( $city->ID, 'wta_timezone', true );
+			
+			// Get country name
+			$parent_id = wp_get_post_parent_id( $city->ID );
+			$country_name = $parent_id ? get_post_field( 'post_title', $parent_id ) : '';
+			
+			// Calculate time difference
+			$time_diff = $this->calculate_time_difference( $current_timezone, $city_timezone );
+			$local_time = $this->get_local_time( $city_timezone );
+			
+			$output .= '<tr>' . "\n";
+			$output .= sprintf( '<td><a href="%s">%s</a></td>' . "\n", esc_url( get_permalink( $city->ID ) ), esc_html( $city_name ) );
+			$output .= sprintf( '<td>%s</td>' . "\n", esc_html( $country_name ) );
+			$output .= sprintf( '<td class="wta-time-diff">%s</td>' . "\n", esc_html( $time_diff ) );
+			$output .= sprintf( '<td><span class="wta-live-comparison-time" data-timezone="%s">%s</span></td>' . "\n", esc_attr( $city_timezone ), esc_html( $local_time ) );
+			$output .= '</tr>' . "\n";
+		}
+		
+		$output .= '</tbody>' . "\n";
+		$output .= '</table>' . "\n";
+		$output .= '</div>' . "\n";
+		
+		// Add ItemList schema (direct injection like existing schemas)
+		$schema_name = sprintf( 'Tidsforskel mellem %s og andre byer', $current_city_name );
+		$schema_description = sprintf( 'Sammenlign lokal tid i %s med 24 internationale byer', $current_city_name );
+		$output .= $this->generate_item_list_schema( $comparison_cities, $schema_name, $schema_description );
+		
+		$output .= '</div>' . "\n";
+		
+		return $output;
+	}
+	
+	/**
+	 * Select 24 globally distributed cities for time comparison.
+	 *
+	 * @since    2.26.0
+	 * @param    int    $current_post_id Current city post ID.
+	 * @param    string $current_timezone Current timezone.
+	 * @return   array                   Array of WP_Post objects.
+	 */
+	private function select_global_cities( $current_post_id, $current_timezone ) {
+		global $wpdb;
+		
+		$selected_cities = array();
+		
+		// 1. Always add base country city (København)
+		$base_city = $wpdb->get_row( $wpdb->prepare( "
+			SELECT p.ID
+			FROM {$wpdb->posts} p
+			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			WHERE p.post_type = %s
+			AND p.post_status = 'publish'
+			AND pm_type.meta_value = 'city'
+			AND pm_cc.meta_value = 'DK'
+			ORDER BY p.post_title ASC
+			LIMIT 1
+		", WTA_POST_TYPE ) );
+		
+		if ( $base_city && $base_city->ID != $current_post_id ) {
+			$selected_cities[] = get_post( $base_city->ID );
+		}
+		
+		// 2. Get current city's continent
+		$current_continent = get_post_meta( $current_post_id, 'wta_continent_code', true );
+		
+		// 3. Define distribution (including Oceania)
+		$distribution = array(
+			'EU' => ( 'EU' === $current_continent ) ? 3 : 5,
+			'AS' => ( 'AS' === $current_continent ) ? 3 : 5,
+			'NA' => ( 'NA' === $current_continent ) ? 3 : 4,
+			'SA' => ( 'SA' === $current_continent ) ? 3 : 3,
+			'AF' => ( 'AF' === $current_continent ) ? 3 : 3,
+			'OC' => ( 'OC' === $current_continent ) ? 2 : 2,
+		);
+		
+		// 4. Fetch cities per continent
+		foreach ( $distribution as $continent_code => $count ) {
+			$cities = $this->get_cities_for_continent( $continent_code, $current_timezone, $current_post_id, $count );
+			$selected_cities = array_merge( $selected_cities, $cities );
+		}
+		
+		// 5. Remove duplicates and limit to 24
+		$unique_cities = array();
+		$seen_ids = array();
+		
+		foreach ( $selected_cities as $city ) {
+			if ( ! in_array( $city->ID, $seen_ids ) ) {
+				$unique_cities[] = $city;
+				$seen_ids[] = $city->ID;
+			}
+		}
+		
+		return array_slice( $unique_cities, 0, 24 );
+	}
+	
+	/**
+	 * Get cities for a specific continent.
+	 *
+	 * @since    2.26.0
+	 * @param    string $continent_code  Continent code (EU, AS, NA, SA, AF, OC).
+	 * @param    string $current_tz      Current timezone to exclude same timezone.
+	 * @param    int    $current_post_id Current post ID to exclude.
+	 * @param    int    $count           Number of cities to fetch.
+	 * @return   array                   Array of WP_Post objects.
+	 */
+	private function get_cities_for_continent( $continent_code, $current_tz, $current_post_id, $count ) {
+		global $wpdb;
+		
+		$results = $wpdb->get_results( $wpdb->prepare( "
+			SELECT p.ID
+			FROM {$wpdb->posts} p
+			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
+			LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+			WHERE p.post_type = %s
+			AND p.post_status = 'publish'
+			AND p.ID != %d
+			AND pm_type.meta_value = 'city'
+			AND pm_cont.meta_value = %s
+			AND pm_tz.meta_value IS NOT NULL
+			AND pm_tz.meta_value != 'multiple'
+			AND pm_tz.meta_value != %s
+			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			LIMIT %d
+		", WTA_POST_TYPE, $current_post_id, $continent_code, $current_tz, $count ) );
+		
+		$cities = array();
+		foreach ( $results as $result ) {
+			$post = get_post( $result->ID );
+			if ( $post ) {
+				$cities[] = $post;
+			}
+		}
+		
+		return $cities;
+	}
+	
+	/**
+	 * Calculate time difference between two timezones.
+	 *
+	 * @since    2.26.0
+	 * @param    string $tz1 Timezone 1.
+	 * @param    string $tz2 Timezone 2.
+	 * @return   string      Formatted time difference.
+	 */
+	private function calculate_time_difference( $tz1, $tz2 ) {
+		try {
+			$timezone1 = new DateTimeZone( $tz1 );
+			$timezone2 = new DateTimeZone( $tz2 );
+			$now = new DateTime( 'now' );
+			
+			$offset = $timezone2->getOffset( $now ) - $timezone1->getOffset( $now );
+			$hours_diff = $offset / 3600;
+			
+			// Format
+			$hours_abs = abs( $hours_diff );
+			$hours_formatted = ( $hours_abs == floor( $hours_abs ) ) 
+				? intval( $hours_abs ) 
+				: number_format( $hours_abs, 1, ',', '' );
+			
+			if ( $hours_diff > 0 ) {
+				return '+' . $hours_formatted . ' timer';
+			} elseif ( $hours_diff < 0 ) {
+				return '-' . $hours_formatted . ' timer';
+			} else {
+				return 'Samme tid';
+			}
+		} catch ( Exception $e ) {
+			return '';
+		}
+	}
+	
+	/**
+	 * Get local time for a timezone.
+	 *
+	 * @since    2.26.0
+	 * @param    string $timezone Timezone identifier.
+	 * @return   string           Formatted time (HH:MM:SS).
+	 */
+	private function get_local_time( $timezone ) {
+		try {
+			$tz = new DateTimeZone( $timezone );
+			$now = new DateTime( 'now', $tz );
+			return $now->format( 'H:i:s' );
+		} catch ( Exception $e ) {
+			return '--:--:--';
+		}
+	}
+	
+	/**
+	 * Generate AI intro text for comparison section.
+	 *
+	 * @since    2.26.0
+	 * @param    string $city_name Current city name.
+	 * @return   string            AI-generated intro text.
+	 */
+	private function generate_comparison_intro( $city_name ) {
+		$api_key = get_option( 'wta_openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return '';
+		}
+		
+		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+		
+		$system = 'Du er SEO-ekspert. Skriv KUN teksten, ingen citationstegn, ingen ekstra forklaringer.';
+		$user = sprintf(
+			'Skriv præcis 40-50 ord om hvorfor et verdensur er nyttigt til at sammenligne tidsforskelle mellem %s og andre internationale byer. Inkludér nøgleordene "tidsforskel", "tidsforskelle" og "verdensur". Fokusér på rejseplanlægning og internationale møder. KUN teksten.',
+			$city_name
+		);
+		
+		$url = 'https://api.openai.com/v1/chat/completions';
+		
+		$body = array(
+			'model'       => $model,
+			'messages'    => array(
+				array(
+					'role'    => 'system',
+					'content' => $system,
+				),
+				array(
+					'role'    => 'user',
+					'content' => $user,
+				),
+			),
+			'temperature' => 0.7,
+			'max_tokens'  => 100,
+		);
+		
+		$response = wp_remote_post( $url, array(
+			'timeout' => 30,
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $api_key,
+				'Content-Type'  => 'application/json',
+			),
+			'body'    => wp_json_encode( $body ),
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			return '';
+		}
+		
+		$response_body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $response_body, true );
+		
+		if ( ! isset( $data['choices'][0]['message']['content'] ) ) {
+			return '';
+		}
+		
+		$content = trim( $data['choices'][0]['message']['content'] );
+		
+		// Remove surrounding quotes
+		if ( ( str_starts_with( $content, '"' ) && str_ends_with( $content, '"' ) ) ||
+		     ( str_starts_with( $content, "'" ) && str_ends_with( $content, "'" ) ) ) {
+			$content = substr( $content, 1, -1 );
+		}
+		
+		return $content;
 	}
 
 	/**

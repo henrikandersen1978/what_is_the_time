@@ -27,6 +27,9 @@
 		cityClocks.forEach(function(clock) {
 			updateCityClock(clock);
 		});
+		
+		// Global comparison times
+		updateComparisonTimes();
 	}
 	
 	// Update SEO Direct Answer section
@@ -199,6 +202,31 @@
 			const timeEl = clock.querySelector('.wta-time');
 			if (timeEl) timeEl.textContent = '--:--:--';
 		}
+	}
+	
+	// Update global comparison times
+	function updateComparisonTimes() {
+		const comparisonTimes = document.querySelectorAll('.wta-live-comparison-time[data-timezone]');
+		
+		comparisonTimes.forEach(function(timeEl) {
+			const timezone = timeEl.getAttribute('data-timezone');
+			
+			try {
+				const now = new Date();
+				const formatter = new Intl.DateTimeFormat('da-DK', {
+					timeZone: timezone,
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false
+				});
+				
+				timeEl.textContent = formatter.format(now);
+			} catch (error) {
+				console.error('Error updating comparison time:', error);
+				timeEl.textContent = '--:--:--';
+			}
+		});
 	}
 
 	// Initialize

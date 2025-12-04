@@ -593,6 +593,142 @@ a.wta-auto-link:hover {
 }
 
 /* ========================================
+   Global Time Comparison Section
+   ======================================== */
+
+.wta-comparison-section {
+	margin: 60px 0 !important;
+	padding: 40px !important;
+	background: #f8f9fa !important;
+	border-radius: 12px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+.wta-comparison-section h2 {
+	color: #333 !important;
+	margin: 0 0 15px 0 !important;
+	font-size: 1.8em !important;
+	font-weight: 600 !important;
+}
+
+.wta-comparison-intro {
+	color: #666 !important;
+	line-height: 1.6 !important;
+	margin: 0 0 30px 0 !important;
+	font-size: 1.05em !important;
+}
+
+.wta-table-wrapper {
+	overflow-x: auto !important;
+	-webkit-overflow-scrolling: touch !important;
+}
+
+.wta-time-comparison-table {
+	width: 100% !important;
+	border-collapse: collapse !important;
+	background: white !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+	border-radius: 8px !important;
+	overflow: hidden !important;
+}
+
+.wta-time-comparison-table thead {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.wta-time-comparison-table th {
+	color: white !important;
+	padding: 15px 12px !important;
+	text-align: left !important;
+	font-weight: 600 !important;
+	font-size: 0.95em !important;
+	letter-spacing: 0.3px !important;
+}
+
+.wta-time-comparison-table td {
+	padding: 12px !important;
+	border-bottom: 1px solid #e9ecef !important;
+	font-size: 0.95em !important;
+	color: #333 !important;
+}
+
+.wta-time-comparison-table tbody tr:last-child td {
+	border-bottom: none !important;
+}
+
+.wta-time-comparison-table tbody tr:hover {
+	background: #f8f9fa !important;
+	transition: background 0.2s !important;
+}
+
+.wta-time-comparison-table a {
+	color: #667eea !important;
+	text-decoration: none !important;
+	font-weight: 500 !important;
+	transition: color 0.2s !important;
+}
+
+.wta-time-comparison-table a:hover {
+	text-decoration: underline !important;
+	color: #764ba2 !important;
+}
+
+.wta-live-comparison-time {
+	font-family: 'Courier New', monospace !important;
+	font-weight: 600 !important;
+	color: #28a745 !important;
+	font-size: 1em !important;
+}
+
+.wta-time-diff {
+	color: #6c757d !important;
+	font-weight: 500 !important;
+}
+
+/* Responsive Table */
+@media (max-width: 968px) {
+	.wta-comparison-section {
+		padding: 30px 20px !important;
+	}
+	
+	.wta-time-comparison-table {
+		font-size: 0.9em !important;
+	}
+	
+	.wta-time-comparison-table th,
+	.wta-time-comparison-table td {
+		padding: 10px 8px !important;
+	}
+}
+
+@media (max-width: 768px) {
+	.wta-comparison-section {
+		padding: 20px !important;
+		margin: 40px 0 !important;
+	}
+	
+	.wta-comparison-section h2 {
+		font-size: 1.5em !important;
+	}
+	
+	.wta-time-comparison-table {
+		font-size: 0.85em !important;
+	}
+	
+	.wta-time-comparison-table th,
+	.wta-time-comparison-table td {
+		padding: 8px 6px !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-time-comparison-table th:nth-child(2),
+	.wta-time-comparison-table td:nth-child(2) {
+		display: none !important;
+	}
+}
+
+/* ========================================
    Nearby Cities/Countries Lists
    ======================================== */
 
