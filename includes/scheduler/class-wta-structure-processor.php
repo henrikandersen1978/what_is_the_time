@@ -612,19 +612,40 @@ class WTA_Structure_Processor {
 						$first_city_logged = true;
 					}
 					
-				// Filter by country_code (iso2)
-				if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
-					$skipped_country++;
-					continue; // Skip this city
+			// DEBUG: Log Norwegian cities specifically
+			if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+				file_put_contents( $debug_file, sprintf(
+					"[NO DEBUG] Found: '%s' (pop: %d, wikidata: %s)\n",
+					$city['name'],
+					$city['population'],
+					isset($city['wikiDataId']) ? $city['wikiDataId'] : 'none'
+				), FILE_APPEND );
+			}
+			
+			// Filter by country_code (iso2)
+			if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
+				$skipped_country++;
+				if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+					file_put_contents( $debug_file, "  → SKIPPED: Not in filtered country codes\n", FILE_APPEND );
 				}
-				
-				// Apply population filter - SKIP cities with null or zero population OR below threshold
-				if ( $min_population > 0 ) {
-					if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
-						$skipped_population++;
-						continue; // Skip to next iteration
+				continue; // Skip this city
+			}
+			
+			// Apply population filter - SKIP cities with null or zero population OR below threshold
+			if ( $min_population > 0 ) {
+				if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
+					$skipped_population++;
+					if ( $city['country_code'] === 'NO' ) {
+						file_put_contents( $debug_file, sprintf(
+							"  → SKIPPED '%s': Population %s < %d\n",
+							$city['name'],
+							isset($city['population']) ? $city['population'] : 'null',
+							$min_population
+						), FILE_APPEND );
 					}
+					continue; // Skip to next iteration
 				}
+			}
 				
 			// Filter out municipalities, communes, and administrative divisions
 			if ( isset( $city['name'] ) ) {
@@ -658,14 +679,21 @@ class WTA_Structure_Processor {
 					'territory of',     // English
 				);
 				
-			// Check if any keyword is present in city name
-			foreach ( $admin_keywords as $keyword ) {
-				if ( strpos( $name_lower, $keyword ) !== false ) {
-					$skipped_country++;
-					continue 2; // Skip to next city in outer loop
+		// Check if any keyword is present in city name
+		foreach ( $admin_keywords as $keyword ) {
+			if ( strpos( $name_lower, $keyword ) !== false ) {
+				$skipped_country++;
+				if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+					file_put_contents( $debug_file, sprintf(
+						"  → FILTERED OUT '%s': Contains keyword '%s'\n",
+						$city['name'],
+						$keyword
+					), FILE_APPEND );
 				}
+				continue 2; // Skip to next city in outer loop
 			}
-			}
+		}
+		}
 
 				// Filter by type field if present
 				if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
@@ -676,32 +704,55 @@ class WTA_Structure_Processor {
 					}
 				}
 					
-			// If we reach here, city passed all filters
-			// Max cities per country
-				$should_queue = true;
-				if ( $max_cities_per_country > 0 ) {
-					$country_code = $city['country_code'];
-					if ( ! isset( $per_country[ $country_code ] ) ) {
-						$per_country[ $country_code ] = 0;
-					}
+		// If we reach here, city passed all filters
+		if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+			file_put_contents( $debug_file, sprintf(
+				"  ✓ PASSED ALL FILTERS: '%s' (pop: %d)\n",
+				$city['name'],
+				$city['population']
+			), FILE_APPEND );
+		}
+		
+		// Max cities per country
+			$should_queue = true;
+			if ( $max_cities_per_country > 0 ) {
+				$country_code = $city['country_code'];
+				if ( ! isset( $per_country[ $country_code ] ) ) {
+					$per_country[ $country_code ] = 0;
+				}
 
-					if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-						$should_queue = false;
-						$skipped_max_reached++;
-					} else {
-						$per_country[ $country_code ]++;
+				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+					$should_queue = false;
+					$skipped_max_reached++;
+					if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+						file_put_contents( $debug_file, sprintf(
+							"  → SKIPPED '%s': Max cities reached (%d/%d)\n",
+							$city['name'],
+							$per_country[ $country_code ],
+							$max_cities_per_country
+						), FILE_APPEND );
+					}
+				} else {
+					$per_country[ $country_code ]++;
+				}
+			}
+					
+				if ( $should_queue ) {
+					if ( $city['country_code'] === 'NO' && isset( $city['population'] ) && $city['population'] > 50000 ) {
+						file_put_contents( $debug_file, sprintf(
+							"  ✓✓ QUEUING: '%s'\n",
+							$city['name']
+						), FILE_APPEND );
+					}
+					
+					// Queue city using the helper method
+					$queued += $this->queue_cities_batch( array( $city ), $options );
+					
+					// Log progress every 100 cities
+					if ( $queued % 100 === 0 ) {
+						file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
 					}
 				}
-					
-					if ( $should_queue ) {
-						// Queue city using the helper method
-						$queued += $this->queue_cities_batch( array( $city ), $options );
-						
-						// Log progress every 100 cities
-						if ( $queued % 100 === 0 ) {
-							file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
-						}
-					}
 				}
 				
 				// Reset for next object

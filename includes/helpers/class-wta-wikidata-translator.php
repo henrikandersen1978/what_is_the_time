@@ -87,6 +87,7 @@ class WTA_Wikidata_Translator {
 		}
 
 	$label = $data['entities'][ $wikidata_id ]['labels'][ $target_lang ]['value'];
+	$original_label = $label; // Store for debugging
 
 	// Validate label
 	if ( empty( $label ) || strlen( $label ) > 200 ) {
@@ -146,16 +147,40 @@ class WTA_Wikidata_Translator {
 	
 	// Case-insensitive removal of suffixes
 	$label_lower = mb_strtolower( $label, 'UTF-8' );
+	$suffix_removed = false;
+	$removed_suffix = '';
+	
 	foreach ( $admin_suffixes as $suffix ) {
 		if ( mb_substr( $label_lower, -mb_strlen( $suffix, 'UTF-8' ), null, 'UTF-8' ) === $suffix ) {
 			// Remove the suffix (preserve original case for the city name part)
 			$label = mb_substr( $label, 0, mb_strlen( $label, 'UTF-8' ) - mb_strlen( $suffix, 'UTF-8' ), 'UTF-8' );
 			$label = trim( $label );
+			$suffix_removed = true;
+			$removed_suffix = $suffix;
 			break; // Only remove one suffix
 		}
 	}
 	
 	$label = trim( $label );
+	
+	// DEBUG: Log suffix removal for Norwegian cities
+	if ( $suffix_removed ) {
+		WTA_Logger::info( 'Wikidata suffix removed', array(
+			'wikidata_id' => $wikidata_id,
+			'original'    => $original_label,
+			'cleaned'     => $label,
+			'suffix'      => $removed_suffix,
+			'lang'        => $target_lang,
+		) );
+	} elseif ( strpos( mb_strtolower( $original_label, 'UTF-8' ), 'kommune' ) !== false ) {
+		// Log if "kommune" is present but NOT removed
+		WTA_Logger::warning( 'Wikidata suffix NOT removed', array(
+			'wikidata_id'  => $wikidata_id,
+			'label'        => $original_label,
+			'label_lower'  => $label_lower,
+			'lang'         => $target_lang,
+		) );
+	}
 
 		// Cache successful result for 1 year
 		set_transient( $cache_key, $label, YEAR_IN_SECONDS );
