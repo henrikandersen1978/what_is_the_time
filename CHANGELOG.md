@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.27.10] - 2025-12-04
+
+### Fixed
+- **REVERTED: Population Filter**: Cities with null population are now correctly EXCLUDED when min_population is set
+- Only cities with known population >= threshold are imported (as intended)
+- Fixed issue where 656 cities with unknown population were included in import
+- **Enhanced Debugging**: Added comprehensive logging for Wikidata suffix removal
+- Now logs when administrative terms (kommune, kommun, municipality, etc.) remain after cleaning
+- Helps identify which cities need manual translation overrides
+
+### Technical Details
+- Population filter reverted to original behavior: `null` population = exclude when filtering
+- Added multi-term detection in Wikidata translator for 6 common administrative terms
+- Enhanced warning logs pinpoint exact cities where suffix removal failed
+
 ## [2.27.9] - 2025-12-04
 
 ### Fixed

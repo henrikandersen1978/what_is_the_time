@@ -199,7 +199,7 @@ class WTA_Wikidata_Translator {
 	
 	$label = trim( $label );
 	
-	// DEBUG: Log suffix removal for Norwegian cities
+	// DEBUG: Enhanced logging for suffix removal
 	if ( $suffix_removed ) {
 		WTA_Logger::info( 'Wikidata suffix removed', array(
 			'wikidata_id' => $wikidata_id,
@@ -208,14 +208,23 @@ class WTA_Wikidata_Translator {
 			'suffix'      => $removed_suffix,
 			'lang'        => $target_lang,
 		) );
-	} elseif ( strpos( mb_strtolower( $original_label, 'UTF-8' ), 'kommune' ) !== false ) {
-		// Log if "kommune" is present but NOT removed
-		WTA_Logger::warning( 'Wikidata suffix NOT removed', array(
-			'wikidata_id'  => $wikidata_id,
-			'label'        => $original_label,
-			'label_lower'  => $label_lower,
-			'lang'         => $target_lang,
-		) );
+	}
+	
+	// Log if "kommune" or other admin terms are still present after cleaning
+	$admin_check_terms = array( 'kommune', 'kommun', 'municipality', 'commune', 'municipio', 'município' );
+	$label_check = mb_strtolower( $label, 'UTF-8' );
+	
+	foreach ( $admin_check_terms as $term ) {
+		if ( strpos( $label_check, $term ) !== false ) {
+			WTA_Logger::warning( 'Wikidata: Admin term still present after cleaning', array(
+				'wikidata_id'  => $wikidata_id,
+				'original'     => $original_label,
+				'cleaned'      => $label,
+				'term_found'   => $term,
+				'lang'         => $target_lang,
+			) );
+			break;
+		}
 	}
 
 		// Cache successful result for 1 year

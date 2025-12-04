@@ -612,14 +612,13 @@ class WTA_Structure_Processor {
 			continue; // Skip this city
 		}
 			
-		// Apply population filter - ONLY skip if population is explicitly set AND below threshold
-		// Cities with null/missing population are INCLUDED (we don't know their size)
+		// Apply population filter - EXCLUDE cities with null, zero, or below threshold
+		// Only cities with known population >= min_population are included
 		if ( $min_population > 0 ) {
-			if ( isset( $city['population'] ) && $city['population'] !== null && $city['population'] < $min_population ) {
+			if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
 				$skipped_population++;
 				continue; // Skip to next iteration
 			}
-			// If population is null or not set → INCLUDE the city
 		}
 				
 		// Filter out municipalities, communes, and administrative divisions
