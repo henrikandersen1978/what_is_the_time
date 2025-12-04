@@ -54,7 +54,28 @@ class WTA_Importer {
 		$filtered_countries = array();
 
 		foreach ( $countries as $country ) {
-			$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+			// Determine continent from subregion (for Americas) or region (for others)
+			if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
+				$subregion = $country['subregion'];
+				
+				// Map Americas subregions to North/South America
+				if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
+					$continent = 'North America';
+				} elseif ( $subregion === 'South America' ) {
+					$continent = 'South America';
+				} else {
+					// For other continents (Europe, Asia, Africa, Oceania), use main region
+					$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+				}
+			} else {
+				$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+			}
+			
+			// Handle special case: Polar -> Antarctica
+			if ( $continent === 'Polar' ) {
+				$continent = 'Antarctica';
+			}
+			
 			$continent_code = WTA_Utils::get_continent_code( $continent );
 
 			// Filter based on import mode
@@ -72,7 +93,7 @@ class WTA_Importer {
 
 			// Queue continent (deduplicated)
 			if ( ! in_array( $continent, $continents_queued, true ) ) {
-				WTA_Queue::add(
+WTA_Queue::add(
 					'continent',
 					array(
 						'name'     => $continent,
@@ -101,6 +122,24 @@ class WTA_Importer {
 				$wikidata_id 
 			);
 			
+			// Calculate continent for this country (reuse logic from above)
+			if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
+				$subregion = $country['subregion'];
+				if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
+					$country_continent = 'North America';
+				} elseif ( $subregion === 'South America' ) {
+					$country_continent = 'South America';
+				} else {
+					$country_continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+				}
+			} else {
+				$country_continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+			}
+			
+			if ( $country_continent === 'Polar' ) {
+				$country_continent = 'Antarctica';
+			}
+			
 			WTA_Queue::add(
 				'country',
 				array(
@@ -108,7 +147,7 @@ class WTA_Importer {
 					'name_local'   => $name_local,
 					'country_code' => $country['iso2'],
 					'country_id'   => $country['id'],
-					'continent'    => $country['region'],
+					'continent'    => $country_continent,
 					'latitude'     => isset( $country['latitude'] ) ? $country['latitude'] : null,
 					'longitude'    => isset( $country['longitude'] ) ? $country['longitude'] : null,
 					'wikidata_id'  => $wikidata_id,

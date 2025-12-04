@@ -37,6 +37,7 @@ class WTA_Quick_Translate {
 		self::$translations = array(
 			'da-DK' => array(
 				'continent' => array(
+					// Main continents
 					'Europe'        => 'Europa',
 					'Asia'          => 'Asien',
 					'Africa'        => 'Afrika',
@@ -44,6 +45,34 @@ class WTA_Quick_Translate {
 					'South America' => 'Sydamerika',
 					'Oceania'       => 'Oceanien',
 					'Antarctica'    => 'Antarktis',
+					'Americas'      => 'Amerika',  // Fallback (shouldn't be used)
+					'Polar'         => 'Antarktis',
+					// European subregions
+					'Northern Europe'   => 'Nordeuropa',
+					'Southern Europe'   => 'Sydeuropa',
+					'Eastern Europe'    => 'Østeuropa',
+					'Western Europe'    => 'Vesteuropa',
+					// American subregions
+					'Northern America'  => 'Nordamerika',
+					'Central America'   => 'Centralamerika',
+					'Caribbean'         => 'Caribien',
+					// Asian subregions
+					'Southern Asia'     => 'Sydasien',
+					'Western Asia'      => 'Vestasien',
+					'South-Eastern Asia' => 'Sydøstasien',
+					'Eastern Asia'      => 'Østasien',
+					'Central Asia'      => 'Centralasien',
+					// African subregions
+					'Northern Africa'   => 'Nordafrika',
+					'Middle Africa'     => 'Centralafrika',
+					'Western Africa'    => 'Vestafrika',
+					'Eastern Africa'    => 'Østafrika',
+					'Southern Africa'   => 'Sydafrika',
+					// Oceanian subregions
+					'Australia and New Zealand' => 'Australien og New Zealand',
+					'Polynesia'         => 'Polynesien',
+					'Melanesia'         => 'Melanesien',
+					'Micronesia'        => 'Mikronesien',
 				),
 				'country' => array(
 					// Europe

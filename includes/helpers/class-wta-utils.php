@@ -75,13 +75,16 @@ class WTA_Utils {
 			'Asien'         => 'AS',
 			'Africa'        => 'AF',
 			'Afrika'        => 'AF',
+			'Americas'      => 'NA',  // Fallback (shouldn't be used with new logic)
 			'North America' => 'NA',
 			'Nordamerika'   => 'NA',
 			'South America' => 'SA',
 			'Sydamerika'    => 'SA',
 			'Oceania'       => 'OC',
+			'Oceanien'      => 'OC',
 			'Antarctica'    => 'AN',
 			'Antarktis'     => 'AN',
+			'Polar'         => 'AN',  // Map Polar to Antarctica
 		);
 
 		return isset( $map[ $continent_name ] ) ? $map[ $continent_name ] : 'XX';
