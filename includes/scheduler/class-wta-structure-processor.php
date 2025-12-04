@@ -612,6 +612,19 @@ class WTA_Structure_Processor {
 						$first_city_logged = true;
 					}
 					
+		// DEBUG: Log MEGA cities (>500k) globally to find Oslo
+		if ( isset($city['population']) && is_numeric($city['population']) && intval($city['population']) > 500000 ) {
+			$country = isset($city['country_code']) ? $city['country_code'] : 'NONE';
+			file_put_contents( $debug_file, sprintf(
+				"[MEGA CITY >500K] '%s' | pop:%d | country:'%s' (len:%d, ascii:%s)\n",
+				$city['name'],
+				intval($city['population']),
+				$country,
+				strlen($country),
+				isset($city['country_code']) ? bin2hex($city['country_code']) : 'none'
+			), FILE_APPEND );
+		}
+		
 		// DEBUG: Log ALL Norwegian cities (regardless of population)
 		if ( isset( $city['country_code'] ) && $city['country_code'] === 'NO' ) {
 			$pop_value = isset($city['population']) ? $city['population'] : 'NOT_SET';
