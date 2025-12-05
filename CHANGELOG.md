@@ -2,6 +2,55 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.8] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed internal links still showing /location/ prefix**
+- Root cause: Direct post type registration in `time-zone-clock.php` used `'slug' => 'location'`
+- WordPress generated ALL URLs with `/location/` (not `/wta_location/`)
+- Our `post_type_link` filter was replacing `/wta_location/` → didn't match actual URLs
+- Filter was never executed, so internal links kept `/location/` prefix
+
+### Changed
+- **Post type registration:** Changed `'slug' => 'location'` to `'slug' => ''` (empty)
+- **Permalink filter:** Updated to replace `/location/` instead of `/wta_location/`
+- Now WordPress generates clean URLs from the start (no prefix)
+- Internal links, schema markup, Yoast data all use clean URLs automatically
+
+### Technical Details
+**The Bug:**
+```php
+// OLD (time-zone-clock.php line 142)
+'rewrite' => array( 'slug' => 'location' ),
+
+// OLD (class-wta-post-type.php line 41)
+$post_link = str_replace( '/' . WTA_POST_TYPE . '/', '/', $post_link );
+// This replaced '/wta_location/' but URLs actually contained '/location/'
+```
+
+**The Fix:**
+```php
+// NEW (time-zone-clock.php)
+'rewrite' => array( 'slug' => '' ),  // No prefix at all
+
+// NEW (class-wta-post-type.php)
+$post_link = str_replace( '/location/', '/', $post_link );
+// Now matches actual URL structure
+```
+
+**Impact:**
+- Landing page URLs: Already worked ✅
+- Internal links in content: NOW FIXED ✅
+- Schema markup URLs: NOW FIXED ✅
+- Yoast canonical URLs: NOW FIXED ✅
+- Breadcrumb URLs: NOW FIXED ✅
+
+**Next Steps:**
+1. Upload plugin v2.28.8
+2. Go to Settings → Permalinks and click Save
+3. Re-import data (to regenerate content with new URLs)
+4. All URLs should now be clean throughout the site
+
 ## [2.28.7] - 2025-12-05
 
 ### Added

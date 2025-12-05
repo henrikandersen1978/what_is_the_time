@@ -37,8 +37,9 @@ class WTA_Post_Type {
 		}
 		
 		// Remove the post type slug from URL - works for all post statuses
-		// This handles: /wta_location/europa/ -> /europa/
-		$post_link = str_replace( '/' . WTA_POST_TYPE . '/', '/', $post_link );
+		// The post type is registered with slug 'location' (not 'wta_location')
+		// This handles: /location/europa/ -> /europa/
+		$post_link = str_replace( '/location/', '/', $post_link );
 		
 		return $post_link;
 	}
