@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.6] - 2025-12-05
+
+### Fixed
+- **Flag emojis NOW actually display correctly** 🚩🎉
+- Replaced unreliable `mb_convert_encoding()` method with direct `mb_chr()` Unicode generation
+
+### Technical Details
+
+**Problem:** ISO codes were displaying as text (ZA, KE, EG) instead of flag emojis (🇿🇦 🇰🇪 🇪🇬)
+
+**Root Cause:** The `mb_convert_encoding()` with HTML-ENTITIES wasn't properly converting to flag emojis.
+
+**Solution:** Use `mb_chr()` directly with Unicode codepoints for Regional Indicator Symbols.
+
+**Before (broken):**
+```php
+$flag_emoji = mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' )
+            . mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' );
+// Result: "DK" (text)
+```
+
+**After (working):**
+```php
+$first_letter = ord( $iso_code[0] ) - 65; // A=0, B=1, etc.
+$second_letter = ord( $iso_code[1] ) - 65;
+$flag_emoji = mb_chr( 127462 + $first_letter, 'UTF-8' ) . mb_chr( 127462 + $second_letter, 'UTF-8' ) . ' ';
+// Result: "🇩🇰" (flag emoji!)
+```
+
+**How it works:**
+- Regional Indicator Symbol Letter A = U+1F1E6 (127462 in decimal)
+- DK → D (127462 + 3) + K (127462 + 10) = 🇩🇰
+- ES → E (127462 + 4) + S (127462 + 18) = 🇪🇸
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Fixed flag emoji generation
+
 ## [2.32.5] - 2025-12-05
 
 ### Fixed

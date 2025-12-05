@@ -1163,10 +1163,13 @@ class WTA_Shortcodes {
 			
 			if ( ! empty( $iso_code ) && strlen( $iso_code ) === 2 ) {
 				// Convert ISO code to flag emoji (e.g., DK → 🇩🇰)
+				// Regional Indicator Symbols: A=🇦 (U+1F1E6), offset is 127462
 				$iso_code = strtoupper( $iso_code );
-				$flag_emoji = mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' )
-				            . mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' );
-				$flag_emoji = $flag_emoji . ' ';
+				$first_letter = ord( $iso_code[0] ) - 65; // A=0, B=1, etc.
+				$second_letter = ord( $iso_code[1] ) - 65;
+				
+				// Create flag emoji using Unicode codepoints
+				$flag_emoji = mb_chr( 127462 + $first_letter, 'UTF-8' ) . mb_chr( 127462 + $second_letter, 'UTF-8' ) . ' ';
 			}
 				
 				$output .= sprintf(
