@@ -865,10 +865,10 @@ p.wta-no-nearby {
 }
 
 .wta-country-list li {
-	margin: 0.5em 0 !important;
+	margin: 0.25em 0 !important;
 	padding-left: 0 !important;
 	position: relative !important;
-	line-height: 1.8 !important;
+	line-height: 1.4 !important;
 }
 
 .wta-country-list li::before {
@@ -880,9 +880,8 @@ p.wta-no-nearby {
 	color: #333 !important;
 	text-decoration: none !important;
 	transition: color 0.2s ease !important;
-	display: inline-flex !important;
-	align-items: center !important;
-	gap: 0.3em !important;
+	display: inline-block !important;
+	font-size: 1em !important;
 }
 
 .wta-country-list a:hover {

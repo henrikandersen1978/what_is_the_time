@@ -2,6 +2,36 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.5] - 2025-12-05
+
+### Fixed
+- **Flag emojis now display correctly** 🚩
+- Fixed meta key lookup from `wta_iso_alpha2` to `wta_country_code`
+- **Reduced spacing between countries** for better visual density
+
+### Changes
+- Country list spacing: `margin: 0.5em → 0.25em`
+- Line height: `1.8 → 1.4`
+- Cleaner display styling
+
+**Before:** 
+```
+Ingen flag emojis
+Stor afstand mellem lande
+```
+
+**After:**
+```
+🇩🇰 Danmark
+🇸🇪 Sverige
+🇩🇪 Tyskland
+(kompakt liste med flag)
+```
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Fixed meta key for ISO codes
+- `includes/frontend/assets/css/frontend.css` - Reduced spacing
+
 ## [2.32.4] - 2025-12-05
 
 ### Changed

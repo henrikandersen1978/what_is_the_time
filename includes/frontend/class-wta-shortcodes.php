@@ -1157,17 +1157,17 @@ class WTA_Shortcodes {
 				$country_name = get_the_title( $country->ID );
 				$country_url = get_permalink( $country->ID );
 				
-				// Get country ISO code for flag emoji
-				$iso_code = get_post_meta( $country->ID, 'wta_iso_alpha2', true );
-				$flag_emoji = '';
-				
-				if ( ! empty( $iso_code ) && strlen( $iso_code ) === 2 ) {
-					// Convert ISO code to flag emoji (e.g., DK → 🇩🇰)
-					$iso_code = strtoupper( $iso_code );
-					$flag_emoji = mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' )
-					            . mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' );
-					$flag_emoji .= ' ';
-				}
+			// Get country ISO code for flag emoji
+			$iso_code = get_post_meta( $country->ID, 'wta_country_code', true );
+			$flag_emoji = '';
+			
+			if ( ! empty( $iso_code ) && strlen( $iso_code ) === 2 ) {
+				// Convert ISO code to flag emoji (e.g., DK → 🇩🇰)
+				$iso_code = strtoupper( $iso_code );
+				$flag_emoji = mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' )
+				            . mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' );
+				$flag_emoji = $flag_emoji . ' ';
+			}
 				
 				$output .= sprintf(
 					'<li><a href="%s">%s%s</a></li>' . "\n",
