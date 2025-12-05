@@ -59,11 +59,11 @@ class WTA_Post_Type {
 			'show_ui'            => true,
 			'show_in_menu'       => false, // We add custom menu via admin class
 			'query_var'          => true,
-			'rewrite'            => array(
-				'slug'         => 'location',
-				'with_front'   => false,
-				'hierarchical' => true,
-			),
+		'rewrite'            => array(
+			'slug'         => '',
+			'with_front'   => false,
+			'hierarchical' => true,
+		),
 			'capability_type'    => 'post',
 			'has_archive'        => false,
 			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships

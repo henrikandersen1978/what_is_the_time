@@ -20,6 +20,7 @@ class WTA_Shortcodes {
 		add_shortcode( 'wta_nearby_cities', array( $this, 'nearby_cities_shortcode' ) );
 		add_shortcode( 'wta_nearby_countries', array( $this, 'nearby_countries_shortcode' ) );
 		add_shortcode( 'wta_global_time_comparison', array( $this, 'global_time_comparison_shortcode' ) );
+		add_shortcode( 'wta_continents_overview', array( $this, 'continents_overview_shortcode' ) );
 	}
 
 	/**
@@ -1068,6 +1069,133 @@ class WTA_Shortcodes {
 		$output .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
 		$output .= '</script>';
 
+		return $output;
+	}
+
+	/**
+	 * Shortcode to display continents overview with top countries.
+	 *
+	 * Usage: [wta_continents_overview countries_per_continent="5"]
+	 *
+	 * @since    2.28.0
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function continents_overview_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'countries_per_continent' => 5,
+		), $atts );
+		
+		// Get all continents
+		$continents = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'meta_query'     => array(
+				array(
+					'key'   => 'wta_type',
+					'value' => 'continent',
+				),
+			),
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+		) );
+		
+		if ( empty( $continents ) ) {
+			return '<!-- No continents found -->';
+		}
+		
+		// Build output
+		$output = '<div class="wta-continents-overview">' . "\n";
+		
+		// Schema.org ItemList
+		$list_items = array();
+		$position = 1;
+		
+		foreach ( $continents as $continent ) {
+			$continent_name = get_the_title( $continent->ID );
+			$continent_url = get_permalink( $continent->ID );
+			
+			// Get top countries for this continent
+			$countries = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'post_status'    => 'publish',
+				'post_parent'    => $continent->ID,
+				'posts_per_page' => intval( $atts['countries_per_continent'] ),
+				'orderby'        => 'meta_value_num',
+				'meta_key'       => 'wta_population',
+				'order'          => 'DESC',
+			) );
+			
+			// Continent emoji mapping
+			$emoji_map = array(
+				'Europa'        => '🇪🇺',
+				'Europe'        => '🇪🇺',
+				'Afrika'        => '🌍',
+				'Africa'        => '🌍',
+				'Asien'         => '🌏',
+				'Asia'          => '🌏',
+				'Nordamerika'   => '🌎',
+				'North America' => '🌎',
+				'Sydamerika'    => '🌎',
+				'South America' => '🌎',
+				'Oceanien'      => '🌊',
+				'Oceania'       => '🌊',
+			);
+			
+			$emoji = isset( $emoji_map[ $continent_name ] ) ? $emoji_map[ $continent_name ] : '🌍';
+			
+			$output .= '<div class="wta-continent-card">' . "\n";
+			$output .= sprintf( 
+				'<h3 class="wta-continent-title"><a href="%s">%s %s</a></h3>' . "\n",
+				esc_url( $continent_url ),
+				$emoji,
+				esc_html( $continent_name )
+			);
+			
+			if ( ! empty( $countries ) ) {
+				$output .= '<ul class="wta-country-list">' . "\n";
+				foreach ( $countries as $country ) {
+					$country_name = get_the_title( $country->ID );
+					$country_url = get_permalink( $country->ID );
+					$output .= sprintf(
+						'<li><a href="%s">%s</a></li>' . "\n",
+						esc_url( $country_url ),
+						esc_html( $country_name )
+					);
+					
+					// Add to schema
+					$list_items[] = array(
+						'@type'    => 'ListItem',
+						'position' => $position++,
+						'item'     => array(
+							'@type' => 'Country',
+							'@id'   => $country_url,
+							'name'  => $country_name,
+						),
+					);
+				}
+				$output .= '</ul>' . "\n";
+			}
+			
+			$output .= '</div>' . "\n";
+		}
+		
+		$output .= '</div>' . "\n";
+		
+		// Add Schema.org markup
+		$schema = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'ItemList',
+			'name'            => 'Verdenstidszoner efter kontinent',
+			'numberOfItems'   => count( $list_items ),
+			'itemListElement' => $list_items,
+		);
+		
+		$output .= '<script type="application/ld+json">' . "\n";
+		$output .= wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . "\n";
+		$output .= '</script>' . "\n";
+		
 		return $output;
 	}
 }

@@ -2,6 +2,36 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.0] - 2025-12-05
+
+### Added
+- **NEW SHORTCODE: `[wta_continents_overview]`** - Beautiful homepage continent/country navigation
+  - Displays all continents in responsive grid layout
+  - Shows top N countries per continent (default: 5, configurable via `countries_per_continent` parameter)
+  - Includes continent emoji indicators (🇪🇺 Europa, 🌍 Afrika, 🌏 Asien, 🌎 Americas, 🌊 Oceanien)
+  - Schema.org ItemList markup for SEO
+  - Hover effects and modern card design
+  - Usage: `[wta_continents_overview countries_per_continent="5"]`
+
+### Changed
+- **CLEANER URL STRUCTURE**: Removed "location" prefix from all location URLs
+  - Before: `/location/afrika/sydafrika/benoni/`
+  - After: `/afrika/sydafrika/benoni/`
+  - Makes URLs shorter, cleaner, and more SEO-friendly
+  - All internal links, breadcrumbs, and schema markup automatically updated
+  - **IMPORTANT**: Requires permalink flush - Go to Settings → Permalinks and click "Save Changes"
+
+### Technical
+- Modified `WTA_Post_Type::register_post_type()` - rewrite slug changed from 'location' to empty string
+- Added new `continents_overview_shortcode()` method in `WTA_Shortcodes` class
+- Added CSS styling for continent overview cards with responsive grid layout
+- All links use `get_permalink()` so URL changes propagate automatically throughout plugin
+
+### Important Notes
+- This is a breaking change for URLs if plugin was already deployed to production
+- For new installations (like current test site), this is the perfect time to implement
+- Better to do this before full production rollout to avoid SEO impact
+
 ## [2.27.12] - 2025-12-05
 
 ### Fixed
