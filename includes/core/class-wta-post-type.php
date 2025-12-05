@@ -326,8 +326,11 @@ class WTA_Post_Type {
 			$query_vars['name'] = $slug;
 			$query_vars[ WTA_POST_TYPE ] = $pagename;
 			
-			// Remove pagename to prevent WordPress from looking for a page
-			unset( $query_vars['pagename'] );
+			// CRITICAL: Do NOT unset pagename!
+			// Other plugins (like Pilanto-Text-Snippets) use get_page_by_path() 
+			// which depends on pagename being present in query vars.
+			// WordPress will prioritize post_type and name anyway.
+			// unset( $query_vars['pagename'] ); // DISABLED - breaks other plugins
 		}
 		
 		// Return modified (or unmodified) query vars

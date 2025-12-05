@@ -2,6 +2,76 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.9] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Stop unsetting pagename in query vars**
+- **Fixes Pilanto-Text-Snippets and other plugins that use get_page_by_path()**
+- WordPress's `get_page_by_path()` depends on `pagename` being present in query vars
+- Our filter now leaves `pagename` intact - WordPress prioritizes `post_type` and `name` anyway
+
+### Technical Details
+
+**The Real Culprit:**
+
+After debugging with the actual Pilanto-Text-Snippets code, we found the root cause:
+
+```php
+// Pilanto-Text-Snippets ShortcodeController.php line 17
+public function render($atts) {
+    $text_snippet = get_page_by_path($atts['slug'], OBJECT, 'text_snippet');
+    return $text_snippet->post_content; // ← ERROR: $text_snippet is null
+}
+```
+
+**Why was `get_page_by_path()` returning null?**
+
+Our request filter was unsetting `pagename`:
+
+```php
+// v2.30.8 - Breaking get_page_by_path()
+if ( $post_exists ) {
+    $query_vars['post_type'] = WTA_POST_TYPE;
+    $query_vars['name'] = $slug;
+    unset( $query_vars['pagename'] ); // ← This broke other plugins!
+}
+```
+
+**The Problem:**
+
+WordPress's `get_page_by_path()` function (in `wp-includes/post.php`) relies on `pagename` being present in the global query vars to resolve post lookups. When we unset it, subsequent calls to `get_page_by_path()` within the same request return `null`.
+
+**The Solution:**
+
+```php
+// v2.30.9 - Keep pagename intact
+if ( $post_exists ) {
+    $query_vars['post_type'] = WTA_POST_TYPE;
+    $query_vars['name'] = $slug;
+    $query_vars[ WTA_POST_TYPE ] = $pagename;
+    
+    // Do NOT unset pagename - other plugins need it!
+    // WordPress will prioritize post_type and name anyway
+    // unset( $query_vars['pagename'] ); // DISABLED
+}
+```
+
+**Why This Works:**
+
+1. ✅ **WordPress's query priority:** When both `post_type` + `name` AND `pagename` are set, WordPress prioritizes `post_type` + `name`
+2. ✅ **Location URLs load correctly:** `/europa/danmark/aalborg/` still resolves to our location post
+3. ✅ **get_page_by_path() works:** Other plugins can still use this function
+4. ✅ **No side effects:** Leaving `pagename` intact doesn't interfere with our routing
+
+**Tested:**
+- ✅ Location URLs work: `/europa/danmark/aalborg/`
+- ✅ WordPress pages work: `/om/`, `/betingelser/`
+- ✅ Pilanto-Text-Snippets shortcodes work without warnings
+- ✅ Other plugins using `get_page_by_path()` work normally
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Stopped unsetting `pagename` in request filter
+
 ## [2.30.8] - 2025-12-05
 
 ### Fixed
