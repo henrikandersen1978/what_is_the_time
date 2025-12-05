@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.1] - 2025-12-05
+
+### Improved
+- **Removed emoji from continent overview shortcode (cleaner design)**
+- **Fixed Schema.org ItemList to include BOTH continents AND countries**
+- **Grid layout already present in CSS (no changes needed)**
+
+### Changes to `[wta_continents_overview]`
+
+**Before:**
+```html
+<h3>🇪🇺 Europa</h3>
+<!-- Schema only had countries -->
+```
+
+**After:**
+```html
+<h3>Europa</h3>
+<!-- Schema has both continents AND countries -->
+```
+
+**Schema.org Improvements:**
+```json
+{
+  "@type": "ItemList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "Place",
+        "name": "Europa",
+        "url": "https://site.dk/europa/"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "Country",
+        "name": "Denmark",
+        "url": "https://site.dk/europa/danmark/"
+      }
+    }
+  ]
+}
+```
+
+**Grid Layout:**
+- Already implemented in CSS (no changes needed)
+- Responsive: 3 columns on desktop, 2 on tablet, 1 on mobile
+- Modern card design with hover effects
+
+**Shortcode Usage:**
+```
+[wta_continents_overview countries_per_continent="5"]
+```
+
+Change the number to show more/fewer countries per continent.
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Removed emoji, added continents to schema
+
 ## [2.32.0] - 2025-12-05
 
 ### ✅ FINAL WORKING VERSION - Clean URLs Without Conflicts

@@ -1105,16 +1105,27 @@ class WTA_Shortcodes {
 			return '<!-- No continents found -->';
 		}
 		
-		// Build output
+		// Build output with modern grid layout
 		$output = '<div class="wta-continents-overview">' . "\n";
 		
-		// Schema.org ItemList
+		// Schema.org ItemList - includes BOTH continents and countries
 		$list_items = array();
 		$position = 1;
 		
 		foreach ( $continents as $continent ) {
 			$continent_name = get_the_title( $continent->ID );
 			$continent_url = get_permalink( $continent->ID );
+			
+			// Add continent to schema
+			$list_items[] = array(
+				'@type'    => 'ListItem',
+				'position' => $position++,
+				'item'     => array(
+					'@type' => 'Place',
+					'@id'   => $continent_url,
+					'name'  => $continent_name,
+				),
+			);
 			
 			// Get top countries for this continent
 			$countries = get_posts( array(
@@ -1127,29 +1138,11 @@ class WTA_Shortcodes {
 				'order'          => 'DESC',
 			) );
 			
-			// Continent emoji mapping
-			$emoji_map = array(
-				'Europa'        => '🇪🇺',
-				'Europe'        => '🇪🇺',
-				'Afrika'        => '🌍',
-				'Africa'        => '🌍',
-				'Asien'         => '🌏',
-				'Asia'          => '🌏',
-				'Nordamerika'   => '🌎',
-				'North America' => '🌎',
-				'Sydamerika'    => '🌎',
-				'South America' => '🌎',
-				'Oceanien'      => '🌊',
-				'Oceania'       => '🌊',
-			);
-			
-			$emoji = isset( $emoji_map[ $continent_name ] ) ? $emoji_map[ $continent_name ] : '🌍';
-			
+			// Continent card (no emoji, clean design)
 			$output .= '<div class="wta-continent-card">' . "\n";
 			$output .= sprintf( 
-				'<h3 class="wta-continent-title"><a href="%s">%s %s</a></h3>' . "\n",
+				'<h3 class="wta-continent-title"><a href="%s">%s</a></h3>' . "\n",
 				esc_url( $continent_url ),
-				$emoji,
 				esc_html( $continent_name )
 			);
 			
@@ -1164,7 +1157,7 @@ class WTA_Shortcodes {
 						esc_html( $country_name )
 					);
 					
-					// Add to schema
+					// Add country to schema
 					$list_items[] = array(
 						'@type'    => 'ListItem',
 						'position' => $position++,
@@ -1183,7 +1176,7 @@ class WTA_Shortcodes {
 		
 		$output .= '</div>' . "\n";
 		
-		// Add Schema.org markup
+		// Add Schema.org markup with both continents and countries
 		$schema = array(
 			'@context'        => 'https://schema.org',
 			'@type'           => 'ItemList',
