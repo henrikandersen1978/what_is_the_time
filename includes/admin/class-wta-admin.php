@@ -694,5 +694,6 @@ class WTA_Admin {
 		'updated' => $updated,
 	) );
 }
+}
 
 

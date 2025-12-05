@@ -2,6 +2,33 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.7] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Added missing closing brace for class**
+- Problem: "Parse error: Unclosed '{' on line 9"
+- Root cause: After all the indentation fixes, we had:
+  - `}` on line 686 (closes Yoast if block) ✅
+  - `}` on line 696 (closes function) ✅
+  - **MISSING** `}` to close the class itself ❌
+- PHP requires: `class { function { } }` ← two closing braces needed
+
+This is the final syntax fix. The code now has proper structure:
+```php
+class WTA_Admin {                    // Line 9
+    public function ajax_regenerate_permalinks() {  // Line 583
+        if ( function_exists( 'YoastSEO' ) ) {
+            // ...
+        }  // Line 686 ← Closes Yoast if
+        WTA_Logger::info(...);
+        wp_send_json_success(...);
+    }  // Line 696 ← Closes function
+}  // Line 697 ← Closes class (NOW ADDED!)
+```
+
+**After Update:**
+Upload v2.29.7 and the site should load without parse errors.
+
 ## [2.29.6] - 2025-12-05
 
 ### Fixed
