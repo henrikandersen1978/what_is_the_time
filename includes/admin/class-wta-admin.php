@@ -606,9 +606,9 @@ class WTA_Admin {
 			'total_posts' => count( $post_ids ),
 		) );
 
-		foreach ( $post_ids as $post_id ) {
-			// Clear post cache
-			clean_post_cache( $post_id );
+	foreach ( $post_ids as $post_id ) {
+		// Clear post cache
+		clean_post_cache( $post_id );
 
 		// Clear permalink cache
 		delete_post_meta( $post_id, '_wp_old_slug' );
@@ -678,22 +678,21 @@ class WTA_Admin {
 		// Clear Yoast's internal caches
 		wp_cache_delete( 'wpseo_', 'options' );
 		
-		// Clear all Yoast transients
-		global $wpdb;
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wpseo_%' OR option_name LIKE '_transient_timeout_wpseo_%'" );
-		
-		WTA_Logger::info( 'Cleared all Yoast SEO caches and indexables' );
-	}
+	// Clear all Yoast transients
+	global $wpdb;
+	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wpseo_%' OR option_name LIKE '_transient_timeout_wpseo_%'" );
+	
+	WTA_Logger::info( 'Cleared all Yoast SEO caches and indexables' );
+}
 
-		WTA_Logger::info( 'Permalink regeneration completed', array(
-			'updated_posts' => $updated,
-		) );
+	WTA_Logger::info( 'Permalink regeneration completed', array(
+		'updated_posts' => $updated,
+	) );
 
-		wp_send_json_success( array(
-			'message' => 'Permalinks have been regenerated successfully! All internal links, schema, and Yoast data should now use clean URLs.',
-			'updated' => $updated,
-		) );
-	}
+	wp_send_json_success( array(
+		'message' => 'Permalinks have been regenerated successfully! All internal links, schema, and Yoast data should now use clean URLs.',
+		'updated' => $updated,
+	) );
 }
 
 

@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.6] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed MULTIPLE indentation errors and extra closing brace**
+- Problem: v2.29.5 still failed immediately - turns out there were MORE indentation errors
+- Found issues:
+  1. Lines 613-614: Only 2 tabs instead of 3 (outside foreach loop)
+  2. Line 685: Only 1 tab instead of 2 (outside Yoast if block)  
+  3. Lines 688-695: Extra tab (wrong scope)
+  4. Line 697: **Extra closing brace }** causing PHP syntax error
+- All these combined caused immediate PHP fatal error
+
+### Technical Details
+
+The indentation was completely broken:
+```php
+foreach ( $post_ids as $post_id ) {        // Line 609
+    clean_post_cache( $post_id );          // ✅ Correct (3 tabs)
+    
+// delete_post_meta( $post_id, ... );     // ❌ Only 2 tabs!
+// if ( class_exists( 'WPSEO_Options' ) ) // ❌ Only 2 tabs!
+
+// Plus at the end:
+}  // Close function
+}  // ❌ EXTRA closing brace - syntax error!
+```
+
+All fixed now with proper indentation throughout.
+
+**After Update:**
+Upload v2.29.6 and try "Regenerate All Permalinks" again.
+
 ## [2.29.5] - 2025-12-05
 
 ### Fixed
