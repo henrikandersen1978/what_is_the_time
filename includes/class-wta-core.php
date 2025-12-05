@@ -123,35 +123,25 @@ class WTA_Core {
 	/**
 	 * Register permalink and post type hooks.
 	 * 
-	 * CRITICAL: Must run on BOTH admin and frontend for clean URLs to work everywhere.
+	 * Uses WPExplorer's proven approach for removing CPT slugs without conflicts.
+	 * @link https://www.wpexplorer.com/remove-custom-post-type-slugs-in-wordpress/
 	 *
-	 * @since    2.29.3
+	 * @since    2.31.0
 	 * @access   private
 	 */
 	private function define_permalink_hooks() {
-		// Register custom post type (needed on both admin and frontend)
+		// Register custom post type
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
 		
-		// Register URL cleanup filters - EARLY priority to run before caching
-		// MUST be active on frontend for breadcrumbs, schema, internal links to work
-		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 1, 2 );
-		$this->loader->add_filter( 'post_link', $post_type, 'remove_post_type_slug', 1, 2 );
-		$this->loader->add_filter( 'page_link', $post_type, 'remove_post_type_slug', 1, 2 );
+		// Remove slug from permalinks (filter_post_type_link)
+		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 10, 3 );
 		
-		// Use 'request' filter instead of 'pre_get_posts' to modify query vars
-		// This is the proper WordPress way and doesn't interfere with $post global
-		$this->loader->add_filter( 'request', $post_type, 'parse_clean_urls_request', 1 );
+		// Defensive pre_get_posts to allow slug-less URLs (WPExplorer's approach)
+		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_request_for_locations', 10 );
 		
-		// Disable WordPress canonical redirects that try to "fix" our clean URLs
-		$this->loader->add_filter( 'redirect_canonical', $post_type, 'disable_canonical_redirect', 10, 2 );
-		$this->loader->add_filter( 'do_redirect_guess_404_permalink', $post_type, 'disable_guess_redirect', 10, 1 );
-		
-		// Ensure rewrite rules are properly set (checks and flushes if needed)
-		$this->loader->add_action( 'init', $post_type, 'ensure_rewrite_rules', 999 );
-		
-		// Clear permalink cache when location posts are saved
-		$this->loader->add_action( 'save_post_' . WTA_POST_TYPE, $post_type, 'clear_single_permalink_cache', 10, 1 );
+		// Redirect old URLs with slugs to clean URLs
+		$this->loader->add_action( 'template_redirect', $post_type, 'redirect_old_urls', 10 );
 	}
 
 	/**

@@ -1,6 +1,9 @@
 <?php
 /**
  * Register custom post type for locations.
+ * 
+ * Uses WPExplorer's proven approach for removing CPT slugs without conflicts.
+ * @link https://www.wpexplorer.com/remove-custom-post-type-slugs-in-wordpress/
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/core
@@ -18,188 +21,127 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Remove dummy slug from permalinks to create clean URLs.
+	 * Remove post type slug from permalinks.
+	 * 
+	 * Based on WPExplorer's approach.
+	 * Generates clean URLs: /europa/danmark/ instead of /l/europa/danmark/
 	 *
-	 * WordPress generates: /l/europa/danmark/
-	 * This filter removes '/l/' → /europa/danmark/
-	 *
-	 * @since    2.28.2
-	 * @param    string       $post_link Post URL.
-	 * @param    WP_Post|int  $post      Post object or ID.
-	 * @return   string                  Modified URL.
+	 * @since    2.31.0
+	 * @param    string  $post_link Post URL.
+	 * @param    WP_Post $post      Post object.
+	 * @param    bool    $leavename Whether to keep post name.
+	 * @return   string             Modified URL.
 	 */
-	public function remove_post_type_slug( $post_link, $post ) {
-		// Handle both WP_Post object and post ID
-		if ( is_numeric( $post ) ) {
-			$post = get_post( $post );
-		}
-		
-		// Only for our post type
-		if ( ! $post || WTA_POST_TYPE !== $post->post_type ) {
+	public function remove_post_type_slug( $post_link, $post, $leavename ) {
+		// Only for our post type and published posts
+		if ( ! in_array( $post->post_type, array( WTA_POST_TYPE ), true ) || 'publish' !== $post->post_status ) {
 			return $post_link;
 		}
 		
-		// Remove dummy slug '/l/' from URL
-		// WordPress generates: /l/europa/ → We return: /europa/
-		$post_link = str_replace( '/l/', '/', $post_link );
+		// Get the post type rewrite slug
+		$slug = $this->get_post_type_slug( $post->post_type );
+		
+		if ( $slug ) {
+			// Remove the slug from the URL
+			$post_link = str_replace( "/{$slug}/", '/', $post_link );
+		}
 		
 		return $post_link;
 	}
 	
 	/**
-	 * Check and ensure rewrite rules are properly set.
-	 *
-	 * @since    2.28.6
-	 */
-	public function ensure_rewrite_rules() {
-		// Check if rewrite rules exist
-		$rules = get_option( 'rewrite_rules' );
-		
-		// If rules don't exist OR don't contain our custom rules, flush them
-		if ( ! $rules || ! $this->check_custom_rules_exist( $rules ) ) {
-			flush_rewrite_rules( false );
-			
-			WTA_Logger::info( 'Rewrite rules flushed', array(
-				'reason' => empty( $rules ) ? 'rules_missing' : 'custom_rules_missing',
-			) );
-		}
-		
-		// Clear continent slugs cache (so rewrite rules and request filter get fresh data)
-		delete_transient( 'wta_continent_slugs' );
-		
-		// Clear object cache for permalinks
-		wp_cache_delete( 'alloptions', 'options' );
-		
-		// Clear Yoast SEO permalink cache if it exists
-		if ( function_exists( 'YoastSEO' ) ) {
-			delete_transient( 'wpseo_sitemap_cache_validator' );
-		}
-	}
-	
-	/**
-	 * Check if our custom rewrite rules exist in the rules array.
-	 *
-	 * @since    2.28.6
-	 * @param    array $rules Rewrite rules array.
-	 * @return   bool         True if custom rules exist.
-	 */
-	private function check_custom_rules_exist( $rules ) {
-		// Get continent slugs to build expected patterns
-		$continent_slugs = $this->get_continent_slugs();
-		
-		if ( empty( $continent_slugs ) ) {
-			return false;
-		}
-		
-		// Build the continent pattern (same as in register_post_type)
-		$escaped_slugs = array_map( 'preg_quote', $continent_slugs );
-		$continent_pattern = implode( '|', $escaped_slugs );
-		
-		// Check if any of our dynamic custom rules exist
-		$custom_patterns = array(
-			'^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',
-			'^(' . $continent_pattern . ')/([^/]+)/?$',
-			'^(' . $continent_pattern . ')/?$',
-		);
-		
-		foreach ( $custom_patterns as $pattern ) {
-			if ( isset( $rules[ $pattern ] ) ) {
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	
-	/**
-	 * Clear permalink cache for a single post when it's saved.
-	 *
-	 * @since    2.28.4
-	 * @param    int $post_id Post ID.
-	 */
-	public function clear_single_permalink_cache( $post_id ) {
-		// Clear permalink cache for this specific post
-		clean_post_cache( $post_id );
-		
-		// Clear object cache
-		wp_cache_delete( $post_id, 'posts' );
-		wp_cache_delete( $post_id, 'post_meta' );
-		
-		// If this is a continent being saved, clear continent slugs cache
-		// This ensures new continents are immediately available for routing
-		$location_type = get_post_meta( $post_id, 'wta_type', true );
-		if ( 'continent' === $location_type ) {
-			delete_transient( 'wta_continent_slugs' );
-		}
-	}
-	
-	/**
-	 * Disable canonical redirect for our clean URLs.
-	 *
-	 * WordPress tries to "fix" our clean URLs by redirecting to /location/ prefix.
-	 * This filter prevents that redirect.
-	 *
-	 * @since    2.28.5
-	 * @param    string $redirect_url  Redirect URL.
-	 * @param    string $requested_url Requested URL.
-	 * @return   string|false          False to disable redirect.
-	 */
-	public function disable_canonical_redirect( $redirect_url, $requested_url ) {
-		global $wp_query;
-		
-		// If this is a location post, disable canonical redirect
-		if ( isset( $wp_query->query_vars['post_type'] ) && WTA_POST_TYPE === $wp_query->query_vars['post_type'] ) {
-			return false;
-		}
-		
-		// Check if requested URL looks like our clean URL pattern
-		$path = parse_url( $requested_url, PHP_URL_PATH );
-		$path = trim( $path, '/' );
-		$parts = explode( '/', $path );
-		
-		// If it's 1-3 level path (continent, continent/country, continent/country/city)
-		// and doesn't contain 'location', disable redirect
-		if ( count( $parts ) >= 1 && count( $parts ) <= 3 && strpos( $path, 'location' ) === false ) {
-			// Check if redirect URL contains 'location' - if so, cancel the redirect!
-			if ( strpos( $redirect_url, '/location/' ) !== false || strpos( $redirect_url, '/' . WTA_POST_TYPE . '/' ) !== false ) {
-				return false;
-			}
-		}
-		
-		return $redirect_url;
-	}
-	
-	/**
-	 * Disable WordPress guess redirect for our URLs.
-	 *
-	 * Prevents WordPress from "guessing" that our clean URLs are wrong.
-	 *
-	 * @since    2.28.5
-	 * @param    bool $do_redirect Whether to redirect.
-	 * @return   bool              False to disable.
-	 */
-	public function disable_guess_redirect( $do_redirect ) {
-		// Check if current request matches our clean URL pattern
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-		$path = parse_url( $request_uri, PHP_URL_PATH );
-		$path = trim( $path, '/' );
-		$parts = explode( '/', $path );
-		
-		// If it's 1-3 level path without 'location', disable guess redirect
-		if ( count( $parts ) >= 1 && count( $parts ) <= 3 && strpos( $path, 'location' ) === false ) {
-			return false;
-		}
-		
-		return $do_redirect;
-	}
-	
-	/**
-	 * Get continent slugs from database for dynamic rewrite rules.
+	 * Parse request to allow slug-less URLs for locations.
 	 * 
-	 * Fetches all published continents and returns their slugs.
-	 * Used to create specific rewrite rules that only match actual continents.
+	 * Based on WPExplorer's defensive approach.
+	 * Only modifies queries that match our specific structure.
 	 *
-	 * @since    2.30.3
+	 * @since    2.31.0
+	 * @param    WP_Query $query Query object.
+	 */
+	public function parse_request_for_locations( $query ) {
+		// Only main query, not admin
+		if ( ! $query->is_main_query() || is_admin() ) {
+			return;
+		}
+		
+		// WPExplorer's defensive check: Only modify if query structure matches
+		// We need: hierarchical path (pagename set) without existing post_type
+		if ( 2 === count( $query->query )
+			&& isset( $query->query['page'] )
+			&& ! empty( $query->query['name'] )
+		) {
+			// Check if this could be a location URL by checking first part
+			$name = $query->query['name'];
+			$parts = explode( '/', trim( $name, '/' ) );
+			
+			// Only proceed if it's hierarchical (has slashes)
+			if ( count( $parts ) > 1 ) {
+				$first_part = $parts[0];
+				
+				// Get known continent slugs
+				$continent_slugs = $this->get_continent_slugs();
+				
+				// If first part is a continent, this is likely our URL
+				if ( in_array( $first_part, $continent_slugs, true ) ) {
+					// Allow our post type to be queried without slug
+					$query->set( 'post_type', array_merge( array( 'post', 'page' ), array( WTA_POST_TYPE ) ) );
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Redirect old URLs with slugs to clean URLs.
+	 * 
+	 * Based on WPExplorer's approach.
+	 *
+	 * @since    2.31.0
+	 */
+	public function redirect_old_urls() {
+		// Only for singular location posts, not admin/preview
+		if ( ! is_singular( WTA_POST_TYPE ) || is_admin() || is_preview() ) {
+			return;
+		}
+		
+		$slug = $this->get_post_type_slug( get_post_type() );
+		$current_url = trailingslashit( $this->get_current_url() );
+		
+		// If URL contains the slug, redirect to clean version
+		if ( $slug && str_contains( $current_url, "/{$slug}" ) ) {
+			wp_safe_redirect( esc_url( str_replace( "/{$slug}", '', $current_url ) ), 301 );
+			exit;
+		}
+	}
+	
+	/**
+	 * Get the current URL.
+	 *
+	 * @since    2.31.0
+	 * @return   string Current URL.
+	 */
+	private function get_current_url() {
+		global $wp;
+		return isset( $wp->request ) ? home_url( add_query_arg( array(), $wp->request ) ) : '';
+	}
+	
+	/**
+	 * Get post type slug from rewrite settings.
+	 *
+	 * @since    2.31.0
+	 * @param    string $type Post type name.
+	 * @return   string       Post type slug.
+	 */
+	private function get_post_type_slug( $type ) {
+		$obj = get_post_type_object( $type );
+		return $obj->rewrite['slug'] ?? $obj->name ?? $type;
+	}
+	
+	/**
+	 * Get known continent slugs for URL validation.
+	 * 
+	 * Cached for 24 hours to avoid repeated DB queries.
+	 *
+	 * @since    2.31.0
 	 * @return   array Array of continent slugs.
 	 */
 	private function get_continent_slugs() {
@@ -214,7 +156,6 @@ class WTA_Post_Type {
 		global $wpdb;
 		
 		// Query for all continent slugs directly from database
-		// This is more efficient than get_posts() and works even during early init
 		$query = $wpdb->prepare(
 			"SELECT p.post_name 
 			FROM {$wpdb->posts} p
@@ -229,7 +170,6 @@ class WTA_Post_Type {
 		$slugs = $wpdb->get_col( $query );
 		
 		// Fallback: If no continents in DB yet, use common translated continent slugs
-		// This ensures rules work even before first import
 		if ( empty( $slugs ) ) {
 			$slugs = array(
 				'europa', 'asien', 'afrika', 'nordamerika', 'sydamerika', 'oceanien', 'antarktis', // Danish
@@ -244,112 +184,10 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Parse clean URLs using request filter (proper WordPress way).
-	 * 
-	 * This runs BEFORE WP_Query is created, so it doesn't interfere with
-	 * the global $post variable that other plugins depend on.
-	 * 
-	 * DEFENSIVE: Multiple early exits to avoid interfering with normal WP pages.
-	 *
-	 * @since    2.30.6
-	 * @param    array $query_vars Query variables.
-	 * @return   array             Modified query variables.
-	 */
-	public function parse_clean_urls_request( $query_vars ) {
-		// ========================================
-		// DIAGNOSTIC MODE v2.30.10
-		// COMPLETELY DISABLE REQUEST FILTER FOR TESTING
-		// If Pilanto errors disappear, this filter is the problem
-		// If errors persist, the problem is elsewhere
-		// ========================================
-		error_log('WTA REQUEST FILTER: DISABLED FOR DIAGNOSTIC - URL: ' . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
-		return $query_vars; // IMMEDIATE RETURN - NO PROCESSING
-		
-		// DEFENSE 1: Skip in admin
-		if ( is_admin() ) {
-			return $query_vars;
-		}
-		
-		// DEFENSE 2: If WordPress already knows what to query, don't interfere
-		if ( isset( $query_vars['post_type'] ) || 
-		     isset( $query_vars['p'] ) || 
-		     isset( $query_vars['page_id'] ) ||
-		     isset( $query_vars['name'] ) ) {
-			return $query_vars;
-		}
-		
-		// DEFENSE 3: Need pagename set
-		if ( ! isset( $query_vars['pagename'] ) || empty( $query_vars['pagename'] ) ) {
-			return $query_vars;
-		}
-		
-		$pagename = $query_vars['pagename'];
-		
-		// DEFENSE 4: CRITICAL - Ultra-fast check for single-level paths
-		// Location URLs are ALWAYS hierarchical: continent/country or continent/country/city
-		// Single paths like /om/, /blog/, /betingelser/ are NEVER location URLs
-		// This check happens BEFORE any parsing, DB queries, or continent slug lookups
-		// This is the fix for Pilanto-Text-Snippets warnings!
-		if ( substr_count( $pagename, '/' ) === 0 ) {
-			return $query_vars; // Exit immediately for normal WordPress pages!
-		}
-		
-		// DEFENSE 5: Now safe to parse (we know it has slashes)
-		$parts = explode( '/', trim( $pagename, '/' ) );
-		
-		// DEFENSE 6: Double-check parts count (redundant but safe)
-		if ( count( $parts ) === 1 ) {
-			return $query_vars;
-		}
-		
-		// DEFENSE 7: Get first part
-		$first_part = $parts[0];
-		
-		// DEFENSE 8: Get known continent slugs (ONLY called for multi-level paths now!)
-		$continent_slugs = $this->get_continent_slugs();
-		
-		// DEFENSE 9: First part must be a known continent
-		// This catches /category/news, /author/john, etc.
-		if ( ! in_array( $first_part, $continent_slugs, true ) ) {
-			return $query_vars;
-		}
-		
-		// URL starts with continent - check if location post exists
-		$slug = end( $parts );
-		
-		// Use direct database query (fast and no side effects)
-		global $wpdb;
-		$post_exists = $wpdb->get_var( $wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} 
-			WHERE post_name = %s 
-			AND post_type = %s 
-			AND post_status = 'publish' 
-			LIMIT 1",
-			$slug,
-			WTA_POST_TYPE
-		) );
-		
-		if ( $post_exists ) {
-			// Location post found - modify query vars to load it
-			$query_vars['post_type'] = WTA_POST_TYPE;
-			$query_vars['name'] = $slug;
-			$query_vars[ WTA_POST_TYPE ] = $pagename;
-			
-			// CRITICAL: Do NOT unset pagename!
-			// Other plugins (like Pilanto-Text-Snippets) use get_page_by_path() 
-			// which depends on pagename being present in query vars.
-			// WordPress will prioritize post_type and name anyway.
-			// unset( $query_vars['pagename'] ); // DISABLED - breaks other plugins
-		}
-		
-		// Return modified (or unmodified) query vars
-		return $query_vars;
-	}
-
-	/**
 	 * Register the custom post type.
 	 *
 	 * Creates a hierarchical custom post type for locations (continents, countries, cities).
+	 * Uses a dummy slug 'l' which is removed by the permalink filter.
 	 *
 	 * @since    2.0.0
 	 */
@@ -357,7 +195,7 @@ class WTA_Post_Type {
 		$labels = array(
 			'name'                  => _x( 'Locations', 'Post type general name', WTA_TEXT_DOMAIN ),
 			'singular_name'         => _x( 'Location', 'Post type singular name', WTA_TEXT_DOMAIN ),
-			'menu_name'             => _x( 'World Time', 'Admin Menu text', WTA_TEXT_DOMAIN ),
+			'menu_name'             => _x( 'Locations', 'Admin Menu text', WTA_TEXT_DOMAIN ),
 			'name_admin_bar'        => _x( 'Location', 'Add New on Toolbar', WTA_TEXT_DOMAIN ),
 			'add_new'               => __( 'Add New', WTA_TEXT_DOMAIN ),
 			'add_new_item'          => __( 'Add New Location', WTA_TEXT_DOMAIN ),
@@ -366,7 +204,7 @@ class WTA_Post_Type {
 			'view_item'             => __( 'View Location', WTA_TEXT_DOMAIN ),
 			'all_items'             => __( 'All Locations', WTA_TEXT_DOMAIN ),
 			'search_items'          => __( 'Search Locations', WTA_TEXT_DOMAIN ),
-			'parent_item_colon'     => __( 'Parent Location:', WTA_TEXT_DOMAIN ),
+			'parent_item_colon'     => __( 'Parent Locations:', WTA_TEXT_DOMAIN ),
 			'not_found'             => __( 'No locations found.', WTA_TEXT_DOMAIN ),
 			'not_found_in_trash'    => __( 'No locations found in Trash.', WTA_TEXT_DOMAIN ),
 			'featured_image'        => _x( 'Location Image', 'Overrides the "Featured Image" phrase', WTA_TEXT_DOMAIN ),
@@ -383,75 +221,30 @@ class WTA_Post_Type {
 
 		$args = array(
 			'labels'             => $labels,
+			'description'        => __( 'Locations (continents, countries, cities) with timezone information', WTA_TEXT_DOMAIN ),
 			'public'             => true,
 			'publicly_queryable' => true,
 			'show_ui'            => true,
-			'show_in_menu'       => false, // We add custom menu via admin class
+			'show_in_menu'       => false,
 			'query_var'          => true,
-		'rewrite'            => array(
-			'slug'         => 'l',
-			'with_front'   => false,
-			'hierarchical' => true,
-		),
+			'rewrite'            => array(
+				'slug'         => 'l', // Dummy slug - removed by permalink filter
+				'with_front'   => false,
+				'hierarchical' => true,
+			),
 			'capability_type'    => 'post',
 			'has_archive'        => false,
-			'hierarchical'       => true, // CRITICAL: Enables parent-child relationships
+			'hierarchical'       => true,
 			'menu_position'      => null,
-			'menu_icon'          => 'dashicons-clock',
-			'supports'           => array( 'title', 'editor', 'author', 'page-attributes' ),
-			'show_in_rest'       => true, // Gutenberg support
+			'menu_icon'          => 'dashicons-location-alt',
+			'supports'           => array( 'title', 'editor', 'author', 'revisions', 'page-attributes' ),
+			'show_in_rest'       => true,
 		);
 
-		$result = register_post_type( WTA_POST_TYPE, $args );
+		register_post_type( WTA_POST_TYPE, $args );
 		
-		// Log if registration failed
-		if ( is_wp_error( $result ) ) {
-			WTA_Logger::error( 'Post type registration failed', array(
-				'error' => $result->get_error_message(),
-			) );
-		} else {
-			WTA_Logger::info( 'Post type registered successfully', array(
-				'post_type' => WTA_POST_TYPE,
-				'rest_enabled' => ! empty( $args['show_in_rest'] ),
-			) );
-		}
-		
-		// Add dynamic rewrite rules that ONLY match actual continent slugs
-		// This prevents hijacking WordPress pages while allowing clean location URLs
-		$continent_slugs = $this->get_continent_slugs();
-		
-		if ( ! empty( $continent_slugs ) ) {
-			// Escape each slug for regex and create pattern
-			$escaped_slugs = array_map( 'preg_quote', $continent_slugs );
-			$continent_pattern = implode( '|', $escaped_slugs );
-			
-			// 3-level: /europa/danmark/kobenhavn/
-			add_rewrite_rule(
-				'^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',
-				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]',
-				'top'
-			);
-			
-			// 2-level: /europa/danmark/
-			add_rewrite_rule(
-				'^(' . $continent_pattern . ')/([^/]+)/?$',
-				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]',
-				'top'
-			);
-			
-			// 1-level: /europa/
-			add_rewrite_rule(
-				'^(' . $continent_pattern . ')/?$',
-				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
-				'top'
-			);
-			
-			WTA_Logger::debug( 'Dynamic rewrite rules registered', array(
-				'continent_count' => count( $continent_slugs ),
-				'continents' => implode( ', ', $continent_slugs ),
-			) );
-		}
+		// Clear continent slugs cache when registering post type
+		// This ensures fresh data after imports
+		delete_transient( 'wta_continent_slugs' );
 	}
 }
-
-
