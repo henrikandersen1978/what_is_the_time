@@ -642,9 +642,12 @@ class WTA_Template_Loader {
 	 * Enqueue frontend styles.
 	 *
 	 * @since    2.0.0
+	 * @since    2.32.2 Always enqueue on frontend to support shortcodes in widgets/builders
 	 */
 	public function enqueue_styles() {
-		if ( is_singular( WTA_POST_TYPE ) || has_shortcode( get_the_content(), 'world_time_clock' ) ) {
+		// Always enqueue on frontend (not admin) to support shortcodes anywhere
+		// CSS is lightweight (~20KB) and ensures shortcodes work in widgets, builders, etc.
+		if ( ! is_admin() ) {
 			wp_enqueue_style(
 				'wta-frontend',
 				WTA_PLUGIN_URL . 'includes/frontend/assets/css/frontend.css',
@@ -658,9 +661,12 @@ class WTA_Template_Loader {
 	 * Enqueue frontend scripts.
 	 *
 	 * @since    2.0.0
+	 * @since    2.32.2 Always enqueue on frontend to support shortcodes in widgets/builders
 	 */
 	public function enqueue_scripts() {
-		if ( is_singular( WTA_POST_TYPE ) || has_shortcode( get_the_content(), 'world_time_clock' ) ) {
+		// Always enqueue on frontend (not admin) to support shortcodes anywhere
+		// JS is lightweight (~15KB) and ensures clocks work in widgets, builders, etc.
+		if ( ! is_admin() ) {
 			wp_enqueue_script(
 				'wta-clock',
 				WTA_PLUGIN_URL . 'includes/frontend/assets/js/clock.js',
@@ -669,7 +675,7 @@ class WTA_Template_Loader {
 				true
 			);
 			
-			// Add custom H1 handler for location posts
+			// Add custom H1 handler for location posts only
 			if ( is_singular( WTA_POST_TYPE ) ) {
 				$this->inject_h1_script();
 			}

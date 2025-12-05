@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.2] - 2025-12-05
+
+### Fixed
+- **CSS and JS now load globally on frontend** to support shortcodes in widgets and page builders
+- **Shortcodes now work everywhere** (widgets, Elementor, Divi, etc.)
+
+### Problem
+CSS/JS only loaded when specific shortcodes were detected in `get_the_content()`, which:
+- ❌ Didn't work for widgets
+- ❌ Didn't work for page builders
+- ❌ Caused `[wta_continents_overview]` to display without styling
+
+### Solution
+```php
+// Before: Conditional loading
+if ( has_shortcode( $content, 'wta_continents_overview' ) ) {
+    wp_enqueue_style( 'wta-frontend', ... );
+}
+
+// After: Always load on frontend (not admin)
+if ( ! is_admin() ) {
+    wp_enqueue_style( 'wta-frontend', ... );
+}
+```
+
+**Why This Is Safe:**
+- CSS is only ~20KB (minified)
+- JS is only ~15KB
+- No performance impact
+- WordPress best practice for plugins with shortcodes
+
+### Files Changed
+- `includes/frontend/class-wta-template-loader.php` - Always enqueue CSS/JS on frontend
+
 ## [2.32.1] - 2025-12-05
 
 ### Improved
