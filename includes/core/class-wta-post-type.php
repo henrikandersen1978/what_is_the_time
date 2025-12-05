@@ -223,48 +223,48 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Parse clean URLs and set correct query var.
+	 * Parse clean URLs using request filter (proper WordPress way).
 	 * 
-	 * DEFENSIVE: Only runs on 404 pages that start with continent slug.
-	 * Uses WP_Query instead of get_posts() to avoid polluting global $post.
+	 * This runs BEFORE WP_Query is created, so it doesn't interfere with
+	 * the global $post variable that other plugins depend on.
+	 * 
+	 * DEFENSIVE: Only processes URLs that start with known continent slugs.
 	 *
-	 * @since    2.28.2
-	 * @param    WP_Query $query Query object.
+	 * @since    2.30.6
+	 * @param    array $query_vars Query variables.
+	 * @return   array             Modified query variables.
 	 */
-	public function parse_clean_urls( $query ) {
-		// Only on main query, not in admin
-		if ( ! $query->is_main_query() || is_admin() ) {
-			return;
+	public function parse_clean_urls_request( $query_vars ) {
+		// Skip in admin
+		if ( is_admin() ) {
+			return $query_vars;
 		}
 		
-		// ONLY handle actual 404 pages - don't interfere with normal pages/posts
-		if ( ! $query->is_404() ) {
-			return;
+		// Check if this looks like a potential location URL
+		// WordPress sets 'pagename' for hierarchical paths
+		if ( ! isset( $query_vars['pagename'] ) || empty( $query_vars['pagename'] ) ) {
+			return $query_vars;
 		}
 		
-		// Check if this might be a location URL
-		if ( isset( $query->query_vars['pagename'] ) ) {
-			$pagename = $query->query_vars['pagename'];
-			
-			// Parse URL parts
-			$parts = explode( '/', trim( $pagename, '/' ) );
-			$first_part = $parts[0];
-			
-			// Get known continent slugs
-			$continent_slugs = $this->get_continent_slugs();
-			
-			// If first part is NOT a continent, don't touch it
-			// This lets WordPress handle normal 404s without interference
-			if ( ! in_array( $first_part, $continent_slugs, true ) ) {
-				return;
-			}
-			
+		$pagename = $query_vars['pagename'];
+		
+		// Parse URL parts
+		$parts = explode( '/', trim( $pagename, '/' ) );
+		$first_part = $parts[0];
+		
+		// Get known continent slugs
+		$continent_slugs = $this->get_continent_slugs();
+		
+		// If first part is NOT a continent, this is not a location URL
+		// Let WordPress handle it normally (pages, posts, etc.)
+		if ( ! in_array( $first_part, $continent_slugs, true ) ) {
+			return $query_vars;
+		}
+		
 		// URL starts with continent - check if location post exists
 		$slug = end( $parts );
 		
-		// Use direct database query to avoid ANY global $post pollution
-		// This is critical because we're inside pre_get_posts hook
-		// Any WP_Query here can interfere with other plugins expecting clean $post
+		// Use direct database query (fast and no side effects)
 		global $wpdb;
 		$post_exists = $wpdb->get_var( $wpdb->prepare(
 			"SELECT ID FROM {$wpdb->posts} 
@@ -277,18 +277,17 @@ class WTA_Post_Type {
 		) );
 		
 		if ( $post_exists ) {
-			// Location post found - set correct query vars
-			$query->set( 'post_type', WTA_POST_TYPE );
-			$query->set( 'name', $slug );
-			$query->set( WTA_POST_TYPE, $pagename );
-			unset( $query->query_vars['pagename'] );
+			// Location post found - modify query vars to load it
+			$query_vars['post_type'] = WTA_POST_TYPE;
+			$query_vars['name'] = $slug;
+			$query_vars[ WTA_POST_TYPE ] = $pagename;
 			
-			// Mark as not 404
-			$query->is_404 = false;
+			// Remove pagename to prevent WordPress from looking for a page
+			unset( $query_vars['pagename'] );
 		}
 		
-		// No wp_reset_postdata() needed - we never touched $post!
-		}
+		// Return modified (or unmodified) query vars
+		return $query_vars;
 	}
 
 	/**

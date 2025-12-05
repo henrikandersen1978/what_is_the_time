@@ -138,7 +138,10 @@ class WTA_Core {
 		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_filter( 'post_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_filter( 'page_link', $post_type, 'remove_post_type_slug', 1, 2 );
-		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_clean_urls' );
+		
+		// Use 'request' filter instead of 'pre_get_posts' to modify query vars
+		// This is the proper WordPress way and doesn't interfere with $post global
+		$this->loader->add_filter( 'request', $post_type, 'parse_clean_urls_request', 1 );
 		
 		// Disable WordPress canonical redirects that try to "fix" our clean URLs
 		$this->loader->add_filter( 'redirect_canonical', $post_type, 'disable_canonical_redirect', 10, 2 );

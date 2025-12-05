@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.6] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Switched from pre_get_posts to request filter (proper WordPress way)**
+- Completely eliminates any interference with global $post variable
+- `request` filter runs BEFORE WP_Query is created - zero side effects
+- Fixed Pilanto-Text-Snippets and other plugins that depend on clean $post context
+
+### Technical Details
+
+**Problem:**
+- v2.30.5 used `pre_get_posts` hook which runs AFTER WordPress starts processing
+- Even with direct database queries, timing was wrong
+- Other plugins running after `pre_get_posts` expected `$post` to be set by WordPress
+- Result: Pilanto-Text-Snippets still got null $post
+
+**The Real Issue - Hook Timing:**
+```
+WordPress Request Lifecycle:
+1. request filter       ← Query vars are built (we should be here!)
+2. parse_request        ← WordPress parses the request
+3. pre_get_posts        ← WP_Query is being created (too late!)
+4. posts_selection      ← Posts are being fetched
+5. wp                   ← Main query is ready
+6. template_redirect    ← WordPress loads template
+7. Global $post is set  ← Now other plugins can use it
+```
+
+**Solution - Use `request` Filter:**
+```php
+// Before: pre_get_posts (wrong timing)
+public function parse_clean_urls( $query ) {
+    if ( ! $query->is_main_query() ) return;
+    // Modify WP_Query object...
+}
+add_action( 'pre_get_posts', ... );
+
+// After: request filter (proper WordPress way)
+public function parse_clean_urls_request( $query_vars ) {
+    if ( is_admin() ) return $query_vars;
+    // Modify query vars array...
+    return $query_vars;
+}
+add_filter( 'request', ..., 1 );
+```
+
+**Why This Is The Correct Solution:**
+
+1. ✅ **Runs at the right time** - Before WP_Query is created
+2. ✅ **Proper WordPress API** - `request` filter is designed for this
+3. ✅ **Zero side effects** - Doesn't touch any global variables
+4. ✅ **Other plugins happy** - WordPress sets $post normally
+5. ✅ **Clean architecture** - Modifies input, not state
+
+**From WordPress Codex:**
+> "The `request` filter is applied to the query variables after they are parsed but before the query is executed. This is the correct place to modify what WordPress will query for."
+
+This is exactly what we needed all along!
+
+### Files Changed
+- `includes/class-wta-core.php` - Changed from `pre_get_posts` to `request` filter
+- `includes/core/class-wta-post-type.php` - Renamed method to `parse_clean_urls_request()` and adapted for query vars array
+
 ## [2.30.5] - 2025-12-05
 
 ### Fixed
