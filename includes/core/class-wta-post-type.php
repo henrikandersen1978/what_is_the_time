@@ -14,9 +14,7 @@ class WTA_Post_Type {
 	 * @since    2.0.0
 	 */
 	public function __construct() {
-		// Add filters for clean URLs without post type prefix
-		add_filter( 'post_type_link', array( $this, 'remove_post_type_slug' ), 10, 2 );
-		add_action( 'pre_get_posts', array( $this, 'parse_clean_urls' ) );
+		// Filters registered via loader in class-wta-core.php
 	}
 	
 	/**
@@ -28,11 +26,13 @@ class WTA_Post_Type {
 	 * @return   string             Modified URL.
 	 */
 	public function remove_post_type_slug( $post_link, $post ) {
-		if ( WTA_POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
+		// Only for our post type
+		if ( WTA_POST_TYPE !== $post->post_type ) {
 			return $post_link;
 		}
 		
-		// Remove the post type slug from URL
+		// Remove the post type slug from URL - works for all post statuses
+		// This handles: /wta_location/europa/ -> /europa/
 		$post_link = str_replace( '/' . WTA_POST_TYPE . '/', '/', $post_link );
 		
 		return $post_link;

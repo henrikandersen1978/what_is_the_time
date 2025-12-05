@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.3] - 2025-12-05
+
+### Fixed
+- **CRITICAL: URL filters now properly registered and working everywhere**
+- Permalink filter (`post_type_link`) now removes `/wta_location/` from ALL locations
+- Fixed filter registration - now using loader system instead of direct hooks
+- Removed post_status restriction - filter now works for all post statuses (draft, publish, etc.)
+- Internal links, breadcrumbs, and schema markup now ALL use clean URLs
+
+### Technical Details
+**Root cause identified:**
+- Filters were added in constructor with direct `add_filter()` calls
+- But `$post_type` instance wasn't persisted, so callbacks failed
+- Additionally, `'publish' !== $post->post_status` check was too restrictive
+
+**Solution:**
+- Moved filter registration to `class-wta-core.php` using loader system
+- Filters now properly registered: `$this->loader->add_filter('post_type_link', ...)`
+- Removed post_status check - now works for all posts regardless of status
+- Instance properly maintained through WordPress hooks system
+
+**What now works:**
+✅ `get_permalink()` returns clean URLs everywhere
+✅ Breadcrumbs use clean URLs
+✅ Internal links in shortcodes use clean URLs
+✅ Schema.org @id fields use clean URLs
+✅ All navigation uses clean URLs
+
+### Important
+- Still requires permalink flush after update (Settings → Permalinks → Save)
+- All previous warnings about URL conflicts still apply
+
 ## [2.28.2] - 2025-12-05
 
 ### Fixed

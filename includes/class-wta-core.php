@@ -133,6 +133,10 @@ class WTA_Core {
 		// Register custom post type
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
+		
+		// Register URL cleanup filters
+		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 10, 2 );
+		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_clean_urls' );
 
 		// Admin class
 		$admin = new WTA_Admin();
