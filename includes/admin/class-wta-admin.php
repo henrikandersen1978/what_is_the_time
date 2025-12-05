@@ -610,8 +610,8 @@ class WTA_Admin {
 			// Clear post cache
 			clean_post_cache( $post_id );
 
-			// Clear permalink cache
-			delete_post_meta( $post_id, '_wp_old_slug' );
+		// Clear permalink cache
+		delete_post_meta( $post_id, '_wp_old_slug' );
 
 		// Clear ALL Yoast SEO caches if exists
 		if ( class_exists( 'WPSEO_Options' ) ) {
@@ -645,21 +645,21 @@ class WTA_Admin {
 			delete_transient( 'wpseo_sitemap_cache_' . $post_id );
 		}
 
-			// Force WordPress to regenerate permalink
-			$post = get_post( $post_id );
-			if ( $post ) {
-				// Get fresh permalink (our filter will apply)
-				$new_permalink = get_permalink( $post_id );
+		// Force WordPress to regenerate permalink
+		$post = get_post( $post_id );
+		if ( $post ) {
+			// Get fresh permalink (our filter will apply)
+			$new_permalink = get_permalink( $post_id );
 
-				WTA_Logger::debug( 'Permalink regenerated', array(
-					'post_id'   => $post_id,
-					'title'     => $post->post_title,
-					'permalink' => $new_permalink,
-				) );
+			WTA_Logger::debug( 'Permalink regenerated', array(
+				'post_id'   => $post_id,
+				'title'     => $post->post_title,
+				'permalink' => $new_permalink,
+			) );
 
-				$updated++;
-			}
+			$updated++;
 		}
+	}
 
 	// Clear object cache
 	wp_cache_flush();

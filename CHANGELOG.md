@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.5] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed indentation bug in permalink regeneration tool**
+- Problem: v2.29.4 failed immediately with "Request failed or timed out"
+- Root cause: Indentation error caused permalink regeneration code to be outside the foreach loop
+- Result: The tool didn't actually process any posts
+- This was introduced in v2.29.4 when adding Yoast cache clearing
+
+### Technical Details
+
+**The Bug:**
+```php
+foreach ( $post_ids as $post_id ) {
+    if ( class_exists( 'WPSEO_Options' ) ) {
+        // ... Yoast clearing ...
+    }  // ← End of if block
+
+    // ← This code was OUTSIDE foreach due to wrong indentation
+    $post = get_post( $post_id );
+}  // ← End of foreach
+```
+
+**The Fix:**
+```php
+foreach ( $post_ids as $post_id ) {
+    if ( class_exists( 'WPSEO_Options' ) ) {
+        // ... Yoast clearing ...
+    }
+    
+    // ✅ Now correctly inside foreach loop
+    $post = get_post( $post_id );
+}
+```
+
+**After Update:**
+1. Upload plugin v2.29.5
+2. Go to World Time AI → Tools → Regenerate All Permalinks
+3. This time it will actually work!
+
 ## [2.29.4] - 2025-12-05
 
 ### Fixed
