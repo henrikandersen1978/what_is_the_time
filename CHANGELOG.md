@@ -2,6 +2,113 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.2] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed `/l/` prefix still appearing in URLs**
+- Problem: Negative lookahead `(?!l/)` in rewrite rules was unreliable
+- Slug was empty string `''` instead of `'l'`, causing WordPress to fall back to `wta_location`
+- Result: Filter tried to remove `/l/` but URLs contained `/wta_location/` or query strings
+
+### Changed
+- **Changed slug from `''` to `'l'` in register_post_type**
+- **Replaced negative lookahead with character count `[^/]{2,}`**
+- Custom rewrite rules now match paths with 2+ characters only:
+  - Matches: `/europa/`, `/europa/danmark/` (2+ chars)
+  - Excludes: `/l/`, `/l/europa/` (first segment only 1 char)
+- This is more reliable than regex lookahead for excluding single-letter paths
+
+### Technical Details
+
+**The Bug:**
+```php
+// Slug was empty string
+'rewrite' => array(
+    'slug' => '',  // ❌ WordPress falls back to 'wta_location'
+),
+
+// Filter tried to remove /l/ but URLs had /wta_location/
+$post_link = str_replace( '/l/', '/', $post_link );  // Never matched!
+```
+
+**The Fix:**
+```php
+// Use dummy slug 'l'
+'rewrite' => array(
+    'slug' => 'l',  // ✅ WordPress generates /l/europa/
+),
+
+// Custom rules only match 2+ character paths
+add_rewrite_rule(
+    '^([^/]{2,})/([^/]+)/?$',  // europa (5 chars) ✅, l (1 char) ❌
+    'index.php?post_type=wta_location&name=$matches[2]',
+    'top'
+);
+
+// Filter successfully removes /l/
+$post_link = str_replace( '/l/', '/', $post_link );  // Works!
+```
+
+**After Update:**
+1. Upload plugin v2.29.2
+2. Go to Settings → Permalinks and click Save (flush rewrite rules)
+3. Test: Visit `/l/europa/` → should redirect/show as `/europa/`
+4. Check schema markup - should show `/europa/` not `/l/europa/`
+
+## [2.29.1] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed `/l/` prefix not being removed from URLs**
+- Problem: Custom rewrite rules matched `/l/europa/` and bypassed permalink filter
+- Result: URLs showed as `/l/europa/danmark/` instead of `/europa/danmark/`
+- Root cause: Conflicting rewrite rules - both hierarchical AND custom rules matched same patterns
+
+### Changed
+- **Updated custom rewrite rules with negative lookahead**
+- Rules now explicitly EXCLUDE `/l/` prefix: `^(?!l/)([^/]+)/...`
+- This ensures:
+  1. WordPress hierarchical rewrite handles `/l/europa/` → runs permalink filter → `/europa/`
+  2. Custom rules ONLY catch clean URLs `/europa/` (after filter)
+  3. No conflicts between rule sets
+
+### Technical Details
+
+**The Bug:**
+```php
+// OLD: Custom rules matched BOTH /l/europa/ AND /europa/
+add_rewrite_rule(
+    '^([^/]+)/([^/]+)/?$',  // Matches /l/europa/ ❌
+    'index.php?post_type=wta_location&name=$matches[2]',
+    'top'
+);
+// Result: Requests to /l/europa/ hit custom rule, bypassed filter
+```
+
+**The Fix:**
+```php
+// NEW: Negative lookahead excludes /l/ prefix
+add_rewrite_rule(
+    '^(?!l/)([^/]+)/([^/]+)/?$',  // Does NOT match /l/europa/ ✅
+    'index.php?post_type=wta_location&name=$matches[2]',
+    'top'
+);
+// Result: /l/europa/ uses hierarchical rewrite → filter removes /l/
+```
+
+**How it works now:**
+1. WordPress generates permalink: `/l/europa/danmark/`
+2. User visits: `/l/europa/danmark/`
+3. Hierarchical rewrite matches (custom rules don't match due to `(?!l/)`)
+4. Permalink filter runs: Removes `/l/` → `/europa/danmark/`
+5. User sees clean URL in browser
+6. Internal links use `get_permalink()` → filter removes `/l/` → clean URLs everywhere
+
+**After Update:**
+1. Upload plugin v2.29.1
+2. Go to Settings → Permalinks and click Save
+3. Test URLs - `/l/` should be removed everywhere
+4. No need to re-import (filter works on existing posts)
+
 ## [2.29.0] - 2025-12-05
 
 ### Fixed

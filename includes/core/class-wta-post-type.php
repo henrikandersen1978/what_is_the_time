@@ -253,7 +253,7 @@ class WTA_Post_Type {
 			'show_in_menu'       => false, // We add custom menu via admin class
 			'query_var'          => true,
 		'rewrite'            => array(
-			'slug'         => '',
+			'slug'         => 'l',
 			'with_front'   => false,
 			'hierarchical' => true,
 		),
@@ -280,20 +280,23 @@ class WTA_Post_Type {
 			) );
 		}
 		
-		// Add custom rewrite rules for hierarchical URLs without post type prefix
+		// Add custom rewrite rules for clean URLs (without /l/ prefix)
+		// These catch requests to /europa/ when users visit clean URLs
+		// WordPress's default rules handle /l/europa/
+		// Use [^/]{2,} to match 2+ characters, excluding single-letter paths like /l/
 		add_rewrite_rule(
-			'^([^/]+)/([^/]+)/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]&' . WTA_POST_TYPE . '=$matches[1]/$matches[2]/$matches[3]',
+			'^([^/]{2,})/([^/]+)/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]',
 			'top'
 		);
 		add_rewrite_rule(
-			'^([^/]+)/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]&' . WTA_POST_TYPE . '=$matches[1]/$matches[2]',
+			'^([^/]{2,})/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]',
 			'top'
 		);
 		add_rewrite_rule(
-			'^([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]&' . WTA_POST_TYPE . '=$matches[1]',
+			'^([^/]{2,})/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
 			'top'
 		);
 	}
