@@ -88,6 +88,13 @@ class WTA_Wikidata_Translator {
 
 	$label = $data['entities'][ $wikidata_id ]['labels'][ $target_lang ]['value'];
 	$original_label = $label; // Store for debugging
+	
+	// DEBUG: Log what Wikidata actually returns (before any cleaning)
+	WTA_Logger::debug( 'Wikidata raw label received', array(
+		'wikidata_id' => $wikidata_id,
+		'raw_label'   => $label,
+		'lang'        => $target_lang,
+	) );
 
 	// Validate label
 	if ( empty( $label ) || strlen( $label ) > 200 ) {

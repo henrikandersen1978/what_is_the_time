@@ -300,12 +300,15 @@ class WTA_AI_Translator {
 			return delete_transient( $cache_key );
 		}
 
-		// Clear all translation transients
+		// Clear all AI translation transients
 		$wpdb->query(
 			"DELETE FROM {$wpdb->options} 
 			WHERE option_name LIKE '_transient_wta_trans_%' 
 			OR option_name LIKE '_transient_timeout_wta_trans_%'"
 		);
+
+		// Also clear Wikidata translation cache
+		WTA_Wikidata_Translator::clear_cache();
 
 		WTA_Logger::info( 'Translation cache cleared' );
 		return true;

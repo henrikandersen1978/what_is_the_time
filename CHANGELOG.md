@@ -2,6 +2,25 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.27.12] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Clear Translation Cache now clears BOTH AI and Wikidata caches**
+- Previously "Clear Translation Cache" button only cleared AI translations (`wta_trans_`)
+- Now also clears Wikidata translations (`wta_wikidata_`) automatically
+- This was the root cause of "Kommune" persisting after v2.27.11 - old cached Wikidata translations
+- **Enhanced Wikidata Debugging**: Added raw label logging to track what Wikidata API actually returns
+
+### Technical Details
+- `WTA_AI_Translator::clear_cache()` now also calls `WTA_Wikidata_Translator::clear_cache()`
+- Added debug logging at the start of Wikidata label processing
+- Shows raw label before any suffix removal, making debugging easier
+
+### Important
+- **ACTION REQUIRED**: Click "Clear Translation Cache" button in Tools before next import
+- This will clear old cached "Kommune" translations from before v2.27.11
+- Then the new LAG 2 cleanup code will run on fresh Wikidata API responses
+
 ## [2.27.11] - 2025-12-05
 
 ### Fixed
