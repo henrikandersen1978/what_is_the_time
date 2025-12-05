@@ -613,11 +613,37 @@ class WTA_Admin {
 			// Clear permalink cache
 			delete_post_meta( $post_id, '_wp_old_slug' );
 
-			// Clear Yoast SEO cache if exists
-			if ( class_exists( 'WPSEO_Options' ) ) {
-				delete_post_meta( $post_id, '_yoast_wpseo_canonical' );
-				delete_transient( 'wpseo_sitemap_cache_' . $post_id );
+		// Clear ALL Yoast SEO caches if exists
+		if ( class_exists( 'WPSEO_Options' ) ) {
+			// Clear canonical meta
+			delete_post_meta( $post_id, '_yoast_wpseo_canonical' );
+			
+			// Clear ALL Yoast post meta that might contain URLs
+			delete_post_meta( $post_id, '_yoast_wpseo_opengraph-title' );
+			delete_post_meta( $post_id, '_yoast_wpseo_opengraph-description' );
+			delete_post_meta( $post_id, '_yoast_wpseo_twitter-title' );
+			delete_post_meta( $post_id, '_yoast_wpseo_twitter-description' );
+			
+			// Clear Yoast indexables (they cache permalinks in separate table)
+			if ( class_exists( 'Yoast\WP\SEO\Repositories\Indexable_Repository' ) ) {
+				try {
+					$indexable_repository = YoastSEO()->classes->get( 'Yoast\WP\SEO\Repositories\Indexable_Repository' );
+					$indexable = $indexable_repository->find_by_id_and_type( $post_id, 'post' );
+					if ( $indexable ) {
+						// Force indexable to rebuild by deleting it
+						$indexable_repository->delete( $indexable );
+					}
+				} catch ( Exception $e ) {
+					WTA_Logger::warning( 'Failed to clear Yoast indexable', array(
+						'post_id' => $post_id,
+						'error' => $e->getMessage(),
+					) );
+				}
 			}
+			
+			// Clear sitemap cache
+			delete_transient( 'wpseo_sitemap_cache_' . $post_id );
+		}
 
 			// Force WordPress to regenerate permalink
 			$post = get_post( $post_id );
@@ -635,13 +661,29 @@ class WTA_Admin {
 			}
 		}
 
-		// Clear object cache
-		wp_cache_flush();
+	// Clear object cache
+	wp_cache_flush();
 
-		// Clear Yoast SEO sitemap cache
-		if ( function_exists( 'YoastSEO' ) ) {
-			delete_transient( 'wpseo_sitemap_cache_validator' );
+	// Clear ALL Yoast SEO caches globally
+	if ( function_exists( 'YoastSEO' ) ) {
+		// Clear sitemap cache
+		delete_transient( 'wpseo_sitemap_cache_validator' );
+		
+		// Force Yoast to rebuild all indexables with new URLs
+		if ( class_exists( 'Yoast\WP\SEO\Commands\Index_Command' ) ) {
+			// Trigger indexables rebuild action
+			do_action( 'wpseo_permalink_change' );
 		}
+		
+		// Clear Yoast's internal caches
+		wp_cache_delete( 'wpseo_', 'options' );
+		
+		// Clear all Yoast transients
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wpseo_%' OR option_name LIKE '_transient_timeout_wpseo_%'" );
+		
+		WTA_Logger::info( 'Cleared all Yoast SEO caches and indexables' );
+	}
 
 		WTA_Logger::info( 'Permalink regeneration completed', array(
 			'updated_posts' => $updated,

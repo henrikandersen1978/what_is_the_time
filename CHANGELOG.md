@@ -2,6 +2,60 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.4] - 2025-12-05
+
+### Fixed
+- **Enhanced Yoast SEO cache clearing in permalink regeneration tool**
+- Problem: Yoast SEO still showed `/wta_location/` in OpenGraph, Schema, and meta tags even after v2.29.3
+- Root cause: Yoast has multiple cache layers that weren't being cleared:
+  1. Post meta for OpenGraph/Twitter cards
+  2. Indexables table (separate DB table that caches permalinks)
+  3. Transients for sitemap and other data
+  4. Object cache
+
+### Changed
+- **Updated `ajax_regenerate_permalinks()` to comprehensively clear all Yoast caches:**
+  - Clear all URL-related post meta (canonical, OpenGraph, Twitter)
+  - Delete and rebuild Yoast indexables (forces fresh permalink lookup)
+  - Clear ALL Yoast transients from database
+  - Trigger `wpseo_permalink_change` action
+  - Clear Yoast's object cache
+
+### Technical Details
+
+**Why Yoast Still Had Old URLs:**
+```
+Before v2.29.3:
+- Internal links: /l/europa/  (fixed in v2.29.3 ✅)
+- Breadcrumbs: /l/europa/     (fixed in v2.29.3 ✅)
+- Yoast meta: /wta_location/europa/  (still broken ❌)
+- Yoast schema: /wta_location/europa/ (still broken ❌)
+```
+
+Yoast caches URLs in a separate `wp_yoast_indexable` table. Even though `get_permalink()` now returns clean URLs, Yoast serves cached URLs from its indexable table.
+
+**The Fix:**
+```php
+// Per post: Delete indexable to force rebuild
+$indexable_repository->delete( $indexable );
+
+// Global: Clear ALL Yoast transients
+$wpdb->query( "DELETE FROM {$wpdb->options} 
+               WHERE option_name LIKE '_transient_wpseo_%'" );
+
+// Trigger Yoast's internal rebuild
+do_action( 'wpseo_permalink_change' );
+```
+
+**After Update:**
+1. Upload plugin v2.29.4
+2. Go to World Time AI → Tools
+3. Click "Regenerate All Permalinks"
+4. Wait for completion
+5. Check page source - Yoast meta and schema should now be clean
+
+**Note:** This only affects sites using Yoast SEO. If you don't have Yoast, v2.29.3 already fixed everything.
+
 ## [2.29.3] - 2025-12-05
 
 ### Fixed
