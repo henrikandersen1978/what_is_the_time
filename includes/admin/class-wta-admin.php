@@ -602,9 +602,9 @@ class WTA_Admin {
 
 		$post_ids = get_posts( $args );
 
-		WTA_Logger::info( 'Starting permalink regeneration', array(
-			'total_posts' => count( $post_ids ),
-		) );
+	WTA_Logger::info( 'Starting permalink regeneration', array(
+		'total_posts' => count( $post_ids ),
+	) );
 
 	foreach ( $post_ids as $post_id ) {
 		// Clear post cache
@@ -669,15 +669,15 @@ class WTA_Admin {
 		// Clear sitemap cache
 		delete_transient( 'wpseo_sitemap_cache_validator' );
 		
-		// Force Yoast to rebuild all indexables with new URLs
-		if ( class_exists( 'Yoast\WP\SEO\Commands\Index_Command' ) ) {
-			// Trigger indexables rebuild action
-			do_action( 'wpseo_permalink_change' );
-		}
-		
-		// Clear Yoast's internal caches
-		wp_cache_delete( 'wpseo_', 'options' );
-		
+	// Force Yoast to rebuild all indexables with new URLs
+	if ( class_exists( 'Yoast\WP\SEO\Commands\Index_Command' ) ) {
+		// Trigger indexables rebuild action
+		do_action( 'wpseo_permalink_change' );
+	}
+	
+	// Clear Yoast's internal caches
+	wp_cache_delete( 'wpseo_', 'options' );
+	
 	// Clear all Yoast transients
 	global $wpdb;
 	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wpseo_%' OR option_name LIKE '_transient_timeout_wpseo_%'" );

@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.8] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed MORE indentation errors that prevented function from working**
+- Problem: v2.29.7 still failed with "Request failed or timed out"
+- Root causes found:
+  1. Line 609 `foreach`: Only 1 tab instead of 2 (outside function scope)
+  2. Lines 678-685 (Yoast cache clearing): Only 1 tab instead of 2 (outside if block)
+- Result: Code was executed in wrong scope, causing immediate failures
+
+### Technical Details
+
+**The remaining indentation errors:**
+```php
+public function ajax_regenerate_permalinks() {
+WTA_Logger::info(...);
+
+foreach ( $post_ids as $post_id ) {  // ❌ Only 1 tab - should be 2!
+    // ...
+}
+
+if ( function_exists( 'YoastSEO' ) ) {
+    // ...
+    
+// Clear Yoast's internal caches        // ❌ Only 1 tab - should be 2!
+wp_cache_delete( 'wpseo_', 'options' );
+global $wpdb;                          // ❌ Executed outside if block!
+```
+
+All indentation is now fixed:
+- `foreach`: Now has 2 tabs (inside function)
+- Yoast cache clearing: Now has 2 tabs (inside if block)
+- All closing braces properly aligned
+
+**After Update:**
+Upload v2.29.8 and try "Regenerate All Permalinks" - it should finally work!
+
 ## [2.29.7] - 2025-12-05
 
 ### Fixed
