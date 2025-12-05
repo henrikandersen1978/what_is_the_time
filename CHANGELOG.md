@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.9] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Complete rewrite of URL generation (WordPress Best Practice)**
+- Problem: Empty slug caused WordPress to use 'wta_location' as fallback → `/wta_location/europa/` (404)
+- v2.28.8 approach (empty slug) is NOT valid in WordPress - causes fallback to post type name
+- Solution: Disabled automatic rewrite completely + custom rewrite rules + hierarchical permalink builder
+
+### Changed
+- **Post type registration:** Set `'rewrite' => false` (disable automatic URL generation)
+- **Custom rewrite rules:** Moved to direct init hook (priority 0) for clean URLs
+- **Permalink filter:** Completely rewritten to build hierarchical URLs from post parent chain
+- Now follows WordPress best practice for custom URL structures
+
+### Technical Details
+
+**Previous Approach (v2.28.8) - FAILED:**
+```php
+'rewrite' => array( 'slug' => '' ),  // ❌ WordPress uses post type name as fallback!
+// Result: /wta_location/europa/ (404)
+```
+
+**New Approach (v2.28.9) - WordPress Best Practice:**
+```php
+'rewrite' => false,  // ✅ Disable automatic rewrite entirely
+
+// Add custom rewrite rules
+add_rewrite_rule(
+    '^([^/]+)/([^/]+)/([^/]+)/?$',  // continent/country/city
+    'index.php?post_type=wta_location&name=$matches[3]',
+    'top'
+);
+// ... (+ 2 more rules for country and continent levels)
+
+// Custom permalink builder
+public function remove_post_type_slug( $post_link, $post ) {
+    // Build URL from post hierarchy:
+    // City → Country → Continent
+    // Reverse to: Continent/Country/City
+    // Return: home_url('/continent/country/city/')
+}
+```
+
+**How it works:**
+1. ✅ Post type has `'rewrite' => false` (no automatic URL generation)
+2. ✅ Custom rewrite rules map clean URLs to query vars
+3. ✅ Permalink filter builds URLs from post parent hierarchy
+4. ✅ Result: `/europa/danmark/koebenhavn/` everywhere
+
+**Benefits:**
+- Clean URLs in landing pages ✅
+- Clean URLs in internal links ✅
+- Clean URLs in schema markup ✅
+- Clean URLs in Yoast SEO ✅
+- No redirects needed ✅
+- WordPress best practice ✅
+
+**After Update:**
+1. Upload plugin v2.28.9
+2. Go to Settings → Permalinks and click Save
+3. Re-import data (content will have clean URLs)
+4. All URLs will be clean throughout the site
+
 ## [2.28.8] - 2025-12-05
 
 ### Fixed
