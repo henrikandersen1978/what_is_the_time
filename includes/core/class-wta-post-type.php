@@ -14,7 +14,66 @@ class WTA_Post_Type {
 	 * @since    2.0.0
 	 */
 	public function __construct() {
-		// No custom URL handling - use standard WordPress routing
+		// Add filters for clean URLs without post type prefix
+		add_filter( 'post_type_link', array( $this, 'remove_post_type_slug' ), 10, 2 );
+		add_action( 'pre_get_posts', array( $this, 'parse_clean_urls' ) );
+	}
+	
+	/**
+	 * Remove post type slug from permalinks.
+	 *
+	 * @since    2.28.2
+	 * @param    string  $post_link Post URL.
+	 * @param    WP_Post $post      Post object.
+	 * @return   string             Modified URL.
+	 */
+	public function remove_post_type_slug( $post_link, $post ) {
+		if ( WTA_POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
+			return $post_link;
+		}
+		
+		// Remove the post type slug from URL
+		$post_link = str_replace( '/' . WTA_POST_TYPE . '/', '/', $post_link );
+		
+		return $post_link;
+	}
+	
+	/**
+	 * Parse clean URLs and set correct query var.
+	 *
+	 * @since    2.28.2
+	 * @param    WP_Query $query Query object.
+	 */
+	public function parse_clean_urls( $query ) {
+		// Only on main query, not in admin
+		if ( ! $query->is_main_query() || is_admin() ) {
+			return;
+		}
+		
+		// Check if this is a 404 that might be our location
+		if ( ! isset( $query->query_vars['post_type'] ) && isset( $query->query_vars['pagename'] ) ) {
+			$pagename = $query->query_vars['pagename'];
+			
+			// Try to find a location post with this slug
+			$parts = explode( '/', trim( $pagename, '/' ) );
+			$slug = end( $parts );
+			
+			// Check if a location post exists with this slug
+			$posts = get_posts( array(
+				'name'        => $slug,
+				'post_type'   => WTA_POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => 1,
+			) );
+			
+			if ( ! empty( $posts ) ) {
+				// Set the correct query vars
+				$query->set( 'post_type', WTA_POST_TYPE );
+				$query->set( 'name', $slug );
+				$query->set( WTA_POST_TYPE, $pagename );
+				unset( $query->query_vars['pagename'] );
+			}
+		}
 	}
 
 	/**
@@ -86,6 +145,23 @@ class WTA_Post_Type {
 				'rest_enabled' => ! empty( $args['show_in_rest'] ),
 			) );
 		}
+		
+		// Add custom rewrite rules for hierarchical URLs without post type prefix
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]&' . WTA_POST_TYPE . '=$matches[1]/$matches[2]/$matches[3]',
+			'top'
+		);
+		add_rewrite_rule(
+			'^([^/]+)/([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]&' . WTA_POST_TYPE . '=$matches[1]/$matches[2]',
+			'top'
+		);
+		add_rewrite_rule(
+			'^([^/]+)/?$',
+			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]&' . WTA_POST_TYPE . '=$matches[1]',
+			'top'
+		);
 	}
 }
 

@@ -2,6 +2,39 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.2] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Completely removed post type prefix from URLs**
+- URLs now work correctly: `/europa/danmark/` instead of `/wta_location/europa/danmark/`
+- Added custom rewrite rules for hierarchical URLs without post type prefix
+- Added permalink filters to remove `wta_location` slug from generated URLs
+- Added URL parser to correctly match clean URLs to location posts
+
+### Technical
+- `post_type_link` filter removes post type slug from permalinks
+- `pre_get_posts` filter parses clean URLs and sets correct query vars
+- Custom rewrite rules handle 1, 2, and 3-level hierarchies
+- Rules added at 'top' priority to catch before WordPress defaults
+
+### Important Warnings
+- **CRITICAL: You MUST flush permalinks after this update!**
+  - Go to Settings → Permalinks → Click "Save Changes"
+- **POTENTIAL CONFLICTS**: Clean URLs can collide with WordPress pages
+  - If you have a page named "europa", "danmark", etc., it will conflict
+  - Location URLs take priority due to 'top' rewrite rule priority
+  - Consider deleting or renaming conflicting pages before import
+- **BREAKING CHANGE**: All existing URLs will change
+  - Old: `/wta_location/europa/danmark/`
+  - New: `/europa/danmark/`
+  - OK on test site, but plan redirects for production
+
+### Testing Required
+- Test all location pages after permalink flush
+- Verify breadcrumbs still work
+- Check internal links
+- Test schema markup URLs
+
 ## [2.28.1] - 2025-12-05
 
 ### Fixed
