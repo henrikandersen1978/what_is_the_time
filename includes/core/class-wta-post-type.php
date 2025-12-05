@@ -256,6 +256,15 @@ class WTA_Post_Type {
 	 * @return   array             Modified query variables.
 	 */
 	public function parse_clean_urls_request( $query_vars ) {
+		// ========================================
+		// DIAGNOSTIC MODE v2.30.10
+		// COMPLETELY DISABLE REQUEST FILTER FOR TESTING
+		// If Pilanto errors disappear, this filter is the problem
+		// If errors persist, the problem is elsewhere
+		// ========================================
+		error_log('WTA REQUEST FILTER: DISABLED FOR DIAGNOSTIC - URL: ' . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+		return $query_vars; // IMMEDIATE RETURN - NO PROCESSING
+		
 		// DEFENSE 1: Skip in admin
 		if ( is_admin() ) {
 			return $query_vars;

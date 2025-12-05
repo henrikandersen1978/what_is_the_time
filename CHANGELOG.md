@@ -2,6 +2,53 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.10] - 2025-12-05
+
+### DIAGNOSTIC VERSION
+- **Request filter completely disabled for testing**
+- **This version logs but does NOT process any URLs**
+- **Purpose: Determine if our request filter causes Pilanto-Text-Snippets errors**
+
+### Testing Instructions
+
+Upload this version and test:
+
+1. **Visit `/om/` page**
+   - If NO Pilanto warnings appear → Our request filter WAS the problem
+   - If warnings STILL appear → Problem is elsewhere (rewrite rules, other filters, etc.)
+
+2. **Visit location URLs** (e.g., `/europa/danmark/aalborg/`)
+   - These will NOT work in this version (expected)
+   - They will show query string URLs like `?wta_location=europa/danmark/aalborg`
+
+3. **Check PHP error log**
+   - Look for: `WTA REQUEST FILTER: DISABLED FOR DIAGNOSTIC`
+   - This confirms the filter is running but not processing
+
+### What's Disabled
+
+```php
+public function parse_clean_urls_request( $query_vars ) {
+    error_log('WTA REQUEST FILTER: DISABLED FOR DIAGNOSTIC - URL: ' . $_SERVER['REQUEST_URI']);
+    return $query_vars; // Immediate return - no processing
+    
+    // All defensive checks and URL processing are bypassed
+}
+```
+
+### Next Steps Based on Results
+
+**Scenario A: Pilanto warnings disappear**
+→ Our request filter is interfering with other plugins
+→ Need to refine our approach (different hook, different logic)
+
+**Scenario B: Pilanto warnings persist**
+→ Problem is NOT the request filter
+→ Check rewrite rules, permalink filters, or other hooks
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Added diagnostic early return
+
 ## [2.30.9] - 2025-12-05
 
 ### Fixed
