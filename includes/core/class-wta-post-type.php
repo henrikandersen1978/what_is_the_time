@@ -259,30 +259,35 @@ class WTA_Post_Type {
 				return;
 			}
 			
-			// URL starts with continent - check if location post exists
-			$slug = end( $parts );
+		// URL starts with continent - check if location post exists
+		$slug = end( $parts );
+		
+		// Use direct database query to avoid ANY global $post pollution
+		// This is critical because we're inside pre_get_posts hook
+		// Any WP_Query here can interfere with other plugins expecting clean $post
+		global $wpdb;
+		$post_exists = $wpdb->get_var( $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} 
+			WHERE post_name = %s 
+			AND post_type = %s 
+			AND post_status = 'publish' 
+			LIMIT 1",
+			$slug,
+			WTA_POST_TYPE
+		) );
+		
+		if ( $post_exists ) {
+			// Location post found - set correct query vars
+			$query->set( 'post_type', WTA_POST_TYPE );
+			$query->set( 'name', $slug );
+			$query->set( WTA_POST_TYPE, $pagename );
+			unset( $query->query_vars['pagename'] );
 			
-			// Use WP_Query instead of get_posts() to avoid polluting global $post
-			$location_query = new WP_Query( array(
-				'name'           => $slug,
-				'post_type'      => WTA_POST_TYPE,
-				'post_status'    => 'publish',
-				'posts_per_page' => 1,
-			) );
-			
-			if ( $location_query->have_posts() ) {
-				// Location post found - set correct query vars
-				$query->set( 'post_type', WTA_POST_TYPE );
-				$query->set( 'name', $slug );
-				$query->set( WTA_POST_TYPE, $pagename );
-				unset( $query->query_vars['pagename'] );
-				
-				// Mark as not 404
-				$query->is_404 = false;
-			}
-			
-			// CRITICAL: Reset global $post to avoid polluting other plugins
-			wp_reset_postdata();
+			// Mark as not 404
+			$query->is_404 = false;
+		}
+		
+		// No wp_reset_postdata() needed - we never touched $post!
 		}
 	}
 

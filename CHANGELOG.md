@@ -2,6 +2,63 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.5] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Eliminated ALL global $post pollution using direct database queries**
+- Replaced `WP_Query` with direct `$wpdb` query in `parse_clean_urls()`
+- Completely prevents interference with other plugins expecting clean $post context
+- Fixed Pilanto-Text-Snippets warnings about reading property on null
+
+### Technical Details
+
+**Problem:**
+- v2.30.4 used `WP_Query()` inside `pre_get_posts` hook
+- Even with `wp_reset_postdata()`, creating WP_Query objects can disturb global $post
+- Other plugins (Pilanto-Text-Snippets) expected $post to contain current page object
+- Result: "Warning: Attempt to read property 'post_content' on null"
+
+**Solution - Direct Database Query:**
+```php
+// Before: Used WP_Query (can pollute global context)
+$location_query = new WP_Query( array(
+    'name'           => $slug,
+    'post_type'      => WTA_POST_TYPE,
+    'posts_per_page' => 1,
+) );
+if ( $location_query->have_posts() ) { ... }
+wp_reset_postdata();
+
+// After: Direct database query (zero pollution)
+global $wpdb;
+$post_exists = $wpdb->get_var( $wpdb->prepare(
+    "SELECT ID FROM {$wpdb->posts} 
+    WHERE post_name = %s 
+    AND post_type = %s 
+    AND post_status = 'publish' 
+    LIMIT 1",
+    $slug,
+    WTA_POST_TYPE
+) );
+if ( $post_exists ) { ... }
+// No cleanup needed - we never touched $post!
+```
+
+**Why This Works:**
+- ✅ Direct `$wpdb` query doesn't touch global `$post` variable
+- ✅ No WP_Query objects created during request parsing
+- ✅ Other plugins see clean, unmodified WordPress state
+- ✅ Still validates location posts exist before routing
+- ✅ WordPress pages render normally with correct $post context
+- ✅ Location URLs still work perfectly
+
+**Performance Bonus:**
+- Single database query vs. full WP_Query setup
+- Faster response time for 404 checks
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Direct $wpdb query in `parse_clean_urls()`
+
 ## [2.30.4] - 2025-12-05
 
 ### Fixed
