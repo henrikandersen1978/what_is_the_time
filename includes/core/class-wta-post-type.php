@@ -64,6 +64,9 @@ class WTA_Post_Type {
 			) );
 		}
 		
+		// Clear continent slugs cache (so rewrite rules and request filter get fresh data)
+		delete_transient( 'wta_continent_slugs' );
+		
 		// Clear object cache for permalinks
 		wp_cache_delete( 'alloptions', 'options' );
 		
@@ -121,6 +124,13 @@ class WTA_Post_Type {
 		// Clear object cache
 		wp_cache_delete( $post_id, 'posts' );
 		wp_cache_delete( $post_id, 'post_meta' );
+		
+		// If this is a continent being saved, clear continent slugs cache
+		// This ensures new continents are immediately available for routing
+		$location_type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'continent' === $location_type ) {
+			delete_transient( 'wta_continent_slugs' );
+		}
 	}
 	
 	/**
@@ -193,6 +203,14 @@ class WTA_Post_Type {
 	 * @return   array Array of continent slugs.
 	 */
 	private function get_continent_slugs() {
+		// Check cache first (24 hour cache)
+		$cache_key = 'wta_continent_slugs';
+		$cached_slugs = get_transient( $cache_key );
+		
+		if ( false !== $cached_slugs && is_array( $cached_slugs ) ) {
+			return $cached_slugs;
+		}
+		
 		global $wpdb;
 		
 		// Query for all continent slugs directly from database
@@ -219,6 +237,9 @@ class WTA_Post_Type {
 			);
 		}
 		
+		// Cache for 24 hours
+		set_transient( $cache_key, $slugs, DAY_IN_SECONDS );
+		
 		return $slugs;
 	}
 	
@@ -228,19 +249,27 @@ class WTA_Post_Type {
 	 * This runs BEFORE WP_Query is created, so it doesn't interfere with
 	 * the global $post variable that other plugins depend on.
 	 * 
-	 * DEFENSIVE: Only processes URLs that start with known continent slugs.
+	 * DEFENSIVE: Multiple early exits to avoid interfering with normal WP pages.
 	 *
 	 * @since    2.30.6
 	 * @param    array $query_vars Query variables.
 	 * @return   array             Modified query variables.
 	 */
 	public function parse_clean_urls_request( $query_vars ) {
-		// Skip in admin
+		// DEFENSE 1: Skip in admin
 		if ( is_admin() ) {
 			return $query_vars;
 		}
 		
-		// Check if this looks like a potential location URL
+		// DEFENSE 2: If WordPress already knows what to query, don't interfere
+		if ( isset( $query_vars['post_type'] ) || 
+		     isset( $query_vars['p'] ) || 
+		     isset( $query_vars['page_id'] ) ||
+		     isset( $query_vars['name'] ) ) {
+			return $query_vars;
+		}
+		
+		// DEFENSE 3: Check if this looks like a potential location URL
 		// WordPress sets 'pagename' for hierarchical paths
 		if ( ! isset( $query_vars['pagename'] ) || empty( $query_vars['pagename'] ) ) {
 			return $query_vars;
@@ -248,14 +277,20 @@ class WTA_Post_Type {
 		
 		$pagename = $query_vars['pagename'];
 		
-		// Parse URL parts
+		// DEFENSE 4: Parse URL parts
 		$parts = explode( '/', trim( $pagename, '/' ) );
 		$first_part = $parts[0];
 		
-		// Get known continent slugs
+		// DEFENSE 5: Quick check - if only one part (single slug), probably a normal page
+		// Location URLs are always hierarchical: continent/country or continent/country/city
+		if ( count( $parts ) === 1 ) {
+			return $query_vars;
+		}
+		
+		// DEFENSE 6: Get known continent slugs (cached)
 		$continent_slugs = $this->get_continent_slugs();
 		
-		// If first part is NOT a continent, this is not a location URL
+		// DEFENSE 7: If first part is NOT a continent, this is not a location URL
 		// Let WordPress handle it normally (pages, posts, etc.)
 		if ( ! in_array( $first_part, $continent_slugs, true ) ) {
 			return $query_vars;

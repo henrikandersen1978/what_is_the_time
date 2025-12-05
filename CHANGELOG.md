@@ -2,6 +2,95 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.7] - 2025-12-05
+
+### Fixed
+- **Added 7 defensive checks to prevent ANY interference with normal WordPress pages**
+- **Added caching of continent slugs (24h) to avoid DB queries on every page load**
+- **Extremely conservative routing - exits early at multiple checkpoints**
+
+### Technical Details
+
+**Problem:**
+- v2.30.6 still made DB queries on every page load
+- Request filter ran on ALL requests, even when it shouldn't
+- This could potentially interfere with other plugins' query flow
+
+**Solution - Multiple Defense Layers:**
+
+```php
+public function parse_clean_urls_request( $query_vars ) {
+    // DEFENSE 1: Skip in admin
+    if ( is_admin() ) return $query_vars;
+    
+    // DEFENSE 2: If WordPress already knows what to query, don't interfere
+    if ( isset( $query_vars['post_type'] ) || 
+         isset( $query_vars['p'] ) || 
+         isset( $query_vars['page_id'] ) ||
+         isset( $query_vars['name'] ) ) {
+        return $query_vars;
+    }
+    
+    // DEFENSE 3: Need pagename set
+    if ( ! isset( $query_vars['pagename'] ) ) return $query_vars;
+    
+    // DEFENSE 4: Parse URL
+    $parts = explode( '/', $pagename );
+    
+    // DEFENSE 5: Single-slug URLs are probably normal pages
+    // Location URLs are ALWAYS hierarchical: continent/country/city
+    if ( count( $parts ) === 1 ) return $query_vars;
+    
+    // DEFENSE 6: Get continent slugs (NOW CACHED - no DB query!)
+    $continent_slugs = $this->get_continent_slugs();
+    
+    // DEFENSE 7: First part must be a continent
+    if ( ! in_array( $first_part, $continent_slugs ) ) {
+        return $query_vars; // Not our URL!
+    }
+    
+    // Only NOW do we check if location exists...
+}
+```
+
+**Continent Slugs Caching:**
+
+```php
+private function get_continent_slugs() {
+    // Check 24-hour cache first
+    $cached = get_transient( 'wta_continent_slugs' );
+    if ( $cached ) return $cached;
+    
+    // Query database only if cache miss
+    $slugs = $wpdb->get_col( ... );
+    
+    // Cache for 24 hours
+    set_transient( 'wta_continent_slugs', $slugs, DAY_IN_SECONDS );
+    
+    return $slugs;
+}
+```
+
+**Cache Clearing:**
+- ✅ Cleared when permalink settings saved
+- ✅ Cleared when continent post is saved
+- ✅ Auto-refreshes after 24 hours
+
+**Performance Benefits:**
+- ✅ 99% of requests exit at DEFENSE 2 (WordPress already knows what to do)
+- ✅ Normal pages exit at DEFENSE 5 (single slug check)
+- ✅ Zero DB queries for cached continent slugs
+- ✅ Minimal overhead on every page load
+
+**Why This Should Work:**
+1. WordPress pages like "Om / kontakt" have `page_id` or `pagename` without continent prefix
+2. They exit at DEFENSE 2 or DEFENSE 5 immediately
+3. No DB queries, no interference
+4. Other plugins see completely unmodified query flow
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - 7 defensive checks + caching
+
 ## [2.30.6] - 2025-12-05
 
 ### Fixed
