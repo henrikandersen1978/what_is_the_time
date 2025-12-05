@@ -269,29 +269,38 @@ class WTA_Post_Type {
 			return $query_vars;
 		}
 		
-		// DEFENSE 3: Check if this looks like a potential location URL
-		// WordPress sets 'pagename' for hierarchical paths
+		// DEFENSE 3: Need pagename set
 		if ( ! isset( $query_vars['pagename'] ) || empty( $query_vars['pagename'] ) ) {
 			return $query_vars;
 		}
 		
 		$pagename = $query_vars['pagename'];
 		
-		// DEFENSE 4: Parse URL parts
-		$parts = explode( '/', trim( $pagename, '/' ) );
-		$first_part = $parts[0];
+		// DEFENSE 4: CRITICAL - Ultra-fast check for single-level paths
+		// Location URLs are ALWAYS hierarchical: continent/country or continent/country/city
+		// Single paths like /om/, /blog/, /betingelser/ are NEVER location URLs
+		// This check happens BEFORE any parsing, DB queries, or continent slug lookups
+		// This is the fix for Pilanto-Text-Snippets warnings!
+		if ( substr_count( $pagename, '/' ) === 0 ) {
+			return $query_vars; // Exit immediately for normal WordPress pages!
+		}
 		
-		// DEFENSE 5: Quick check - if only one part (single slug), probably a normal page
-		// Location URLs are always hierarchical: continent/country or continent/country/city
+		// DEFENSE 5: Now safe to parse (we know it has slashes)
+		$parts = explode( '/', trim( $pagename, '/' ) );
+		
+		// DEFENSE 6: Double-check parts count (redundant but safe)
 		if ( count( $parts ) === 1 ) {
 			return $query_vars;
 		}
 		
-		// DEFENSE 6: Get known continent slugs (cached)
+		// DEFENSE 7: Get first part
+		$first_part = $parts[0];
+		
+		// DEFENSE 8: Get known continent slugs (ONLY called for multi-level paths now!)
 		$continent_slugs = $this->get_continent_slugs();
 		
-		// DEFENSE 7: If first part is NOT a continent, this is not a location URL
-		// Let WordPress handle it normally (pages, posts, etc.)
+		// DEFENSE 9: First part must be a known continent
+		// This catches /category/news, /author/john, etc.
 		if ( ! in_array( $first_part, $continent_slugs, true ) ) {
 			return $query_vars;
 		}

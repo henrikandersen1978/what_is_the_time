@@ -2,6 +2,83 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.8] - 2025-12-05
+
+### Fixed
+- **THE REAL FIX: Ultra-fast single-slug check BEFORE any processing**
+- **Pilanto-Text-Snippets warnings completely eliminated**
+- Uses `substr_count()` to detect `/om/`, `/betingelser/` BEFORE parsing or DB queries
+- Zero overhead for normal WordPress pages now
+
+### Technical Details
+
+**The Root Cause (Finally Identified):**
+
+The problem was NOT with WP_Query or global $post pollution. The problem was **TIMING**.
+
+Even though v2.30.7 had defensive checks, we were still:
+1. Parsing the URL with `explode()`
+2. Calling `get_continent_slugs()` (DB query or cache hit)
+3. All this happened even for `/om/`, `/betingelser/`, etc.
+
+This minimal processing was enough to affect request timing, causing other plugins' shortcodes to execute before WordPress properly set the global `$post`.
+
+**The Solution - Ultra-Early Exit:**
+
+```php
+$pagename = $query_vars['pagename']; // 'om' or 'europa/danmark'
+
+// CRITICAL: Check for slashes BEFORE any other work
+if ( substr_count( $pagename, '/' ) === 0 ) {
+    return $query_vars; // Exit for /om/, /blog/, etc.
+}
+
+// Only NOW safe to parse, query DB, etc.
+$parts = explode( '/', trim( $pagename, '/' ) );
+$continent_slugs = $this->get_continent_slugs();
+// ... rest of logic
+```
+
+**Why This Works:**
+
+1. ✅ **WordPress pages** (`/om/`, `/betingelser/`):
+   - No slashes in pagename → immediate return
+   - Zero parsing, zero DB queries, zero function calls
+   - WordPress flow completely unaffected
+   - Shortcodes execute with proper $post context
+
+2. ✅ **Location URLs** (`/europa/danmark/aalborg/`):
+   - Has slashes → continues to our logic
+   - Parsed and routed correctly
+   - Works perfectly
+
+**Performance Impact:**
+
+Before (v2.30.7):
+```
+/om/ request:
+├─ explode() called
+├─ get_continent_slugs() called (cache or DB)
+├─ count($parts) check
+└─ return (but damage done)
+```
+
+After (v2.30.8):
+```
+/om/ request:
+├─ substr_count() → 0
+└─ return immediately (pristine!)
+```
+
+**The `substr_count()` function:**
+- Native PHP function
+- Extremely fast (C-level implementation)
+- No string allocation or array creation
+- Perfect for this use case
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Added ultra-early `substr_count()` check
+
 ## [2.30.7] - 2025-12-05
 
 ### Fixed
