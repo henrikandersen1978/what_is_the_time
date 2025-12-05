@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.28.5
+ * Version:           2.28.6
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.28.5' );
+define( 'WTA_VERSION', '2.28.6' );
 
 /**
  * Plugin directory path.
@@ -93,6 +93,31 @@ function deactivate_world_time_ai() {
 
 register_activation_hook( __FILE__, 'activate_world_time_ai' );
 register_deactivation_hook( __FILE__, 'deactivate_world_time_ai' );
+
+/**
+ * Check for plugin upgrades and flush rewrite rules if needed.
+ */
+function wta_check_plugin_upgrade() {
+	$current_version = get_option( 'wta_plugin_version' );
+	
+	// If version has changed, flush rewrite rules
+	if ( $current_version !== WTA_VERSION ) {
+		// Flush rewrite rules to ensure custom rules are registered
+		flush_rewrite_rules( false );
+		
+		// Update version in database
+		update_option( 'wta_plugin_version', WTA_VERSION );
+		
+		// Log the upgrade
+		if ( class_exists( 'WTA_Logger' ) ) {
+			WTA_Logger::info( 'Plugin upgraded, rewrite rules flushed', array(
+				'old_version' => $current_version,
+				'new_version' => WTA_VERSION,
+			) );
+		}
+	}
+}
+add_action( 'admin_init', 'wta_check_plugin_upgrade' );
 
 /**
  * The core plugin class.

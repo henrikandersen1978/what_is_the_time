@@ -144,8 +144,8 @@ class WTA_Core {
 		$this->loader->add_filter( 'redirect_canonical', $post_type, 'disable_canonical_redirect', 10, 2 );
 		$this->loader->add_filter( 'do_redirect_guess_404_permalink', $post_type, 'disable_guess_redirect', 10, 1 );
 		
-		// Force clear permalink cache on init
-		$this->loader->add_action( 'init', $post_type, 'clear_permalink_cache', 999 );
+		// Ensure rewrite rules are properly set (checks and flushes if needed)
+		$this->loader->add_action( 'init', $post_type, 'ensure_rewrite_rules', 999 );
 		
 		// Clear permalink cache when location posts are saved
 		$this->loader->add_action( 'save_post_' . WTA_POST_TYPE, $post_type, 'clear_single_permalink_cache', 10, 1 );

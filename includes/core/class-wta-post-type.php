@@ -44,21 +44,54 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Clear permalink cache to force regeneration with our filter.
+	 * Check and ensure rewrite rules are properly set.
 	 *
-	 * @since    2.28.4
+	 * @since    2.28.6
 	 */
-	public function clear_permalink_cache() {
-		// Clear WordPress permalink cache
-		delete_option( 'rewrite_rules' );
+	public function ensure_rewrite_rules() {
+		// Check if rewrite rules exist
+		$rules = get_option( 'rewrite_rules' );
 		
-		// Clear object cache for all our posts
-		wp_cache_flush();
+		// If rules don't exist OR don't contain our custom rules, flush them
+		if ( ! $rules || ! $this->check_custom_rules_exist( $rules ) ) {
+			flush_rewrite_rules( false );
+			
+			WTA_Logger::info( 'Rewrite rules flushed', array(
+				'reason' => empty( $rules ) ? 'rules_missing' : 'custom_rules_missing',
+			) );
+		}
+		
+		// Clear object cache for permalinks
+		wp_cache_delete( 'alloptions', 'options' );
 		
 		// Clear Yoast SEO permalink cache if it exists
 		if ( function_exists( 'YoastSEO' ) ) {
 			delete_transient( 'wpseo_sitemap_cache_validator' );
 		}
+	}
+	
+	/**
+	 * Check if our custom rewrite rules exist in the rules array.
+	 *
+	 * @since    2.28.6
+	 * @param    array $rules Rewrite rules array.
+	 * @return   bool         True if custom rules exist.
+	 */
+	private function check_custom_rules_exist( $rules ) {
+		// Check if any of our custom rules exist
+		$custom_patterns = array(
+			'^([^/]+)/([^/]+)/([^/]+)/?$',
+			'^([^/]+)/([^/]+)/?$',
+			'^([^/]+)/?$',
+		);
+		
+		foreach ( $custom_patterns as $pattern ) {
+			if ( isset( $rules[ $pattern ] ) ) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	/**

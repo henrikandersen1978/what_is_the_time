@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.6] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed rewrite rules not being generated**
+- Root cause: Aggressive `delete_option('rewrite_rules')` prevented rules from being persistent
+- WordPress couldn't find our custom rewrite rules → redirects failed
+- Replaced aggressive deletion with smart detection and regeneration
+- Added upgrade check: automatically flushes rules when plugin version changes
+- Added validation: checks if custom rules exist before flushing
+
+### Changed
+- `clear_permalink_cache()` → `ensure_rewrite_rules()` (smarter, less aggressive)
+- Only flushes rewrite rules if they're missing OR custom rules don't exist
+- Version upgrade detection now triggers automatic flush on first admin page load
+- Reduced unnecessary cache clearing (was causing rules to be deleted too often)
+
+### Technical Details
+**Problem:**
+- Every `init` we ran `delete_option('rewrite_rules')` + `wp_cache_flush()`
+- This prevented WordPress from ever saving our custom rules to database
+- Result: `rewrite_rules` option was EMPTY in wp_options
+- Without saved rules, WordPress couldn't route clean URLs
+
+**Solution:**
+1. Check if `rewrite_rules` option exists
+2. Check if our custom patterns exist in rules array
+3. Only flush if rules missing or incomplete
+4. Auto-flush on plugin upgrade (version change detection)
+
+### Debug
+- Added logging when rewrite rules are flushed
+- Logs reason: `rules_missing` vs `custom_rules_missing`
+- Helps diagnose future routing issues
+
 ## [2.28.5] - 2025-12-05
 
 ### Fixed
