@@ -1,7 +1,14 @@
 # Build Release Script for World Time AI
 # Uses Windows tar for proper Unix-compatible zip files
 
-param([string]$Version = "2.1.1")
+# Auto-detect version from plugin file
+$PluginFile = Get-Content "time-zone-clock.php" -Raw
+if ($PluginFile -match 'Version:\s+(\d+\.\d+\.\d+)') {
+    $Version = $matches[1]
+} else {
+    Write-Host "ERROR: Could not detect version from time-zone-clock.php" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "Building World Time AI v$Version..." -ForegroundColor Cyan
 
