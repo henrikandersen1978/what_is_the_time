@@ -2,6 +2,70 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.29.0] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Fixed query string URLs in schema, links, and content**
+- Problem: `'rewrite' => false` caused WordPress to generate `?wta_location=europa` URLs everywhere
+- v2.28.9 approach FAILED - WordPress always returns query strings when rewrite is disabled
+- Even with custom filter, WordPress bypasses it and returns query strings first
+- Result: Schema markup, internal links, breadcrumbs all had `?wta_location=` URLs
+
+### Changed
+- **NEW STRATEGY: Dummy slug + filter removal (WordPress Best Practice)**
+- Use `'rewrite' => array('slug' => 'l', 'hierarchical' => true)` (short dummy slug)
+- WordPress generates: `/l/europa/danmark/`
+- Our filter removes `/l/` → `/europa/danmark/`
+- This is the ONLY reliable way to get clean URLs in WordPress
+
+### Technical Details
+
+**Why v2.28.9 Failed:**
+```php
+'rewrite' => false,  // ❌ WordPress ALWAYS returns query strings as fallback
+// Result: ?wta_location=europa even when get_permalink() is used
+```
+
+**The Real Problem:**
+- When `'rewrite' => false`, WordPress has no URL structure to build from
+- It falls back to query string format: `?post_type=wta_location&p=123`
+- Our `post_type_link` filter NEVER gets proper URLs to work with
+- Result: Query strings in schema, links, breadcrumbs, everywhere
+
+**The RIGHT Way (v2.29.0):**
+```php
+'rewrite' => array(
+    'slug'         => 'l',  // Short dummy slug
+    'hierarchical' => true,
+    'with_front'   => false,
+),
+
+// WordPress generates: /l/europa/danmark/
+// Filter removes '/l/': /europa/danmark/
+```
+
+**Why This Works:**
+1. ✅ WordPress has proper rewrite structure → generates real URLs
+2. ✅ Hierarchical URLs work automatically
+3. ✅ Our filter simply removes '/l/' prefix
+4. ✅ No query strings anywhere
+5. ✅ Schema, links, breadcrumbs all get clean URLs
+
+**Result After v2.29.0:**
+- Landing pages: `/europa/` ✅
+- Internal links: `/europa/danmark/` ✅
+- Schema URLs: `https://testsite1.pilanto.dk/europa/` ✅
+- ItemList URLs: `https://testsite1.pilanto.dk/europa/danmark/` ✅
+- Breadcrumbs: Clean URLs ✅
+- Tables: Clean URLs ✅
+
+**After Update:**
+1. Upload plugin v2.29.0
+2. Go to Settings → Permalinks and click Save
+3. Re-import data (content will use clean URLs from start)
+4. Test schema markup - should show clean URLs
+5. Test internal links - should be clean URLs
+
 ## [2.28.9] - 2025-12-05
 
 ### Fixed

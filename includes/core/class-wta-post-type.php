@@ -18,10 +18,10 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Generate clean permalinks without post type prefix.
+	 * Remove dummy slug from permalinks to create clean URLs.
 	 *
-	 * When rewrite is disabled ('rewrite' => false), WordPress doesn't generate
-	 * permalinks automatically. This filter builds clean hierarchical URLs.
+	 * WordPress generates: /l/europa/danmark/
+	 * This filter removes '/l/' → /europa/danmark/
 	 *
 	 * @since    2.28.2
 	 * @param    string       $post_link Post URL.
@@ -39,29 +39,11 @@ class WTA_Post_Type {
 			return $post_link;
 		}
 		
-		// Since rewrite is false, WordPress returns ?post_type=wta_location&p=123
-		// We need to build the clean hierarchical URL ourselves
+		// Remove dummy slug '/l/' from URL
+		// WordPress generates: /l/europa/ → We return: /europa/
+		$post_link = str_replace( '/l/', '/', $post_link );
 		
-		// Get the full hierarchy (city → country → continent)
-		$hierarchy = array();
-		$current_post = $post;
-		
-		while ( $current_post ) {
-			$hierarchy[] = $current_post->post_name;
-			if ( $current_post->post_parent ) {
-				$current_post = get_post( $current_post->post_parent );
-			} else {
-				break;
-			}
-		}
-		
-		// Reverse to get continent → country → city
-		$hierarchy = array_reverse( $hierarchy );
-		
-		// Build clean URL
-		$clean_url = home_url( '/' . implode( '/', $hierarchy ) . '/' );
-		
-		return $clean_url;
+		return $post_link;
 	}
 	
 	/**

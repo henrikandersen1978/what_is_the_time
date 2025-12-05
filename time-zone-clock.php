@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.28.9
+ * Version:           2.29.0
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.28.9' );
+define( 'WTA_VERSION', '2.29.0' );
 
 /**
  * Plugin directory path.
@@ -128,8 +128,11 @@ require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
  * DIRECT post type registration for debugging.
  * Register BEFORE anything else to ensure it works.
  * 
- * CRITICAL: 'rewrite' => false means we handle ALL URL generation ourselves
- * via custom rewrite rules and permalink filters.
+ * STRATEGY: Use a short dummy slug ('l') + hierarchical rewrite
+ * WordPress generates: /l/europa/danmark/
+ * Our filter removes '/l/' → /europa/danmark/
+ * 
+ * This is the ONLY reliable way to avoid query string URLs in WordPress.
  */
 add_action( 'init', function() {
 	register_post_type( 'wta_location', array(
@@ -142,30 +145,16 @@ add_action( 'init', function() {
 		'show_ui' => true,
 		'show_in_menu' => true,
 		'query_var' => true,
-		'rewrite' => false,  // Disable automatic rewrite - we use custom rules
+		'rewrite' => array(
+			'slug'         => 'l',  // Short dummy slug - will be removed by filter
+			'hierarchical' => true,
+			'with_front'   => false,
+		),
 		'has_archive' => false,
 		'hierarchical' => true,
 		'supports' => array( 'title', 'editor', 'author', 'page-attributes' ),
 		'show_in_rest' => true,
 	) );
-	
-	// Add custom rewrite rules for hierarchical URLs WITHOUT any prefix
-	// Priority 'top' ensures these rules are checked first
-	add_rewrite_rule(
-		'^([^/]+)/([^/]+)/([^/]+)/?$',  // continent/country/city
-		'index.php?post_type=wta_location&name=$matches[3]',
-		'top'
-	);
-	add_rewrite_rule(
-		'^([^/]+)/([^/]+)/?$',  // continent/country
-		'index.php?post_type=wta_location&name=$matches[2]',
-		'top'
-	);
-	add_rewrite_rule(
-		'^([^/]+)/?$',  // continent
-		'index.php?post_type=wta_location&name=$matches[1]',
-		'top'
-	);
 }, 0 );
 
 /**
