@@ -2,8 +2,8 @@
 /**
  * Register custom post type for locations.
  * 
- * Uses WPExplorer's proven approach for removing CPT slugs without conflicts.
- * @link https://www.wpexplorer.com/remove-custom-post-type-slugs-in-wordpress/
+ * Uses dynamic continent-based rewrite rules for clean URLs.
+ * Combines custom rewrite with defensive pre_get_posts for maximum compatibility.
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/core
@@ -23,10 +23,9 @@ class WTA_Post_Type {
 	/**
 	 * Remove post type slug from permalinks.
 	 * 
-	 * Based on WPExplorer's approach.
 	 * Generates clean URLs: /europa/danmark/ instead of /l/europa/danmark/
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @param    string  $post_link Post URL.
 	 * @param    WP_Post $post      Post object.
 	 * @param    bool    $leavename Whether to keep post name.
@@ -50,12 +49,12 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Parse request to allow slug-less URLs for locations.
+	 * Defensive pre_get_posts to handle edge cases.
 	 * 
-	 * Adapted from WPExplorer's approach for hierarchical URLs.
-	 * Much more flexible than original to handle /europa/danmark/kolding/ structure.
+	 * Only modifies queries for hierarchical paths starting with continents.
+	 * Exits early for single-level paths like /om/, /blog/, etc.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @param    WP_Query $query Query object.
 	 */
 	public function parse_request_for_locations( $query ) {
@@ -64,81 +63,41 @@ class WTA_Post_Type {
 			return;
 		}
 		
-		// DEBUG: Log what WordPress sends us
-		error_log('=== WTA PRE_GET_POSTS DEBUG ===');
-		error_log('URL: ' . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
-		error_log('Query count: ' . count($query->query));
-		error_log('Query vars: ' . print_r($query->query, true));
-		error_log('Query var keys: ' . implode(', ', array_keys($query->query)));
-		
-		// Check multiple possible query structures for hierarchical URLs
+		// Look for hierarchical pagename structure
 		$potential_path = null;
 		
-		// Structure 1: WPExplorer's structure (simple CPT posts)
-		if ( 2 === count( $query->query )
-			&& isset( $query->query['page'] )
-			&& ! empty( $query->query['name'] )
-		) {
-			$potential_path = $query->query['name'];
-			error_log('Matched Structure 1: WPExplorer (page + name)');
-		}
-		// Structure 2: Hierarchical pagename (WordPress pages style)
-		elseif ( isset( $query->query['pagename'] ) && ! empty( $query->query['pagename'] ) ) {
+		if ( isset( $query->query['pagename'] ) && ! empty( $query->query['pagename'] ) ) {
 			$potential_path = $query->query['pagename'];
-			error_log('Matched Structure 2: Hierarchical pagename');
-		}
-		// Structure 3: Our custom rewrite (wta_location set)
-		elseif ( isset( $query->query[ WTA_POST_TYPE ] ) && ! empty( $query->query[ WTA_POST_TYPE ] ) ) {
-			$potential_path = $query->query[ WTA_POST_TYPE ];
-			error_log('Matched Structure 3: Direct wta_location');
 		}
 		
 		// If we found a potential path, check if it's a location URL
 		if ( $potential_path ) {
-			error_log('Potential path found: ' . $potential_path);
-			
 			$parts = explode( '/', trim( $potential_path, '/' ) );
-			error_log('Path parts: ' . implode(' / ', $parts));
 			
-			// Only proceed if it's hierarchical (multiple parts)
-			if ( count( $parts ) > 1 ) {
-				$first_part = $parts[0];
-				error_log('First part: ' . $first_part);
-				
-				// Get known continent slugs
-				$continent_slugs = $this->get_continent_slugs();
-				error_log('Known continents: ' . implode(', ', $continent_slugs));
-				
-				// If first part is a continent, this is likely our URL
-				if ( in_array( $first_part, $continent_slugs, true ) ) {
-					error_log('MATCH! First part is a continent - modifying query');
-					
-					// Allow our post type to be queried
-					$query->set( 'post_type', array_merge( array( 'post', 'page' ), array( WTA_POST_TYPE ) ) );
-					
-					// Set the name to the last part (the actual post slug)
-					$last_part = end( $parts );
-					$query->set( 'name', $last_part );
-					error_log('Set post_type to include wta_location, name to: ' . $last_part);
-				} else {
-					error_log('NO MATCH: First part is NOT a continent');
-				}
-			} else {
-				error_log('Single part URL - skipping (probably normal page)');
+			// CRITICAL: Single-level paths are normal pages - DON'T TOUCH
+			// This prevents interference with /om/, /blog/, etc.
+			if ( count( $parts ) === 1 ) {
+				return;
 			}
-		} else {
-			error_log('No potential path found in query vars');
+			
+			// Only proceed for multi-level hierarchical paths
+			$first_part = $parts[0];
+			
+			// Get known continent slugs
+			$continent_slugs = $this->get_continent_slugs();
+			
+			// If first part is a continent, this might be our URL
+			if ( in_array( $first_part, $continent_slugs, true ) ) {
+				// Allow our post type to be queried alongside pages/posts
+				$query->set( 'post_type', array_merge( array( 'post', 'page' ), array( WTA_POST_TYPE ) ) );
+			}
 		}
-		
-		error_log('=== END WTA DEBUG ===');
 	}
 	
 	/**
 	 * Redirect old URLs with slugs to clean URLs.
-	 * 
-	 * Based on WPExplorer's approach.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 */
 	public function redirect_old_urls() {
 		// Only for singular location posts, not admin/preview
@@ -159,7 +118,7 @@ class WTA_Post_Type {
 	/**
 	 * Get the current URL.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @return   string Current URL.
 	 */
 	private function get_current_url() {
@@ -170,7 +129,7 @@ class WTA_Post_Type {
 	/**
 	 * Get post type slug from rewrite settings.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @param    string $type Post type name.
 	 * @return   string       Post type slug.
 	 */
@@ -180,11 +139,11 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Get known continent slugs for URL validation.
+	 * Get known continent slugs for URL validation and rewrite rules.
 	 * 
 	 * Cached for 24 hours to avoid repeated DB queries.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @return   array Array of continent slugs.
 	 */
 	private function get_continent_slugs() {
@@ -229,8 +188,7 @@ class WTA_Post_Type {
 	/**
 	 * Register the custom post type.
 	 *
-	 * Creates a hierarchical custom post type for locations (continents, countries, cities).
-	 * Uses a dummy slug 'l' which is removed by the permalink filter.
+	 * Creates a hierarchical custom post type for locations with dynamic rewrite rules.
 	 *
 	 * @since    2.0.0
 	 */
@@ -286,8 +244,52 @@ class WTA_Post_Type {
 
 		register_post_type( WTA_POST_TYPE, $args );
 		
-		// Clear continent slugs cache when registering post type
-		// This ensures fresh data after imports
+		// Add dynamic rewrite rules for continents
+		$this->add_dynamic_rewrite_rules();
+		
+		// Clear continent slugs cache
 		delete_transient( 'wta_continent_slugs' );
+	}
+	
+	/**
+	 * Add dynamic rewrite rules based on existing continent slugs.
+	 * 
+	 * Creates specific rules only for known continents to avoid conflicts.
+	 *
+	 * @since    2.32.0
+	 */
+	private function add_dynamic_rewrite_rules() {
+		// Get continent slugs
+		$continent_slugs = $this->get_continent_slugs();
+		
+		if ( empty( $continent_slugs ) ) {
+			return;
+		}
+		
+		// Escape slugs for regex
+		$escaped_slugs = array_map( 'preg_quote', $continent_slugs );
+		$continent_pattern = implode( '|', $escaped_slugs );
+		
+		// Add rewrite rules for hierarchical location URLs
+		// Matches: /europa/danmark/copenhagen/
+		add_rewrite_rule(
+			'^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',
+			'index.php?wta_location=$matches[1]/$matches[2]/$matches[3]&post_type=' . WTA_POST_TYPE . '&name=$matches[3]',
+			'top'
+		);
+		
+		// Matches: /europa/danmark/
+		add_rewrite_rule(
+			'^(' . $continent_pattern . ')/([^/]+)/?$',
+			'index.php?wta_location=$matches[1]/$matches[2]&post_type=' . WTA_POST_TYPE . '&name=$matches[2]',
+			'top'
+		);
+		
+		// Matches: /europa/
+		add_rewrite_rule(
+			'^(' . $continent_pattern . ')/?$',
+			'index.php?wta_location=$matches[1]&post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
+			'top'
+		);
 	}
 }

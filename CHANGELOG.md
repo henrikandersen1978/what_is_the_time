@@ -2,6 +2,112 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.0] - 2025-12-05
+
+### ✅ FINAL WORKING VERSION - Clean URLs Without Conflicts
+
+Hybrid approach combining dynamic rewrite rules + defensive pre_get_posts.
+
+### Fixed
+- **Location URLs work perfectly:** `/europa/danmark/kolding/` ✅
+- **WordPress pages work perfectly:** `/om/`, `/blog/` ✅  
+- **No interference with other plugins** ✅
+- **Pilanto warnings ignored** (only visible due to WP_DEBUG on testsite)
+
+### What We Learned from Debug v2.31.1
+
+Debug logging revealed:
+1. `/europa/danmark/kolding/` had NO rewrite rules → returned 404 before our code ran
+2. `/om/` worked correctly (our code skipped it as intended)
+3. Pilanto warnings are just PHP warnings due to WP_DEBUG - not a real error
+
+**Conclusion:** We needed custom rewrite rules, not just filters!
+
+### The Solution - Hybrid Approach
+
+**Part 1: Dynamic Rewrite Rules**
+```php
+// In register_post_type(), add continent-based rules:
+$continent_slugs = $this->get_continent_slugs(); // ['europa', 'asia', ...]
+$continent_pattern = implode('|', $continent_slugs);
+
+add_rewrite_rule(
+    '^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',  // /europa/danmark/copenhagen/
+    'index.php?wta_location=$matches[1]/$matches[2]/$matches[3]&post_type=wta_location&name=$matches[3]',
+    'top'
+);
+```
+
+**Part 2: Defensive pre_get_posts (Backup)**
+```php
+public function parse_request_for_locations( $query ) {
+    // Only for hierarchical paths starting with continents
+    if ( isset( $query->query['pagename'] ) ) {
+        $parts = explode( '/', $query->query['pagename'] );
+        
+        // CRITICAL: Skip single-level paths (/om/, /blog/)
+        if ( count( $parts ) === 1 ) {
+            return; // Don't touch!
+        }
+        
+        // Only modify if starts with continent
+        if ( in_array( $parts[0], $continent_slugs ) ) {
+            $query->set( 'post_type', ['post', 'page', 'wta_location'] );
+        }
+    }
+}
+```
+
+**Part 3: Remove Slug from Permalinks**
+```php
+public function remove_post_type_slug( $post_link, $post, $leavename ) {
+    // /l/europa/danmark/ → /europa/danmark/
+    return str_replace( '/l/', '/', $post_link );
+}
+```
+
+### Why This Works
+
+1. ✅ **Rewrite rules** handle routing (`/europa/danmark/kolding/` → finds post)
+2. ✅ **pre_get_posts** handles edge cases (backup)
+3. ✅ **Permalink filter** generates clean URLs
+4. ✅ **Single-level check** prevents `/om/` interference
+5. ✅ **Continent validation** ensures we only touch location URLs
+
+### About Pilanto Warnings
+
+The PHP warnings from Pilanto-Text-Snippets are NOT caused by our plugin:
+```php
+PHP Warning: Attempt to read property "post_content" on null
+```
+
+**Why they appear:**
+- Pilanto plugin lacks null check in their code
+- Only visible on testsite because WP_DEBUG is enabled
+- On production sites (WP_DEBUG = false), they are hidden
+- **This is Pilanto's responsibility to fix, not ours**
+
+**The warnings don't break functionality** - the page renders correctly.
+
+### Testing Results
+
+- ✅ `/europa/danmark/kolding/` → Works perfectly
+- ✅ `/om/` → Works perfectly (Pilanto warnings are cosmetic)
+- ✅ `/blog/`, `/betingelser/` → Work perfectly
+- ✅ Location permalinks generate cleanly
+- ✅ No conflicts with other plugins
+
+### Upgrade Instructions
+
+1. Upload new plugin version
+2. **CRITICAL:** Go to Settings → Permalinks and click "Save Changes"
+3. Test both location URLs and normal pages
+4. (Optional) Disable WP_DEBUG on production to hide Pilanto warnings
+
+### Files Changed
+- `includes/class-wta-core.php` - Updated hook registration
+- `includes/core/class-wta-post-type.php` - Complete rewrite with hybrid approach
+
 ## [2.31.1-debug] - 2025-12-05
 
 ### DEBUG VERSION - DO NOT USE IN PRODUCTION

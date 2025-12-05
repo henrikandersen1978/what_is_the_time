@@ -123,21 +123,21 @@ class WTA_Core {
 	/**
 	 * Register permalink and post type hooks.
 	 * 
-	 * Uses WPExplorer's proven approach for removing CPT slugs without conflicts.
-	 * @link https://www.wpexplorer.com/remove-custom-post-type-slugs-in-wordpress/
+	 * Uses dynamic continent-based rewrite rules + defensive pre_get_posts.
+	 * This hybrid approach provides maximum compatibility.
 	 *
-	 * @since    2.31.0
+	 * @since    2.32.0
 	 * @access   private
 	 */
 	private function define_permalink_hooks() {
-		// Register custom post type
+		// Register custom post type (includes dynamic rewrite rules)
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
 		
-		// Remove slug from permalinks (filter_post_type_link)
+		// Remove slug from permalinks
 		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 10, 3 );
 		
-		// Defensive pre_get_posts to allow slug-less URLs (WPExplorer's approach)
+		// Defensive pre_get_posts as backup for edge cases
 		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_request_for_locations', 10 );
 		
 		// Redirect old URLs with slugs to clean URLs
