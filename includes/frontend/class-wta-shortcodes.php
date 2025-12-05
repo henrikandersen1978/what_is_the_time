@@ -1127,49 +1127,73 @@ class WTA_Shortcodes {
 				),
 			);
 			
-			// Get top countries for this continent
-			$countries = get_posts( array(
-				'post_type'      => WTA_POST_TYPE,
-				'post_status'    => 'publish',
-				'post_parent'    => $continent->ID,
-				'posts_per_page' => intval( $atts['countries_per_continent'] ),
-				'orderby'        => 'meta_value_num',
-				'meta_key'       => 'wta_population',
-				'order'          => 'DESC',
-			) );
-			
-			// Continent card (no emoji, clean design)
-			$output .= '<div class="wta-continent-card">' . "\n";
-			$output .= sprintf( 
-				'<h3 class="wta-continent-title"><a href="%s">%s</a></h3>' . "\n",
-				esc_url( $continent_url ),
-				esc_html( $continent_name )
-			);
-			
-			if ( ! empty( $countries ) ) {
-				$output .= '<ul class="wta-country-list">' . "\n";
-				foreach ( $countries as $country ) {
-					$country_name = get_the_title( $country->ID );
-					$country_url = get_permalink( $country->ID );
-					$output .= sprintf(
-						'<li><a href="%s">%s</a></li>' . "\n",
-						esc_url( $country_url ),
-						esc_html( $country_name )
-					);
-					
-					// Add country to schema
-					$list_items[] = array(
-						'@type'    => 'ListItem',
-						'position' => $position++,
-						'item'     => array(
-							'@type' => 'Country',
-							'@id'   => $country_url,
-							'name'  => $country_name,
-						),
-					);
+		// Get top countries for this continent
+		$countries = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_status'    => 'publish',
+			'post_parent'    => $continent->ID,
+			'posts_per_page' => intval( $atts['countries_per_continent'] ),
+			'meta_query'     => array(
+				array(
+					'key'     => 'wta_type',
+					'value'   => 'country',
+					'compare' => '=',
+				),
+			),
+			'orderby'        => 'meta_value_num',
+			'meta_key'       => 'wta_population',
+			'order'          => 'DESC',
+		) );
+		
+		// Continent card (no emoji, clean design)
+		$output .= '<div class="wta-continent-card">' . "\n";
+		$output .= sprintf( 
+			'<h3 class="wta-continent-title"><a href="%s">%s</a></h3>' . "\n",
+			esc_url( $continent_url ),
+			esc_html( $continent_name )
+		);
+		
+		if ( ! empty( $countries ) ) {
+			$output .= '<ul class="wta-country-list">' . "\n";
+			foreach ( $countries as $country ) {
+				$country_name = get_the_title( $country->ID );
+				$country_url = get_permalink( $country->ID );
+				
+				// Get country ISO code for flag emoji
+				$iso_code = get_post_meta( $country->ID, 'wta_iso_alpha2', true );
+				$flag_emoji = '';
+				
+				if ( ! empty( $iso_code ) && strlen( $iso_code ) === 2 ) {
+					// Convert ISO code to flag emoji (e.g., DK → 🇩🇰)
+					$iso_code = strtoupper( $iso_code );
+					$flag_emoji = mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' )
+					            . mb_convert_encoding( '&#' . ( 127397 + ord( $iso_code[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES' );
+					$flag_emoji .= ' ';
 				}
-				$output .= '</ul>' . "\n";
+				
+				$output .= sprintf(
+					'<li><a href="%s">%s%s</a></li>' . "\n",
+					esc_url( $country_url ),
+					$flag_emoji,
+					esc_html( $country_name )
+				);
+				
+				// Add country to schema
+				$list_items[] = array(
+					'@type'    => 'ListItem',
+					'position' => $position++,
+					'item'     => array(
+						'@type' => 'Country',
+						'@id'   => $country_url,
+						'name'  => $country_name,
+					),
+				);
 			}
+			$output .= '</ul>' . "\n";
+		} else {
+			// Debug: Show why no countries are found
+			$output .= '<p class="wta-debug" style="font-size: 0.85em; color: #999;">Ingen lande fundet endnu. Import i gang...</p>' . "\n";
+		}
 			
 			$output .= '</div>' . "\n";
 		}

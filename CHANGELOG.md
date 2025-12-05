@@ -2,6 +2,45 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.3] - 2025-12-05
+
+### Added
+- **Flag emojis for countries** in continents overview shortcode (auto-generated from ISO codes)
+- **Debug message** when no countries found yet (shows "Import i gang...")
+- **Improved meta_query** to ensure only countries are fetched (not cities)
+
+### Improved
+- **Removed arrow (→) from country list** - flags are now the visual indicator
+- **Better CSS for flag display** - inline-flex layout with proper gap
+- **Better line height** for country lists (1.8)
+
+### How Flag Emojis Work
+```php
+// ISO code (e.g., "DK") → Flag emoji (🇩🇰)
+$iso_code = get_post_meta( $country->ID, 'wta_iso_alpha2', true );
+if ( strlen( $iso_code ) === 2 ) {
+    // Convert to regional indicator symbols
+    $flag = chr(127397 + ord($iso_code[0])) . chr(127397 + ord($iso_code[1]));
+}
+```
+
+**Example Output:**
+```
+Afrika
+  🇳🇬 Nigeria
+  🇪🇹 Ethiopia
+  🇪🇬 Egypt
+
+Europa
+  🇩🇪 Tyskland
+  🇬🇧 Storbritannien
+  🇫🇷 Frankrig
+```
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Added flag emoji logic + debug
+- `includes/frontend/assets/css/frontend.css` - Removed arrow, added flex layout
+
 ## [2.32.2] - 2025-12-05
 
 ### Fixed

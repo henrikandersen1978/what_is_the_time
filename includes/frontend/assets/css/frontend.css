@@ -866,27 +866,36 @@ p.wta-no-nearby {
 
 .wta-country-list li {
 	margin: 0.5em 0 !important;
-	padding-left: 1.5em !important;
+	padding-left: 0 !important;
 	position: relative !important;
+	line-height: 1.8 !important;
 }
 
 .wta-country-list li::before {
-	content: "→" !important;
-	position: absolute !important;
-	left: 0 !important;
-	color: #667eea !important;
-	font-weight: bold !important;
+	content: none !important;
+	display: none !important;
 }
 
 .wta-country-list a {
 	color: #333 !important;
 	text-decoration: none !important;
 	transition: color 0.2s ease !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 0.3em !important;
 }
 
 .wta-country-list a:hover {
 	color: #667eea !important;
 	text-decoration: underline !important;
+}
+
+/* Debug message styling */
+.wta-debug {
+	font-size: 0.85em !important;
+	color: #999 !important;
+	font-style: italic !important;
+	margin: 0.5em 0 !important;
 }
 
 /* Responsive adjustments */
