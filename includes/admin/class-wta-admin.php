@@ -602,98 +602,45 @@ class WTA_Admin {
 
 		$post_ids = get_posts( $args );
 
-	WTA_Logger::info( 'Starting permalink regeneration', array(
-		'total_posts' => count( $post_ids ),
-	) );
+		WTA_Logger::info( 'Starting permalink regeneration', array(
+			'total_posts' => count( $post_ids ),
+		) );
 
-	foreach ( $post_ids as $post_id ) {
-		// Clear post cache
-		clean_post_cache( $post_id );
-
-		// Clear permalink cache
-		delete_post_meta( $post_id, '_wp_old_slug' );
-
-		// Clear ALL Yoast SEO caches if exists
-		if ( class_exists( 'WPSEO_Options' ) ) {
-			// Clear canonical meta
-			delete_post_meta( $post_id, '_yoast_wpseo_canonical' );
+		foreach ( $post_ids as $post_id ) {
+			// Clear post cache
+			clean_post_cache( $post_id );
 			
-			// Clear ALL Yoast post meta that might contain URLs
-			delete_post_meta( $post_id, '_yoast_wpseo_opengraph-title' );
-			delete_post_meta( $post_id, '_yoast_wpseo_opengraph-description' );
-			delete_post_meta( $post_id, '_yoast_wpseo_twitter-title' );
-			delete_post_meta( $post_id, '_yoast_wpseo_twitter-description' );
+			// Clear permalink cache
+			delete_post_meta( $post_id, '_wp_old_slug' );
 			
-			// Clear Yoast indexables (they cache permalinks in separate table)
-			if ( class_exists( 'Yoast\WP\SEO\Repositories\Indexable_Repository' ) ) {
-				try {
-					$indexable_repository = YoastSEO()->classes->get( 'Yoast\WP\SEO\Repositories\Indexable_Repository' );
-					$indexable = $indexable_repository->find_by_id_and_type( $post_id, 'post' );
-					if ( $indexable ) {
-						// Force indexable to rebuild by deleting it
-						$indexable_repository->delete( $indexable );
-					}
-				} catch ( Exception $e ) {
-					WTA_Logger::warning( 'Failed to clear Yoast indexable', array(
-						'post_id' => $post_id,
-						'error' => $e->getMessage(),
-					) );
-				}
-			}
-			
-			// Clear sitemap cache
-			delete_transient( 'wpseo_sitemap_cache_' . $post_id );
-		}
-
-		// Force WordPress to regenerate permalink
-		$post = get_post( $post_id );
-		if ( $post ) {
 			// Get fresh permalink (our filter will apply)
 			$new_permalink = get_permalink( $post_id );
-
+			
 			WTA_Logger::debug( 'Permalink regenerated', array(
 				'post_id'   => $post_id,
-				'title'     => $post->post_title,
 				'permalink' => $new_permalink,
 			) );
-
+			
 			$updated++;
 		}
-	}
 
-	// Clear object cache
-	wp_cache_flush();
-
-	// Clear ALL Yoast SEO caches globally
-	if ( function_exists( 'YoastSEO' ) ) {
-		// Clear sitemap cache
-		delete_transient( 'wpseo_sitemap_cache_validator' );
+		// Clear object cache
+		wp_cache_flush();
 		
-	// Force Yoast to rebuild all indexables with new URLs
-	if ( class_exists( 'Yoast\WP\SEO\Commands\Index_Command' ) ) {
-		// Trigger indexables rebuild action
-		do_action( 'wpseo_permalink_change' );
+		// Trigger Yoast SEO reindex (simple way)
+		if ( function_exists( 'YoastSEO' ) ) {
+			delete_transient( 'wpseo_sitemap_cache_validator' );
+		}
+
+		WTA_Logger::info( 'Permalink regeneration completed', array(
+			'updated_posts' => $updated,
+		) );
+
+		wp_send_json_success( array(
+			'message' => 'Permalinks regenerated successfully! ✅ Now go to Yoast SEO → Tools → "Optimize SEO Data" to update Yoast cache.',
+			'updated' => $updated,
+		) );
 	}
-	
-	// Clear Yoast's internal caches
-	wp_cache_delete( 'wpseo_', 'options' );
-	
-	// Clear all Yoast transients
-	global $wpdb;
-	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wpseo_%' OR option_name LIKE '_transient_timeout_wpseo_%'" );
-	
-	WTA_Logger::info( 'Cleared all Yoast SEO caches and indexables' );
-}
-
-	WTA_Logger::info( 'Permalink regeneration completed', array(
-		'updated_posts' => $updated,
-	) );
-
-	wp_send_json_success( array(
-		'message' => 'Permalinks have been regenerated successfully! All internal links, schema, and Yoast data should now use clean URLs.',
-		'updated' => $updated,
-	) );
-}
 }
 
 

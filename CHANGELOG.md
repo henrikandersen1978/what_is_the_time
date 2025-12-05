@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.0] - 2025-12-05
+
+### Changed
+- **MAJOR: Simplified permalink regeneration tool (removed complex Yoast handling)**
+- Removed all complex Yoast SEO cache clearing logic that caused repeated failures
+- Now uses simple, robust approach:
+  1. Clear WordPress permalink cache
+  2. Regenerate permalinks with clean URLs
+  3. Clear basic Yoast sitemap cache
+  4. User manually runs Yoast's own "Optimize SEO Data" tool after
+
+### Why This Change?
+
+The previous approach (v2.29.4-2.29.8) tried to programmatically clear Yoast's indexables table and all caches. This resulted in:
+- Multiple syntax errors from complex nested code
+- Indentation issues that were hard to debug
+- Immediate AJAX failures with no useful error messages
+- Over-engineering a simple task
+
+**New Simple Approach:**
+```php
+foreach ( $post_ids as $post_id ) {
+    clean_post_cache( $post_id );
+    delete_post_meta( $post_id, '_wp_old_slug' );
+    get_permalink( $post_id );  // Regenerates with our filter
+}
+wp_cache_flush();
+```
+
+Then user manually updates Yoast via: **Yoast SEO → Tools → "Optimize SEO Data"**
+
+### Benefits
+- ✅ Much simpler code (60 lines → 30 lines)
+- ✅ No complex Yoast API calls that can fail
+- ✅ Easy to debug
+- ✅ Uses Yoast's own tools for Yoast cache
+- ✅ Reliable and fast
+
+### After Update
+1. Upload plugin v2.30.0
+2. Go to World Time AI → Tools → "Regenerate All Permalinks"
+3. When complete, go to **Yoast SEO → Tools**
+4. Click **"Optimize SEO Data"** or **"Start SEO data optimization"**
+5. Done! Clean URLs everywhere including Yoast meta tags
+
 ## [2.29.8] - 2025-12-05
 
 ### Fixed
