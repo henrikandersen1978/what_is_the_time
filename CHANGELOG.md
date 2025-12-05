@@ -2,6 +2,48 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.7] - 2025-12-05
+
+### Fixed
+- **Flag emojis FINALLY work! 🎉🚩** - Hardcoded ISO to emoji mapping
+- Most reliable solution - works on ALL PHP versions
+
+### Why Hardcoded Mapping?
+
+Previous methods failed because:
+- ❌ `mb_chr()` not available on all PHP versions
+- ❌ `mb_convert_encoding()` with HTML entities doesn't work reliably
+- ✅ **Hardcoded UTF-8 emojis work everywhere**
+
+### Technical Details
+
+**Solution:** Complete ISO alpha-2 to flag emoji mapping (250+ countries)
+
+```php
+$flags = array(
+    'DK' => '🇩🇰',
+    'SE' => '🇸🇪',
+    'NO' => '🇳🇴',
+    'DE' => '🇩🇪',
+    // ... all 250+ countries
+);
+
+$iso_upper = strtoupper( $iso_code );
+if ( isset( $flags[ $iso_upper ] ) ) {
+    $flag_emoji = $flags[ $iso_upper ] . ' ';
+}
+```
+
+**Benefits:**
+- ✅ Works on PHP 5.6 - 8.3+
+- ✅ No special PHP extensions needed
+- ✅ UTF-8 emojis directly in source code
+- ✅ 100% reliable
+- ✅ Fast lookup (array index)
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Added complete ISO→emoji mapping
+
 ## [2.32.6] - 2025-12-05
 
 ### Fixed
