@@ -201,11 +201,17 @@ class WTA_Post_Type {
 				'fields'      => 'ids',
 			) );
 			
-			// If NO location post exists, clear our post_type and let WordPress find page/post
+			// If NO location post exists, restore pagename so WordPress can find pages/posts
 			if ( empty( $exists ) ) {
+				// Get the original request path to restore pagename
+				$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+				$path = parse_url( $request_uri, PHP_URL_PATH );
+				$path = trim( $path, '/' );
+				
+				// Clear our location query vars and set pagename for WordPress to handle
 				unset( $query_vars['post_type'] );
 				unset( $query_vars['name'] );
-				// WordPress will now look for a regular page/post with this URL
+				$query_vars['pagename'] = $path;
 			}
 		}
 		

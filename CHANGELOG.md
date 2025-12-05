@@ -2,6 +2,35 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.2] - 2025-12-05
+
+### Fixed
+- **CRITICAL HOTFIX: WordPress pages now actually work (v2.30.1 broke them)**
+- Fixed bug where all standard pages redirected to homepage
+- Problem: When clearing query vars, WordPress had no information to find pages
+- Solution: Set `pagename` from original request URI so WordPress can find pages/posts normally
+
+### Technical Details
+**v2.30.1 Bug:**
+```php
+// ❌ WRONG: Left WordPress with no query vars
+unset( $query_vars['post_type'] );
+unset( $query_vars['name'] );
+// Result: WordPress found nothing → redirect to homepage
+```
+
+**v2.30.2 Fix:**
+```php
+// ✅ CORRECT: Give WordPress the pagename to search for
+unset( $query_vars['post_type'] );
+unset( $query_vars['name'] );
+$query_vars['pagename'] = $path; // Restore from request URI
+// Result: WordPress finds page/post normally
+```
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Fixed `smart_request_filter()` to set pagename
+
 ## [2.30.1] - 2025-12-05
 
 ### Fixed
