@@ -1127,7 +1127,7 @@ class WTA_Shortcodes {
 				),
 			);
 			
-		// Get top countries for this continent
+		// Get random countries for this continent
 		$countries = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_status'    => 'publish',
@@ -1140,9 +1140,7 @@ class WTA_Shortcodes {
 					'compare' => '=',
 				),
 			),
-			'orderby'        => 'meta_value_num',
-			'meta_key'       => 'wta_population',
-			'order'          => 'DESC',
+			'orderby'        => 'rand',
 		) );
 		
 		// Continent card (no emoji, clean design)

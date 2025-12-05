@@ -2,6 +2,57 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.32.4] - 2025-12-05
+
+### Changed
+- **Random country selection in continents overview shortcode** 🎲
+- Countries now displayed in random order instead of by population
+- Creates dynamic homepage content that changes on each page load
+- Better distribution - all countries get visibility over time
+
+### Why This Change?
+
+**Problem:** Countries don't have population data (only cities do), so sorting by population was returning 0 results.
+
+**Options Considered:**
+1. Calculate country population from cities (complex, slow)
+2. Sort by number of cities (not accurate)
+3. Random selection (simple, dynamic, fair) ✅
+
+**Benefits:**
+- ✅ Works immediately with existing data
+- ✅ Dynamic content on every page load
+- ✅ Fair visibility for all countries
+- ✅ Better user engagement (repeat visits show new countries)
+- ✅ No database changes needed
+
+**Implementation:**
+```php
+// Before:
+'orderby'  => 'meta_value_num',
+'meta_key' => 'wta_population',  // Countries don't have this!
+'order'    => 'DESC',
+
+// After:
+'orderby' => 'rand',  // Simple & effective! 🎲
+```
+
+**Example Output (changes each time):**
+```
+Afrika
+  🇰🇪 Kenya
+  🇲🇦 Marokko
+  🇹🇿 Tanzania
+
+Europa (refresh shows different countries)
+  🇵🇱 Polen
+  🇬🇷 Grækenland
+  🇸🇪 Sverige
+```
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Changed to random ordering
+
 ## [2.32.3] - 2025-12-05
 
 ### Added
