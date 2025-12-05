@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.0] - 2025-12-05
+
+### Changed
+- **FLAG EMOJIS NOW USE JAVASCRIPT** 🚩💡
+- Switched from PHP to JavaScript conversion for maximum compatibility
+- Works on ALL browsers and servers regardless of PHP version or encoding
+
+### How It Works
+
+**PHP Side (simple):**
+```php
+// Just output ISO code in HTML
+<span class="wta-flag-emoji" data-country-code="DK"></span>Danmark
+```
+
+**JavaScript Side (conversion):**
+```javascript
+function isoToFlag(countryCode) {
+    // DK → 🇩🇰
+    const codePoints = countryCode
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
+```
+
+**Benefits:**
+- ✅ **Works everywhere** - client-side conversion
+- ✅ **No PHP dependencies** - uses standard JavaScript
+- ✅ **No encoding issues** - UTF-8 handled by browser
+- ✅ **Fast** - runs once on page load
+- ✅ **Clean** - PHP just outputs data, JS handles presentation
+
+### Technical Details
+
+Regional Indicator Symbols:
+- 🇦 = U+1F1E6 (127462 decimal)
+- A = 65 (ASCII)
+- Offset = 127462 - 65 = 127397
+- DK = D(68) + K(75) → 🇩(127465) + 🇰(127472) = 🇩🇰
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Output ISO codes with data attribute
+- `includes/frontend/assets/js/clock.js` - Added flag emoji converter
+
 ## [2.32.7] - 2025-12-05
 
 ### Fixed
