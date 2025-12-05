@@ -134,9 +134,17 @@ class WTA_Core {
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
 		
-		// Register URL cleanup filters
-		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 10, 2 );
+		// Register URL cleanup filters - EARLY priority to run before caching
+		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 1, 2 );
+		$this->loader->add_filter( 'post_link', $post_type, 'remove_post_type_slug', 1, 2 );
+		$this->loader->add_filter( 'page_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_clean_urls' );
+		
+		// Force clear permalink cache on init
+		$this->loader->add_action( 'init', $post_type, 'clear_permalink_cache', 999 );
+		
+		// Clear permalink cache when location posts are saved
+		$this->loader->add_action( 'save_post_' . WTA_POST_TYPE, $post_type, 'clear_single_permalink_cache', 10, 1 );
 
 		// Admin class
 		$admin = new WTA_Admin();

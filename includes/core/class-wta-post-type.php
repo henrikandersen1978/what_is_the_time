@@ -21,13 +21,18 @@ class WTA_Post_Type {
 	 * Remove post type slug from permalinks.
 	 *
 	 * @since    2.28.2
-	 * @param    string  $post_link Post URL.
-	 * @param    WP_Post $post      Post object.
-	 * @return   string             Modified URL.
+	 * @param    string       $post_link Post URL.
+	 * @param    WP_Post|int  $post      Post object or ID.
+	 * @return   string                  Modified URL.
 	 */
 	public function remove_post_type_slug( $post_link, $post ) {
+		// Handle both WP_Post object and post ID
+		if ( is_numeric( $post ) ) {
+			$post = get_post( $post );
+		}
+		
 		// Only for our post type
-		if ( WTA_POST_TYPE !== $post->post_type ) {
+		if ( ! $post || WTA_POST_TYPE !== $post->post_type ) {
 			return $post_link;
 		}
 		
@@ -36,6 +41,39 @@ class WTA_Post_Type {
 		$post_link = str_replace( '/' . WTA_POST_TYPE . '/', '/', $post_link );
 		
 		return $post_link;
+	}
+	
+	/**
+	 * Clear permalink cache to force regeneration with our filter.
+	 *
+	 * @since    2.28.4
+	 */
+	public function clear_permalink_cache() {
+		// Clear WordPress permalink cache
+		delete_option( 'rewrite_rules' );
+		
+		// Clear object cache for all our posts
+		wp_cache_flush();
+		
+		// Clear Yoast SEO permalink cache if it exists
+		if ( function_exists( 'YoastSEO' ) ) {
+			delete_transient( 'wpseo_sitemap_cache_validator' );
+		}
+	}
+	
+	/**
+	 * Clear permalink cache for a single post when it's saved.
+	 *
+	 * @since    2.28.4
+	 * @param    int $post_id Post ID.
+	 */
+	public function clear_single_permalink_cache( $post_id ) {
+		// Clear permalink cache for this specific post
+		clean_post_cache( $post_id );
+		
+		// Clear object cache
+		wp_cache_delete( $post_id, 'posts' );
+		wp_cache_delete( $post_id, 'post_meta' );
 	}
 	
 	/**

@@ -2,6 +2,50 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.4] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Aggressive permalink cache busting to fix internal links**
+- Filter priority changed from 10 to 1 (runs BEFORE WordPress caches permalinks)
+- Added filters to `post_link` and `page_link` in addition to `post_type_link`
+- Automatic wp_cache_flush() on init to force permalink regeneration
+- Clear permalink cache when individual posts are saved
+- Clear Yoast SEO sitemap cache to force regeneration
+
+### Technical Details
+**Root cause:**
+- WordPress caches permalinks after generating them
+- Our filter ran at priority 10, but permalinks were already cached
+- get_permalink() returned cached URLs with `/wta_location/` prefix
+- This affected: internal links, breadcrumbs, schema markup, Yoast SEO data
+
+**Solution implemented:**
+1. **Early filter priority**: Changed from priority 10 to 1
+   - Runs BEFORE WordPress internal permalink caching
+2. **Multiple filter hooks**: 
+   - `post_type_link` (our posts)
+   - `post_link` (general posts)  
+   - `page_link` (pages - just in case)
+3. **Aggressive cache clearing**:
+   - `wp_cache_flush()` on every init (priority 999)
+   - `clean_post_cache()` when posts are saved
+   - Delete Yoast SEO sitemap cache
+4. **Handle both post objects and IDs**: Filter now works with both
+
+### What should now work
+✅ get_permalink() returns clean URLs immediately
+✅ Internal links use clean URLs
+✅ Breadcrumbs use clean URLs
+✅ Schema @id fields use clean URLs
+✅ Yoast SEO canonical/og:url use clean URLs
+✅ Sitemap XML uses clean URLs
+
+### Important
+- **FLUSH PERMALINKS REQUIRED** after update
+- **CLEAR ALL CACHES** (object cache, browser cache, CDN)
+- May need to resave posts to regenerate their permalinks
+- Performance impact: wp_cache_flush() on init is aggressive but necessary
+
 ## [2.28.3] - 2025-12-05
 
 ### Fixed
