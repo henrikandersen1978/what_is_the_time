@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.1] - 2025-12-05
+
+### Fixed
+- **CRITICAL: AI Placeholder Protection** - AI vil ikke længere opfinde sine egne placeholders
+- Opdateret ALLE AI system-prompts med sikkerhed mod placeholders som `[by-navn]`, `[navn]`, `[location]`, `[land]`, `[sted]`
+- AI instrueres nu eksplicit om at ALTID bruge faktiske stednavne direkte i teksten
+- Forhindrer problemer som "hvad er klokken i [by-navn]" i genereret indhold
+
+### Technical
+- Tilføjet til alle 16 system prompts: "KRITISK: Brug ALDRIG placeholders som [by-navn], [navn], [location], [land] etc. Brug ALTID de faktiske stednavne direkte."
+- Dækker continent prompts (5 sections), country prompts (6 sections), city prompts (6 sections)
+- Eksisterende god prompt-struktur bevaret - kun tilføjet sikkerhedsinstruktion
+
+### Important
+- Eksisterende AI-genereret content kan stadig indeholde gamle placeholders
+- Ved ny import vil alt content blive genereret med de opdaterede prompts
+- Anbefalinger: Reset content og re-importer for at få rent content
+
 ## [2.28.0] - 2025-12-05
 
 ### Added
