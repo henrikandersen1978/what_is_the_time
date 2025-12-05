@@ -2,6 +2,30 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.27.11] - 2025-12-05
+
+### Fixed
+- **2-LAYER "KOMMUNE" REMOVAL SYSTEM**: Comprehensive fix to prevent administrative terms in city names
+- **Layer 1 (Import Filter)**: Cities with admin terms in source name (e.g., "Oslo kommune") are now filtered OUT at import
+  - Prevents duplicates where both "Oslo" and "Oslo kommune" exist in cities.json
+  - Filters 17+ admin terms globally (kommune, kommun, municipality, commune, etc.)
+  - Runs BEFORE translation, checks raw source data
+- **Layer 2 (Translation Cleanup)**: Enhanced Wikidata suffix removal now finds and removes admin terms ANYWHERE in string
+  - No longer limited to suffix-only removal
+  - Handles "Kommune Oslo", "Oslo Kommune", "Oslo  kommune" (extra spaces), etc.
+  - Fully case-insensitive with proper Unicode handling
+  - Multi-pass removal (up to 3 iterations for compound terms)
+  - Covers 40+ administrative terms in all languages
+- **Result**: Future imports will have clean city names without administrative designations
+- **Important**: Does NOT modify existing posts - only affects new imports going forward
+
+### Technical Details
+- Import filter added in `class-wta-structure-processor.php` after population filter
+- Translation cleanup enhanced in `class-wta-wikidata-translator.php` with position-independent term removal
+- Uses `mb_strpos()` for finding terms anywhere in string (not just end)
+- Sorts terms by length (longest first) to prevent partial match issues
+- Preserves original case of city name while removing admin terms
+
 ## [2.27.10] - 2025-12-04
 
 ### Fixed

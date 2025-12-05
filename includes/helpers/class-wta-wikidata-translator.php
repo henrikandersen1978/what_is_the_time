@@ -170,32 +170,55 @@ class WTA_Wikidata_Translator {
 		' area',
 	);
 	
-	// Case-insensitive removal of suffixes - try multiple times for compound suffixes
-	$label_lower = mb_strtolower( $label, 'UTF-8' );
+	// LAG 2: Remove administrative terms from ANYWHERE in Wikidata label
+	// More robust than suffix-only removal - handles "Kommune Oslo", "Oslo kommune", etc.
+	// Normalize suffixes (remove leading space, convert to array of terms)
+	$admin_terms = array();
+	foreach ( $admin_suffixes as $suffix ) {
+		$admin_terms[] = trim( $suffix ); // Remove leading space
+	}
+	
+	// Sort by length (longest first) to avoid partial matches
+	usort( $admin_terms, function( $a, $b ) {
+		return mb_strlen( $b, 'UTF-8' ) - mb_strlen( $a, 'UTF-8' );
+	});
+	
 	$suffix_removed = false;
-	$removed_suffix = '';
-	$max_iterations = 3; // Allow removing up to 3 suffixes (e.g., "City Municipality District")
+	$removed_terms = array();
+	$max_iterations = 3; // Allow removing up to 3 terms
 	
 	for ( $i = 0; $i < $max_iterations; $i++ ) {
 		$found = false;
 		$label_lower = mb_strtolower( $label, 'UTF-8' );
 		
-		foreach ( $admin_suffixes as $suffix ) {
-			if ( mb_substr( $label_lower, -mb_strlen( $suffix, 'UTF-8' ), null, 'UTF-8' ) === $suffix ) {
-				// Remove the suffix (preserve original case for the city name part)
-				$label = mb_substr( $label, 0, mb_strlen( $label, 'UTF-8' ) - mb_strlen( $suffix, 'UTF-8' ), 'UTF-8' );
-				$label = trim( $label );
+		foreach ( $admin_terms as $term ) {
+			$term_lower = mb_strtolower( $term, 'UTF-8' );
+			
+			// Search for the term anywhere in the string (case-insensitive)
+			$pos = mb_strpos( $label_lower, $term_lower, 0, 'UTF-8' );
+			
+			if ( $pos !== false ) {
+				// Found the term! Remove it from original label (preserve case of city name)
+				$before = mb_substr( $label, 0, $pos, 'UTF-8' );
+				$after = mb_substr( $label, $pos + mb_strlen( $term, 'UTF-8' ), null, 'UTF-8' );
+				
+				// Combine and clean up extra spaces
+				$label = trim( $before . ' ' . $after );
+				$label = preg_replace( '/\s+/', ' ', $label ); // Multiple spaces → single space
+				
 				$suffix_removed = true;
-				$removed_suffix .= ( $removed_suffix ? ', ' : '' ) . $suffix;
+				$removed_terms[] = $term;
 				$found = true;
-				break; // Try again with remaining text
+				break; // Try again with cleaned label
 			}
 		}
 		
 		if ( ! $found ) {
-			break; // No more suffixes found
+			break; // No more terms found
 		}
 	}
+	
+	$removed_suffix = implode( ', ', $removed_terms );
 	
 	$label = trim( $label );
 	

@@ -620,8 +620,42 @@ class WTA_Structure_Processor {
 				continue; // Skip to next iteration
 			}
 		}
+		
+		// LAG 1: Filter cities with admin terms in ORIGINAL name from cities.json
+		// Prevents duplicates where both "Oslo" and "Oslo kommune" exist
+		// This runs BEFORE translation, so we check the raw English/native name
+		if ( isset( $city['name'] ) ) {
+			$name_lower = mb_strtolower( $city['name'], 'UTF-8' );
+			
+			$admin_terms_in_source = array(
+				'kommune',          // Danish/Norwegian
+				'kommun',           // Swedish
+				'municipality',     // English
+				'commune',          // French
+				'municipio',        // Spanish
+				'município',        // Portuguese
+				'gemeinde',         // German
+				'landkreis',        // German
+				'gmina',            // Polish
+				'powiat',           // Polish
+				'oblast',           // Russian
+				'rayon',            // Russian/Azerbaijani
+				'prefecture',       // Japanese
+				'governorate',      // Arabic
+				'county',           // English
+				'district',         // English (already checked below, but adding here for completeness)
+				'province',         // English
+			);
+			
+			foreach ( $admin_terms_in_source as $term ) {
+				if ( strpos( $name_lower, $term ) !== false ) {
+					$skipped_country++;
+					continue 2; // Skip to next city
+				}
+			}
+		}
 				
-		// Filter out municipalities, communes, and administrative divisions
+		// Filter out municipalities, communes, and administrative divisions (existing filter)
 		if ( isset( $city['name'] ) ) {
 			$name_lower = strtolower( $city['name'] );
 				
