@@ -224,6 +224,9 @@ class WTA_Post_Type {
 	
 	/**
 	 * Parse clean URLs and set correct query var.
+	 * 
+	 * DEFENSIVE: Only runs on 404 pages that start with continent slug.
+	 * Uses WP_Query instead of get_posts() to avoid polluting global $post.
 	 *
 	 * @since    2.28.2
 	 * @param    WP_Query $query Query object.
@@ -234,29 +237,52 @@ class WTA_Post_Type {
 			return;
 		}
 		
-		// Check if this is a 404 that might be our location
-		if ( ! isset( $query->query_vars['post_type'] ) && isset( $query->query_vars['pagename'] ) ) {
+		// ONLY handle actual 404 pages - don't interfere with normal pages/posts
+		if ( ! $query->is_404() ) {
+			return;
+		}
+		
+		// Check if this might be a location URL
+		if ( isset( $query->query_vars['pagename'] ) ) {
 			$pagename = $query->query_vars['pagename'];
 			
-			// Try to find a location post with this slug
+			// Parse URL parts
 			$parts = explode( '/', trim( $pagename, '/' ) );
+			$first_part = $parts[0];
+			
+			// Get known continent slugs
+			$continent_slugs = $this->get_continent_slugs();
+			
+			// If first part is NOT a continent, don't touch it
+			// This lets WordPress handle normal 404s without interference
+			if ( ! in_array( $first_part, $continent_slugs, true ) ) {
+				return;
+			}
+			
+			// URL starts with continent - check if location post exists
 			$slug = end( $parts );
 			
-			// Check if a location post exists with this slug
-			$posts = get_posts( array(
-				'name'        => $slug,
-				'post_type'   => WTA_POST_TYPE,
-				'post_status' => 'publish',
-				'numberposts' => 1,
+			// Use WP_Query instead of get_posts() to avoid polluting global $post
+			$location_query = new WP_Query( array(
+				'name'           => $slug,
+				'post_type'      => WTA_POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
 			) );
 			
-			if ( ! empty( $posts ) ) {
-				// Set the correct query vars
+			if ( $location_query->have_posts() ) {
+				// Location post found - set correct query vars
 				$query->set( 'post_type', WTA_POST_TYPE );
 				$query->set( 'name', $slug );
 				$query->set( WTA_POST_TYPE, $pagename );
 				unset( $query->query_vars['pagename'] );
+				
+				// Mark as not 404
+				$query->is_404 = false;
 			}
+			
+			// CRITICAL: Reset global $post to avoid polluting other plugins
+			wp_reset_postdata();
 		}
 	}
 

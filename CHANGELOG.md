@@ -2,6 +2,54 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.4] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Stopped polluting global $post variable that broke other plugins**
+- Made `parse_clean_urls()` defensive - only runs on actual 404 pages
+- Checks if URL starts with continent slug before processing
+- Uses `WP_Query` instead of `get_posts()` to avoid global pollution
+- Calls `wp_reset_postdata()` to clean up after checks
+
+### Technical Details
+
+**Problem:**
+- `parse_clean_urls()` ran on ALL page requests
+- Used `get_posts()` which pollutes global `$post` variable
+- Other plugins (e.g., Pilanto-Text-Snippets) expected `$post` to be set
+- Result: Warnings about reading property on null
+
+**Solution:**
+```php
+// 1. Only run on 404 pages (not normal pages/posts)
+if ( ! $query->is_404() ) {
+    return;
+}
+
+// 2. Only check if URL starts with continent
+$continent_slugs = $this->get_continent_slugs();
+if ( ! in_array( $first_part, $continent_slugs ) ) {
+    return; // Not our URL - let WordPress handle it
+}
+
+// 3. Use WP_Query instead of get_posts()
+$location_query = new WP_Query( ... );
+
+// 4. CRITICAL: Reset global $post
+wp_reset_postdata();
+```
+
+**Benefits:**
+- ✅ Only processes URLs that start with continent slugs
+- ✅ Only runs on actual 404 pages
+- ✅ Doesn't pollute global `$post` variable
+- ✅ Other plugins work normally
+- ✅ WordPress pages work normally
+- ✅ Location URLs still work perfectly
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Made `parse_clean_urls()` defensive
+
 ## [2.30.3] - 2025-12-05
 
 ### Changed
