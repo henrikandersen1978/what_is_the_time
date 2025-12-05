@@ -27,6 +27,7 @@ class WTA_Core {
 	 */
 	public function __construct() {
 		$this->load_dependencies();
+		$this->define_permalink_hooks(); // MUST run on both admin and frontend
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
@@ -120,21 +121,20 @@ class WTA_Core {
 	}
 
 	/**
-	 * Register all admin-related hooks.
+	 * Register permalink and post type hooks.
+	 * 
+	 * CRITICAL: Must run on BOTH admin and frontend for clean URLs to work everywhere.
 	 *
-	 * @since    2.0.0
+	 * @since    2.29.3
 	 * @access   private
 	 */
-	private function define_admin_hooks() {
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		// Register custom post type
+	private function define_permalink_hooks() {
+		// Register custom post type (needed on both admin and frontend)
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
 		
 		// Register URL cleanup filters - EARLY priority to run before caching
+		// MUST be active on frontend for breadcrumbs, schema, internal links to work
 		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_filter( 'post_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_filter( 'page_link', $post_type, 'remove_post_type_slug', 1, 2 );
@@ -149,6 +149,18 @@ class WTA_Core {
 		
 		// Clear permalink cache when location posts are saved
 		$this->loader->add_action( 'save_post_' . WTA_POST_TYPE, $post_type, 'clear_single_permalink_cache', 10, 1 );
+	}
+
+	/**
+	 * Register all admin-related hooks.
+	 *
+	 * @since    2.0.0
+	 * @access   private
+	 */
+	private function define_admin_hooks() {
+		if ( ! is_admin() ) {
+			return;
+		}
 
 		// Admin class
 		$admin = new WTA_Admin();
