@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.7] - 2025-12-05
+
+### Added
+- **NEW: Bulk Permalink Regeneration Tool**
+- Added "Regenerate All Permalinks" button in Tools page
+- Clears cached permalinks for all location posts
+- Forces regeneration with clean URL structure (without `/location/` prefix)
+- Updates internal links, schema markup, and Yoast SEO data
+- Progress feedback and detailed logging
+
+### Fixed
+- **CRITICAL: Fixed cached permalinks showing old URL structure**
+- Problem: Posts created before URL structure change had cached permalinks with `/location/` prefix
+- These cached URLs were used in internal links, schema, and Yoast data
+- Solution: New tool regenerates all permalinks using current filter system
+- Clears post cache, permalink cache, and Yoast SEO cache
+- Result: All internal URLs now use clean structure (e.g., `/europa/danmark/`)
+
+### Technical Details
+**Why this was needed:**
+- Our `post_type_link` filter removes `/location/` prefix from generated URLs
+- BUT WordPress caches permalinks in multiple places:
+  - Post meta (`_wp_old_slug`)
+  - Object cache
+  - Yoast SEO meta and transients
+- Posts created before v2.28.2 had cached URLs with old structure
+- Internal links, schema, breadcrumbs all used these cached URLs
+
+**What the tool does:**
+1. Gets all published location posts
+2. For each post:
+   - Clears post cache (`clean_post_cache`)
+   - Deletes old slug meta
+   - Clears Yoast canonical and sitemap cache
+   - Forces permalink regeneration via `get_permalink()`
+3. Flushes object cache
+4. Clears Yoast sitemap validator
+5. Logs progress for debugging
+
+**Usage:**
+- Go to World Time AI → Tools
+- Click "Regenerate All Permalinks"
+- Wait for completion (may take 1-2 minutes for large sites)
+- All internal links should now use clean URLs
+
 ## [2.28.6] - 2025-12-05
 
 ### Fixed

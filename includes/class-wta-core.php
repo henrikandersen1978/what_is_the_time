@@ -168,6 +168,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed_items', $admin, 'ajax_retry_failed_items' );
 		$this->loader->add_action( 'wp_ajax_wta_get_logs', $admin, 'ajax_get_logs' );
 		$this->loader->add_action( 'wp_ajax_wta_clear_translation_cache', $admin, 'ajax_clear_translation_cache' );
+		$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
 
 		// Settings
 		$settings = new WTA_Settings();

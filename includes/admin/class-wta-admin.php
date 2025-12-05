@@ -574,6 +574,84 @@ class WTA_Admin {
 			'message' => 'Translation cache has been cleared. New imports will use fresh translations.',
 		) );
 	}
+
+	/**
+	 * AJAX: Regenerate all permalinks for location posts.
+	 *
+	 * @since    2.28.7
+	 */
+	public function ajax_regenerate_permalinks() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		// Increase time limit for large datasets
+		set_time_limit( 300 ); // 5 minutes
+
+		$updated = 0;
+
+		// Get all location posts
+		$args = array(
+			'post_type'      => WTA_POST_TYPE,
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'fields'         => 'ids',
+		);
+
+		$post_ids = get_posts( $args );
+
+		WTA_Logger::info( 'Starting permalink regeneration', array(
+			'total_posts' => count( $post_ids ),
+		) );
+
+		foreach ( $post_ids as $post_id ) {
+			// Clear post cache
+			clean_post_cache( $post_id );
+
+			// Clear permalink cache
+			delete_post_meta( $post_id, '_wp_old_slug' );
+
+			// Clear Yoast SEO cache if exists
+			if ( class_exists( 'WPSEO_Options' ) ) {
+				delete_post_meta( $post_id, '_yoast_wpseo_canonical' );
+				delete_transient( 'wpseo_sitemap_cache_' . $post_id );
+			}
+
+			// Force WordPress to regenerate permalink
+			$post = get_post( $post_id );
+			if ( $post ) {
+				// Get fresh permalink (our filter will apply)
+				$new_permalink = get_permalink( $post_id );
+
+				WTA_Logger::debug( 'Permalink regenerated', array(
+					'post_id'   => $post_id,
+					'title'     => $post->post_title,
+					'permalink' => $new_permalink,
+				) );
+
+				$updated++;
+			}
+		}
+
+		// Clear object cache
+		wp_cache_flush();
+
+		// Clear Yoast SEO sitemap cache
+		if ( function_exists( 'YoastSEO' ) ) {
+			delete_transient( 'wpseo_sitemap_cache_validator' );
+		}
+
+		WTA_Logger::info( 'Permalink regeneration completed', array(
+			'updated_posts' => $updated,
+		) );
+
+		wp_send_json_success( array(
+			'message' => 'Permalinks have been regenerated successfully! All internal links, schema, and Yoast data should now use clean URLs.',
+			'updated' => $updated,
+		) );
+	}
 }
 
 

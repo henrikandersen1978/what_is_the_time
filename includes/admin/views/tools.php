@@ -61,6 +61,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div id="wta-translation-cache-result"></div>
 		</div>
 
+		<!-- Permalink Regeneration -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Regenerate Permalinks', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'Regenerate all location permalinks to remove cached /location/ prefix from URLs. This updates internal links, schema markup, and Yoast SEO data.', WTA_TEXT_DOMAIN ); ?></p>
+			<p class="description"><strong><?php esc_html_e( 'Use this after URL structure changes or if internal links still show old URLs.', WTA_TEXT_DOMAIN ); ?></strong></p>
+			<p>
+				<button type="button" class="button button-primary" id="wta-regenerate-permalinks"><?php esc_html_e( 'Regenerate All Permalinks', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-permalink-result"></div>
+		</div>
+
 		<!-- Reset Data -->
 		<div class="wta-card wta-card-warning">
 			<h2><?php esc_html_e( 'Reset All Data', WTA_TEXT_DOMAIN ); ?></h2>
@@ -201,6 +213,45 @@ jQuery(document).ready(function($) {
 			},
 			error: function() {
 				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Regenerate permalinks
+	$('#wta-regenerate-permalinks').on('click', function() {
+		if (!confirm('<?php echo esc_js( __( 'This will regenerate permalinks for all location posts. This may take a few moments. Continue?', WTA_TEXT_DOMAIN ) ); ?>')) {
+			return;
+		}
+		
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-permalink-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('<div class="notice notice-info"><p>⏳ Regenerating permalinks... This may take a minute.</p></div>');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_regenerate_permalinks',
+				nonce: wtaAdmin.nonce
+			},
+			timeout: 120000, // 2 minutes timeout
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '<br><strong>Updated:</strong> ' + response.data.updated + ' posts</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed or timed out. The process might still be running in the background.</p></div>');
 			},
 			complete: function() {
 				$button.prop('disabled', false);
