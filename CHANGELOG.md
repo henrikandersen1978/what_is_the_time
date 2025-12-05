@@ -2,6 +2,30 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.31.1-debug] - 2025-12-05
+
+### DEBUG VERSION - DO NOT USE IN PRODUCTION
+
+Added extensive debug logging to identify query structure for hierarchical URLs.
+
+**What This Does:**
+- Logs every request to PHP error log
+- Shows exact query structure WordPress sends
+- Identifies which path structure matches (if any)
+- Shows continent slug matching process
+
+**How to Use:**
+1. Upload this version
+2. Visit `/om/` and `/europa/danmark/kolding/`
+3. Check PHP error log (wp-content/debug.log)
+4. Send me the log output
+
+**Also Added:**
+- Support for 3 different query structures (WPExplorer's, hierarchical pagename, direct wta_location)
+- More flexible matching for hierarchical URLs
+
+**This is a diagnostic version - will be replaced with clean version once we identify the correct query structure.**
+
 ## [2.31.0] - 2025-12-05
 
 ### 🎉 MAJOR REWRITE - WPExplorer's Proven Approach

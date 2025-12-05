@@ -52,8 +52,8 @@ class WTA_Post_Type {
 	/**
 	 * Parse request to allow slug-less URLs for locations.
 	 * 
-	 * Based on WPExplorer's defensive approach.
-	 * Only modifies queries that match our specific structure.
+	 * Adapted from WPExplorer's approach for hierarchical URLs.
+	 * Much more flexible than original to handle /europa/danmark/kolding/ structure.
 	 *
 	 * @since    2.31.0
 	 * @param    WP_Query $query Query object.
@@ -64,30 +64,73 @@ class WTA_Post_Type {
 			return;
 		}
 		
-		// WPExplorer's defensive check: Only modify if query structure matches
-		// We need: hierarchical path (pagename set) without existing post_type
+		// DEBUG: Log what WordPress sends us
+		error_log('=== WTA PRE_GET_POSTS DEBUG ===');
+		error_log('URL: ' . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+		error_log('Query count: ' . count($query->query));
+		error_log('Query vars: ' . print_r($query->query, true));
+		error_log('Query var keys: ' . implode(', ', array_keys($query->query)));
+		
+		// Check multiple possible query structures for hierarchical URLs
+		$potential_path = null;
+		
+		// Structure 1: WPExplorer's structure (simple CPT posts)
 		if ( 2 === count( $query->query )
 			&& isset( $query->query['page'] )
 			&& ! empty( $query->query['name'] )
 		) {
-			// Check if this could be a location URL by checking first part
-			$name = $query->query['name'];
-			$parts = explode( '/', trim( $name, '/' ) );
+			$potential_path = $query->query['name'];
+			error_log('Matched Structure 1: WPExplorer (page + name)');
+		}
+		// Structure 2: Hierarchical pagename (WordPress pages style)
+		elseif ( isset( $query->query['pagename'] ) && ! empty( $query->query['pagename'] ) ) {
+			$potential_path = $query->query['pagename'];
+			error_log('Matched Structure 2: Hierarchical pagename');
+		}
+		// Structure 3: Our custom rewrite (wta_location set)
+		elseif ( isset( $query->query[ WTA_POST_TYPE ] ) && ! empty( $query->query[ WTA_POST_TYPE ] ) ) {
+			$potential_path = $query->query[ WTA_POST_TYPE ];
+			error_log('Matched Structure 3: Direct wta_location');
+		}
+		
+		// If we found a potential path, check if it's a location URL
+		if ( $potential_path ) {
+			error_log('Potential path found: ' . $potential_path);
 			
-			// Only proceed if it's hierarchical (has slashes)
+			$parts = explode( '/', trim( $potential_path, '/' ) );
+			error_log('Path parts: ' . implode(' / ', $parts));
+			
+			// Only proceed if it's hierarchical (multiple parts)
 			if ( count( $parts ) > 1 ) {
 				$first_part = $parts[0];
+				error_log('First part: ' . $first_part);
 				
 				// Get known continent slugs
 				$continent_slugs = $this->get_continent_slugs();
+				error_log('Known continents: ' . implode(', ', $continent_slugs));
 				
 				// If first part is a continent, this is likely our URL
 				if ( in_array( $first_part, $continent_slugs, true ) ) {
-					// Allow our post type to be queried without slug
+					error_log('MATCH! First part is a continent - modifying query');
+					
+					// Allow our post type to be queried
 					$query->set( 'post_type', array_merge( array( 'post', 'page' ), array( WTA_POST_TYPE ) ) );
+					
+					// Set the name to the last part (the actual post slug)
+					$last_part = end( $parts );
+					$query->set( 'name', $last_part );
+					error_log('Set post_type to include wta_location, name to: ' . $last_part);
+				} else {
+					error_log('NO MATCH: First part is NOT a continent');
 				}
+			} else {
+				error_log('Single part URL - skipping (probably normal page)');
 			}
+		} else {
+			error_log('No potential path found in query vars');
 		}
+		
+		error_log('=== END WTA DEBUG ===');
 	}
 	
 	/**
