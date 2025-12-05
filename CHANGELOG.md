@@ -2,6 +2,60 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.3] - 2025-12-05
+
+### Changed
+- **MAJOR: Switched to dynamic continent whitelist for rewrite rules**
+- Rewrite rules now ONLY match actual continent slugs from database
+- Removed problematic `smart_request_filter()` that broke other plugins
+- WordPress pages now work perfectly alongside location URLs
+
+### Technical Details
+
+**Problem with v2.30.1-2.30.2:**
+- Used broad rewrite rules that matched ALL URLs
+- Added request filter to check if location exists
+- This broke other plugins (e.g., Pilanto-Text-Snippets) that expected `$post` global
+
+**New Solution (v2.30.3):**
+```php
+// Get actual continent slugs from database
+$continent_slugs = $this->get_continent_slugs();
+// Result: ['europa', 'asien', 'afrika', ...]
+
+// Create specific rewrite rules ONLY for these slugs
+$pattern = '^(europa|asien|afrika|nordamerika|sydamerika|oceanien|antarktis)/([^/]+)/?$';
+```
+
+**Benefits:**
+- ✅ Only matches actual continents from database
+- ✅ WordPress pages work normally (no interference)
+- ✅ Other plugins work normally (no `$post` global issues)
+- ✅ Language-independent (reads actual translated slugs from DB)
+- ✅ Fallback to common continent names if DB empty (works before first import)
+- ✅ Clean URLs without `/l/` prefix
+- ✅ No performance overhead (rules built once at init)
+
+**Fallback Slugs:**
+If no continents in database yet (before first import), uses common translations:
+- Danish: `europa`, `asien`, `afrika`, `nordamerika`, `sydamerika`, `oceanien`, `antarktis`
+- English: `europe`, `asia`, `africa`, `north-america`, `south-america`, `oceania`, `antarctica`
+
+### Files Changed
+- `includes/core/class-wta-post-type.php`:
+  - Removed `smart_request_filter()` method
+  - Added `get_continent_slugs()` method
+  - Updated `register_post_type()` with dynamic rewrite rules
+  - Updated `check_custom_rules_exist()` to check dynamic rules
+- `includes/class-wta-core.php`:
+  - Removed `smart_request_filter` registration
+
+### After Update
+1. Upload plugin v2.30.3
+2. Go to **Settings → Permalinks** → Click "Save Changes"
+3. Import locations - continent slugs will auto-update rewrite rules
+4. All WordPress pages will work normally alongside location URLs
+
 ## [2.30.2] - 2025-12-05
 
 ### Fixed

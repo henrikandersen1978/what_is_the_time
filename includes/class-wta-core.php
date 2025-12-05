@@ -133,11 +133,6 @@ class WTA_Core {
 		$post_type = new WTA_Post_Type();
 		$this->loader->add_action( 'init', $post_type, 'register_post_type' );
 		
-		// Smart request filter - checks if location post exists before claiming URL
-		// This prevents hijacking WordPress pages/posts
-		// MUST run EARLY (priority 1) before WordPress query parsing
-		$this->loader->add_filter( 'request', $post_type, 'smart_request_filter', 1 );
-		
 		// Register URL cleanup filters - EARLY priority to run before caching
 		// MUST be active on frontend for breadcrumbs, schema, internal links to work
 		$this->loader->add_filter( 'post_type_link', $post_type, 'remove_post_type_slug', 1, 2 );

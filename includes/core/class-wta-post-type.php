@@ -81,11 +81,22 @@ class WTA_Post_Type {
 	 * @return   bool         True if custom rules exist.
 	 */
 	private function check_custom_rules_exist( $rules ) {
-		// Check if any of our custom rules exist
+		// Get continent slugs to build expected patterns
+		$continent_slugs = $this->get_continent_slugs();
+		
+		if ( empty( $continent_slugs ) ) {
+			return false;
+		}
+		
+		// Build the continent pattern (same as in register_post_type)
+		$escaped_slugs = array_map( 'preg_quote', $continent_slugs );
+		$continent_pattern = implode( '|', $escaped_slugs );
+		
+		// Check if any of our dynamic custom rules exist
 		$custom_patterns = array(
-			'^([^/]+)/([^/]+)/([^/]+)/?$',
-			'^([^/]+)/([^/]+)/?$',
-			'^([^/]+)/?$',
+			'^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',
+			'^(' . $continent_pattern . ')/([^/]+)/?$',
+			'^(' . $continent_pattern . ')/?$',
 		);
 		
 		foreach ( $custom_patterns as $pattern ) {
@@ -173,49 +184,42 @@ class WTA_Post_Type {
 	}
 	
 	/**
-	 * Smart request filter - only claim URLs if location post exists.
+	 * Get continent slugs from database for dynamic rewrite rules.
 	 * 
-	 * This prevents our rewrite rules from hijacking WordPress pages.
-	 * Checks if a location post exists before setting post_type.
+	 * Fetches all published continents and returns their slugs.
+	 * Used to create specific rewrite rules that only match actual continents.
 	 *
-	 * @since    2.30.1
-	 * @param    array $query_vars Query variables.
-	 * @return   array             Modified query variables.
+	 * @since    2.30.3
+	 * @return   array Array of continent slugs.
 	 */
-	public function smart_request_filter( $query_vars ) {
-		// Skip in admin
-		if ( is_admin() ) {
-			return $query_vars;
+	private function get_continent_slugs() {
+		global $wpdb;
+		
+		// Query for all continent slugs directly from database
+		// This is more efficient than get_posts() and works even during early init
+		$query = $wpdb->prepare(
+			"SELECT p.post_name 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			WHERE p.post_type = %s
+			AND p.post_status = 'publish'
+			AND pm.meta_key = 'wta_type'
+			AND pm.meta_value = 'continent'",
+			WTA_POST_TYPE
+		);
+		
+		$slugs = $wpdb->get_col( $query );
+		
+		// Fallback: If no continents in DB yet, use common translated continent slugs
+		// This ensures rules work even before first import
+		if ( empty( $slugs ) ) {
+			$slugs = array(
+				'europa', 'asien', 'afrika', 'nordamerika', 'sydamerika', 'oceanien', 'antarktis', // Danish
+				'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania', 'antarctica', // English
+			);
 		}
 		
-		// Check if our rewrite rules matched (they set post_type and name)
-		if ( isset( $query_vars['post_type'] ) && $query_vars['post_type'] === WTA_POST_TYPE && isset( $query_vars['name'] ) ) {
-			$slug = $query_vars['name'];
-			
-			// Verify that a location post with this slug actually exists
-			$exists = get_posts( array(
-				'name'        => $slug,
-				'post_type'   => WTA_POST_TYPE,
-				'post_status' => 'publish',
-				'numberposts' => 1,
-				'fields'      => 'ids',
-			) );
-			
-			// If NO location post exists, restore pagename so WordPress can find pages/posts
-			if ( empty( $exists ) ) {
-				// Get the original request path to restore pagename
-				$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-				$path = parse_url( $request_uri, PHP_URL_PATH );
-				$path = trim( $path, '/' );
-				
-				// Clear our location query vars and set pagename for WordPress to handle
-				unset( $query_vars['post_type'] );
-				unset( $query_vars['name'] );
-				$query_vars['pagename'] = $path;
-			}
-		}
-		
-		return $query_vars;
+		return $slugs;
 	}
 	
 	/**
@@ -326,25 +330,41 @@ class WTA_Post_Type {
 			) );
 		}
 		
-		// Add custom rewrite rules for clean URLs (without /l/ prefix)
-		// These catch requests to /europa/ when users visit clean URLs
-		// WordPress's default rules handle /l/europa/
-		// Use [^/]{2,} to match 2+ characters, excluding single-letter paths like /l/
-		add_rewrite_rule(
-			'^([^/]{2,})/([^/]+)/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]',
-			'top'
-		);
-		add_rewrite_rule(
-			'^([^/]{2,})/([^/]+)/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]',
-			'top'
-		);
-		add_rewrite_rule(
-			'^([^/]{2,})/?$',
-			'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
-			'top'
-		);
+		// Add dynamic rewrite rules that ONLY match actual continent slugs
+		// This prevents hijacking WordPress pages while allowing clean location URLs
+		$continent_slugs = $this->get_continent_slugs();
+		
+		if ( ! empty( $continent_slugs ) ) {
+			// Escape each slug for regex and create pattern
+			$escaped_slugs = array_map( 'preg_quote', $continent_slugs );
+			$continent_pattern = implode( '|', $escaped_slugs );
+			
+			// 3-level: /europa/danmark/kobenhavn/
+			add_rewrite_rule(
+				'^(' . $continent_pattern . ')/([^/]+)/([^/]+)/?$',
+				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[3]',
+				'top'
+			);
+			
+			// 2-level: /europa/danmark/
+			add_rewrite_rule(
+				'^(' . $continent_pattern . ')/([^/]+)/?$',
+				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[2]',
+				'top'
+			);
+			
+			// 1-level: /europa/
+			add_rewrite_rule(
+				'^(' . $continent_pattern . ')/?$',
+				'index.php?post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
+				'top'
+			);
+			
+			WTA_Logger::debug( 'Dynamic rewrite rules registered', array(
+				'continent_count' => count( $continent_slugs ),
+				'continents' => implode( ', ', $continent_slugs ),
+			) );
+		}
 	}
 }
 
