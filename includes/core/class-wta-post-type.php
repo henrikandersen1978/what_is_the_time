@@ -77,6 +77,66 @@ class WTA_Post_Type {
 	}
 	
 	/**
+	 * Disable canonical redirect for our clean URLs.
+	 *
+	 * WordPress tries to "fix" our clean URLs by redirecting to /location/ prefix.
+	 * This filter prevents that redirect.
+	 *
+	 * @since    2.28.5
+	 * @param    string $redirect_url  Redirect URL.
+	 * @param    string $requested_url Requested URL.
+	 * @return   string|false          False to disable redirect.
+	 */
+	public function disable_canonical_redirect( $redirect_url, $requested_url ) {
+		global $wp_query;
+		
+		// If this is a location post, disable canonical redirect
+		if ( isset( $wp_query->query_vars['post_type'] ) && WTA_POST_TYPE === $wp_query->query_vars['post_type'] ) {
+			return false;
+		}
+		
+		// Check if requested URL looks like our clean URL pattern
+		$path = parse_url( $requested_url, PHP_URL_PATH );
+		$path = trim( $path, '/' );
+		$parts = explode( '/', $path );
+		
+		// If it's 1-3 level path (continent, continent/country, continent/country/city)
+		// and doesn't contain 'location', disable redirect
+		if ( count( $parts ) >= 1 && count( $parts ) <= 3 && strpos( $path, 'location' ) === false ) {
+			// Check if redirect URL contains 'location' - if so, cancel the redirect!
+			if ( strpos( $redirect_url, '/location/' ) !== false || strpos( $redirect_url, '/' . WTA_POST_TYPE . '/' ) !== false ) {
+				return false;
+			}
+		}
+		
+		return $redirect_url;
+	}
+	
+	/**
+	 * Disable WordPress guess redirect for our URLs.
+	 *
+	 * Prevents WordPress from "guessing" that our clean URLs are wrong.
+	 *
+	 * @since    2.28.5
+	 * @param    bool $do_redirect Whether to redirect.
+	 * @return   bool              False to disable.
+	 */
+	public function disable_guess_redirect( $do_redirect ) {
+		// Check if current request matches our clean URL pattern
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		$path = parse_url( $request_uri, PHP_URL_PATH );
+		$path = trim( $path, '/' );
+		$parts = explode( '/', $path );
+		
+		// If it's 1-3 level path without 'location', disable guess redirect
+		if ( count( $parts ) >= 1 && count( $parts ) <= 3 && strpos( $path, 'location' ) === false ) {
+			return false;
+		}
+		
+		return $do_redirect;
+	}
+	
+	/**
 	 * Parse clean URLs and set correct query var.
 	 *
 	 * @since    2.28.2

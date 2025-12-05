@@ -140,6 +140,10 @@ class WTA_Core {
 		$this->loader->add_filter( 'page_link', $post_type, 'remove_post_type_slug', 1, 2 );
 		$this->loader->add_action( 'pre_get_posts', $post_type, 'parse_clean_urls' );
 		
+		// Disable WordPress canonical redirects that try to "fix" our clean URLs
+		$this->loader->add_filter( 'redirect_canonical', $post_type, 'disable_canonical_redirect', 10, 2 );
+		$this->loader->add_filter( 'do_redirect_guess_404_permalink', $post_type, 'disable_guess_redirect', 10, 1 );
+		
 		// Force clear permalink cache on init
 		$this->loader->add_action( 'init', $post_type, 'clear_permalink_cache', 999 );
 		

@@ -2,6 +2,52 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.28.5] - 2025-12-05
+
+### Fixed
+- **CRITICAL: Disabled WordPress canonical redirects that broke clean URLs**
+- WordPress was redirecting `/europa/danmark/` → `/location/europa/danmark/`
+- Added `redirect_canonical` filter to prevent WordPress "fixing" our clean URLs
+- Added `do_redirect_guess_404_permalink` filter to prevent WordPress guessing wrong URLs
+- Clean URLs now work WITHOUT redirects
+
+### Root Cause Discovered
+**The Real Problem:**
+1. ✅ Our rewrite rules worked correctly
+2. ✅ Our permalink filters removed `/wta_location/` correctly
+3. ❌ BUT WordPress' **canonical redirect** ran and "corrected" clean URLs
+4. ❌ WordPress thought `/europa/danmark/` was "wrong" and redirected to `/location/europa/danmark/`
+
+**Why this happened:**
+- WordPress has built-in "helpful" redirect logic
+- It tries to fix "incorrect" URLs by redirecting to what it thinks is correct
+- Since post type is `wta_location`, WordPress assumed URLs MUST include that prefix
+- Our clean URLs triggered WordPress' 404 guess redirect
+
+**The Solution:**
+- Disable `redirect_canonical` for location posts
+- Disable `do_redirect_guess_404_permalink` for 1-3 level paths without 'location'
+- Now WordPress accepts our clean URLs without "helping"
+
+### What Now Works
+✅ `/europa/` - No redirect, displays correctly
+✅ `/europa/danmark/` - No redirect, displays correctly  
+✅ `/europa/danmark/aalborg/` - No redirect, displays correctly
+✅ get_permalink() returns clean URLs
+✅ Internal links use clean URLs
+✅ Schema markup uses clean URLs
+✅ Yoast SEO data uses clean URLs
+✅ Breadcrumbs use clean URLs
+
+### Testing Instructions
+1. Upload plugin v2.28.5
+2. Flush permalinks (Settings → Permalinks → Save)
+3. Clear ALL caches (object cache, browser, CDN)
+4. Visit `/europa/danmark/` directly
+5. Check browser URL bar - should stay at `/europa/danmark/` (NO redirect!)
+6. View page source - all URLs should be clean
+7. Check Yoast canonical and og:url tags
+
 ## [2.28.4] - 2025-12-05
 
 ### Fixed
