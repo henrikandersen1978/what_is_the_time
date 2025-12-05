@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.30.1] - 2025-12-05
+
+### Fixed
+- **CRITICAL: WordPress pages now work alongside location URLs**
+- Added smart request filter that checks if location post exists before claiming URL
+- Prevents plugin rewrite rules from hijacking regular WordPress pages, posts, or other post types
+
+### Technical Details
+**Problem:**
+Custom rewrite rules were too broad (`^([^/]{2,})/?$`) and matched ALL URLs, including WordPress pages:
+- `/europa/` → Correctly matched location ✅
+- `/om/` → Incorrectly matched as location, broke WordPress page ❌
+- `/blog/` → Incorrectly matched as location, broke WordPress page ❌
+
+**Solution:**
+Added `smart_request_filter()` that runs AFTER rewrite rules but BEFORE query parsing:
+1. Rewrite rules match broadly (as before)
+2. New filter checks: Does a location post with this slug actually exist?
+3. If YES → Use location post type ✅
+4. If NO → Clear post_type, let WordPress find page/post normally ✅
+
+**Benefits:**
+- ✅ Language-independent (works with Danish, German, English site translations)
+- ✅ No hardcoded continent whitelists needed
+- ✅ WordPress pages, posts, and other CPTs work normally
+- ✅ Location URLs still work perfectly
+- ✅ Future-proof solution
+
+### Files Changed
+- `includes/core/class-wta-post-type.php` - Added `smart_request_filter()` method
+- `includes/class-wta-core.php` - Registered filter with priority 1 (runs early)
+
 ## [2.30.0] - 2025-12-05
 
 ### Changed

@@ -173,6 +173,46 @@ class WTA_Post_Type {
 	}
 	
 	/**
+	 * Smart request filter - only claim URLs if location post exists.
+	 * 
+	 * This prevents our rewrite rules from hijacking WordPress pages.
+	 * Checks if a location post exists before setting post_type.
+	 *
+	 * @since    2.30.1
+	 * @param    array $query_vars Query variables.
+	 * @return   array             Modified query variables.
+	 */
+	public function smart_request_filter( $query_vars ) {
+		// Skip in admin
+		if ( is_admin() ) {
+			return $query_vars;
+		}
+		
+		// Check if our rewrite rules matched (they set post_type and name)
+		if ( isset( $query_vars['post_type'] ) && $query_vars['post_type'] === WTA_POST_TYPE && isset( $query_vars['name'] ) ) {
+			$slug = $query_vars['name'];
+			
+			// Verify that a location post with this slug actually exists
+			$exists = get_posts( array(
+				'name'        => $slug,
+				'post_type'   => WTA_POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => 1,
+				'fields'      => 'ids',
+			) );
+			
+			// If NO location post exists, clear our post_type and let WordPress find page/post
+			if ( empty( $exists ) ) {
+				unset( $query_vars['post_type'] );
+				unset( $query_vars['name'] );
+				// WordPress will now look for a regular page/post with this URL
+			}
+		}
+		
+		return $query_vars;
+	}
+	
+	/**
 	 * Parse clean URLs and set correct query var.
 	 *
 	 * @since    2.28.2
