@@ -2,6 +2,71 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.3] - 2025-12-07
+
+### Fixed
+- **IMPROVED SCHEMA.ORG STRUCTURE** 🔍✨
+- Front page ItemList now contains ONLY continents (not countries)
+- Cleaner, more focused SEO structure
+- Eliminates mixed hierarchy issues
+
+### The Problem (Before v2.33.3)
+
+**Previous Schema Structure:**
+```
+ItemList (34 items):
+  Position 1: Afrika (Place) ← Continent
+  Position 2: Asien (Place) ← Continent
+  ...
+  Position 7: Egypten (Country) ← Country under Afrika
+  Position 8: Kenya (Country) ← Country under Afrika
+  Position 9: Sydafrika (Country) ← Country under Afrika
+  ...
+```
+
+**Issues:**
+❌ Mixed types (Continents + Countries in flat list)  
+❌ Hierarchy lost (no clear parent-child relationship)  
+❌ Confusing position numbers (continents appear multiple times implicitly)  
+❌ Inconsistent structure (Place vs Country types mixed)  
+
+### The Solution (v2.33.3)
+
+**New Schema Structure:**
+```
+ItemList (6 items):
+  Position 1: Afrika (Place)
+  Position 2: Asien (Place)
+  Position 3: Europa (Place)
+  Position 4: Nordamerika (Place)
+  Position 5: Oceanien (Place)
+  Position 6: Sydamerika (Place)
+```
+
+**Benefits:**
+✅ Clean, focused structure  
+✅ Consistent type (all Place/Continent)  
+✅ Correct numberOfItems (6 instead of 34+)  
+✅ Better SEO (clear hierarchy)  
+✅ Matches visual presentation  
+
+### Future Enhancement
+Each continent page will have its own ItemList of countries, maintaining proper hierarchy:
+- `/afrika/` → ItemList of African countries
+- `/asien/` → ItemList of Asian countries
+- etc.
+
+### Technical Details
+- **Changed:** `includes/frontend/class-wta-shortcodes.php`
+- **Removed:** Countries from front page Schema.org ItemList
+- **Result:** Clean, semantic structured data
+
+### Schema.org Compliance
+✅ ItemList with consistent item types  
+✅ Proper position numbering (1-6)  
+✅ Accurate numberOfItems count  
+✅ Hierarchical structure maintained  
+
 ## [2.33.2] - 2025-12-07
 
 ### Improved

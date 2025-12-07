@@ -1169,16 +1169,8 @@ class WTA_Shortcodes {
 					esc_html( $country_name )
 				);
 				
-				// Add country to schema
-				$list_items[] = array(
-					'@type'    => 'ListItem',
-					'position' => $position++,
-					'item'     => array(
-						'@type' => 'Country',
-						'@id'   => $country_url,
-						'name'  => $country_name,
-					),
-				);
+				// Countries are NOT added to front page schema (only continents in ItemList)
+				// Each continent page will have its own ItemList of countries for better SEO structure
 			}
 			$output .= '</ul>' . "\n";
 		} else {
