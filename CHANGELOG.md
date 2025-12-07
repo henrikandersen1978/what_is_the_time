@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.2] - 2025-12-07
+
+### Improved
+- **BETTER COUNTRY LIST STYLING** 📐✨
+- Improved spacing and readability for country names
+- Better handling of long country names (e.g. "Forenede Arabiske Emirater")
+
+### CSS Changes
+
+**Spacing Improvements:**
+- Increased bottom margin between countries: `0.25em` → `0.6em`
+- Added padding around list items: `0.2em`
+- Added padding to list container: `0.5em`
+- Improved line-height: `1.4` → `1.5`
+
+**Typography Improvements:**
+- Slightly reduced font size: `1em` → `0.95em` (better for long names)
+- Added `word-break: break-word` for very long country names
+- Changed to `inline-flex` for better alignment with flags
+
+**Flag Icon Improvements:**
+- Added `min-width` to prevent flag squishing
+- Increased margin-right: `0.5em` → `0.6em`
+- Added `flex-shrink: 0` to keep flag size consistent
+
+### Visual Result
+✅ More breathing room between countries  
+✅ Long names wrap properly without breaking layout  
+✅ Flags stay consistent size regardless of text length  
+✅ Better visual hierarchy and readability  
+
+### Files Changed
+- `includes/frontend/assets/css/frontend.css` - Country list styling improvements
+
 ## [2.33.1] - 2025-12-07
 
 ### Changed
