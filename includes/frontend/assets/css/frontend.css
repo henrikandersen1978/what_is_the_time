@@ -202,6 +202,43 @@ html {
 	scroll-behavior: smooth !important;
 }
 
+/* Responsive Time Display - Optimized for mobile devices */
+@media (max-width: 768px) {
+	.wta-live-time {
+		font-size: 2.5em !important;
+		letter-spacing: 1px !important;
+	}
+	
+	.wta-current-time-statement {
+		font-size: 1.1em !important;
+	}
+	
+	.wta-seo-direct-answer {
+		padding: 2em 1.5em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-live-time {
+		font-size: 2em !important;
+		letter-spacing: 0.5px !important;
+		margin: 0.3em 0 !important;
+	}
+	
+	.wta-current-time-statement {
+		font-size: 1em !important;
+	}
+	
+	.wta-current-date-statement {
+		font-size: 1em !important;
+	}
+	
+	.wta-seo-direct-answer {
+		padding: 1.5em 1em !important;
+		margin: 1em 0 1.5em 0 !important;
+	}
+}
+
 /* Responsive Breadcrumb & Quick Nav */
 @media (max-width: 768px) {
 	.wta-breadcrumb {

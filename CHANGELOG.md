@@ -2,6 +2,70 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.4] - 2025-12-07
+
+### Improved
+- **RESPONSIVE TIME DISPLAY** 📱✨
+- Optimized font sizes for mobile devices
+- Better readability on tablets and phones
+- Reduced padding on smaller screens
+
+### The Problem (Before v2.33.4)
+
+**Desktop time display:**
+- `.wta-live-time`: 3.5em font size
+- Works great on desktop (large screens)
+
+**Mobile issues:**
+- 3.5em was TOO LARGE on phones
+- Text could overflow or look cramped
+- Poor user experience on small devices
+- Excessive padding wasted screen space
+
+### The Solution (v2.33.4)
+
+**Responsive Font Sizing:**
+
+| Device Size | Time Font | Statement Font | Padding |
+|------------|-----------|----------------|---------|
+| Desktop (>768px) | **3.5em** | 1.2em | 2.5em |
+| Tablet (≤768px) | **2.5em** ↓29% | 1.1em | 2em 1.5em |
+| Mobile (≤480px) | **2.0em** ↓43% | 1.0em | 1.5em 1em |
+
+**Additional Mobile Optimizations:**
+- Reduced `letter-spacing` (2px → 1px → 0.5px)
+- Adjusted margins for better vertical rhythm
+- Compressed padding in hero box
+- Better use of screen real estate
+
+### CSS Media Queries Added
+
+```css
+@media (max-width: 768px) {
+  .wta-live-time { font-size: 2.5em; }
+  .wta-current-time-statement { font-size: 1.1em; }
+  .wta-seo-direct-answer { padding: 2em 1.5em; }
+}
+
+@media (max-width: 480px) {
+  .wta-live-time { font-size: 2em; }
+  .wta-current-time-statement { font-size: 1em; }
+  .wta-current-date-statement { font-size: 1em; }
+  .wta-seo-direct-answer { padding: 1.5em 1em; }
+}
+```
+
+### Benefits
+
+✅ **Better Mobile UX** - Comfortable reading on all devices  
+✅ **No Overflow** - Text fits properly on small screens  
+✅ **Consistent Hierarchy** - Font sizes scale proportionally  
+✅ **Space Efficiency** - Better use of limited screen space  
+✅ **Professional Look** - Polished across all breakpoints  
+
+### Files Changed
+- `includes/frontend/assets/css/frontend.css` - Added responsive media queries
+
 ## [2.33.3] - 2025-12-07
 
 ### Fixed
