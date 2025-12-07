@@ -696,16 +696,60 @@ class WTA_Structure_Processor {
 			}
 		}
 
-		// Filter by type field if present
-		if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
-			// Skip non-city types
-			if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+	// Filter by type field if present
+	if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
+		// Skip non-city types
+		if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
+			$skipped_country++;
+			continue;
+		}
+	}
+	
+	// GPS VALIDATION: Filter out entries with corrupt/mismatched GPS coordinates
+	// Prevents importing cities with wrong location data (e.g. København with NY coordinates)
+	if ( isset( $city['latitude'] ) && isset( $city['longitude'] ) && isset( $city['country_code'] ) ) {
+		$lat = floatval( $city['latitude'] );
+		$lon = floatval( $city['longitude'] );
+		$cc = strtoupper( $city['country_code'] );
+		
+		// Define approximate latitude/longitude bounds for countries
+		// This catches major GPS errors (e.g. European city with American coordinates)
+		$gps_bounds = array(
+			'DK' => array( 'lat_min' => 54.5,  'lat_max' => 58.0,  'lon_min' => 8.0,   'lon_max' => 15.5 ),  // Denmark
+			'NO' => array( 'lat_min' => 57.5,  'lat_max' => 71.5,  'lon_min' => 4.0,   'lon_max' => 31.5 ),  // Norway
+			'SE' => array( 'lat_min' => 55.0,  'lat_max' => 69.5,  'lon_min' => 10.5,  'lon_max' => 24.5 ),  // Sweden
+			'DE' => array( 'lat_min' => 47.0,  'lat_max' => 55.5,  'lon_min' => 5.5,   'lon_max' => 15.5 ),  // Germany
+			'FR' => array( 'lat_min' => 41.0,  'lat_max' => 51.5,  'lon_min' => -5.5,  'lon_max' => 10.0 ),  // France
+			'GB' => array( 'lat_min' => 49.5,  'lat_max' => 61.0,  'lon_min' => -8.5,  'lon_max' => 2.0 ),   // United Kingdom
+			'IT' => array( 'lat_min' => 35.5,  'lat_max' => 47.5,  'lon_min' => 6.5,   'lon_max' => 19.0 ),  // Italy
+			'ES' => array( 'lat_min' => 27.5,  'lat_max' => 44.0,  'lon_min' => -18.5, 'lon_max' => 5.0 ),   // Spain
+			'NL' => array( 'lat_min' => 50.5,  'lat_max' => 53.7,  'lon_min' => 3.0,   'lon_max' => 7.5 ),   // Netherlands
+			'BE' => array( 'lat_min' => 49.5,  'lat_max' => 51.7,  'lon_min' => 2.3,   'lon_max' => 6.5 ),   // Belgium
+		);
+		
+		// Check if country has defined bounds
+		if ( isset( $gps_bounds[ $cc ] ) ) {
+			$bounds = $gps_bounds[ $cc ];
+			
+			// Check if GPS coordinates are outside expected bounds
+			if ( $lat < $bounds['lat_min'] || $lat > $bounds['lat_max'] ||
+			     $lon < $bounds['lon_min'] || $lon > $bounds['lon_max'] ) {
+				// GPS coordinates don't match country - skip this corrupt entry
 				$skipped_country++;
+				file_put_contents( $debug_file, sprintf(
+					"SKIPPED corrupt GPS: %s (%s) - GPS: %.2f,%.2f outside %s bounds\n",
+					$city['name'],
+					$cc,
+					$lat,
+					$lon,
+					$cc
+				), FILE_APPEND );
 				continue;
 			}
 		}
-		
-		// Max cities per country
+	}
+	
+	// Max cities per country
 		$should_queue = true;
 		if ( $max_cities_per_country > 0 ) {
 			$country_code = $city['country_code'];
