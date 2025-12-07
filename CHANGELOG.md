@@ -2,6 +2,94 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.5] - 2025-12-07
+
+### Added
+- **FLAG ICONS EVERYWHERE** 🚩✨
+- Added country flag icons to child locations grid (country boxes)
+- Added flag icons to nearby countries list
+- Added flag icons to time comparison table
+- Replaced generic emoji with actual country flags
+
+### Where Flags Now Appear
+
+**1. Child Locations Grid (Country Overview)**
+```
+Before: [Danmark] [Sverige] [Norge]
+After:  [🇩🇰 Danmark] [🇸🇪 Sverige] [🇳🇴 Norge]
+```
+
+**2. Nearby Countries List**
+```
+Before: 🌍 Danmark (12 steder i databasen)
+After:  🇩🇰 Danmark (12 steder i databasen)
+```
+
+**3. Time Comparison Table**
+```
+Before: | København | Danmark | Samme tid |
+After:  | København | 🇩🇰 Danmark | Samme tid |
+```
+
+### Implementation Details
+
+**PHP Changes (class-wta-shortcodes.php):**
+
+1. **Child Locations** (line ~379-397):
+   - Detects if child is a country
+   - Fetches `wta_country_code` meta
+   - Outputs flag-icons CSS class
+
+2. **Nearby Countries** (line ~555-584):
+   - Fetches country ISO code
+   - Replaces generic 🌍 emoji with actual flag
+   - Fallback to emoji if no ISO code
+
+3. **Time Comparison Table** (line ~777-806):
+   - Gets parent country's ISO code
+   - Displays flag before country name
+   - Graceful fallback for missing codes
+
+**CSS Changes (frontend.css):**
+```css
+/* Child locations grid */
+.wta-location-link .fi {
+    margin-right: 0.5em;
+    font-size: 1.2em;
+}
+
+/* Nearby countries list */
+.wta-nearby-icon .fi {
+    font-size: 2em;
+}
+
+/* Time comparison table */
+.wta-time-comparison-table .fi {
+    margin-right: 0.5em;
+    font-size: 1.2em;
+}
+```
+
+### Benefits
+
+✅ **Better Visual Recognition** - Instantly recognize countries by flag  
+✅ **Consistent Design** - Matches front page continent overview style  
+✅ **Professional Look** - Real flags instead of generic emojis  
+✅ **Universal Browser Support** - Works on all devices (flag-icons library)  
+✅ **Improved UX** - Easier to scan and navigate country lists  
+
+### Technical Notes
+
+- Uses flag-icons library (already loaded for front page)
+- Zero additional HTTP requests
+- Graceful degradation if ISO code missing
+- Proper semantic HTML structure maintained
+- SEO-friendly (country names still in text)
+
+### Files Changed
+- `includes/frontend/class-wta-shortcodes.php` - Added flag logic to 3 locations
+- `includes/frontend/assets/css/frontend.css` - Added flag styling for 3 contexts
+
 ## [2.33.4] - 2025-12-07
 
 ### Improved

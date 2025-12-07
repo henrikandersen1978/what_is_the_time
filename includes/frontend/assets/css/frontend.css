@@ -943,6 +943,26 @@ p.wta-no-nearby {
 	flex-shrink: 0 !important;
 }
 
+/* Flag icons in child locations grid (country boxes) */
+.wta-location-link .fi {
+	margin-right: 0.5em !important;
+	font-size: 1.2em !important;
+	vertical-align: middle !important;
+}
+
+/* Flag icons in nearby countries list */
+.wta-nearby-icon .fi {
+	font-size: 2em !important;
+	line-height: 1 !important;
+}
+
+/* Flag icons in time comparison table */
+.wta-time-comparison-table .fi {
+	margin-right: 0.5em !important;
+	font-size: 1.2em !important;
+	vertical-align: middle !important;
+}
+
 /* Debug message styling */
 .wta-debug {
 	font-size: 0.85em !important;

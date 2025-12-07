@@ -376,14 +376,27 @@ class WTA_Shortcodes {
 		$output .= '<div id="child-locations" class="wta-plugin-locations-grid wta-child-list">' . "\n";
 		$output .= '<ul class="wta-grid-list">' . "\n";
 		
-		foreach ( $children as $child ) {
-			// Get simple title (not SEO H1) - use post_title directly
-			$simple_title = get_post_field( 'post_title', $child->ID );
-			
-			$output .= '<li class="wta-grid-item"><a class="wta-location-link" href="' . esc_url( get_permalink( $child->ID ) ) . '">';
-			$output .= esc_html( $simple_title );
-			$output .= '</a></li>' . "\n";
+	foreach ( $children as $child ) {
+		// Get simple title (not SEO H1) - use post_title directly
+		$simple_title = get_post_field( 'post_title', $child->ID );
+		
+		// Get ISO code for flag icon (only for countries)
+		$child_type = get_post_meta( $child->ID, 'wta_type', true );
+		$iso_code = '';
+		if ( 'country' === $child_type ) {
+			$iso_code = get_post_meta( $child->ID, 'wta_country_code', true );
 		}
+		
+		$output .= '<li class="wta-grid-item"><a class="wta-location-link" href="' . esc_url( get_permalink( $child->ID ) ) . '">';
+		
+		// Add flag icon for countries
+		if ( ! empty( $iso_code ) ) {
+			$output .= '<span class="fi fi-' . esc_attr( strtolower( $iso_code ) ) . '"></span> ';
+		}
+		
+		$output .= esc_html( $simple_title );
+		$output .= '</a></li>' . "\n";
+	}
 		
 		$output .= '</ul>' . "\n";
 		$output .= '</div>' . "\n";
@@ -539,29 +552,39 @@ class WTA_Shortcodes {
 		// Build output
 		$output = '<div class="wta-nearby-list wta-nearby-countries-list">' . "\n";
 		
-		foreach ( $nearby_countries as $country_id ) {
-			$country_name = get_post_field( 'post_title', $country_id );
-			$country_link = get_permalink( $country_id );
-			
-			// Count cities in country
-			$cities_count = count( get_posts( array(
-				'post_type'      => WTA_POST_TYPE,
-				'post_parent'    => $country_id,
-				'posts_per_page' => -1,
-				'post_status'    => 'publish',
-				'fields'         => 'ids',
-			) ) );
-			
-			$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
-			
-			$output .= '<div class="wta-nearby-item">' . "\n";
+	foreach ( $nearby_countries as $country_id ) {
+		$country_name = get_post_field( 'post_title', $country_id );
+		$country_link = get_permalink( $country_id );
+		
+		// Get ISO code for flag icon
+		$iso_code = get_post_meta( $country_id, 'wta_country_code', true );
+		
+		// Count cities in country
+		$cities_count = count( get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'post_parent'    => $country_id,
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'fields'         => 'ids',
+		) ) );
+		
+		$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
+		
+		$output .= '<div class="wta-nearby-item">' . "\n";
+		
+		// Use flag icon instead of generic globe emoji
+		if ( ! empty( $iso_code ) ) {
+			$output .= '  <div class="wta-nearby-icon"><span class="fi fi-' . esc_attr( strtolower( $iso_code ) ) . '"></span></div>' . "\n";
+		} else {
 			$output .= '  <div class="wta-nearby-icon">🌍</div>' . "\n";
-			$output .= '  <div class="wta-nearby-content">' . "\n";
-			$output .= '    <a href="' . esc_url( $country_link ) . '" class="wta-nearby-title">' . esc_html( $country_name ) . '</a>' . "\n";
-			$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
-			$output .= '  </div>' . "\n";
-			$output .= '</div>' . "\n";
 		}
+		
+		$output .= '  <div class="wta-nearby-content">' . "\n";
+		$output .= '    <a href="' . esc_url( $country_link ) . '" class="wta-nearby-title">' . esc_html( $country_name ) . '</a>' . "\n";
+		$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
+		$output .= '  </div>' . "\n";
+		$output .= '</div>' . "\n";
+	}
 		
 		$output .= '</div>' . "\n";
 		
@@ -751,25 +774,36 @@ class WTA_Shortcodes {
 		$output .= '</tr></thead>' . "\n";
 		$output .= '<tbody>' . "\n";
 		
-		foreach ( $comparison_cities as $city ) {
-			$city_name = get_post_field( 'post_title', $city->ID );
-			$city_timezone = get_post_meta( $city->ID, 'wta_timezone', true );
-			
-			// Get country name
-			$parent_id = wp_get_post_parent_id( $city->ID );
-			$country_name = $parent_id ? get_post_field( 'post_title', $parent_id ) : '';
-			
-			// Calculate time difference
-			$time_diff = $this->calculate_time_difference( $current_timezone, $city_timezone );
-			$local_time = $this->get_local_time( $city_timezone );
-			
-			$output .= '<tr>' . "\n";
-			$output .= sprintf( '<td><a href="%s">%s</a></td>' . "\n", esc_url( get_permalink( $city->ID ) ), esc_html( $city_name ) );
+	foreach ( $comparison_cities as $city ) {
+		$city_name = get_post_field( 'post_title', $city->ID );
+		$city_timezone = get_post_meta( $city->ID, 'wta_timezone', true );
+		
+		// Get country name and ISO code for flag
+		$parent_id = wp_get_post_parent_id( $city->ID );
+		$country_name = $parent_id ? get_post_field( 'post_title', $parent_id ) : '';
+		$country_iso = $parent_id ? get_post_meta( $parent_id, 'wta_country_code', true ) : '';
+		
+		// Calculate time difference
+		$time_diff = $this->calculate_time_difference( $current_timezone, $city_timezone );
+		$local_time = $this->get_local_time( $city_timezone );
+		
+		$output .= '<tr>' . "\n";
+		$output .= sprintf( '<td><a href="%s">%s</a></td>' . "\n", esc_url( get_permalink( $city->ID ) ), esc_html( $city_name ) );
+		
+		// Add flag icon before country name
+		if ( ! empty( $country_iso ) ) {
+			$output .= sprintf( '<td><span class="fi fi-%s"></span> %s</td>' . "\n", 
+				esc_attr( strtolower( $country_iso ) ), 
+				esc_html( $country_name ) 
+			);
+		} else {
 			$output .= sprintf( '<td>%s</td>' . "\n", esc_html( $country_name ) );
-			$output .= sprintf( '<td class="wta-time-diff">%s</td>' . "\n", esc_html( $time_diff ) );
-			$output .= sprintf( '<td><span class="wta-live-comparison-time" data-timezone="%s">%s</span></td>' . "\n", esc_attr( $city_timezone ), esc_html( $local_time ) );
-			$output .= '</tr>' . "\n";
 		}
+		
+		$output .= sprintf( '<td class="wta-time-diff">%s</td>' . "\n", esc_html( $time_diff ) );
+		$output .= sprintf( '<td><span class="wta-live-comparison-time" data-timezone="%s">%s</span></td>' . "\n", esc_attr( $city_timezone ), esc_html( $local_time ) );
+		$output .= '</tr>' . "\n";
+	}
 		
 		$output .= '</tbody>' . "\n";
 		$output .= '</table>' . "\n";
