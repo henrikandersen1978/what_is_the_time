@@ -889,6 +889,15 @@ p.wta-no-nearby {
 	text-decoration: underline !important;
 }
 
+/* Flag icons styling (flag-icons library) */
+.wta-country-list .fi {
+	width: 1.33em !important;
+	line-height: 1em !important;
+	margin-right: 0.5em !important;
+	display: inline-block !important;
+	vertical-align: middle !important;
+}
+
 /* Debug message styling */
 .wta-debug {
 	font-size: 0.85em !important;

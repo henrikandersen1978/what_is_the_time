@@ -643,15 +643,24 @@ class WTA_Template_Loader {
 	 *
 	 * @since    2.0.0
 	 * @since    2.32.2 Always enqueue on frontend to support shortcodes in widgets/builders
+	 * @since    2.33.1 Added flag-icons library for universal flag emoji support
 	 */
 	public function enqueue_styles() {
 		// Always enqueue on frontend (not admin) to support shortcodes anywhere
 		// CSS is lightweight (~20KB) and ensures shortcodes work in widgets, builders, etc.
 		if ( ! is_admin() ) {
+			// Enqueue flag-icons library for country flags (works in all browsers)
+			wp_enqueue_style(
+				'flag-icons',
+				'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css',
+				array(),
+				'7.2.3'
+			);
+			
 			wp_enqueue_style(
 				'wta-frontend',
 				WTA_PLUGIN_URL . 'includes/frontend/assets/css/frontend.css',
-				array(),
+				array( 'flag-icons' ),
 				WTA_VERSION
 			);
 		}

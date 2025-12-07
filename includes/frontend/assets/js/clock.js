@@ -292,51 +292,12 @@
 })();
 
 /**
- * Convert ISO country codes to flag emojis
- * Uses Regional Indicator Symbols (U+1F1E6-1F1FF)
+ * Flag emojis are now handled by flag-icons CSS library
+ * This provides universal browser support (including Chrome on Windows)
+ * See: https://github.com/lipis/flag-icons
+ * 
+ * Previous approach using Regional Indicator Symbols worked on Safari/macOS
+ * but not on Chrome/Windows, which doesn't support native flag emojis.
  */
-(function() {
-	'use strict';
-
-	function isoToFlag(countryCode) {
-		if (!countryCode || countryCode.length !== 2) {
-			return '';
-		}
-		
-		// Convert to uppercase
-		countryCode = countryCode.toUpperCase();
-		
-		// Regional Indicator Symbol Letter A starts at U+1F1E6 (127462 in decimal)
-		// A = 65 in ASCII, so offset = 127462 - 65 = 127397
-		const codePoints = countryCode
-			.split('')
-			.map(function(char) {
-				return 127397 + char.charCodeAt();
-			});
-		
-		return String.fromCodePoint.apply(String, codePoints);
-	}
-
-	function convertFlagEmojis() {
-		const flagElements = document.querySelectorAll('.wta-flag-emoji[data-country-code]');
-		
-		flagElements.forEach(function(element) {
-			const countryCode = element.getAttribute('data-country-code');
-			const flag = isoToFlag(countryCode);
-			
-			if (flag) {
-				element.textContent = flag + ' ';
-			}
-		});
-	}
-
-	// Start when DOM is ready
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', convertFlagEmojis);
-	} else {
-		convertFlagEmojis();
-	}
-
-})();
 
 

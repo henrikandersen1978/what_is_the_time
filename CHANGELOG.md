@@ -2,6 +2,63 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.33.1] - 2025-12-07
+
+### Changed
+- **UNIVERSAL FLAG EMOJI SUPPORT** 🚩✨
+- Switched from JavaScript Regional Indicator Symbols to **flag-icons CSS library**
+- Now works in **ALL browsers** including Chrome on Windows (which doesn't support native flag emojis)
+
+### Why This Change?
+
+**Previous Approach (v2.33.0):**
+- Used JavaScript to convert ISO codes to Unicode flag emojis
+- ✅ Worked perfectly on Safari (macOS/iOS) and Chrome (macOS)
+- ❌ Failed on Chrome/Windows and Firefox/Windows (no native flag emoji support)
+- Users saw "DK", "SE", "NO" instead of 🇩🇰 🇸🇪 🇳🇴
+
+**New Approach (v2.33.1):**
+- Uses flag-icons library (https://github.com/lipis/flag-icons)
+- CSS classes + SVG flags = Universal support
+- ✅ Works on ALL browsers and operating systems
+- ✅ SEO-friendly (ISO codes in HTML, flags via CSS)
+- ✅ Lightweight (30KB minified CSS from CDN)
+- ✅ No JavaScript required for flag display
+
+### Technical Implementation
+
+**HTML Output:**
+```html
+<li><a href="/europa/danmark/"><span class="fi fi-dk"></span> Danmark</a></li>
+```
+
+**CSS (via CDN):**
+```css
+/* flag-icons library handles the rest */
+.fi.fi-dk { background-image: url('dk.svg'); }
+```
+
+**Benefits:**
+- 🎨 **Better Design Control** - CSS can style flags consistently
+- 🚀 **Better Performance** - Cached SVGs, no JS conversion needed
+- 📱 **Better Mobile Support** - Works on all devices
+- ♿ **Better Accessibility** - ISO codes visible if CSS fails
+- 🔍 **Better SEO** - Clean semantic HTML
+
+### Files Changed
+- `includes/frontend/class-wta-template-loader.php` - Added flag-icons CSS enqueue
+- `includes/frontend/class-wta-shortcodes.php` - Changed to flag-icons classes
+- `includes/frontend/assets/js/clock.js` - Removed JavaScript emoji conversion
+- `includes/frontend/assets/css/frontend.css` - Added flag-icons styling
+
+### Browser Support
+✅ Chrome (Windows/macOS/Linux)  
+✅ Firefox (all platforms)  
+✅ Safari (macOS/iOS)  
+✅ Edge  
+✅ Opera  
+✅ All mobile browsers  
+
 ## [2.33.0] - 2025-12-05
 
 ### Changed

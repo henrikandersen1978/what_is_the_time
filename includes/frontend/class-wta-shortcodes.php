@@ -1157,15 +1157,17 @@ class WTA_Shortcodes {
 				$country_name = get_the_title( $country->ID );
 				$country_url = get_permalink( $country->ID );
 				
-			// Get country ISO code - use JavaScript to convert to flag emoji (more reliable)
-			$iso_code = get_post_meta( $country->ID, 'wta_country_code', true );
+				// Get country ISO code for flag-icons CSS classes
+				$iso_code = get_post_meta( $country->ID, 'wta_country_code', true );
 				
-			$output .= sprintf(
-				'<li><a href="%s"><span class="wta-flag-emoji" data-country-code="%s"></span>%s</a></li>' . "\n",
-				esc_url( $country_url ),
-				esc_attr( strtoupper( $iso_code ) ),
-				esc_html( $country_name )
-			);
+				// Use flag-icons library for universal browser support
+				// Format: fi fi-{lowercase-iso-code}
+				$output .= sprintf(
+					'<li><a href="%s"><span class="fi fi-%s"></span> %s</a></li>' . "\n",
+					esc_url( $country_url ),
+					esc_attr( strtolower( $iso_code ) ),
+					esc_html( $country_name )
+				);
 				
 				// Add country to schema
 				$list_items[] = array(
