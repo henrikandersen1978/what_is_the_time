@@ -558,6 +558,7 @@ class WTA_Structure_Processor {
 		$skipped_gps_invalid = 0;
 		$skipped_continent_mismatch = 0;
 		$skipped_duplicate = 0;
+		$gps_fixed_via_wikidata = 0;
 		$per_country = array();
 		$total_read = 0;
 		$seen_cities = array(); // For duplicate detection
@@ -692,7 +693,7 @@ class WTA_Structure_Processor {
 				continue;
 			}
 			
-			// GPS VALIDATION LAG 2: Continent Consistency Check (GLOBAL validation!)
+			// GPS VALIDATION LAG 2: Continent Consistency Check + Wikidata Rescue
 			// This catches the København problem: DK=Europe, but GPS=North America
 			if ( isset( $city['country_code'] ) && isset( $country_to_continent[ $city['country_code'] ] ) ) {
 				$country_continent = $country_to_continent[ $city['country_code'] ];
@@ -702,8 +703,9 @@ class WTA_Structure_Processor {
 					$gps_continent = $this->get_continent_from_gps( $lat, $lon );
 					
 					if ( $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
+						// GPS MISMATCH DETECTED! Try to rescue with Wikidata
 						WTA_Logger::warning( sprintf(
-							'SKIPPED continent mismatch: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
+							'GPS continent mismatch detected: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
 							$city['name'],
 							$city['country_code'],
 							$country_continent,
@@ -711,8 +713,58 @@ class WTA_Structure_Processor {
 							$lat,
 							$lon
 						) );
-						$skipped_continent_mismatch++;
-						continue; // Skip this corrupt entry
+						
+						// Attempt Wikidata rescue if we have a Wikidata ID
+						if ( isset( $city['wikiDataId'] ) && ! empty( $city['wikiDataId'] ) ) {
+							WTA_Logger::info( 'Attempting Wikidata GPS rescue for: ' . $city['name'] . ' (' . $city['wikiDataId'] . ')' );
+							
+							$wikidata_coords = $this->fetch_coordinates_from_wikidata( $city['wikiDataId'] );
+							
+							if ( $wikidata_coords !== false ) {
+								// SUCCESS! Replace corrupt GPS with Wikidata coordinates
+								$old_lat = $city['latitude'];
+								$old_lon = $city['longitude'];
+								$city['latitude'] = $wikidata_coords['lat'];
+								$city['longitude'] = $wikidata_coords['lon'];
+								
+								WTA_Logger::info( sprintf(
+									'✅ GPS FIXED via Wikidata: %s (%s) - Old: %s,%s → New: %s,%s',
+									$city['name'],
+									$city['wikiDataId'],
+									$old_lat,
+									$old_lon,
+									$wikidata_coords['lat'],
+									$wikidata_coords['lon']
+								) );
+								
+								$gps_fixed_via_wikidata++;
+								
+								// Verify new GPS matches country continent
+								$new_gps_continent = $this->get_continent_from_gps( $wikidata_coords['lat'], $wikidata_coords['lon'] );
+								if ( $new_gps_continent !== $country_continent && $new_gps_continent !== 'Unknown' ) {
+									WTA_Logger::error( sprintf(
+										'❌ Wikidata GPS still mismatches! %s - Country=%s, New GPS=%s',
+										$city['name'],
+										$country_continent,
+										$new_gps_continent
+									) );
+									$skipped_continent_mismatch++;
+									continue; // Still corrupt - skip
+								}
+								
+								// Continue processing with fixed GPS! ✅
+							} else {
+								// Could not fetch from Wikidata - skip this entry
+								WTA_Logger::warning( 'Failed to rescue GPS from Wikidata, skipping: ' . $city['name'] );
+								$skipped_continent_mismatch++;
+								continue;
+							}
+						} else {
+							// No Wikidata ID - cannot rescue, skip
+							WTA_Logger::warning( 'No Wikidata ID available for rescue, skipping: ' . $city['name'] );
+							$skipped_continent_mismatch++;
+							continue;
+						}
 					}
 				}
 			}
@@ -925,13 +977,14 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 
 	$summary = sprintf(
-		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_continent_mismatch=%d, Skipped_duplicate=%d, Skipped_max=%d, Total_read=%d\n",
+		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_continent_mismatch=%d, Skipped_duplicate=%d, GPS_fixed_via_Wikidata=%d, Skipped_max=%d, Total_read=%d\n",
 		$queued,
 		$skipped_country,
 		$skipped_population,
 		$skipped_gps_invalid,
 		$skipped_continent_mismatch,
 		$skipped_duplicate,
+		$gps_fixed_via_wikidata,
 		$skipped_max_reached,
 		$total_read
 	);
@@ -944,6 +997,7 @@ class WTA_Structure_Processor {
 		'skipped_gps_invalid' => $skipped_gps_invalid,
 		'skipped_continent_mismatch' => $skipped_continent_mismatch,
 		'skipped_duplicate' => $skipped_duplicate,
+		'gps_fixed_via_wikidata' => $gps_fixed_via_wikidata,
 		'skipped_max_reached' => $skipped_max_reached,
 		'total_read' => $total_read,
 	) );
@@ -1110,6 +1164,71 @@ class WTA_Structure_Processor {
 		$name = str_replace( array( ' ', '-', '_' ), '', $name );
 		
 		return $name;
+	}
+
+	/**
+	 * Fetch correct GPS coordinates from Wikidata.
+	 * 
+	 * Used to rescue cities with corrupt GPS data in cities.json.
+	 * Only called when GPS validation fails but city has Wikidata ID.
+	 *
+	 * @since    2.33.8
+	 * @param    string $wikidata_id Wikidata entity ID (e.g., "Q1748")
+	 * @return   array|false         Array with 'lat' and 'lon', or false on failure
+	 */
+	private function fetch_coordinates_from_wikidata( $wikidata_id ) {
+		if ( empty( $wikidata_id ) ) {
+			return false;
+		}
+		
+		// Wikidata Entity Data API (JSON format)
+		$url = sprintf(
+			'https://www.wikidata.org/wiki/Special:EntityData/%s.json',
+			$wikidata_id
+		);
+		
+		WTA_Logger::info( 'Fetching GPS from Wikidata: ' . $wikidata_id . ' - ' . $url );
+		
+		$response = wp_remote_get( $url, array(
+			'timeout' => 10,
+			'headers' => array(
+				'User-Agent' => 'WorldTimeAI-WordPress-Plugin/2.33.8'
+			)
+		) );
+		
+		if ( is_wp_error( $response ) ) {
+			WTA_Logger::warning( 'Wikidata API error: ' . $response->get_error_message() );
+			return false;
+		}
+		
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+		
+		// Check if coordinate data exists (P625 = coordinate location property)
+		if ( ! isset( $data['entities'][ $wikidata_id ]['claims']['P625'] ) ) {
+			WTA_Logger::warning( 'No coordinate data in Wikidata for: ' . $wikidata_id );
+			return false;
+		}
+		
+		// Extract coordinates from first claim
+		$coord_claim = $data['entities'][ $wikidata_id ]['claims']['P625'][0];
+		
+		if ( ! isset( $coord_claim['mainsnak']['datavalue']['value'] ) ) {
+			WTA_Logger::warning( 'Invalid coordinate structure in Wikidata for: ' . $wikidata_id );
+			return false;
+		}
+		
+		$coord_value = $coord_claim['mainsnak']['datavalue']['value'];
+		
+		if ( ! isset( $coord_value['latitude'] ) || ! isset( $coord_value['longitude'] ) ) {
+			WTA_Logger::warning( 'Missing lat/lon in Wikidata for: ' . $wikidata_id );
+			return false;
+		}
+		
+		return array(
+			'lat' => $coord_value['latitude'],
+			'lon' => $coord_value['longitude']
+		);
 	}
 }
 
