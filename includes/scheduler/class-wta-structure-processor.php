@@ -1188,6 +1188,20 @@ class WTA_Structure_Processor {
 			return false;
 		}
 		
+		// Rate limiting: Max 1 request per second (Wikidata-friendly)
+		// Prevents IP bans and respects Wikimedia's guidelines
+		static $last_api_call = 0;
+		
+		$now = microtime( true );
+		$time_since_last_call = $now - $last_api_call;
+		
+		// If less than 1 second has passed since last call, wait
+		if ( $time_since_last_call < 1.0 ) {
+			$wait_microseconds = (int) ( ( 1.0 - $time_since_last_call ) * 1000000 );
+			usleep( $wait_microseconds );
+			WTA_Logger::debug( sprintf( 'Rate limit: waited %.3f seconds', $wait_microseconds / 1000000 ) );
+		}
+		
 		// Wikidata Entity Data API (JSON format)
 		$url = sprintf(
 			'https://www.wikidata.org/wiki/Special:EntityData/%s.json',
@@ -1199,9 +1213,12 @@ class WTA_Structure_Processor {
 		$response = wp_remote_get( $url, array(
 			'timeout' => 10,
 			'headers' => array(
-				'User-Agent' => 'WorldTimeAI-WordPress-Plugin/2.33.8'
+				'User-Agent' => 'WorldTimeAI-WordPress-Plugin/2.34.1'
 			)
 		) );
+		
+		// Update last call timestamp for rate limiting
+		$last_api_call = microtime( true );
 		
 		if ( is_wp_error( $response ) ) {
 			WTA_Logger::warning( 'Wikidata API error: ' . $response->get_error_message() );
