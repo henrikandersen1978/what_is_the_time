@@ -555,8 +555,55 @@ class WTA_Structure_Processor {
 		$skipped_country = 0;
 		$skipped_population = 0;
 		$skipped_max_reached = 0;
+		$skipped_gps_invalid = 0;
+		$skipped_continent_mismatch = 0;
+		$skipped_duplicate = 0;
 		$per_country = array();
 		$total_read = 0;
+		$seen_cities = array(); // For duplicate detection
+		
+		// Load countries.json to build country_code → continent mapping
+		// This enables GLOBAL GPS validation for ALL 195+ countries!
+		file_put_contents( $debug_file, "Loading countries.json for continent mapping...\n", FILE_APPEND );
+		$countries = WTA_Github_Fetcher::fetch_countries();
+		$country_to_continent = array();
+		
+		if ( $countries && is_array( $countries ) ) {
+			foreach ( $countries as $country ) {
+				if ( ! isset( $country['iso2'] ) ) {
+					continue;
+				}
+				
+				$iso2 = $country['iso2'];
+				
+				// Use SAME logic as class-wta-importer.php for consistency
+				if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
+					$subregion = $country['subregion'];
+					if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
+						$continent = 'North America';
+					} elseif ( $subregion === 'South America' ) {
+						$continent = 'South America';
+					} else {
+						$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+					}
+				} else {
+					$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
+				}
+				
+				if ( $continent === 'Polar' ) {
+					$continent = 'Antarctica';
+				}
+				
+				$country_to_continent[ $iso2 ] = $continent;
+			}
+			
+			file_put_contents( $debug_file, sprintf(
+				"Loaded %d country→continent mappings\n",
+				count( $country_to_continent )
+			), FILE_APPEND );
+		} else {
+			file_put_contents( $debug_file, "WARNING: Could not load countries.json for continent validation\n", FILE_APPEND );
+		}
 		
 		// Read entire JSON file at once (more reliable than manual parsing)
 		$json_content = file_get_contents( $file_path );
@@ -620,6 +667,99 @@ class WTA_Structure_Processor {
 				continue; // Skip to next iteration
 			}
 		}
+		
+		// ==========================================
+		// 3-LAYER GPS VALIDATION (GLOBAL)
+		// Works for ALL 195+ countries without hardcoding!
+		// ==========================================
+		
+		// GPS VALIDATION LAG 1: Sanity Checks (catch obviously corrupt data)
+		if ( isset( $city['latitude'] ) && isset( $city['longitude'] ) ) {
+			$lat = floatval( $city['latitude'] );
+			$lon = floatval( $city['longitude'] );
+			
+			// Check 1: Both coordinates are zero = missing/corrupt data
+			if ( $lat == 0 && $lon == 0 ) {
+				WTA_Logger::warning( 'SKIPPED invalid GPS (0,0): ' . $city['name'] . ' (' . $city['country_code'] . ')' );
+				$skipped_gps_invalid++;
+				continue;
+			}
+			
+			// Check 2: Mathematically impossible coordinates
+			if ( abs( $lat ) > 90 || abs( $lon ) > 180 ) {
+				WTA_Logger::warning( 'SKIPPED invalid GPS (out of range): ' . $city['name'] . ' (' . $city['country_code'] . ')' );
+				$skipped_gps_invalid++;
+				continue;
+			}
+			
+			// GPS VALIDATION LAG 2: Continent Consistency Check (GLOBAL validation!)
+			// This catches the København problem: DK=Europe, but GPS=North America
+			if ( isset( $city['country_code'] ) && isset( $country_to_continent[ $city['country_code'] ] ) ) {
+				$country_continent = $country_to_continent[ $city['country_code'] ];
+				
+				// Only validate if country has known continent (not 'Unknown')
+				if ( $country_continent !== 'Unknown' ) {
+					$gps_continent = $this->get_continent_from_gps( $lat, $lon );
+					
+					if ( $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
+						WTA_Logger::warning( sprintf(
+							'SKIPPED continent mismatch: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
+							$city['name'],
+							$city['country_code'],
+							$country_continent,
+							$gps_continent,
+							$lat,
+							$lon
+						) );
+						$skipped_continent_mismatch++;
+						continue; // Skip this corrupt entry
+					}
+				}
+			}
+		}
+		
+		// GPS VALIDATION LAG 3: Duplicate Detection (choose best quality entry)
+		// Prevents multiple entries for same city (e.g., "Copenhagen" + "Copenhagen")
+		if ( isset( $city['name'] ) && isset( $city['country_code'] ) ) {
+			$duplicate_key = $city['country_code'] . '_' . $this->normalize_city_name( $city['name'] );
+			
+			if ( isset( $seen_cities[ $duplicate_key ] ) ) {
+				// We've seen this city before! Compare quality scores
+				$existing_city = $seen_cities[ $duplicate_key ];
+				$new_score = $this->calculate_score( $city );
+				$old_score = $this->calculate_score( $existing_city );
+				
+				if ( $new_score <= $old_score ) {
+					// Current entry is worse or equal - skip it
+					WTA_Logger::info( sprintf(
+						'SKIPPED duplicate (worse quality): %s (%s) - Score: %.2f vs %.2f',
+						$city['name'],
+						$city['country_code'],
+						$new_score,
+						$old_score
+					) );
+					$skipped_duplicate++;
+					continue;
+				} else {
+					// New entry is better - we'll use it instead
+					WTA_Logger::info( sprintf(
+						'REPLACING duplicate (better quality): %s (%s) - Score: %.2f vs %.2f',
+						$city['name'],
+						$city['country_code'],
+						$new_score,
+						$old_score
+					) );
+					// Don't increment skipped counter - we're replacing
+				}
+			}
+			
+			// Remember this city (or update with better version)
+			$seen_cities[ $duplicate_key ] = $city;
+		}
+		
+		// ==========================================
+		// END OF GPS VALIDATION
+		// ==========================================
 		
 		// LAG 1: Filter cities with admin terms in ORIGINAL name from cities.json
 		// Prevents duplicates where both "Oslo" and "Oslo kommune" exist
@@ -785,10 +925,13 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 
 	$summary = sprintf(
-		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_max=%d, Total_read=%d\n",
+		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_continent_mismatch=%d, Skipped_duplicate=%d, Skipped_max=%d, Total_read=%d\n",
 		$queued,
 		$skipped_country,
 		$skipped_population,
+		$skipped_gps_invalid,
+		$skipped_continent_mismatch,
+		$skipped_duplicate,
 		$skipped_max_reached,
 		$total_read
 	);
@@ -798,6 +941,9 @@ class WTA_Structure_Processor {
 		'cities_queued' => $queued,
 		'skipped_country' => $skipped_country,
 		'skipped_population' => $skipped_population,
+		'skipped_gps_invalid' => $skipped_gps_invalid,
+		'skipped_continent_mismatch' => $skipped_continent_mismatch,
+		'skipped_duplicate' => $skipped_duplicate,
 		'skipped_max_reached' => $skipped_max_reached,
 		'total_read' => $total_read,
 	) );
@@ -833,6 +979,137 @@ class WTA_Structure_Processor {
 	 */
 	private function queue_cities_batch( $cities, $options ) {
 		return WTA_Importer::queue_cities_from_array( $cities, $options );
+	}
+
+	/**
+	 * Get continent from GPS coordinates using rough geographical bounds.
+	 * 
+	 * This is a fallback validation that works GLOBALLY for all 195+ countries.
+	 * Rough bounds are sufficient to catch major mismatches (e.g., Europe vs North America).
+	 *
+	 * @since    2.33.7
+	 * @param    float $lat Latitude
+	 * @param    float $lon Longitude
+	 * @return   string     Continent name or 'Unknown'
+	 */
+	private function get_continent_from_gps( $lat, $lon ) {
+		// Rough continent bounds (covering main landmasses)
+		// These are intentionally generous to avoid false positives
+		$continent_bounds = array(
+			'Africa' => array(
+				'lat_min' => -35.0, 'lat_max' => 37.5,
+				'lon_min' => -18.0, 'lon_max' => 52.0
+			),
+			'Asia' => array(
+				'lat_min' => -10.0, 'lat_max' => 80.0,
+				'lon_min' => 25.0, 'lon_max' => 180.0
+			),
+			'Europe' => array(
+				'lat_min' => 36.0, 'lat_max' => 71.5,
+				'lon_min' => -10.0, 'lon_max' => 40.0
+			),
+			'North America' => array(
+				'lat_min' => 15.0, 'lat_max' => 85.0,
+				'lon_min' => -170.0, 'lon_max' => -50.0
+			),
+			'South America' => array(
+				'lat_min' => -56.0, 'lat_max' => 13.0,
+				'lon_min' => -82.0, 'lon_max' => -35.0
+			),
+			'Oceania' => array(
+				'lat_min' => -47.0, 'lat_max' => 1.0,
+				'lon_min' => 110.0, 'lon_max' => 180.0
+			),
+			'Antarctica' => array(
+				'lat_min' => -90.0, 'lat_max' => -60.0,
+				'lon_min' => -180.0, 'lon_max' => 180.0
+			),
+		);
+
+		foreach ( $continent_bounds as $continent => $bounds ) {
+			if ( $lat >= $bounds['lat_min'] && $lat <= $bounds['lat_max'] &&
+			     $lon >= $bounds['lon_min'] && $lon <= $bounds['lon_max'] ) {
+				return $continent;
+			}
+		}
+
+		return 'Unknown';
+	}
+
+	/**
+	 * Calculate quality score for a city entry.
+	 * 
+	 * Used to prioritize best data when duplicates are found.
+	 * Works even if population is null!
+	 *
+	 * @since    2.33.7
+	 * @param    array $city City data
+	 * @return   float       Quality score (higher = better)
+	 */
+	private function calculate_score( $city ) {
+		$score = 0;
+
+		// 1. Population (if available) - higher is better
+		if ( isset( $city['population'] ) && $city['population'] > 0 ) {
+			// Scale: 100k pop = 10 points, 1M pop = 100 points (capped at 100)
+			$score += min( $city['population'] / 10000, 100 );
+		}
+
+		// 2. GPS precision (more decimal places = better data quality)
+		if ( isset( $city['latitude'] ) && isset( $city['longitude'] ) ) {
+			$lat_str = (string) $city['latitude'];
+			$lon_str = (string) $city['longitude'];
+			
+			if ( strpos( $lat_str, '.' ) !== false ) {
+				$lat_decimals = strlen( substr( strrchr( $lat_str, '.' ), 1 ) );
+			} else {
+				$lat_decimals = 0;
+			}
+			
+			if ( strpos( $lon_str, '.' ) !== false ) {
+				$lon_decimals = strlen( substr( strrchr( $lon_str, '.' ), 1 ) );
+			} else {
+				$lon_decimals = 0;
+			}
+			
+			// 2 decimal places = 4 points, 6 decimal places = 12 points
+			$score += ( $lat_decimals + $lon_decimals ) * 2;
+
+			// 3. GPS is not "round" numbers (0, 50, 100 often = imprecise)
+			$lat = floatval( $city['latitude'] );
+			$lon = floatval( $city['longitude'] );
+			if ( $lat != round( $lat ) && $lon != round( $lon ) ) {
+				$score += 10; // Precise coordinates
+			}
+		}
+
+		// 4. Wikidata ID (if available) = authoritative source
+		if ( isset( $city['wikiDataId'] ) && ! empty( $city['wikiDataId'] ) ) {
+			$score += 50; // Big bonus for verified data
+		}
+
+		return $score;
+	}
+
+	/**
+	 * Normalize city name for duplicate detection.
+	 *
+	 * @since    2.33.7
+	 * @param    string $name City name
+	 * @return   string       Normalized name
+	 */
+	private function normalize_city_name( $name ) {
+		// Convert to lowercase
+		$name = mb_strtolower( $name, 'UTF-8' );
+		
+		// Remove common variations
+		$name = str_replace( array( 'copenhagen', 'københavn' ), 'kobenhavn', $name );
+		$name = str_replace( array( 'saint', 'st.', 'st' ), 'sankt', $name );
+		
+		// Remove spaces and dashes
+		$name = str_replace( array( ' ', '-', '_' ), '', $name );
+		
+		return $name;
 	}
 }
 
