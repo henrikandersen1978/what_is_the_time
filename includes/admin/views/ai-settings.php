@@ -16,6 +16,7 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_ai_settings' ) ) {
 	update_option( 'wta_openai_model', sanitize_text_field( $_POST['wta_openai_model'] ) );
 	update_option( 'wta_openai_temperature', floatval( $_POST['wta_openai_temperature'] ) );
 	update_option( 'wta_openai_max_tokens', intval( $_POST['wta_openai_max_tokens'] ) );
+	update_option( 'wta_test_mode', isset( $_POST['wta_test_mode'] ) ? 1 : 0 );
 	
 	echo '<div class="notice notice-success"><p>' . esc_html__( 'Settings saved.', WTA_TEXT_DOMAIN ) . '</p></div>';
 }
@@ -24,6 +25,7 @@ $api_key = get_option( 'wta_openai_api_key', '' );
 $model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
 $temperature = get_option( 'wta_openai_temperature', 0.7 );
 $max_tokens = get_option( 'wta_openai_max_tokens', 2000 );
+$test_mode = get_option( 'wta_test_mode', 0 );
 ?>
 
 <div class="wrap">
@@ -86,6 +88,24 @@ $max_tokens = get_option( 'wta_openai_max_tokens', 2000 );
 						<td>
 							<input type="number" id="wta_openai_max_tokens" name="wta_openai_max_tokens" value="<?php echo esc_attr( $max_tokens ); ?>" min="100" max="4000" class="small-text">
 							<p class="description"><?php esc_html_e( 'Maximum tokens per request. Recommended: 2000', WTA_TEXT_DOMAIN ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="wta_test_mode"><?php esc_html_e( 'Test Mode', WTA_TEXT_DOMAIN ); ?></label>
+						</th>
+						<td>
+							<label for="wta_test_mode">
+								<input type="checkbox" id="wta_test_mode" name="wta_test_mode" value="1" <?php checked( $test_mode, 1 ); ?>>
+								<?php esc_html_e( 'Use template content instead of AI (no OpenAI costs)', WTA_TEXT_DOMAIN ); ?>
+							</label>
+							<p class="description">
+								<strong style="color: #2271b1;">✓ Aktivér for test-imports:</strong> Bruger simple content templates i stedet for OpenAI. 
+								Ingen AI-omkostninger. Perfekt til at teste GPS-validering, struktur og performance med fuld global import (152k byer).<br>
+								<strong style="color: #d63638;">⚠ Deaktivér for produktion:</strong> Bruger OpenAI til at generere unikt, SEO-optimeret indhold for hver lokation.
+								<br><br>
+								<em>💰 Cost savings: ~$210 per fuld import når aktiveret.</em>
+							</p>
 						</td>
 					</tr>
 				</table>

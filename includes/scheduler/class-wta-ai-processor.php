@@ -153,6 +153,13 @@ class WTA_AI_Processor {
 	 * @return   array|false  Generated content or false on failure.
 	 */
 	private function generate_continent_content( $post_id ) {
+		// Check if test mode is enabled (template content instead of AI)
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		if ( $test_mode ) {
+			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
+			return $this->generate_template_continent_content( $post_id );
+		}
+		
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
 			return false;
@@ -283,6 +290,13 @@ class WTA_AI_Processor {
 	 * @return   array|false  Generated content or false on failure.
 	 */
 	private function generate_country_content( $post_id ) {
+		// Check if test mode is enabled (template content instead of AI)
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		if ( $test_mode ) {
+			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
+			return $this->generate_template_country_content( $post_id );
+		}
+		
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
 			return false;
@@ -415,6 +429,13 @@ class WTA_AI_Processor {
 	 * @return   array|false  Generated content or false on failure.
 	 */
 	private function generate_city_content( $post_id ) {
+		// Check if test mode is enabled (template content instead of AI)
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		if ( $test_mode ) {
+			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
+			return $this->generate_template_city_content( $post_id );
+		}
+		
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
 			return false;
@@ -1008,6 +1029,166 @@ class WTA_AI_Processor {
 		$content = preg_replace( '/\s+/', ' ', $content );
 		
 		return trim( $content );
+	}
+
+	/**
+	 * Generate template-based content for cities (test mode, no AI costs).
+	 *
+	 * @since    2.34.2
+	 * @param    int $post_id Post ID.
+	 * @return   array        Generated content array.
+	 */
+	private function generate_template_city_content( $post_id ) {
+		$name_local = get_the_title( $post_id );
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		
+		// Get parent names
+		$parent_country_id = wp_get_post_parent_id( $post_id );
+		$country_name = $parent_country_id ? get_the_title( $parent_country_id ) : 'landet';
+		$parent_continent_id = $parent_country_id ? wp_get_post_parent_id( $parent_country_id ) : 0;
+		$continent_name = $parent_continent_id ? get_the_title( $parent_continent_id ) : 'kontinentet';
+		
+		// Build template content
+		$content = '';
+		
+		// Intro
+		$content .= "<p>{$name_local} er en by i {$country_name}, {$continent_name}. ";
+		$content .= "På denne side kan du se den præcise, aktuelle tid i {$name_local} og få praktisk information om tidsforskelle og rejseplanlægning. ";
+		$content .= "Tiden opdateres automatisk, så du altid har den korrekte information.</p>\n\n";
+		
+		// Timezone section
+		$content .= "<h2>Tidszone i {$name_local}</h2>\n";
+		$content .= "<p>{$name_local} følger tidszonen {$timezone}. ";
+		$content .= "Du kan se den aktuelle tid i byen øverst på siden, opdateret i realtid. ";
+		$content .= "Dette hjælper dig med at planlægge opkald, møder eller rejser til {$name_local}. ";
+		$content .= "Vores tidsforskelsberegner viser også hvordan tiden i {$name_local} forholder sig til Danmark og andre steder i verden.</p>\n\n";
+		
+		// Attractions section
+		$content .= "<h2>Seværdigheder og aktiviteter i {$name_local}</h2>\n";
+		$content .= "<p>{$name_local} byder på interessante oplevelser for besøgende. ";
+		$content .= "Byen har sin egen unikke karakter og kulturelle særpræg, der gør den værd at besøge. ";
+		$content .= "Uanset om du er her for forretning eller fornøjelse, er der meget at opleve og udforske i området. ";
+		$content .= "Husk at tjekke den lokale tid når du planlægger dine aktiviteter.</p>\n\n";
+		
+		// Practical info
+		$content .= "<h2>Praktisk information for besøgende</h2>\n";
+		$content .= "<p>Når du planlægger et besøg til {$name_local}, er det vigtigt at være opmærksom på tidsforskellen fra dit hjemland. ";
+		$content .= "Brug vores tidsforskelsberegner til at koordinere møder eller holde kontakt med hjemmet. ";
+		$content .= "Vi opdaterer tiden automatisk, så du altid ved hvad klokken er i {$name_local}. ";
+		$content .= "Dette er særligt nyttigt hvis du skal fange fly, deltage i virtuelle møder eller planlægge telefonopkald.</p>\n\n";
+		
+		// Nearby cities (with shortcode)
+		$content .= '<div id="nearby-cities"><h2>Nærliggende byer værd at besøge</h2>' . "\n";
+		$content .= "<p>Når du besøger {$name_local}, kan du også overveje at udforske de omkringliggende byer i {$country_name}. ";
+		$content .= "Nedenfor finder du andre interessante destinationer i området med information om afstande og tidszoner.</p>\n";
+		$content .= '[wta_nearby_cities count="5"]' . "\n</div>\n\n";
+		
+		// Nearby countries (with shortcode)
+		$content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
+		$content .= "<p>Fra {$name_local} er der gode muligheder for at rejse videre til nabolandene i {$continent_name}. ";
+		$content .= "Se tidszoner og information om andre spændende destinationer i regionen.</p>\n";
+		$content .= '[wta_nearby_countries count="5"]' . "\n</div>\n\n";
+		
+		// Global time comparison
+		$content .= '<div id="global-time"><h2>Sammenlign med storbyer rundt om i verden</h2>' . "\n";
+		$content .= "<p>Nedenfor kan du sammenligne tiden i {$name_local} med udvalgte storbyer fra hele verden. ";
+		$content .= "Dette gør det nemt at koordinere internationale møder eller opkald:</p>\n";
+		$content .= '[wta_global_time_comparison]' . "\n</div>";
+		
+		return array(
+			'content' => $content,
+			'yoast_title' => "Hvad er klokken i {$name_local}? Se præcis tid nu",
+			'yoast_desc' => "Find den aktuelle tid i {$name_local}, {$country_name}. Tidszone {$timezone}. Se tidsforskel og praktisk rejseinformation."
+		);
+	}
+
+	/**
+	 * Generate template-based content for countries (test mode, no AI costs).
+	 *
+	 * @since    2.34.2
+	 * @param    int $post_id Post ID.
+	 * @return   array        Generated content array.
+	 */
+	private function generate_template_country_content( $post_id ) {
+		$name_local = get_the_title( $post_id );
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		
+		// Get parent continent
+		$parent_id = wp_get_post_parent_id( $post_id );
+		$continent_name = $parent_id ? get_the_title( $parent_id ) : 'kontinentet';
+		
+		// Build template content
+		$content = '';
+		
+		// Intro
+		$content .= "<p>Velkommen til vores side om aktuelle tidspunkter i {$name_local}. ";
+		$content .= "Her finder du præcis information om tidszoner, tidsforskel og praktiske detaljer for rejsende til {$name_local}. ";
+		$content .= "Alle tidsangivelser opdateres automatisk, så du altid har den korrekte information.</p>\n\n";
+		
+		// Timezone section
+		$content .= "<h2>Tidszone og tidsforskel</h2>\n";
+		$content .= "<p>{$name_local} ligger i {$continent_name} og følger tidszonen {$timezone}. ";
+		$content .= "Nedenfor finder du en oversigt over de største byer i landet med live-opdaterede tidspunkter. ";
+		$content .= "Dette hjælper dig med at planlægge møder, telefonopkald eller rejser.</p>\n\n";
+		
+		// Major cities section
+		$content .= '<h2>Største byer og deres tidszoner</h2>' . "\n";
+		$content .= "<p>Se den aktuelle tid i de største byer i {$name_local}. ";
+		$content .= "Alle tider vises med præcis tidsforskel til Danmark:</p>\n";
+		$content .= '[wta_major_cities count="12"]' . "\n\n";
+		
+		// Child locations section
+		$content .= '<div id="child-locations"><h2>Udforsk byer i {$name_local}</h2>' . "\n";
+		$content .= "<p>Find information om tidszoner og aktuelle tidspunkter for forskellige byer og regioner i {$name_local}:</p>\n";
+		$content .= '[wta_child_locations]' . "\n</div>";
+		
+		return array(
+			'content' => $content,
+			'yoast_title' => "Hvad er klokken i {$name_local}? Aktuel tid og tidszoner",
+			'yoast_desc' => "Se den aktuelle tid i {$name_local}, {$continent_name}. Tidszoner, tidsforskel og praktisk information for rejsende."
+		);
+	}
+
+	/**
+	 * Generate template-based content for continents (test mode, no AI costs).
+	 *
+	 * @since    2.34.2
+	 * @param    int $post_id Post ID.
+	 * @return   array        Generated content array.
+	 */
+	private function generate_template_continent_content( $post_id ) {
+		$name_local = get_the_title( $post_id );
+		
+		// Build template content
+		$content = '';
+		
+		// Intro
+		$content .= "<p>Velkommen til vores oversigt over tidszoner og aktuelle tidspunkter i {$name_local}. ";
+		$content .= "Her finder du information om alle lande og større byer på kontinentet med præcise, realtidsopdaterede tidsangivelser. ";
+		$content .= "Dette hjælper dig med at koordinere møder, planlægge rejser og holde kontakt på tværs af tidszoner.</p>\n\n";
+		
+		// Timezone overview
+		$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
+		$content .= "<p>{$name_local} omfatter flere forskellige tidszoner. ";
+		$content .= "Nedenfor kan du se den aktuelle tid i kontinentets største byer og sammenligne tidsforskelle. ";
+		$content .= "Alle tider opdateres automatisk hver sekund for at give dig den mest præcise information.</p>\n\n";
+		
+		// Major cities section
+		$content .= '<h2>Største byer og deres aktuelle tid</h2>' . "\n";
+		$content .= "<p>Se den aktuelle tid i de største og mest betydningsfulde byer i {$name_local}:</p>\n";
+		$content .= '[wta_major_cities count="24"]' . "\n\n";
+		
+		// Child locations section
+		$content .= '<div id="child-locations"><h2>Lande i {$name_local}</h2>' . "\n";
+		$content .= "<p>Udforsk tidszoner og tidspunkter for forskellige lande på kontinentet. ";
+		$content .= "Klik på et land for at se detaljeret information om byer og regioner:</p>\n";
+		$content .= '[wta_child_locations]' . "\n</div>";
+		
+		return array(
+			'content' => $content,
+			'yoast_title' => "Hvad er klokken i {$name_local}? Tidszoner og aktuel tid",
+			'yoast_desc' => "Se aktuelle tidspunkter for lande og byer i {$name_local}. Præcise tidszoner, tidsforskel og realtidsopdaterede tidsangivelser."
+		);
 	}
 }
 
