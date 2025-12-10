@@ -18,8 +18,14 @@ class WTA_AI_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
+		// Dynamic batch size based on test mode
+		// Test mode: 50 items (fast template generation, ~1.2s per city = 60s total)
+		// Normal mode: 10 items (slow AI generation, ~13s per city = 130s total)
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		$batch_size = $test_mode ? 50 : 10;
+		
 		// Get pending AI content items
-		$items = WTA_Queue::get_pending( 'ai_content', 10 );
+		$items = WTA_Queue::get_pending( 'ai_content', $batch_size );
 
 		if ( empty( $items ) ) {
 			return;

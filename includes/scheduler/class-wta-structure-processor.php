@@ -58,9 +58,10 @@ class WTA_Structure_Processor {
 		}
 
 	// 4. Finally process individual cities (only after cities_import is done)
-	// Reduced batch size to 30 for safer execution time with Wikidata API calls
-	// Worst case: 30 cities × 1 second/call = 30 seconds (safe for 60s PHP timeout)
-	$cities = WTA_Queue::get_pending( 'city', 30 );
+	// Batch size: 60 cities for optimal speed
+	// Worst case: 60 cities × 1.6 second/city = 96 seconds (safe with 300s limit)
+	// Note: set_time_limit(300) is set in process_city() for safety
+	$cities = WTA_Queue::get_pending( 'city', 60 );
 	if ( ! empty( $cities ) ) {
 		WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
 		foreach ( $cities as $item ) {

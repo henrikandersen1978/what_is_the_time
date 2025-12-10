@@ -2,6 +2,32 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.6] - 2025-12-10
+
+### Changed
+- **DYNAMIC BATCH SIZES FOR FASTER IMPORTS** ⚡
+- Structure batch size increased: 30 → **60 cities** (+100%)
+- AI batch size now dynamic based on test mode:
+  - **Test mode:** 50 cities per batch (+400%)
+  - **Normal mode:** 10 cities per batch (unchanged for safety)
+
+### Performance Impact
+- **Test Mode Import Speed:** 14 days → **~4 days** (72% faster!) 🚀
+- **Normal Mode Import Speed:** 14 days → **~12 days** (14% faster)
+- **Structure Phase:** 3.5 days → **1.75 days** (50% faster)
+- **AI Phase (Test):** 10.4 days → **2.1 days** (80% faster)
+
+### Technical Details
+- Structure processor has `set_time_limit(300)` for safe execution
+- Test mode: Template generation is fast (~1.2s/city), allows 50x batch
+- Normal mode: AI generation is slow (~13s/city), keeps 10x batch for safety
+- Worst case execution times remain well within PHP timeout limits
+
+### Why This Works
+- Test mode has NO API calls (templates only) = very fast
+- Larger batches = fewer wp-cron cycles = much faster completion
+- Normal mode keeps conservative batch size due to OpenAI API latency
+
 ## [2.34.5] - 2025-12-10
 
 ### Changed
