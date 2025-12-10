@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.12] - 2025-12-10
+
+### Fixed
+- **REGENERATE AI CONTENT BULK ACTION FIX** 🔧
+- Fixed fatal error when using "Regenerate AI Content" bulk action
+- `WTA_Queue::add()` now called with correct arguments (type, payload, source_id)
+
+### Technical Details
+**Before (Wrong):**
+```php
+WTA_Queue::add( array(
+    'type' => 'ai_content',
+    'payload' => array(...)
+) );  // ❌ Only 1 argument = Fatal Error
+```
+
+**After (Correct):**
+```php
+WTA_Queue::add(
+    'ai_content',           // $type
+    array(...),             // $payload
+    'regenerate_' . $post_id // $source_id
+);  // ✅ 3 arguments = Works perfectly
+```
+
+### Why This Matters
+- Bulk action "Regenerate AI Content" is critical for fixing incomplete posts
+- Now works correctly when you need to re-queue posts for AI generation
+- Essential for post-import quality control
+
+### How to Use
+1. Go to Posts (wta_location) in admin
+2. Select posts with incomplete content
+3. Bulk Actions → "Regenerate AI Content"
+4. Apply → Posts are queued successfully ✅
+
 ## [2.34.11] - 2025-12-10
 
 ### Fixed

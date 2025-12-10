@@ -760,19 +760,20 @@ class WTA_Admin {
 				continue;
 			}
 			
-			// Reset AI status to trigger regeneration
-			update_post_meta( $post_id, 'wta_ai_status', 'pending' );
-			
-			// Add to AI content queue
-			WTA_Queue::add( array(
-				'type'    => 'ai_content',
-				'payload' => array(
-					'post_id' => $post_id,
-					'type'    => $type,
-				),
-			) );
-			
-			$regenerated++;
+		// Reset AI status to trigger regeneration
+		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+		
+		// Add to AI content queue
+		WTA_Queue::add(
+			'ai_content',
+			array(
+				'post_id' => $post_id,
+				'type'    => $type,
+			),
+			'regenerate_' . $post_id
+		);
+		
+		$regenerated++;
 			
 			WTA_Logger::info( 'Post queued for AI content regeneration', array(
 				'post_id' => $post_id,
