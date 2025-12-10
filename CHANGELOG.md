@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.4] - 2025-12-10
+
+### Changed
+- **SAFER BATCH PROCESSING** 🛡️
+- Reduced city batch size from 50 → 30 cities per wp-cron execution
+- Provides extra safety margin for Wikidata API rate limiting
+- Prevents PHP timeout issues during full imports (150k+ cities)
+
+### Technical Details
+- **Execution time:** 30-35 seconds (down from 50-55 seconds)
+- **PHP timeout buffer:** 25-30 seconds (up from 5-10 seconds)
+- **Wikidata rate limit:** Still 1 request/second (unchanged, very conservative)
+- **Processing:** Sequential, not parallel (one city at a time with 1-second delays)
+- **Why:** Large imports with many Wikidata API calls are now much safer
+
 ## [2.34.3] - 2025-12-10
 
 ### Fixed
