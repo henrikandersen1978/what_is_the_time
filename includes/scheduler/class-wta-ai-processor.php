@@ -220,48 +220,48 @@ class WTA_AI_Processor {
 			$cities_list = implode( ', ', $city_names );
 		}
 		
-		// === 1. INTRO ===
-		$intro_system = get_option( 'wta_prompt_continent_intro_system', '' );
-		$intro_user = get_option( 'wta_prompt_continent_intro_user', '' );
-		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
-		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
-		$intro = $this->call_openai_api( $api_key, $model, $temperature, 500, $intro_system, $intro_user );
+	// === 1. INTRO ===
+	$intro_system = get_option( 'wta_prompt_continent_intro_system', '' );
+	$intro_user = get_option( 'wta_prompt_continent_intro_user', '' );
+	$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+	$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+	$intro = $this->call_openai_api( $api_key, $model, $temperature, 800, $intro_system, $intro_user );
 		
 		// === 2. COUNTRY LIST (auto-generated above) ===
 		
-		// === 3. TIMEZONE ===
-		$tz_system = get_option( 'wta_prompt_continent_timezone_system', '' );
-		$tz_user = get_option( 'wta_prompt_continent_timezone_user', '' );
-		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
-		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
-		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 600, $tz_system, $tz_user );
+	// === 3. TIMEZONE ===
+	$tz_system = get_option( 'wta_prompt_continent_timezone_system', '' );
+	$tz_user = get_option( 'wta_prompt_continent_timezone_user', '' );
+	$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+	$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+	$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 1000, $tz_system, $tz_user );
 		
-		// === 4. MAJOR CITIES ===
-		$cities_system = get_option( 'wta_prompt_continent_cities_system', '' );
-		$cities_user = get_option( 'wta_prompt_continent_cities_user', '' );
-		// Add cities list to variables for this section
-		$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
-		$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
-		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
-		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $cities_system, $cities_user );
+	// === 4. MAJOR CITIES ===
+	$cities_system = get_option( 'wta_prompt_continent_cities_system', '' );
+	$cities_user = get_option( 'wta_prompt_continent_cities_user', '' );
+	// Add cities list to variables for this section
+	$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
+	$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
+	$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
+	$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 800, $cities_system, $cities_user );
 		
 		// Add dynamic shortcode to display major cities with live clocks
 		// This shortcode queries the database when the page loads, so no timing issues!
 		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
 		
-		// === 5. GEOGRAPHY ===
-		$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
-		$geo_user = get_option( 'wta_prompt_continent_geography_user', '' );
-		$geo_system = str_replace( array_keys( $variables ), array_values( $variables ), $geo_system );
-		$geo_user = str_replace( array_keys( $variables ), array_values( $variables ), $geo_user );
-		$geography_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $geo_system, $geo_user );
+	// === 5. GEOGRAPHY ===
+	$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
+	$geo_user = get_option( 'wta_prompt_continent_geography_user', '' );
+	$geo_system = str_replace( array_keys( $variables ), array_values( $variables ), $geo_system );
+	$geo_user = str_replace( array_keys( $variables ), array_values( $variables ), $geo_user );
+	$geography_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $geo_system, $geo_user );
 		
-		// === 6. FACTS ===
-		$facts_system = get_option( 'wta_prompt_continent_facts_system', '' );
-		$facts_user = get_option( 'wta_prompt_continent_facts_user', '' );
-		$facts_system = str_replace( array_keys( $variables ), array_values( $variables ), $facts_system );
-		$facts_user = str_replace( array_keys( $variables ), array_values( $variables ), $facts_user );
-		$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $facts_system, $facts_user );
+	// === 6. FACTS ===
+	$facts_system = get_option( 'wta_prompt_continent_facts_system', '' );
+	$facts_user = get_option( 'wta_prompt_continent_facts_user', '' );
+	$facts_system = str_replace( array_keys( $variables ), array_values( $variables ), $facts_system );
+	$facts_user = str_replace( array_keys( $variables ), array_values( $variables ), $facts_user );
+	$facts_content = $this->call_openai_api( $api_key, $model, $temperature, 800, $facts_system, $facts_user );
 		
 		// === COMBINE ALL SECTIONS ===
 		// Add paragraph breaks to make content more readable
@@ -355,53 +355,53 @@ class WTA_AI_Processor {
 			$cities_list = implode( ', ', $city_names );
 		}
 		
-		// === 1. INTRO ===
-		$intro_system = get_option( 'wta_prompt_country_intro_system', '' );
-		$intro_user = get_option( 'wta_prompt_country_intro_user', '' );
-		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
-		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
-		$intro = $this->call_openai_api( $api_key, $model, $temperature, 300, $intro_system, $intro_user );
+	// === 1. INTRO ===
+	$intro_system = get_option( 'wta_prompt_country_intro_system', '' );
+	$intro_user = get_option( 'wta_prompt_country_intro_user', '' );
+	$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+	$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+	$intro = $this->call_openai_api( $api_key, $model, $temperature, 600, $intro_system, $intro_user );
 		
 		// === 2. CITY LIST (auto-generated shortcode) ===
 		
-		// === 3. TIMEZONE ===
-		$tz_system = get_option( 'wta_prompt_country_timezone_system', '' );
-		$tz_user = get_option( 'wta_prompt_country_timezone_user', '' );
-		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
-		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
-		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 500, $tz_system, $tz_user );
+	// === 3. TIMEZONE ===
+	$tz_system = get_option( 'wta_prompt_country_timezone_system', '' );
+	$tz_user = get_option( 'wta_prompt_country_timezone_user', '' );
+	$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+	$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+	$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 800, $tz_system, $tz_user );
 		
-		// === 4. MAJOR CITIES ===
-		$cities_system = get_option( 'wta_prompt_country_cities_system', '' );
-		$cities_user = get_option( 'wta_prompt_country_cities_user', '' );
-		$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
-		$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
-		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
-		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $cities_system, $cities_user );
+	// === 4. MAJOR CITIES ===
+	$cities_system = get_option( 'wta_prompt_country_cities_system', '' );
+	$cities_user = get_option( 'wta_prompt_country_cities_user', '' );
+	$cities_variables = array_merge( $variables, array( '{cities_list}' => $cities_list ) );
+	$cities_system = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_system );
+	$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
+	$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $cities_system, $cities_user );
 		
 		// Add dynamic shortcode for live city clocks (30 cities)
 		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
 		
-		// === 5. WEATHER & CLIMATE ===
-		$weather_system = get_option( 'wta_prompt_country_weather_system', '' );
-		$weather_user = get_option( 'wta_prompt_country_weather_user', '' );
-		$weather_system = str_replace( array_keys( $variables ), array_values( $variables ), $weather_system );
-		$weather_user = str_replace( array_keys( $variables ), array_values( $variables ), $weather_user );
-		$weather_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $weather_system, $weather_user );
+	// === 5. WEATHER & CLIMATE ===
+	$weather_system = get_option( 'wta_prompt_country_weather_system', '' );
+	$weather_user = get_option( 'wta_prompt_country_weather_user', '' );
+	$weather_system = str_replace( array_keys( $variables ), array_values( $variables ), $weather_system );
+	$weather_user = str_replace( array_keys( $variables ), array_values( $variables ), $weather_user );
+	$weather_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $weather_system, $weather_user );
 		
-		// === 6. CULTURE & TIME ===
-		$culture_system = get_option( 'wta_prompt_country_culture_system', '' );
-		$culture_user = get_option( 'wta_prompt_country_culture_user', '' );
-		$culture_system = str_replace( array_keys( $variables ), array_values( $variables ), $culture_system );
-		$culture_user = str_replace( array_keys( $variables ), array_values( $variables ), $culture_user );
-		$culture_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $culture_system, $culture_user );
+	// === 6. CULTURE & TIME ===
+	$culture_system = get_option( 'wta_prompt_country_culture_system', '' );
+	$culture_user = get_option( 'wta_prompt_country_culture_user', '' );
+	$culture_system = str_replace( array_keys( $variables ), array_values( $variables ), $culture_system );
+	$culture_user = str_replace( array_keys( $variables ), array_values( $variables ), $culture_user );
+	$culture_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $culture_system, $culture_user );
 		
-		// === 7. TRAVEL INFO ===
-		$travel_system = get_option( 'wta_prompt_country_travel_system', '' );
-		$travel_user = get_option( 'wta_prompt_country_travel_user', '' );
-		$travel_system = str_replace( array_keys( $variables ), array_values( $variables ), $travel_system );
-		$travel_user = str_replace( array_keys( $variables ), array_values( $variables ), $travel_user );
-		$travel_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $travel_system, $travel_user );
+	// === 7. TRAVEL INFO ===
+	$travel_system = get_option( 'wta_prompt_country_travel_system', '' );
+	$travel_user = get_option( 'wta_prompt_country_travel_user', '' );
+	$travel_system = str_replace( array_keys( $variables ), array_values( $variables ), $travel_system );
+	$travel_user = str_replace( array_keys( $variables ), array_values( $variables ), $travel_user );
+	$travel_content = $this->call_openai_api( $api_key, $model, $temperature, 800, $travel_system, $travel_user );
 		
 		// === COMBINE ALL SECTIONS ===
 		// Add paragraph breaks to make content more readable
@@ -478,47 +478,47 @@ class WTA_AI_Processor {
 			'{base_country_name}'   => get_option( 'wta_base_country_name', 'Danmark' ),
 		);
 		
-		// === 1. INTRO ===
-		$intro_system = get_option( 'wta_prompt_city_intro_system', '' );
-		$intro_user = get_option( 'wta_prompt_city_intro_user', '' );
-		$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
-		$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
-		$intro = $this->call_openai_api( $api_key, $model, $temperature, 300, $intro_system, $intro_user );
+	// === 1. INTRO ===
+	$intro_system = get_option( 'wta_prompt_city_intro_system', '' );
+	$intro_user = get_option( 'wta_prompt_city_intro_user', '' );
+	$intro_system = str_replace( array_keys( $variables ), array_values( $variables ), $intro_system );
+	$intro_user = str_replace( array_keys( $variables ), array_values( $variables ), $intro_user );
+	$intro = $this->call_openai_api( $api_key, $model, $temperature, 600, $intro_system, $intro_user );
 		
-		// === 2. TIMEZONE ===
-		$tz_system = get_option( 'wta_prompt_city_timezone_system', '' );
-		$tz_user = get_option( 'wta_prompt_city_timezone_user', '' );
-		$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
-		$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
-		$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $tz_system, $tz_user );
+	// === 2. TIMEZONE ===
+	$tz_system = get_option( 'wta_prompt_city_timezone_system', '' );
+	$tz_user = get_option( 'wta_prompt_city_timezone_user', '' );
+	$tz_system = str_replace( array_keys( $variables ), array_values( $variables ), $tz_system );
+	$tz_user = str_replace( array_keys( $variables ), array_values( $variables ), $tz_user );
+	$timezone_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $tz_system, $tz_user );
 		
-		// === 3. ATTRACTIONS ===
-		$attr_system = get_option( 'wta_prompt_city_attractions_system', '' );
-		$attr_user = get_option( 'wta_prompt_city_attractions_user', '' );
-		$attr_system = str_replace( array_keys( $variables ), array_values( $variables ), $attr_system );
-		$attr_user = str_replace( array_keys( $variables ), array_values( $variables ), $attr_user );
-		$attractions_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $attr_system, $attr_user );
+	// === 3. ATTRACTIONS ===
+	$attr_system = get_option( 'wta_prompt_city_attractions_system', '' );
+	$attr_user = get_option( 'wta_prompt_city_attractions_user', '' );
+	$attr_system = str_replace( array_keys( $variables ), array_values( $variables ), $attr_system );
+	$attr_user = str_replace( array_keys( $variables ), array_values( $variables ), $attr_user );
+	$attractions_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $attr_system, $attr_user );
 		
-		// === 4. PRACTICAL ===
-		$pract_system = get_option( 'wta_prompt_city_practical_system', '' );
-		$pract_user = get_option( 'wta_prompt_city_practical_user', '' );
-		$pract_system = str_replace( array_keys( $variables ), array_values( $variables ), $pract_system );
-		$pract_user = str_replace( array_keys( $variables ), array_values( $variables ), $pract_user );
-		$practical_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $pract_system, $pract_user );
+	// === 4. PRACTICAL ===
+	$pract_system = get_option( 'wta_prompt_city_practical_system', '' );
+	$pract_user = get_option( 'wta_prompt_city_practical_user', '' );
+	$pract_system = str_replace( array_keys( $variables ), array_values( $variables ), $pract_system );
+	$pract_user = str_replace( array_keys( $variables ), array_values( $variables ), $pract_user );
+	$practical_content = $this->call_openai_api( $api_key, $model, $temperature, 700, $pract_system, $pract_user );
 		
-		// === 5. NEARBY CITIES (generic intro only - shortcode displays actual cities) ===
-		$near_cities_system = get_option( 'wta_prompt_city_nearby_cities_system', '' );
-		$near_cities_user = get_option( 'wta_prompt_city_nearby_cities_user', '' );
-		$near_cities_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_system );
-		$near_cities_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_user );
-		$nearby_cities_intro = $this->call_openai_api( $api_key, $model, $temperature, 100, $near_cities_system, $near_cities_user );
+	// === 5. NEARBY CITIES (generic intro only - shortcode displays actual cities) ===
+	$near_cities_system = get_option( 'wta_prompt_city_nearby_cities_system', '' );
+	$near_cities_user = get_option( 'wta_prompt_city_nearby_cities_user', '' );
+	$near_cities_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_system );
+	$near_cities_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_cities_user );
+	$nearby_cities_intro = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_cities_system, $near_cities_user );
 		
-		// === 6. NEARBY COUNTRIES (generic intro only - shortcode displays actual countries) ===
-		$near_countries_system = get_option( 'wta_prompt_city_nearby_countries_system', '' );
-		$near_countries_user = get_option( 'wta_prompt_city_nearby_countries_user', '' );
-		$near_countries_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_system );
-		$near_countries_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_user );
-		$nearby_countries_intro = $this->call_openai_api( $api_key, $model, $temperature, 100, $near_countries_system, $near_countries_user );
+	// === 6. NEARBY COUNTRIES (generic intro only - shortcode displays actual countries) ===
+	$near_countries_system = get_option( 'wta_prompt_city_nearby_countries_system', '' );
+	$near_countries_user = get_option( 'wta_prompt_city_nearby_countries_user', '' );
+	$near_countries_system = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_system );
+	$near_countries_user = str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_user );
+	$nearby_countries_intro = $this->call_openai_api( $api_key, $model, $temperature, 150, $near_countries_system, $near_countries_user );
 		
 		// === COMBINE ALL SECTIONS ===
 		$intro = $this->add_paragraph_breaks( $intro );

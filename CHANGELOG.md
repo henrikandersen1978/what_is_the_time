@@ -2,6 +2,52 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.11] - 2025-12-10
+
+### Fixed
+- **INCREASED MAX_TOKENS FOR AI CONTENT** 📝
+- Fixed truncated text in AI-generated content sections
+- All content sections now have sufficient token limits to prevent mid-sentence cutoffs
+
+### Technical Details - Token Limits Increased
+**Continent Content:**
+- Intro: 500 → 800 tokens
+- Timezone: 600 → 1000 tokens
+- Cities: 500 → 800 tokens
+- Geography: 400 → 700 tokens
+- Facts: 500 → 800 tokens
+
+**Country Content:**
+- Intro: 300 → 600 tokens
+- Timezone: 500 → 800 tokens
+- Cities: 400 → 700 tokens
+- Weather: 400 → 700 tokens
+- Culture: 400 → 700 tokens
+- Travel: 400 → 800 tokens
+
+**City Content:**
+- Intro: 300 → 600 tokens
+- Timezone: 400 → 700 tokens
+- Attractions: 400 → 700 tokens
+- Practical: 400 → 700 tokens
+- Nearby Cities Intro: 100 → 150 tokens
+- Nearby Countries Intro: 100 → 150 tokens
+
+### Why This Matters
+- **Old limits (300-500 tokens)** = ~225-375 words = Text often cut off mid-sentence ❌
+- **New limits (600-1000 tokens)** = ~450-750 words = Full paragraphs with proper endings ✅
+- Ensures high-quality content that reads naturally
+- Particularly important for longer sections like "Hvad du skal vide om tid når du rejser til [Land]"
+
+### Impact
+- **Minimal cost increase:** ~50% more tokens = ~$0.15 instead of $0.10 per 100 posts (still very cheap!)
+- **Significant quality improvement:** All sections now complete and natural
+- **Better SEO:** More complete content = better Google ranking
+
+### Recommendation
+- **Re-generate AI content** for posts with incomplete text using bulk action "Regenerate AI Content"
+- Check "Content Status" column to find posts that may need regeneration
+
 ## [2.34.10] - 2025-12-10
 
 ### Fixed
