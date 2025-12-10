@@ -237,7 +237,7 @@ class WTA_AI_Processor {
 		
 		// Add dynamic shortcode to display major cities with live clocks
 		// This shortcode queries the database when the page loads, so no timing issues!
-		$cities_content .= "\n\n" . '[wta_major_cities count="12"]';
+		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
 		
 		// === 5. GEOGRAPHY ===
 		$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
@@ -369,8 +369,8 @@ class WTA_AI_Processor {
 		$cities_user = str_replace( array_keys( $cities_variables ), array_values( $cities_variables ), $cities_user );
 		$cities_content = $this->call_openai_api( $api_key, $model, $temperature, 400, $cities_system, $cities_user );
 		
-		// Add dynamic shortcode for live city clocks (12 cities in 3x4 grid)
-		$cities_content .= "\n\n" . '[wta_major_cities count="12"]';
+		// Add dynamic shortcode for live city clocks (30 cities)
+		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
 		
 		// === 5. WEATHER & CLIMATE ===
 		$weather_system = get_option( 'wta_prompt_country_weather_system', '' );
@@ -526,14 +526,14 @@ class WTA_AI_Processor {
 		if ( ! empty( $nearby_cities_intro ) ) {
 			$full_content .= '<p>' . $nearby_cities_intro . "</p>\n";
 		}
-		$full_content .= '[wta_nearby_cities count="5"]' . "\n</div>\n\n";
+		$full_content .= '[wta_nearby_cities count="18"]' . "\n</div>\n\n";
 		
 		// Nearby countries section with dynamic shortcode
 		$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
 		if ( ! empty( $nearby_countries_intro ) ) {
 			$full_content .= '<p>' . $nearby_countries_intro . "</p>\n";
 		}
-		$full_content .= '[wta_nearby_countries count="5"]' . "\n</div>\n\n";
+		$full_content .= '[wta_nearby_countries count="18"]' . "\n</div>\n\n";
 		
 		// Global time comparison section
 		$full_content .= '[wta_global_time_comparison]';
@@ -1069,12 +1069,12 @@ class WTA_AI_Processor {
 		// Nearby cities (with shortcode)
 		$content .= "<div id=\"nearby-cities\"><h2>Nærliggende byer værd at besøge</h2>\n";
 		$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
-		$content .= "[wta_nearby_cities count=\"5\"]\n</div>\n\n";
+		$content .= "[wta_nearby_cities count=\"18\"]\n</div>\n\n";
 		
 		// Nearby countries (with shortcode)
 		$content .= "<div id=\"nearby-countries\"><h2>Udforsk nærliggende lande</h2>\n";
 		$content .= "<p>Dummy intro tekst om nærliggende lande.</p>\n";
-		$content .= "[wta_nearby_countries count=\"5\"]\n</div>\n\n";
+		$content .= "[wta_nearby_countries count=\"18\"]\n</div>\n\n";
 		
 		// Global time comparison
 		$content .= "<div id=\"global-time\"><h2>Sammenlign med storbyer rundt om i verden</h2>\n";

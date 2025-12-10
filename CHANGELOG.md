@@ -2,6 +2,30 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.5] - 2025-12-10
+
+### Changed
+- **SEO-OPTIMIZED SHORTCODE COUNTS** 📈
+- Increased shortcode limits for better content and internal linking
+- Added clickable city links in `[wta_major_cities]` shortcode
+- Fixed test mode for `[wta_global_time_comparison]` (no AI costs in test mode)
+
+### Shortcode Changes
+- `[wta_major_cities]`: 12 → **30 cities** (+150%)
+- `[wta_child_locations]`: 100 → **ALL locations** (no limit)
+- `[wta_nearby_cities]`: 5 → **18 cities** (+260%)
+- `[wta_nearby_countries]`: 5 → **18 countries** (+260%)
+- `[wta_global_time_comparison]`: 24 cities (unchanged, but now respects test mode)
+
+### New Features
+- **City names in major cities are now clickable links** (better UX + internal linking)
+- **Test mode now covers ALL shortcode AI generation** (100% free testing)
+
+### SEO Impact
+- ⭐⭐⭐⭐⭐ More internal links = better crawlability
+- ⭐⭐⭐⭐⭐ More content per page = better topical coverage
+- ⭐⭐⭐⭐⭐ All child locations shown = no orphaned pages
+
 ## [2.34.4] - 2025-12-10
 
 ### Changed

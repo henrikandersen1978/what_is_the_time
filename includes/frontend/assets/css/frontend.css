@@ -370,6 +370,17 @@ div.wta-city-name {
 	color: white !important;
 }
 
+div.wta-city-name a {
+	color: white !important;
+	text-decoration: none !important;
+	transition: opacity 0.2s ease !important;
+}
+
+div.wta-city-name a:hover {
+	opacity: 0.85 !important;
+	text-decoration: underline !important;
+}
+
 div.wta-time {
 	font-size: 2em !important;
 	font-family: 'Courier New', Courier, monospace !important;

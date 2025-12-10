@@ -34,7 +34,7 @@ class WTA_Shortcodes {
 	 */
 	public function major_cities_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 12,
+			'count' => 30,
 		), $atts );
 		
 		// Get current post ID
@@ -137,22 +137,26 @@ class WTA_Shortcodes {
 				$diff_text = sprintf( 'Samme tid som %s', $base_country );
 			}
 				
-				// Initial time with seconds
-				$initial_time = $now->format( 'H:i:s' );
-				
-				// Build clock HTML
-				$output .= sprintf(
-					'<div class="wta-live-city-clock" data-timezone="%s" data-base-offset="%.1f">
-						<div class="wta-city-name">%s</div>
-						<div class="wta-time">%s</div>
-						<div class="wta-time-diff">%s</div>
-					</div>' . "\n",
-					esc_attr( $timezone ),
-					$hours_diff,
-					esc_html( $city_name ),
-					esc_html( $initial_time ),
-					esc_html( $diff_text )
-				);
+			// Initial time with seconds
+			$initial_time = $now->format( 'H:i:s' );
+			
+			// Get city URL for link
+			$city_url = get_permalink( $city->ID );
+			
+			// Build clock HTML with linked city name
+			$output .= sprintf(
+				'<div class="wta-live-city-clock" data-timezone="%s" data-base-offset="%.1f">
+					<div class="wta-city-name"><a href="%s">%s</a></div>
+					<div class="wta-time">%s</div>
+					<div class="wta-time-diff">%s</div>
+				</div>' . "\n",
+				esc_attr( $timezone ),
+				$hours_diff,
+				esc_url( $city_url ),
+				esc_html( $city_name ),
+				esc_html( $initial_time ),
+				esc_html( $diff_text )
+			);
 				
 			} catch ( Exception $e ) {
 				continue;
@@ -280,7 +284,7 @@ class WTA_Shortcodes {
 		$atts = shortcode_atts( array(
 			'orderby' => 'title',
 			'order'   => 'ASC',
-			'limit'   => 100,
+			'limit'   => -1,  // Show ALL child locations
 		), $atts );
 		
 		// Get child locations
@@ -429,7 +433,7 @@ class WTA_Shortcodes {
 	 */
 	public function nearby_cities_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 5,
+			'count' => 18,
 		), $atts );
 		
 		$post_id = get_the_ID();
@@ -518,7 +522,7 @@ class WTA_Shortcodes {
 	 */
 	public function nearby_countries_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 5,
+			'count' => 18,
 		), $atts );
 		
 		$post_id = get_the_ID();
@@ -747,14 +751,21 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get AI-generated intro text (cached for 1 month)
-		$intro_cache_key = 'wta_comparison_intro_' . $post_id;
-		$intro_text = get_transient( $intro_cache_key );
-		
-		if ( false === $intro_text ) {
-			$intro_text = $this->generate_comparison_intro( $current_city_name );
-			if ( ! empty( $intro_text ) ) {
-				set_transient( $intro_cache_key, $intro_text, MONTH_IN_SECONDS );
+		// Get intro text (test mode or AI-generated)
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		if ( $test_mode ) {
+			// Test mode: use dummy text (no AI costs)
+			$intro_text = 'Dummy tekst om tidsforskelle og verdensur. Test mode aktiveret.';
+		} else {
+			// Normal mode: AI-generated intro text (cached for 1 month)
+			$intro_cache_key = 'wta_comparison_intro_' . $post_id;
+			$intro_text = get_transient( $intro_cache_key );
+			
+			if ( false === $intro_text ) {
+				$intro_text = $this->generate_comparison_intro( $current_city_name );
+				if ( ! empty( $intro_text ) ) {
+					set_transient( $intro_cache_key, $intro_text, MONTH_IN_SECONDS );
+				}
 			}
 		}
 		
