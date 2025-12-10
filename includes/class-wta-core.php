@@ -168,6 +168,10 @@ class WTA_Core {
 		$this->loader->add_filter( 'bulk_actions-edit-' . WTA_POST_TYPE, $admin, 'add_regenerate_bulk_action' );
 		$this->loader->add_filter( 'handle_bulk_actions-edit-' . WTA_POST_TYPE, $admin, 'handle_regenerate_bulk_action', 10, 3 );
 		$this->loader->add_action( 'admin_notices', $admin, 'display_regenerate_admin_notice' );
+		
+		// Content status filter dropdown
+		$this->loader->add_action( 'restrict_manage_posts', $admin, 'add_content_filter_dropdown' );
+		$this->loader->add_action( 'pre_get_posts', $admin, 'filter_posts_by_content_status' );
 
 		// AJAX handlers
 		$this->loader->add_action( 'wp_ajax_wta_prepare_import', $admin, 'ajax_prepare_import' );

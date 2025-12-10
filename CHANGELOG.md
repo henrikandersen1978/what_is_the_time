@@ -2,6 +2,39 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.9] - 2025-12-10
+
+### Added
+- **CONTENT STATUS FILTER DROPDOWN** 🔍
+- Filter posts by content completeness in admin list
+- Quickly find and fix incomplete posts at scale
+
+### New Admin Feature
+**Filter Dropdown in Post List:**
+- "All Content Status" - Shows all posts
+- "✅ Complete" - Shows only posts with complete content (>500 chars + Yoast meta)
+- "❌ Incomplete" - Shows only posts with issues (missing or short content, missing SEO meta)
+
+### Use Cases
+- **After import:** Filter to see only ❌ posts → Select all → Regenerate
+- **Quality check:** Filter to ✅ to verify completion rate
+- **Maintenance:** Quickly identify posts needing attention
+- **Scalability:** Works with 150k+ posts (efficient SQL queries)
+
+### How It Works
+1. Navigate to **Locations** post list
+2. Use filter dropdown (next to date/category filters)
+3. Select "❌ Incomplete"
+4. See only posts with issues
+5. Use bulk action "Regenerate AI Content" to fix
+6. Monitor progress using same filter
+
+### Technical Details
+- Efficient SQL WHERE clauses (no PHP loops)
+- Filters on: content length, Yoast title, Yoast description
+- Works with main query (no performance impact)
+- Compatible with other WordPress filters
+
 ## [2.34.8] - 2025-12-10
 
 ### Added

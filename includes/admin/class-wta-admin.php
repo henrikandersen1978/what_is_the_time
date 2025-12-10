@@ -814,6 +814,131 @@ class WTA_Admin {
 			);
 		}
 	}
+
+	/**
+	 * Add content completeness filter dropdown.
+	 *
+	 * @since    2.34.9
+	 */
+	public function add_content_filter_dropdown() {
+		global $typenow;
+		
+		if ( WTA_POST_TYPE !== $typenow ) {
+			return;
+		}
+
+		$current_filter = isset( $_GET['content_status_filter'] ) ? $_GET['content_status_filter'] : '';
+		
+		?>
+		<select name="content_status_filter">
+			<option value=""><?php esc_html_e( 'All Content Status', WTA_TEXT_DOMAIN ); ?></option>
+			<option value="complete" <?php selected( $current_filter, 'complete' ); ?>>
+				✅ <?php esc_html_e( 'Complete', WTA_TEXT_DOMAIN ); ?>
+			</option>
+			<option value="incomplete" <?php selected( $current_filter, 'incomplete' ); ?>>
+				❌ <?php esc_html_e( 'Incomplete', WTA_TEXT_DOMAIN ); ?>
+			</option>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Filter posts by content completeness.
+	 *
+	 * @since    2.34.9
+	 * @param    object $query The WP_Query instance.
+	 */
+	public function filter_posts_by_content_status( $query ) {
+		global $pagenow, $typenow;
+		
+		// Only on admin post list page for our post type
+		if ( ! is_admin() || 'edit.php' !== $pagenow || WTA_POST_TYPE !== $typenow || ! $query->is_main_query() ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['content_status_filter'] ) || empty( $_GET['content_status_filter'] ) ) {
+			return;
+		}
+
+		$filter = $_GET['content_status_filter'];
+		
+		if ( 'complete' === $filter ) {
+			// Show only posts with complete content
+			// We'll use a meta query + post content length check
+			add_filter( 'posts_where', array( $this, 'filter_complete_content_where' ), 10, 2 );
+			
+		} elseif ( 'incomplete' === $filter ) {
+			// Show only posts with incomplete content
+			add_filter( 'posts_where', array( $this, 'filter_incomplete_content_where' ), 10, 2 );
+		}
+	}
+
+	/**
+	 * Add WHERE clause for complete content filter.
+	 *
+	 * @since    2.34.9
+	 * @param    string $where Current WHERE clause.
+	 * @param    object $query The WP_Query instance.
+	 * @return   string        Modified WHERE clause.
+	 */
+	public function filter_complete_content_where( $where, $query ) {
+		global $wpdb;
+		
+		// Only apply once
+		remove_filter( 'posts_where', array( $this, 'filter_complete_content_where' ), 10 );
+		
+		// Posts with content > 500 chars AND have Yoast meta
+		$where .= " AND LENGTH({$wpdb->posts}.post_content) >= 500";
+		$where .= " AND {$wpdb->posts}.ID IN (
+			SELECT post_id FROM {$wpdb->postmeta} 
+			WHERE meta_key = '_yoast_wpseo_title' 
+			AND meta_value IS NOT NULL 
+			AND meta_value != ''
+		)";
+		$where .= " AND {$wpdb->posts}.ID IN (
+			SELECT post_id FROM {$wpdb->postmeta} 
+			WHERE meta_key = '_yoast_wpseo_metadesc' 
+			AND meta_value IS NOT NULL 
+			AND meta_value != ''
+		)";
+		
+		return $where;
+	}
+
+	/**
+	 * Add WHERE clause for incomplete content filter.
+	 *
+	 * @since    2.34.9
+	 * @param    string $where Current WHERE clause.
+	 * @param    object $query The WP_Query instance.
+	 * @return   string        Modified WHERE clause.
+	 */
+	public function filter_incomplete_content_where( $where, $query ) {
+		global $wpdb;
+		
+		// Only apply once
+		remove_filter( 'posts_where', array( $this, 'filter_incomplete_content_where' ), 10 );
+		
+		// Posts with short/no content OR missing Yoast meta
+		$where .= " AND (
+			LENGTH({$wpdb->posts}.post_content) < 500
+			OR {$wpdb->posts}.post_content IS NULL
+			OR {$wpdb->posts}.ID NOT IN (
+				SELECT post_id FROM {$wpdb->postmeta} 
+				WHERE meta_key = '_yoast_wpseo_title' 
+				AND meta_value IS NOT NULL 
+				AND meta_value != ''
+			)
+			OR {$wpdb->posts}.ID NOT IN (
+				SELECT post_id FROM {$wpdb->postmeta} 
+				WHERE meta_key = '_yoast_wpseo_metadesc' 
+				AND meta_value IS NOT NULL 
+				AND meta_value != ''
+			)
+		)";
+		
+		return $where;
+	}
 }
 
 
