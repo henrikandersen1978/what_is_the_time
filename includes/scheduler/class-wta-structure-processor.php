@@ -12,6 +12,14 @@
 class WTA_Structure_Processor {
 
 	/**
+	 * Cached admin user ID for post authorship.
+	 *
+	 * @since    2.34.10
+	 * @var      int|null
+	 */
+	private static $admin_user_id = null;
+
+	/**
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every minute.
@@ -140,6 +148,7 @@ class WTA_Structure_Processor {
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft', // Will be published after AI content
 			'post_parent'  => 0,
+			'post_author'  => $this->get_admin_user_id(),
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -227,6 +236,7 @@ class WTA_Structure_Processor {
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft',
 			'post_parent'  => $parent->ID,
+			'post_author'  => $this->get_admin_user_id(),
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -374,6 +384,7 @@ class WTA_Structure_Processor {
 			'post_type'    => WTA_POST_TYPE,
 			'post_status'  => 'draft',
 			'post_parent'  => $parent_id,
+			'post_author'  => $this->get_admin_user_id(),
 		) );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -1176,6 +1187,29 @@ class WTA_Structure_Processor {
 		$name = str_replace( array( ' ', '-', '_' ), '', $name );
 		
 		return $name;
+	}
+
+	/**
+	 * Get admin user ID for post authorship (cached).
+	 *
+	 * @since    2.34.10
+	 * @return   int Admin user ID.
+	 */
+	private function get_admin_user_id() {
+		if ( null === self::$admin_user_id ) {
+			$admin_users = get_users( array(
+				'role'    => 'administrator',
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+				'number'  => 1,
+			) );
+			self::$admin_user_id = ! empty( $admin_users ) ? $admin_users[0]->ID : 1;
+			
+			WTA_Logger::debug( 'Admin user ID cached for post authorship', array(
+				'user_id' => self::$admin_user_id,
+			) );
+		}
+		return self::$admin_user_id;
 	}
 
 	/**

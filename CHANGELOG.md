@@ -2,6 +2,31 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.10] - 2025-12-10
+
+### Fixed
+- **POST AUTHOR ASSIGNMENT** 👤
+- All posts now correctly assigned to first admin user
+- Fixes issue where posts had no author (post_author = 0)
+- Applies to continents, countries, and cities
+
+### Technical Details
+- Added cached `get_admin_user_id()` method
+- Finds first administrator user (ordered by ID)
+- Caches result to avoid repeated database queries (150k+ posts)
+- Fallback to user ID 1 if no admin found
+- Added to all three `wp_insert_post()` calls (continent, country, city)
+
+### Why This Matters
+- Posts without authors can cause permission issues
+- Some plugins/themes require valid post author
+- Better user experience in WordPress admin
+- Proper attribution for content
+
+### Performance
+- Only 1 database query per import session (cached)
+- No performance impact on large imports
+
 ## [2.34.9] - 2025-12-10
 
 ### Added
