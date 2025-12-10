@@ -2,6 +2,22 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.3] - 2025-12-10
+
+### Fixed
+- **TEST MODE TEMPLATE FIX** 🧪
+- Fixed variable interpolation in test mode templates (single quotes → double quotes)
+- All location names, timezones, and parent names now display correctly
+- Changed template content to simple "dummy text" to clearly indicate test mode
+- All shortcodes preserved: `[wta_child_locations]`, `[wta_nearby_cities]`, `[wta_major_cities]`, etc.
+- Normal AI mode completely unaffected - only test mode templates updated
+
+### Technical Details
+- **Problem:** Single quotes in template strings prevented PHP variable interpolation
+- **Example:** `'<h2>Udforsk byer i {$name_local}</h2>'` displayed literally as "{$name_local}"
+- **Solution:** Changed all template strings to double quotes for proper variable replacement
+- **Impact:** Test mode now shows real location names with generic content, $0 AI costs
+
 ## [2.33.6] - 2025-12-07
 
 ### Fixed

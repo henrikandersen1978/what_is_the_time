@@ -1,7 +1,7 @@
 <?php
 /**
  * Register custom post type for locations.
- * 
+ *
  * Uses dynamic continent-based rewrite rules for clean URLs.
  * Combines custom rewrite with defensive pre_get_posts for maximum compatibility.
  *
@@ -184,7 +184,7 @@ class WTA_Post_Type {
 		
 		return $slugs;
 	}
-	
+
 	/**
 	 * Register the custom post type.
 	 *
@@ -291,5 +291,5 @@ class WTA_Post_Type {
 			'index.php?wta_location=$matches[1]&post_type=' . WTA_POST_TYPE . '&name=$matches[1]',
 			'top'
 		);
+		}
 	}
-}
