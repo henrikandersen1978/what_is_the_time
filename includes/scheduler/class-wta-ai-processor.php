@@ -38,8 +38,12 @@ class WTA_AI_Processor {
 		foreach ( $items as $item ) {
 			$this->process_item( $item );
 
-			// Small delay between API calls
-			usleep( 100000 ); // 100ms
+			// Dynamic delay between items based on test mode:
+			// Test mode: No delay (template generation, no API calls)
+			// Normal mode: 200ms delay (conservative OpenAI rate limiting)
+			if ( ! $test_mode ) {
+				usleep( 200000 ); // 200ms delay for AI safety
+			}
 		}
 
 		WTA_Logger::info( 'AI processor completed', array(

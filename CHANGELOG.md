@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.7] - 2025-12-10
+
+### Changed
+- **MODE-SPECIFIC OPTIMIZATIONS** ⚡🛡️
+- Implemented separate optimization strategies for test mode vs production mode
+- Test mode: Maximum speed with safe rate limits
+- Normal mode: Maximum reliability and conservative rate limiting
+
+### Test Mode Optimizations (Speed Priority)
+- **Wikidata rate:** 1 req/s → **10 req/s** (10x faster, still only 5% of capacity)
+- **Structure batch:** 60 cities (aggressive for speed)
+- **AI batch:** 50 cities (template generation is instant)
+- **AI delay:** 0ms (no API calls, no delay needed)
+
+### Normal Mode Optimizations (Reliability Priority)
+- **Wikidata rate:** 1 req/s (ultra-conservative, maximum safety)
+- **Structure batch:** 30 cities (conservative for stability)
+- **AI batch:** 10 cities (safe for OpenAI rate limits)
+- **AI delay:** 100ms → **200ms** (extra protection against rate limits)
+
+### Performance Impact
+- **Test Mode:** 3.85 days → **~2 days** (48% faster!) 🚀
+  - Structure phase: 1.75 days → **4.2 hours** (90% faster!)
+  - AI phase: 2.1 days → **2 days** (minimal change)
+- **Normal Mode:** 12.15 days → **~15 days** (more reliable, slightly slower)
+  - Structure phase: 1.75 days → **3.5 days** (more conservative)
+  - AI phase: 10.4 days → **11.5 days** (better rate limit protection)
+
+### Philosophy
+- **Test Mode:** "As fast as safely possible" - maximize speed while respecting API limits
+- **Normal Mode:** "As reliable as possible" - maximize stability, time is secondary
+
 ## [2.34.6] - 2025-12-10
 
 ### Changed

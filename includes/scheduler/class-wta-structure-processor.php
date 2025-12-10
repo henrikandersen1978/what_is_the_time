@@ -58,10 +58,12 @@ class WTA_Structure_Processor {
 		}
 
 	// 4. Finally process individual cities (only after cities_import is done)
-	// Batch size: 60 cities for optimal speed
-	// Worst case: 60 cities × 1.6 second/city = 96 seconds (safe with 300s limit)
-	// Note: set_time_limit(300) is set in process_city() for safety
-	$cities = WTA_Queue::get_pending( 'city', 60 );
+	// Dynamic batch size based on test mode for optimal balance:
+	// Test mode: 60 cities (maximum speed, ~96s execution)
+	// Normal mode: 30 cities (conservative for reliability, ~48s execution)
+	$test_mode = get_option( 'wta_test_mode', 0 );
+	$batch_size = $test_mode ? 60 : 30;
+	$cities = WTA_Queue::get_pending( 'city', $batch_size );
 	if ( ! empty( $cities ) ) {
 		WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
 		foreach ( $cities as $item ) {
@@ -1191,16 +1193,21 @@ class WTA_Structure_Processor {
 			return false;
 		}
 		
-		// Rate limiting: Max 1 request per second (Wikidata-friendly)
-		// Prevents IP bans and respects Wikimedia's guidelines
+		// Dynamic rate limiting based on test mode:
+		// Test mode: 10 requests/second (fast, still only 5% of Wikidata capacity)
+		// Normal mode: 1 request/second (conservative, maximum safety)
+		// Wikidata official limit: 200 requests/second
 		static $last_api_call = 0;
+		
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		$min_interval = $test_mode ? 0.1 : 1.0;  // 100ms vs 1000ms
 		
 		$now = microtime( true );
 		$time_since_last_call = $now - $last_api_call;
 		
-		// If less than 1 second has passed since last call, wait
-		if ( $time_since_last_call < 1.0 ) {
-			$wait_microseconds = (int) ( ( 1.0 - $time_since_last_call ) * 1000000 );
+		// If minimum interval hasn't passed since last call, wait
+		if ( $time_since_last_call < $min_interval ) {
+			$wait_microseconds = (int) ( ( $min_interval - $time_since_last_call ) * 1000000 );
 			usleep( $wait_microseconds );
 			WTA_Logger::debug( sprintf( 'Rate limit: waited %.3f seconds', $wait_microseconds / 1000000 ) );
 		}
