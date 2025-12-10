@@ -641,6 +641,179 @@ class WTA_Admin {
 			'updated' => $updated,
 		) );
 	}
+
+	/**
+	 * Add custom admin columns for content status.
+	 *
+	 * @since    2.34.8
+	 * @param    array $columns Existing columns.
+	 * @return   array          Modified columns.
+	 */
+	public function add_content_status_column( $columns ) {
+		// Insert after title column
+		$new_columns = array();
+		foreach ( $columns as $key => $value ) {
+			$new_columns[ $key ] = $value;
+			if ( 'title' === $key ) {
+				$new_columns['content_status'] = __( 'Content Status', WTA_TEXT_DOMAIN );
+			}
+		}
+		return $new_columns;
+	}
+
+	/**
+	 * Display content status in admin column.
+	 *
+	 * @since    2.34.8
+	 * @param    string $column  Column name.
+	 * @param    int    $post_id Post ID.
+	 */
+	public function display_content_status_column( $column, $post_id ) {
+		if ( 'content_status' !== $column ) {
+			return;
+		}
+
+		$status = $this->check_content_completeness( $post_id );
+		
+		if ( $status['complete'] ) {
+			echo '<span style="color: #46b450; font-size: 18px;" title="Content is complete">✅</span>';
+		} else {
+			$issues = implode( ', ', $status['issues'] );
+			echo '<span style="color: #dc3232; font-size: 18px;" title="Issues: ' . esc_attr( $issues ) . '">❌</span>';
+			echo '<div style="font-size: 11px; color: #666; margin-top: 3px;">' . esc_html( $issues ) . '</div>';
+		}
+	}
+
+	/**
+	 * Check if post content is complete.
+	 *
+	 * @since    2.34.8
+	 * @param    int $post_id Post ID.
+	 * @return   array        Status and issues.
+	 */
+	private function check_content_completeness( $post_id ) {
+		$issues = array();
+		
+		// Check post content
+		$content = get_post_field( 'post_content', $post_id );
+		if ( empty( $content ) ) {
+			$issues[] = 'No content';
+		} elseif ( strlen( $content ) < 500 ) {
+			$issues[] = 'Short content (' . strlen( $content ) . ' chars)';
+		}
+		
+		// Check Yoast title
+		$yoast_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+		if ( empty( $yoast_title ) ) {
+			$issues[] = 'No SEO title';
+		}
+		
+		// Check Yoast description
+		$yoast_desc = get_post_meta( $post_id, '_yoast_wpseo_metadesc', true );
+		if ( empty( $yoast_desc ) ) {
+			$issues[] = 'No SEO desc';
+		}
+		
+		return array(
+			'complete' => empty( $issues ),
+			'issues'   => $issues,
+		);
+	}
+
+	/**
+	 * Add bulk action for regenerating content.
+	 *
+	 * @since    2.34.8
+	 * @param    array $actions Existing bulk actions.
+	 * @return   array          Modified bulk actions.
+	 */
+	public function add_regenerate_bulk_action( $actions ) {
+		$actions['regenerate_ai_content'] = __( 'Regenerate AI Content', WTA_TEXT_DOMAIN );
+		return $actions;
+	}
+
+	/**
+	 * Handle regenerate content bulk action.
+	 *
+	 * @since    2.34.8
+	 * @param    string $redirect_to Redirect URL.
+	 * @param    string $doaction    Action being taken.
+	 * @param    array  $post_ids    Post IDs being acted upon.
+	 * @return   string              Modified redirect URL.
+	 */
+	public function handle_regenerate_bulk_action( $redirect_to, $doaction, $post_ids ) {
+		if ( 'regenerate_ai_content' !== $doaction ) {
+			return $redirect_to;
+		}
+
+		$regenerated = 0;
+		
+		foreach ( $post_ids as $post_id ) {
+			// Verify this is a location post
+			if ( WTA_POST_TYPE !== get_post_type( $post_id ) ) {
+				continue;
+			}
+			
+			// Get location type
+			$type = get_post_meta( $post_id, 'wta_type', true );
+			if ( empty( $type ) ) {
+				continue;
+			}
+			
+			// Reset AI status to trigger regeneration
+			update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+			
+			// Add to AI content queue
+			WTA_Queue::add( array(
+				'type'    => 'ai_content',
+				'payload' => array(
+					'post_id' => $post_id,
+					'type'    => $type,
+				),
+			) );
+			
+			$regenerated++;
+			
+			WTA_Logger::info( 'Post queued for AI content regeneration', array(
+				'post_id' => $post_id,
+				'type'    => $type,
+			) );
+		}
+
+		// Add count to redirect URL
+		$redirect_to = add_query_arg( 'regenerated', $regenerated, $redirect_to );
+		
+		return $redirect_to;
+	}
+
+	/**
+	 * Display admin notice after bulk regeneration.
+	 *
+	 * @since    2.34.8
+	 */
+	public function display_regenerate_admin_notice() {
+		if ( ! isset( $_GET['regenerated'] ) ) {
+			return;
+		}
+
+		$count = intval( $_GET['regenerated'] );
+		
+		if ( $count > 0 ) {
+			printf(
+				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+				sprintf(
+					/* translators: %d: number of posts queued for regeneration */
+					_n(
+						'%d post has been queued for AI content regeneration.',
+						'%d posts have been queued for AI content regeneration.',
+						$count,
+						WTA_TEXT_DOMAIN
+					),
+					$count
+				)
+			);
+		}
+	}
 }
 
 

@@ -162,6 +162,13 @@ class WTA_Core {
 		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_scripts' );
 		$this->loader->add_action( 'admin_notices', $admin, 'show_admin_notices' );
 
+		// Admin columns and bulk actions (Content Health Check)
+		$this->loader->add_filter( 'manage_' . WTA_POST_TYPE . '_posts_columns', $admin, 'add_content_status_column' );
+		$this->loader->add_action( 'manage_' . WTA_POST_TYPE . '_posts_custom_column', $admin, 'display_content_status_column', 10, 2 );
+		$this->loader->add_filter( 'bulk_actions-edit-' . WTA_POST_TYPE, $admin, 'add_regenerate_bulk_action' );
+		$this->loader->add_filter( 'handle_bulk_actions-edit-' . WTA_POST_TYPE, $admin, 'handle_regenerate_bulk_action', 10, 3 );
+		$this->loader->add_action( 'admin_notices', $admin, 'display_regenerate_admin_notice' );
+
 		// AJAX handlers
 		$this->loader->add_action( 'wp_ajax_wta_prepare_import', $admin, 'ajax_prepare_import' );
 		$this->loader->add_action( 'wp_ajax_wta_get_queue_stats', $admin, 'ajax_get_queue_stats' );

@@ -2,6 +2,44 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.8] - 2025-12-10
+
+### Added
+- **CONTENT HEALTH CHECK & BULK REGENERATION** 🩺🔄
+- Admin column showing content completeness status (✅ or ❌)
+- Bulk action to regenerate AI content for selected posts
+- Automatic detection of incomplete content issues
+
+### New Admin Features
+1. **Content Status Column**
+   - Visual indicator (✅/❌) for each post
+   - Shows specific issues: No content, Short content, No SEO title, No SEO desc
+   - Hover tooltip with issue details
+
+2. **Bulk Action: "Regenerate AI Content"**
+   - Select multiple posts with issues
+   - One-click regeneration for all selected
+   - Posts are re-queued for AI content generation
+   - Admin notice shows how many posts were queued
+
+### Use Cases
+- **After failed imports:** Quickly identify and fix posts with missing content
+- **Quality control:** Review content completeness before going live
+- **Maintenance:** Re-generate content for posts with outdated or incomplete data
+- **Error recovery:** Fix posts affected by API failures during initial import
+
+### Content Completeness Checks
+- ✅ Post content exists and is > 500 characters
+- ✅ Yoast SEO title is present
+- ✅ Yoast SEO description is present
+- ❌ Missing or short content triggers red indicator
+
+### Technical Details
+- Posts are added to AI queue with status='pending'
+- Uses existing queue system and retry logic
+- Safe for bulk operations (1000+ posts)
+- Respects AI rate limits and batch processing
+
 ## [2.34.7] - 2025-12-10
 
 ### Changed
