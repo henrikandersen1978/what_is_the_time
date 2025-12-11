@@ -2,6 +2,84 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.14] - 2025-12-11
+
+### Fixed
+- **PLUGIN UPDATE CHECKER FIX** 🔧
+- Fixed plugin slug to match GitHub release asset filename
+- WordPress automatic updates will now work correctly
+
+### The Problem
+
+**Symptom:**
+- WordPress did not detect plugin updates from GitHub
+- Manual upload was required for each version
+- "Check for updates" showed no available updates
+
+**Root Cause:**
+Plugin slug mismatch between code and GitHub release assets:
+
+```php
+❌ BEFORE:
+Update checker slug: 'world-time-ai'
+GitHub asset name: time-zone-clock-2.34.13.zip
+Result: Plugin Update Checker couldn't find the asset! ❌
+```
+
+**Why It Happened:**
+- Plugin filename: `time-zone-clock.php` ✅
+- Build script output: `time-zone-clock-X.Y.Z.zip` ✅
+- Update checker slug: `world-time-ai` ❌ (MISMATCH!)
+
+### The Solution
+
+**Changed plugin slug to match asset filename:**
+
+```php
+✅ AFTER:
+Update checker slug: 'time-zone-clock'
+GitHub asset name: time-zone-clock-2.34.14.zip
+Result: Plugin Update Checker finds asset perfectly! ✅
+```
+
+### Benefits
+
+✅ **Automatic Updates Work**
+- WordPress will now detect updates from GitHub releases
+- No more manual uploads required
+- Users can update with one click
+
+✅ **Consistent Naming**
+- Plugin file: `time-zone-clock.php`
+- Update slug: `time-zone-clock`
+- Asset name: `time-zone-clock-X.Y.Z.zip`
+- All aligned! Perfect!
+
+✅ **Better User Experience**
+- Update notifications appear automatically
+- Standard WordPress update flow
+- Professional plugin behavior
+
+### How to Test
+
+1. Install this version (2.34.14)
+2. Wait 12 hours OR go to Plugins → "Check for updates"
+3. Next release will show update notification automatically ✅
+
+### Technical Details
+
+**File Changed:**
+- `time-zone-clock.php` (line 181)
+
+**Change:**
+```php
+// Before:
+'world-time-ai'
+
+// After:  
+'time-zone-clock'  // Must match GitHub release asset filename
+```
+
 ## [2.34.13] - 2025-12-11
 
 ### Fixed

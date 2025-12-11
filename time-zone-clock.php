@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.34.13
+ * Version:           2.34.14
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.34.13' );
+define( 'WTA_VERSION', '2.34.14' );
 
 /**
  * Plugin directory path.
@@ -178,7 +178,7 @@ if ( file_exists( $puc_path ) ) {
 	$updateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 		'https://github.com/henrikandersen1978/what_is_the_time',
 		__FILE__,
-		'world-time-ai'
+		'time-zone-clock'  // Must match GitHub release asset filename (time-zone-clock-X.Y.Z.zip)
 	);
 
 	$updateChecker->getVcsApi()->enableReleaseAssets();
