@@ -465,8 +465,54 @@ class WTA_Structure_Processor {
 		$gps_source = 'cities_json';
 	}
 	
-	// STEP 2: Save GPS coordinates (CRITICAL for nearby cities shortcode!)
+	// STEP 2: Validate GPS after Wikidata-first correction
+	// This catches truly corrupt data that Wikidata couldn't fix
 	if ( $final_lat !== null && $final_lon !== null ) {
+		// Sanity check: Mathematically impossible coordinates
+		if ( abs( $final_lat ) > 90 || abs( $final_lon ) > 180 ) {
+			WTA_Logger::error( sprintf(
+				'City creation ABORTED - invalid GPS range: %s (%s) - GPS: %s,%s',
+				$data['name'],
+				$data['country_code'],
+				$final_lat,
+				$final_lon
+			) );
+			WTA_Queue::mark_failed( $item['id'], 'Invalid GPS coordinates (out of range)' );
+			return;
+		}
+		
+		// Continent consistency check (after Wikidata correction)
+		// Only skip if STILL mismatched after Wikidata tried to fix it
+		// Use parent country's continent to validate GPS
+		if ( isset( $parent_id ) && $parent_id > 0 ) {
+			$parent_continent_code = get_post_meta( $parent_id, 'wta_continent_code', true );
+			if ( $parent_continent_code ) {
+				// Map continent code to name for comparison
+				$continent_names = array(
+					'AF' => 'Africa', 'AN' => 'Antarctica', 'AS' => 'Asia',
+					'EU' => 'Europe', 'NA' => 'North America', 'OC' => 'Oceania', 'SA' => 'South America'
+				);
+				$country_continent = isset( $continent_names[ $parent_continent_code ] ) ? $continent_names[ $parent_continent_code ] : 'Unknown';
+				$gps_continent = $this->get_continent_from_gps( $final_lat, $final_lon );
+				
+				if ( $country_continent !== 'Unknown' && $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
+					WTA_Logger::error( sprintf(
+						'City creation ABORTED - continent mismatch after Wikidata: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s, source=%s)',
+						$data['name'],
+						$data['country_code'],
+						$country_continent,
+						$gps_continent,
+						$final_lat,
+						$final_lon,
+						$gps_source
+					) );
+					WTA_Queue::mark_failed( $item['id'], 'GPS continent mismatch (even after Wikidata correction)' );
+					return;
+				}
+			}
+		}
+		
+		// GPS is valid! Save it.
 		update_post_meta( $post_id, 'wta_latitude', floatval( $final_lat ) );
 		update_post_meta( $post_id, 'wta_longitude', floatval( $final_lon ) );
 		update_post_meta( $post_id, 'wta_gps_source', $gps_source );
@@ -484,6 +530,8 @@ class WTA_Structure_Processor {
 			$data['name'],
 			$data['country_code']
 		) );
+		WTA_Queue::mark_failed( $item['id'], 'No GPS coordinates available' );
+		return;
 	}
 
 		// Handle timezone (use final GPS coordinates from Wikidata-first strategy)
@@ -790,31 +838,10 @@ class WTA_Structure_Processor {
 				continue;
 			}
 			
-			// GPS VALIDATION LAG 2: Continent Consistency Check
-			// Verify GPS matches country's continent (catches corrupt data)
-			if ( isset( $city['country_code'] ) && isset( $country_to_continent[ $city['country_code'] ] ) ) {
-				$country_continent = $country_to_continent[ $city['country_code'] ];
-				
-				// Only validate if country has known continent (not 'Unknown')
-				if ( $country_continent !== 'Unknown' ) {
-					$gps_continent = $this->get_continent_from_gps( $lat, $lon );
-					
-					if ( $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
-						// GPS MISMATCH! City has coordinates from wrong continent
-						WTA_Logger::error( sprintf(
-							'SKIPPED continent mismatch: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
-							$city['name'],
-							$city['country_code'],
-							$country_continent,
-							$gps_continent,
-							$lat,
-							$lon
-						) );
-						$skipped_continent_mismatch++;
-						continue; // Skip this corrupt entry
-					}
-				}
-			}
+			// NOTE: Continent validation is INTENTIONALLY SKIPPED HERE!
+			// Reason: Cities with corrupt GPS in cities.json (e.g., København with NY coords)
+			// must still be queued so process_city() can fix GPS with Wikidata-first.
+			// GPS validation happens AFTER Wikidata fetch in process_city().
 		}
 		
 		// GPS VALIDATION LAG 3: Duplicate Detection (choose best quality entry)

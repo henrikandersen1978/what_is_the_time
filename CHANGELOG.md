@@ -2,6 +2,116 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.17] - 2025-12-11
+
+### Fixed
+- **CRITICAL: GPS VALIDATION MOVED TO AFTER WIKIDATA** 🔧🌍
+- Fixed København and other cities with corrupt GPS being skipped before Wikidata could fix them
+- GPS validation now happens AFTER Wikidata-first correction in process_city()
+
+### The Problem
+
+**Symptom:**
+- København (Copenhagen) was not imported despite being largest Danish city
+- Log showed: `GPS_from_Wikidata=0` (Wikidata never used!)
+- Log showed: `Skipped_continent_mismatch=1` (København skipped!)
+
+**Root Cause - Catch-22:**
+```
+v2.34.16 flow (BROKEN):
+1. process_cities_import() reads København from cities.json
+2. København has corrupt GPS (New York coordinates)
+3. GPS validation runs → continent mismatch → SKIP! ❌
+4. København never queued
+5. process_city() never runs
+6. Wikidata-first never gets chance to fix GPS! ❌
+
+Result: København and similar cities completely missing!
+```
+
+### The Solution
+
+**Moved GPS validation to AFTER Wikidata correction:**
+
+```
+v2.34.17 flow (FIXED):
+1. process_cities_import() reads København
+2. Has corrupt GPS but SKIPS validation ✅
+3. København queued anyway
+4. process_city() runs:
+   ├─ Wikidata-first fetches correct GPS ✅
+   ├─ GPS validation runs with CORRECT GPS ✅
+   └─ København created with accurate coordinates! ✅
+
+Result: All cities imported with best possible GPS!
+```
+
+### Technical Details
+
+**In process_cities_import():**
+- Removed continent mismatch validation (line ~793-818)
+- Only keeps basic sanity checks (0,0 coords, out of range)
+- All cities with wikiDataId are queued regardless of GPS quality
+- Comment explains why validation is skipped
+
+**In process_city():**
+- Added GPS validation AFTER Wikidata-first fetch
+- Validates with Wikidata-corrected GPS (not cities.json GPS)
+- Only skips if GPS is STILL wrong after Wikidata tried to fix it
+- Marks as failed with clear error message
+
+### Why This Matters
+
+**København Test Case:**
+```
+cities.json entry:
+├─ name: "Copenhagen"
+├─ GPS: 43.89,-75.67 (New York!) ❌
+├─ wikiDataId: Q1748 ✅
+
+v2.34.16: Skipped in import → Never created ❌
+v2.34.17: Queued → Wikidata fixes GPS → Created ✅
+```
+
+**Expected Results After Fix:**
+```
+Danmark import (50k+ population):
+├─ Queued: 13 cities (was 11)
+├─ GPS_from_Wikidata: 10+ (was 0!)
+├─ København: ✅ Imported with correct GPS
+└─ All cities: ✅ Best possible GPS accuracy
+```
+
+### Impact
+
+✅ **København and similar cities now import correctly**
+- Any city with corrupt GPS in cities.json but valid Wikidata ID
+- Wikidata-first can now actually fix GPS issues
+- Hundreds of cities globally affected
+
+✅ **Wikidata-first actually works now**
+- GPS_from_Wikidata will show real usage
+- Accurate coordinates for major cities
+- Fallback to cities.json only if Wikidata unavailable
+
+✅ **Better data quality**
+- Validation still happens (after correction)
+- Only truly corrupt data is skipped
+- Best of both worlds: accuracy + safety
+
+### Upgrade Notes
+
+**If you have incomplete imports:**
+1. Clear existing data (København missing = incomplete)
+2. Install v2.34.17
+3. Re-import affected countries
+4. Verify København and other major cities present
+
+**Test with Danmark:**
+- Should import 13 cities (not 11)
+- København should be included
+- GPS_from_Wikidata should be > 0
+
 ## [2.34.16] - 2025-12-11
 
 ### Fixed
