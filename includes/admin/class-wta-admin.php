@@ -538,6 +538,76 @@ class WTA_Admin {
 	}
 
 	/**
+	 * AJAX: Regenerate ALL AI Content (v2.34.20).
+	 * 
+	 * Queues ai_content jobs for ALL location posts.
+	 * Use case: Switching from test mode to normal mode, or after prompt changes.
+	 *
+	 * @since    2.34.20
+	 */
+	public function ajax_regenerate_all_ai() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		// Get ALL published location posts
+		$posts = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'posts_per_page' => -1, // ALL posts
+			'post_status'    => 'publish',
+			'fields'         => 'ids', // Only IDs for performance
+		) );
+
+		if ( empty( $posts ) ) {
+			wp_send_json_error( array( 
+				'message' => 'No published location posts found to regenerate.'
+			) );
+		}
+
+		$queued = 0;
+		$skipped = 0;
+
+		foreach ( $posts as $post_id ) {
+			$type = get_post_meta( $post_id, 'wta_type', true );
+
+			if ( ! $type || ! in_array( $type, array( 'continent', 'country', 'city' ), true ) ) {
+				$skipped++;
+				continue;
+			}
+
+			// Queue AI content generation
+			$source_id = 'ai_content_' . $type . '_' . $post_id;
+			
+			WTA_Queue::add(
+				'ai_content',
+				array(
+					'post_id' => $post_id,
+					'type'    => $type,
+				),
+				$source_id
+			);
+
+			$queued++;
+		}
+
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		$mode_warning = $test_mode ? ' ⚠️ Note: Test Mode is ENABLED - template content will be used (no API costs).' : '';
+
+		wp_send_json_success( array(
+			'message' => sprintf(
+				'Successfully queued %d posts for AI content regeneration! %s%s',
+				$queued,
+				$skipped > 0 ? " ($skipped posts skipped due to missing type)" : '',
+				$mode_warning
+			),
+			'queued'  => $queued,
+			'skipped' => $skipped,
+		) );
+	}
+
+	/**
 	 * AJAX: Get recent logs.
 	 *
 	 * @since    2.0.0

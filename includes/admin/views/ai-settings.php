@@ -12,13 +12,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Handle form submission
 if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_ai_settings' ) ) {
+	// Detect test mode change (v2.34.20)
+	$old_test_mode = get_option( 'wta_test_mode', 0 );
+	$new_test_mode = isset( $_POST['wta_test_mode'] ) ? 1 : 0;
+	$test_mode_disabled = ( $old_test_mode == 1 && $new_test_mode == 0 );
+	
 	update_option( 'wta_openai_api_key', sanitize_text_field( $_POST['wta_openai_api_key'] ) );
 	update_option( 'wta_openai_model', sanitize_text_field( $_POST['wta_openai_model'] ) );
 	update_option( 'wta_openai_temperature', floatval( $_POST['wta_openai_temperature'] ) );
 	update_option( 'wta_openai_max_tokens', intval( $_POST['wta_openai_max_tokens'] ) );
-	update_option( 'wta_test_mode', isset( $_POST['wta_test_mode'] ) ? 1 : 0 );
+	update_option( 'wta_test_mode', $new_test_mode );
 	
-	echo '<div class="notice notice-success"><p>' . esc_html__( 'Settings saved.', WTA_TEXT_DOMAIN ) . '</p></div>';
+	// Show prompt for AI regeneration if test mode was disabled (v2.34.20)
+	if ( $test_mode_disabled ) {
+		$post_count = wp_count_posts( WTA_POST_TYPE );
+		$published = isset( $post_count->publish ) ? $post_count->publish : 0;
+		$estimated_cost = round( $published * 8 * 0.00017, 2 );
+		
+		echo '<div class="notice notice-warning" id="wta-test-mode-disabled-notice">';
+		echo '<h3>' . esc_html__( '✅ Test Mode Disabled', WTA_TEXT_DOMAIN ) . '</h3>';
+		echo '<p><strong>' . esc_html__( 'Would you like to generate AI content for all location posts now?', WTA_TEXT_DOMAIN ) . '</strong></p>';
+		echo '<p>' . sprintf( esc_html__( 'This will queue %s posts for AI content generation.', WTA_TEXT_DOMAIN ), number_format( $published ) ) . '</p>';
+		echo '<p>' . sprintf( esc_html__( 'Estimated cost: ~$%s (gpt-4o-mini)', WTA_TEXT_DOMAIN ), $estimated_cost ) . '</p>';
+		echo '<p>';
+		echo '<button type="button" class="button button-primary" id="wta-trigger-ai-regeneration">' . esc_html__( 'Yes, Generate AI Content Now', WTA_TEXT_DOMAIN ) . '</button> ';
+		echo '<button type="button" class="button" id="wta-dismiss-ai-prompt">' . esc_html__( 'No, I\'ll Do It Later', WTA_TEXT_DOMAIN ) . '</button>';
+		echo '</p>';
+		echo '<p class="description">' . esc_html__( 'You can also manually trigger this later from Tools → Regenerate ALL AI Content', WTA_TEXT_DOMAIN ) . '</p>';
+		echo '</div>';
+	} else {
+		echo '<div class="notice notice-success"><p>' . esc_html__( 'Settings saved.', WTA_TEXT_DOMAIN ) . '</p></div>';
+	}
 }
 
 $api_key = get_option( 'wta_openai_api_key', '' );
@@ -161,15 +185,58 @@ jQuery(document).ready(function($) {
 					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
 				}
 			},
-			error: function() {
-				$result.html('<div class="notice notice-error"><p>❌ AJAX request failed</p></div>');
-			},
-			complete: function() {
-				$button.prop('disabled', false);
-				$spinner.removeClass('is-active');
-			}
-		});
+		error: function() {
+			$result.html('<div class="notice notice-error"><p>❌ AJAX request failed</p></div>');
+		},
+		complete: function() {
+			$button.prop('disabled', false);
+			$spinner.removeClass('is-active');
+		}
 	});
+});
+
+// Handle test mode disabled prompt - Trigger AI regeneration (v2.34.20)
+$('#wta-trigger-ai-regeneration').on('click', function() {
+	var $button = $(this);
+	var $notice = $('#wta-test-mode-disabled-notice');
+	
+	$button.prop('disabled', true);
+	$notice.html('<p>⏳ Queuing all posts for AI content generation... This may take a minute.</p>');
+	
+	$.ajax({
+		url: wtaAdmin.ajaxUrl,
+		type: 'POST',
+		data: {
+			action: 'wta_regenerate_all_ai',
+			nonce: wtaAdmin.nonce
+		},
+		timeout: 180000, // 3 minutes
+		success: function(response) {
+			if (response.success) {
+				$notice.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p><p>Redirecting to dashboard...</p></div>');
+				
+				// Redirect to dashboard after 2 seconds
+				setTimeout(function() {
+					window.location.href = '<?php echo esc_url( admin_url( 'admin.php?page=world-time-ai' ) ); ?>';
+				}, 2000);
+			} else {
+				$notice.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+			}
+		},
+		error: function(xhr, status, error) {
+			if (status === 'timeout') {
+				$notice.html('<div class="notice notice-warning"><p>⚠️ Request timed out. The queuing may still be running. Check queue status in dashboard.</p></div>');
+			} else {
+				$notice.html('<div class="notice notice-error"><p>❌ Failed: ' + error + '</p></div>');
+			}
+		}
+	});
+});
+
+// Handle test mode disabled prompt - Dismiss
+$('#wta-dismiss-ai-prompt').on('click', function() {
+	$('#wta-test-mode-disabled-notice').fadeOut();
+});
 });
 </script>
 
