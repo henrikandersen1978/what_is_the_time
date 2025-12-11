@@ -2,6 +2,92 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.21] - 2025-12-11
+
+### Fixed
+- **🐛 CRITICAL: Infinite chunking loop bug** - Chunks would continue queueing even after all cities processed
+- Added 3-layer safety checks to prevent runaway chunking
+
+### Changed
+- **Chunking Safety Checks:**
+  1. **Stop if no cities queued** - If a chunk queues 0 cities (all filtered), stop chunking immediately
+  2. **Max chunks limit** - Hard limit of 10 chunks (300k cities max) as safety failsafe
+  3. **Enhanced logging** - Show chunk number, cities queued per chunk, better debugging
+
+### Technical Details
+
+**The Bug (v2.34.20):**
+```php
+// Only checked if offset < total_cities in JSON
+if ( $next_offset < $total_cities ) { 
+    queue_next_chunk(); // Would queue even if all cities filtered!
+}
+
+Problem:
+├─ JSON has 153k cities total
+├─ Filters reduce to 1k cities needed
+├─ After queuing 1k cities, chunks continued
+├─ Chunk 2,3,4,5... queued 0 cities each but kept going!
+└─ Result: Infinite chunk loop ❌
+```
+
+**The Fix (v2.34.21):**
+```php
+// Check 1: Did we queue anything?
+if ( $queued === 0 ) {
+    stop(); // No cities queued = we're done ✅
+}
+
+// Check 2: Safety limit reached?
+elseif ( $current_chunk >= 10 ) {
+    stop(); // Failsafe: max 10 chunks ✅
+}
+
+// Check 3: More cities in JSON?
+elseif ( $next_offset < $total_cities ) {
+    queue_next_chunk(); // Continue ✅
+}
+```
+
+**Why It Happened:**
+- Chunking was based on JSON size, not filtered result size
+- A chunk with 30k cities might queue only 100 (due to filters)
+- Next chunk might queue 0 (no matching cities)
+- But we'd still queue chunk after chunk because offset < total_cities
+- Solution: Stop immediately if a chunk produces no results
+
+**Safety Measures:**
+1. **Zero-queue detection** - Most important: stops when no valid cities found
+2. **Max chunks limit** - 10 chunks = 300k cities (way more than our 150k dataset)
+3. **Enhanced logging** - Shows queued count per chunk for debugging
+
+### Expected Behavior Now
+
+**Normal Import (150k cities, no filter):**
+```
+Chunk 1 (0-30k):   Queues ~25k cities ✅
+Chunk 2 (30k-60k): Queues ~25k cities ✅
+Chunk 3 (60k-90k): Queues ~25k cities ✅
+Chunk 4 (90k-120k): Queues ~25k cities ✅
+Chunk 5 (120k-150k): Queues ~23k cities ✅
+Chunk 6: offset (150k) >= total (150k) → STOP ✅
+Total: 5 chunks, ~148k cities queued
+```
+
+**Filtered Import (only Denmark, ~12 cities):**
+```
+Chunk 1 (0-30k):   Queues 12 cities ✅
+Chunk 2 (30k-60k): Queues 0 cities → STOP ✅
+Total: 2 chunks, 12 cities queued
+```
+
+**Safety Limit Triggered (misconfiguration):**
+```
+Chunk 1-10: Keep queueing...
+Chunk 11: Max limit → STOP ✅ + Warning logged
+Admin can investigate and fix settings
+```
+
 ## [2.34.20] - 2025-12-11
 
 ### Added

@@ -1089,28 +1089,60 @@ class WTA_Structure_Processor {
 	) );
 
 	// ==========================================
-	// CHUNK CONTINUATION (v2.34.20)
+	// CHUNK CONTINUATION (v2.34.21 - FIXED)
 	// ==========================================
 	// Check if more chunks remain and queue next chunk automatically
+	// SAFETY CHECKS to prevent infinite chunking:
+	// 1. Stop if we reached end of JSON file
+	// 2. Stop if this chunk queued 0 cities (all filtered out = done)
+	// 3. Max 10 chunks safety limit (150k / 30k = 5 expected)
 	
 	$next_offset = $offset + $chunk_size;
+	$current_chunk_number = ( $offset / $chunk_size ) + 1;
+	$max_chunks = 10; // Safety limit: 10 chunks = 300k cities max
 	
-	if ( $next_offset < $total_cities ) {
+	// SAFETY CHECK 1: Did we queue ANY cities in this chunk?
+	if ( $queued === 0 ) {
+		file_put_contents( $debug_file, sprintf(
+			"\n⚠️ CHUNK STOP: No cities queued in this chunk (all filtered). Stopping chunking.\n"
+		), FILE_APPEND );
+		
+		WTA_Logger::info( 'Chunking stopped: No cities queued in chunk (all filtered out)' );
+	}
+	// SAFETY CHECK 2: Have we reached max chunks limit?
+	elseif ( $current_chunk_number >= $max_chunks ) {
+		file_put_contents( $debug_file, sprintf(
+			"\n⚠️ CHUNK STOP: Max chunks limit reached (%d chunks). Safety stop.\n",
+			$max_chunks
+		), FILE_APPEND );
+		
+		WTA_Logger::warning( sprintf(
+			'Chunking stopped: Max chunks limit reached (%d). Check import settings.',
+			$max_chunks
+		) );
+	}
+	// SAFETY CHECK 3: Are there more cities in JSON to process?
+	elseif ( $next_offset < $total_cities ) {
 		// More cities remain - queue next chunk!
 		$next_chunk_end = min( $next_offset + $chunk_size, $total_cities );
 		
 		file_put_contents( $debug_file, sprintf(
-			"\n✅ CHUNK COMPLETE: Processed %d-%d. Queuing next chunk: %d-%d...\n",
+			"\n✅ CHUNK %d COMPLETE: Processed %d-%d, Queued %d cities. Queuing next chunk: %d-%d...\n",
+			$current_chunk_number,
 			$offset,
 			$chunk_end - 1,
+			$queued,
 			$next_offset,
 			$next_chunk_end - 1
 		), FILE_APPEND );
 		
 		WTA_Logger::info( sprintf(
-			'Chunk %d-%d complete. Queuing next chunk: %d-%d',
+			'Chunk %d (%d-%d) complete, queued %d cities. Queuing chunk %d (%d-%d)',
+			$current_chunk_number,
 			$offset,
 			$chunk_end - 1,
+			$queued,
+			$current_chunk_number + 1,
 			$next_offset,
 			$next_chunk_end - 1
 		) );
@@ -1132,13 +1164,15 @@ class WTA_Structure_Processor {
 	} else {
 		// All chunks complete!
 		file_put_contents( $debug_file, sprintf(
-			"\n🎉 ALL CHUNKS COMPLETE! Total cities processed: %d, Total queued: %d\n",
+			"\n🎉 ALL CHUNKS COMPLETE! Total cities in JSON: %d, Total queued this session: %d, Chunks processed: %d\n",
 			$total_cities,
-			$queued
+			$queued,
+			$current_chunk_number
 		), FILE_APPEND );
 		
 		WTA_Logger::info( sprintf(
-			'All cities_import chunks complete! Total: %d cities processed, %d queued',
+			'All cities_import chunks complete! Chunks: %d, Total cities: %d, Queued this session: %d',
+			$current_chunk_number,
 			$total_cities,
 			$queued
 		) );
