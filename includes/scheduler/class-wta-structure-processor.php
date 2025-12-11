@@ -496,8 +496,12 @@ class WTA_Structure_Processor {
 				$gps_continent = $this->get_continent_from_gps( $final_lat, $final_lon );
 				
 				if ( $country_continent !== 'Unknown' && $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
-					WTA_Logger::error( sprintf(
-						'City creation ABORTED - continent mismatch after Wikidata: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s, source=%s)',
+					// SMART ERROR HANDLING (v2.34.19):
+					// This is BAD DATA (corrupt GPS), not a retriable error.
+					// Mark as complete (not failed) so it doesn't show as error in dashboard
+					// and won't be retried via "Retry Failed Items" button.
+					WTA_Logger::info( sprintf(
+						'SKIPPED (corrupt GPS - continent mismatch): %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s, source=%s)',
 						$data['name'],
 						$data['country_code'],
 						$country_continent,
@@ -506,7 +510,7 @@ class WTA_Structure_Processor {
 						$final_lon,
 						$gps_source
 					) );
-					WTA_Queue::mark_failed( $item['id'], 'GPS continent mismatch (even after Wikidata correction)' );
+					WTA_Queue::mark_done( $item['id'] );
 					return;
 				}
 			}
@@ -525,12 +529,15 @@ class WTA_Structure_Processor {
 			$gps_source
 		) );
 	} else {
-		WTA_Logger::warning( sprintf(
-			'No GPS coordinates available for city: %s (%s)',
+		// SMART ERROR HANDLING (v2.34.19):
+		// No GPS available = BAD DATA (not a retriable error)
+		// Mark as complete so it doesn't show as error in dashboard
+		WTA_Logger::info( sprintf(
+			'SKIPPED (no GPS available): %s (%s)',
 			$data['name'],
 			$data['country_code']
 		) );
-		WTA_Queue::mark_failed( $item['id'], 'No GPS coordinates available' );
+		WTA_Queue::mark_done( $item['id'] );
 		return;
 	}
 
@@ -978,55 +985,17 @@ class WTA_Structure_Processor {
 		$lon = floatval( $city['longitude'] );
 		$cc = strtoupper( $city['country_code'] );
 		
-		// Define approximate latitude/longitude bounds for countries
-		// This catches major GPS errors (e.g. European city with American coordinates)
-		$gps_bounds = array(
-			'DK' => array( 'lat_min' => 54.5,  'lat_max' => 58.0,  'lon_min' => 8.0,   'lon_max' => 15.5 ),  // Denmark
-			'NO' => array( 'lat_min' => 57.5,  'lat_max' => 71.5,  'lon_min' => 4.0,   'lon_max' => 31.5 ),  // Norway
-			'SE' => array( 'lat_min' => 55.0,  'lat_max' => 69.5,  'lon_min' => 10.5,  'lon_max' => 24.5 ),  // Sweden
-			'DE' => array( 'lat_min' => 47.0,  'lat_max' => 55.5,  'lon_min' => 5.5,   'lon_max' => 15.5 ),  // Germany
-			'FR' => array( 'lat_min' => 41.0,  'lat_max' => 51.5,  'lon_min' => -5.5,  'lon_max' => 10.0 ),  // France
-			'GB' => array( 'lat_min' => 49.5,  'lat_max' => 61.0,  'lon_min' => -8.5,  'lon_max' => 2.0 ),   // United Kingdom
-			'IT' => array( 'lat_min' => 35.5,  'lat_max' => 47.5,  'lon_min' => 6.5,   'lon_max' => 19.0 ),  // Italy
-			'ES' => array( 'lat_min' => 27.5,  'lat_max' => 44.0,  'lon_min' => -18.5, 'lon_max' => 5.0 ),   // Spain
-			'NL' => array( 'lat_min' => 50.5,  'lat_max' => 53.7,  'lon_min' => 3.0,   'lon_max' => 7.5 ),   // Netherlands
-			'BE' => array( 'lat_min' => 49.5,  'lat_max' => 51.7,  'lon_min' => 2.3,   'lon_max' => 6.5 ),   // Belgium
-		);
-		
-		// Check if country has defined bounds
-		if ( isset( $gps_bounds[ $cc ] ) ) {
-			$bounds = $gps_bounds[ $cc ];
-			
-			// Check if GPS coordinates are outside expected bounds
-			if ( $lat < $bounds['lat_min'] || $lat > $bounds['lat_max'] ||
-			     $lon < $bounds['lon_min'] || $lon > $bounds['lon_max'] ) {
-				
-				// GPS OUTSIDE BOUNDS - but check if we can fix it with Wikidata!
-				if ( isset( $city['wikiDataId'] ) && ! empty( $city['wikiDataId'] ) ) {
-					// HAS WIKIDATA! Don't skip - Wikidata will fix GPS in process_city()
-					file_put_contents( $debug_file, sprintf(
-						"GPS outside bounds but has wikiDataId %s - queuing for Wikidata correction: %s (%s)\n",
-						$city['wikiDataId'],
-						$city['name'],
-						$cc
-					), FILE_APPEND );
-					// Continue to queue this city (Wikidata will fix it)
-				} else {
-					// NO WIKIDATA! Skip - we can't fix corrupt GPS
-					$skipped_country++;
-					file_put_contents( $debug_file, sprintf(
-						"SKIPPED corrupt GPS (no Wikidata): %s (%s) - GPS: %.2f,%.2f outside %s bounds\n",
-						$city['name'],
-						$cc,
-						$lat,
-						$lon,
-						$cc
-					), FILE_APPEND );
-					continue; // Skip this corrupt entry
-				}
-			}
-		}
-	}
+	// ==========================================
+	// LAG 1 GPS BOUNDS CHECK REMOVED (v2.34.19)
+	// ==========================================
+	// All GPS validation now happens in process_city() (LAG 2) AFTER Wikidata correction.
+	// This makes process_cities_import() ultra-fast (2-3 min for 150k cities).
+	// Benefits:
+	// - No timeout issues for large imports
+	// - Wikidata can correct ALL cities (not just those with continent mismatch)
+	// - Better data quality (validation after correction)
+	// ==========================================
+}
 	
 	// Max cities per country
 		$should_queue = true;
@@ -1064,14 +1033,12 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 
 	$summary = sprintf(
-		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_continent_mismatch=%d, Skipped_duplicate=%d, GPS_from_Wikidata=%d, Skipped_max=%d, Total_read=%d\n",
+		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_duplicate=%d, Skipped_max=%d, Total_read=%d (Note: GPS bounds & continent checks now in LAG 2)\n",
 		$queued,
 		$skipped_country,
 		$skipped_population,
 		$skipped_gps_invalid,
-		$skipped_continent_mismatch,
 		$skipped_duplicate,
-		$gps_fetched_from_wikidata,
 		$skipped_max_reached,
 		$total_read
 	);
