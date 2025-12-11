@@ -1000,17 +1000,30 @@ class WTA_Structure_Processor {
 			// Check if GPS coordinates are outside expected bounds
 			if ( $lat < $bounds['lat_min'] || $lat > $bounds['lat_max'] ||
 			     $lon < $bounds['lon_min'] || $lon > $bounds['lon_max'] ) {
-				// GPS coordinates don't match country - skip this corrupt entry
-				$skipped_country++;
-				file_put_contents( $debug_file, sprintf(
-					"SKIPPED corrupt GPS: %s (%s) - GPS: %.2f,%.2f outside %s bounds\n",
-					$city['name'],
-					$cc,
-					$lat,
-					$lon,
-					$cc
-				), FILE_APPEND );
-				continue;
+				
+				// GPS OUTSIDE BOUNDS - but check if we can fix it with Wikidata!
+				if ( isset( $city['wikiDataId'] ) && ! empty( $city['wikiDataId'] ) ) {
+					// HAS WIKIDATA! Don't skip - Wikidata will fix GPS in process_city()
+					file_put_contents( $debug_file, sprintf(
+						"GPS outside bounds but has wikiDataId %s - queuing for Wikidata correction: %s (%s)\n",
+						$city['wikiDataId'],
+						$city['name'],
+						$cc
+					), FILE_APPEND );
+					// Continue to queue this city (Wikidata will fix it)
+				} else {
+					// NO WIKIDATA! Skip - we can't fix corrupt GPS
+					$skipped_country++;
+					file_put_contents( $debug_file, sprintf(
+						"SKIPPED corrupt GPS (no Wikidata): %s (%s) - GPS: %.2f,%.2f outside %s bounds\n",
+						$city['name'],
+						$cc,
+						$lat,
+						$lon,
+						$cc
+					), FILE_APPEND );
+					continue; // Skip this corrupt entry
+				}
 			}
 		}
 	}

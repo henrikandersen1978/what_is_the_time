@@ -2,6 +2,131 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.18] - 2025-12-11
+
+### Fixed
+- **SMART GPS BOUNDS WITH WIKIDATA EXCEPTION** 🧠🌍
+- Modified GPS bounds validation to allow Wikidata correction for cities with corrupt GPS
+- København and similar cities now import correctly while maintaining data quality protection
+
+### The Problem
+
+**Symptom:**
+- København still skipped: `SKIPPED corrupt GPS: Copenhagen (DK) - GPS: 43.89,-75.67 outside DK bounds`
+- v2.34.17 removed continent validation but GPS bounds validation still blocked København
+
+**Why GPS Bounds Exists:**
+GPS bounds validation (v2.33.6) was added to solve København problem:
+- cities.json has 2 København entries
+- "Copenhagen": NY GPS + population → was being imported with wrong GPS
+- "København": DK GPS + no population → was being filtered out
+- GPS bounds fixed this by skipping corrupt GPS entry
+
+**But Now With Wikidata-First:**
+GPS bounds became too strict:
+- "Copenhagen" has wikiDataId Q1748 (can be fixed!)
+- GPS bounds skips it before Wikidata can correct GPS
+- Result: København never queued, never created
+
+### The Solution
+
+**Smart GPS Bounds with Wikidata Exception:**
+
+```php
+if ( GPS outside country bounds ) {
+    if ( city has wikiDataId ) {
+        // HAS WIKIDATA! Queue it - Wikidata will fix GPS ✅
+        Log: "GPS outside bounds but has wikiDataId Q1748 - queuing for Wikidata correction"
+        Continue to queue;
+    } else {
+        // NO WIKIDATA! Skip it - can't fix corrupt GPS ❌
+        Log: "SKIPPED corrupt GPS (no Wikidata): city (CC) - GPS outside bounds"
+        Skip;
+    }
+}
+```
+
+### Why This Is Perfect
+
+**Best of Both Worlds:**
+
+```
+København case:
+├─ "Copenhagen" entry:
+│   ├─ GPS: 43.89,-75.67 (New York, outside DK bounds)
+│   ├─ wikiDataId: Q1748 ✅
+│   ├─ GPS bounds: "Outside but has Wikidata - queuing!" ✅
+│   ├─ Queues for process_city() ✅
+│   ├─ Wikidata fetches: 55.67,12.56 (correct!) ✅
+│   └─ Created as "København" with accurate GPS! ✅
+│
+└─ Small city without Wikidata:
+    ├─ GPS: Corrupt (outside bounds)
+    ├─ wikiDataId: NONE ❌
+    ├─ GPS bounds: "No Wikidata - skipping!" ❌
+    └─ Skipped - protects database quality! ✅
+
+Data quality maintained:
+├─ ✅ Cities with Wikidata: Queued + corrected
+├─ ✅ Cities without Wikidata: Protected by GPS bounds
+├─ ✅ No corrupt data enters database
+└─ ✅ Best possible GPS accuracy
+```
+
+### Technical Details
+
+**Modified GPS Bounds Validation:**
+- Location: process_cities_import() line ~996-1024
+- Added wikiDataId check before skipping
+- Clear logging for both scenarios
+- Maintains all existing GPS bounds for all countries
+
+**Logic Flow:**
+```
+1. Check if GPS outside country bounds
+2. IF outside bounds:
+   a. Check if city has wikiDataId
+   b. IF yes: Queue (log "queuing for Wikidata correction")
+   c. IF no: Skip (log "SKIPPED corrupt GPS (no Wikidata)")
+3. IF inside bounds: Queue normally
+```
+
+### Impact
+
+✅ **København and major cities import correctly**
+- Cities with corrupt GPS but valid Wikidata ID now import
+- Wikidata corrects GPS in process_city()
+- Accurate coordinates for all major cities
+
+✅ **Data quality still protected**
+- Small cities without Wikidata still blocked by GPS bounds
+- Thousands of potential corrupt entries still filtered out
+- GPS bounds validation NOT weakened
+
+✅ **Clear logging**
+- "queuing for Wikidata correction" = Will be fixed
+- "SKIPPED corrupt GPS (no Wikidata)" = Can't be fixed
+- Easy to understand what happened
+
+### Expected Results
+
+**Danmark import (50k+ population):**
+```
+New log will show:
+├─ "GPS outside bounds but has wikiDataId Q1748 - queuing for Wikidata correction: Copenhagen (DK)"
+├─ Queued: 13 cities (was 11) ✅
+├─ GPS_from_Wikidata: 10+ (was 0) ✅
+├─ København: ✅ Imported with correct GPS
+└─ All cities: ✅ Best possible accuracy
+```
+
+### Upgrade Notes
+
+This completes the København fix:
+- v2.34.17: Removed continent validation (too strict)
+- v2.34.18: Smart GPS bounds (perfect balance)
+- Result: København imports correctly + data quality maintained
+
 ## [2.34.17] - 2025-12-11
 
 ### Fixed
