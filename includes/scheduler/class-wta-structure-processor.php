@@ -415,28 +415,91 @@ class WTA_Structure_Processor {
 		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
 	}
 
-	// Save GPS coordinates (CRITICAL for nearby cities shortcode!)
-	if ( isset( $data['latitude'] ) && ! empty( $data['latitude'] ) ) {
-		update_post_meta( $post_id, 'wta_latitude', floatval( $data['latitude'] ) );
+	// ==========================================
+	// WIKIDATA-FIRST GPS STRATEGY
+	// Prefer authoritative Wikidata GPS over cities.json
+	// Fallback to cities.json if Wikidata unavailable
+	// ==========================================
+	
+	$final_lat = null;
+	$final_lon = null;
+	$gps_source = 'unknown';
+	
+	// STEP 1: Try Wikidata GPS (if available)
+	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
+		$wikidata_coords = $this->fetch_coordinates_from_wikidata( $data['wikidata_id'] );
+		
+		if ( $wikidata_coords !== false ) {
+			// SUCCESS! Use authoritative Wikidata GPS
+			$final_lat = $wikidata_coords['lat'];
+			$final_lon = $wikidata_coords['lon'];
+			$gps_source = 'wikidata';
+			
+			// Log if we replaced cities.json GPS
+			if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
+				$old_lat = $data['latitude'];
+				$old_lon = $data['longitude'];
+				
+				if ( (string)$old_lat !== (string)$final_lat || (string)$old_lon !== (string)$final_lon ) {
+					WTA_Logger::info( sprintf(
+						'🔄 GPS replaced with Wikidata: %s (%s) - cities.json: %s,%s → Wikidata: %s,%s',
+						$data['name'],
+						$data['wikidata_id'],
+						$old_lat,
+						$old_lon,
+						$final_lat,
+						$final_lon
+					) );
+				}
+			}
+		} else {
+			// Wikidata fetch failed - fallback to cities.json GPS
+			$final_lat = isset( $data['latitude'] ) ? $data['latitude'] : null;
+			$final_lon = isset( $data['longitude'] ) ? $data['longitude'] : null;
+			$gps_source = 'cities_json_fallback';
+		}
+	} else {
+		// No Wikidata ID - use cities.json GPS
+		$final_lat = isset( $data['latitude'] ) ? $data['latitude'] : null;
+		$final_lon = isset( $data['longitude'] ) ? $data['longitude'] : null;
+		$gps_source = 'cities_json';
 	}
-	if ( isset( $data['longitude'] ) && ! empty( $data['longitude'] ) ) {
-		update_post_meta( $post_id, 'wta_longitude', floatval( $data['longitude'] ) );
+	
+	// STEP 2: Save GPS coordinates (CRITICAL for nearby cities shortcode!)
+	if ( $final_lat !== null && $final_lon !== null ) {
+		update_post_meta( $post_id, 'wta_latitude', floatval( $final_lat ) );
+		update_post_meta( $post_id, 'wta_longitude', floatval( $final_lon ) );
+		update_post_meta( $post_id, 'wta_gps_source', $gps_source );
+		
+		WTA_Logger::debug( sprintf(
+			'GPS saved for %s: %s,%s (source: %s)',
+			$data['name'],
+			$final_lat,
+			$final_lon,
+			$gps_source
+		) );
+	} else {
+		WTA_Logger::warning( sprintf(
+			'No GPS coordinates available for city: %s (%s)',
+			$data['name'],
+			$data['country_code']
+		) );
 	}
 
-		// Handle timezone
+		// Handle timezone (use final GPS coordinates from Wikidata-first strategy)
 		$needs_timezone_api = false;
 
 		if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
 			// Complex country - need API lookup if we have lat/lng
-			if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
+			if ( $final_lat !== null && $final_lon !== null ) {
 				$needs_timezone_api = true;
 				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
 
 				// Queue timezone resolution
 				WTA_Queue::add( 'timezone', array(
 					'post_id' => $post_id,
-					'lat'     => $data['latitude'],
-					'lng'     => $data['longitude'],
+					'lat'     => $final_lat,
+					'lng'     => $final_lon,
 				), 'timezone_' . $post_id );
 			} else {
 				// No lat/lng - use country default as fallback
@@ -455,14 +518,14 @@ class WTA_Structure_Processor {
 				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 			} else {
 				// Country not in list - fallback to API lookup
-				if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
+				if ( $final_lat !== null && $final_lon !== null ) {
 					$needs_timezone_api = true;
 					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
 					
 					WTA_Queue::add( 'timezone', array(
 						'post_id' => $post_id,
-						'lat'     => $data['latitude'],
-						'lng'     => $data['longitude'],
+						'lat'     => $final_lat,
+						'lng'     => $final_lon,
 					), 'timezone_' . $post_id );
 					
 					WTA_Logger::info( 'Country timezone not in list, using API fallback', array(
@@ -686,50 +749,12 @@ class WTA_Structure_Processor {
 		}
 		
 		// ==========================================
-		// WIKIDATA-FIRST GPS STRATEGY (GLOBAL)
-		// Prefer authoritative Wikidata GPS over cities.json
-		// Fallback to cities.json if Wikidata unavailable
+		// GPS INITIAL CHECK (from cities.json)
+		// NOTE: Wikidata-first GPS fetching happens LATER in process_city()
+		// to avoid timeout - this keeps process_cities_import() fast!
 		// ==========================================
 		
-		$gps_source = 'unknown';
-		
-		// STEP 1: Prefer Wikidata GPS (if available)
-		if ( isset( $city['wikiDataId'] ) && ! empty( $city['wikiDataId'] ) ) {
-			$wikidata_coords = $this->fetch_coordinates_from_wikidata( $city['wikiDataId'] );
-			
-			if ( $wikidata_coords !== false ) {
-				// SUCCESS! Use authoritative Wikidata GPS
-				$old_lat = isset( $city['latitude'] ) ? $city['latitude'] : 'null';
-				$old_lon = isset( $city['longitude'] ) ? $city['longitude'] : 'null';
-				
-				$city['latitude'] = $wikidata_coords['lat'];
-				$city['longitude'] = $wikidata_coords['lon'];
-				$gps_source = 'wikidata';
-				$gps_fetched_from_wikidata++;
-				
-				// Log if we replaced existing GPS
-				if ( $old_lat !== 'null' && $old_lon !== 'null' && 
-				     ( (string)$old_lat !== (string)$wikidata_coords['lat'] || (string)$old_lon !== (string)$wikidata_coords['lon'] ) ) {
-					WTA_Logger::info( sprintf(
-						'🔄 GPS replaced with Wikidata: %s (%s) - cities.json: %s,%s → Wikidata: %s,%s',
-						$city['name'],
-						$city['wikiDataId'],
-						$old_lat,
-						$old_lon,
-						$wikidata_coords['lat'],
-						$wikidata_coords['lon']
-					) );
-				}
-			} else {
-				// Wikidata fetch failed - fallback to cities.json GPS
-				$gps_source = 'cities_json_fallback';
-			}
-		} else {
-			// No Wikidata ID - use cities.json GPS
-			$gps_source = 'cities_json';
-		}
-		
-		// STEP 2: Ensure we have GPS coordinates (from either source)
+		// Ensure we have GPS coordinates from cities.json
 		if ( ! isset( $city['latitude'] ) || ! isset( $city['longitude'] ) ||
 		     $city['latitude'] === null || $city['latitude'] === '' ||
 		     $city['longitude'] === null || $city['longitude'] === '' ) {
