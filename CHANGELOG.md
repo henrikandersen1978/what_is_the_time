@@ -2,6 +2,25 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.15] - 2025-12-11
+
+### Changed
+- **VERSION BUMP FOR UPDATE TEST** 🔄
+- New version to verify automatic WordPress updates work correctly
+- No code changes - testing update mechanism only
+
+### Purpose
+This release tests that the plugin slug fix in v2.34.14 works correctly:
+- WordPress should detect this update automatically
+- Users can update with one click
+- No manual upload required
+
+### What's Included
+All features from v2.34.13 and v2.34.14:
+- ✅ Wikidata-first GPS architecture fix (no more timeouts!)
+- ✅ Plugin slug matches ZIP filename (automatic updates work!)
+- ✅ Import speed: 150k cities in 2-4 days
+
 ## [2.34.14] - 2025-12-11
 
 ### Fixed
