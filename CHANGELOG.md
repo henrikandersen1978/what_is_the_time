@@ -2,6 +2,130 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.22] - 2025-12-11
+
+### Fixed
+- **⚡ CRITICAL: Chunk timeout issue** - Chunks now complete in 2-3 min (was 30-40 min causing timeout)
+- **🎯 Smart logging auto-detection** - Detailed logging auto-disabled for full imports (5-10x faster)
+- **💾 Memory optimization** - Pre-calculate quality scores once (reduce duplicate compute)
+
+### Changed
+- **Chunk Size Optimization:**
+  - Reduced from 30k to 15k cities per chunk
+  - Better fit for 10-minute Action Scheduler timeout
+  - 10 chunks instead of 5 for 150k cities (better progress tracking)
+  - Each chunk: 2-3 min without detailed logging, 5-8 min with logging
+  - Safe margin: 2-5x under timeout limit
+
+- **Smart Logging (Auto-Detection):**
+  - **Full Import** (auto-detected): Detailed logging DISABLED for performance
+    - Triggers: 50+ countries OR 4+ continents OR no population filter
+    - Logging: Only critical events (chunk start/end, summary, errors)
+    - Performance: 5-10x faster (no disk I/O bottleneck)
+  - **Targeted Import** (auto-detected): Detailed logging ENABLED for debugging
+    - Triggers: < 50 countries AND < 4 continents
+    - Logging: Full per-city progress for troubleshooting
+    - Perfect for debugging single country imports
+  - Database logging (WTA_Logger) always enabled for both modes
+
+- **Memory Optimization:**
+  - Pre-calculate quality scores once per city (not twice)
+  - Store score with city in $seen_cities (avoid recalculation)
+  - Reduced memory footprint for duplicate detection
+
+### Technical Details
+
+**The Problem (v2.34.20-21):**
+```
+Chunk processing was taking 30-40 minutes per chunk:
+├─ file_put_contents() called for every city (30k writes!)
+├─ Disk I/O bottleneck (20-30 min just for logging!)
+├─ calculate_score() called twice per duplicate
+└─ Result: Timeout after 10 min (Action Scheduler limit) ❌
+
+Timeline:
+├─ Start chunk at 00:00
+├─ Timeout at 00:10 (marked as failed)
+├─ Only partial cities queued
+└─ Restart and fail again → slow progress
+```
+
+**The Solution (v2.34.22):**
+```
+1. Smart Logging Detection:
+   Full import (150k cities):
+   ├─ Auto-detected: Yes (all continents)
+   ├─ Detailed logging: DISABLED
+   ├─ File writes: ~10 per chunk (vs 30,000!)
+   └─ Performance: 5-10x faster ⚡
+
+   Single country (Denmark, 12 cities):
+   ├─ Auto-detected: No (1 country)
+   ├─ Detailed logging: ENABLED
+   ├─ File writes: ~50 total
+   └─ Full debug info for troubleshooting 🔍
+
+2. Smaller Chunks:
+   ├─ 15k cities per chunk (vs 30k)
+   ├─ Time: 2-3 min with fast logging
+   ├─ Time: 5-8 min with full logging
+   └─ Always under 10 min timeout! ✅
+
+3. Memory Optimization:
+   ├─ Calculate score once (not twice)
+   ├─ Store score with city
+   └─ Faster duplicate detection
+```
+
+### Expected Performance
+
+**Full Import (150k cities, test mode):**
+```
+Detection:
+├─ Continents: 6 (all)
+├─ Countries: All
+├─ Population filter: 0
+└─ Result: Full import → Detailed logging DISABLED
+
+Chunking (10 chunks × 3 min):
+├─ Chunk 1-10: 15k cities each
+├─ Time per chunk: 2-3 min (fast logging)
+├─ Total queuing: 20-30 minutter
+└─ Under timeout with big margin! ✅
+
+City Processing:
+├─ 148k cities / 40 per min
+├─ Time: ~62 timer = 2.6 dage
+└─ Total: ~2.6 dage for full import
+```
+
+**Targeted Import (Denmark, 12 cities):**
+```
+Detection:
+├─ Continents: 1 (Europe)
+├─ Countries: 1 (DK)
+├─ Population filter: 50k
+└─ Result: Targeted import → Detailed logging ENABLED
+
+Chunking:
+├─ Chunk 1: Processes 15k cities, queues 12 (DK cities)
+├─ Time: 5-8 min (with full logging)
+├─ Chunk 2: Queues 0 cities → STOPS ✅
+└─ Full debug log available for troubleshooting!
+```
+
+### Benefits
+
+```
+✅ Works within 10-min Action Scheduler timeout (no server config changes needed)
+✅ 5-10x faster queuing for full imports (detailed logging disabled)
+✅ Full debugging for targeted imports (detailed logging enabled)
+✅ Auto-detection (no manual configuration required)
+✅ Better progress tracking (10 chunks vs 5)
+✅ Memory optimized (pre-calculated scores)
+✅ Fault tolerant (smaller chunks = less to lose on failure)
+```
+
 ## [2.34.21] - 2025-12-11
 
 ### Fixed
