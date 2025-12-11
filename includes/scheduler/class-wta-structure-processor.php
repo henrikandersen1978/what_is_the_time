@@ -66,11 +66,11 @@ class WTA_Structure_Processor {
 		}
 
 	// 4. Finally process individual cities (only after cities_import is done)
-	// Dynamic batch size based on test mode for optimal balance:
-	// Test mode: 60 cities (maximum speed, ~96s execution)
-	// Normal mode: 30 cities (conservative for reliability, ~48s execution)
+	// Dynamic batch size optimized for Wikidata API with safety margins:
+	// Test mode: 40 cities (fast, 20 req/sec = 10% Wikidata capacity, ~2 days for 150k)
+	// Normal mode: 30 cities (safe, 5 req/sec = 2.5% Wikidata capacity, ~3.5 days for 150k)
 	$test_mode = get_option( 'wta_test_mode', 0 );
-	$batch_size = $test_mode ? 60 : 30;
+	$batch_size = $test_mode ? 40 : 30;
 	$cities = WTA_Queue::get_pending( 'city', $batch_size );
 	if ( ! empty( $cities ) ) {
 		WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );
@@ -800,10 +800,9 @@ class WTA_Structure_Processor {
 					$gps_continent = $this->get_continent_from_gps( $lat, $lon );
 					
 					if ( $gps_continent !== 'Unknown' && $country_continent !== $gps_continent ) {
-						// GPS MISMATCH! This shouldn't happen with Wikidata GPS
+						// GPS MISMATCH! City has coordinates from wrong continent
 						WTA_Logger::error( sprintf(
-							'SKIPPED continent mismatch [%s]: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
-							$gps_source,
+							'SKIPPED continent mismatch: %s (%s) - Country=%s, GPS=%s (lat=%s, lon=%s)',
 							$city['name'],
 							$city['country_code'],
 							$country_continent,
@@ -1252,14 +1251,14 @@ class WTA_Structure_Processor {
 			return false;
 		}
 		
-		// Dynamic rate limiting based on test mode:
-		// Test mode: 10 requests/second (fast, still only 5% of Wikidata capacity)
-		// Normal mode: 1 request/second (conservative, maximum safety)
-		// Wikidata official limit: 200 requests/second
+		// Dynamic rate limiting optimized for speed and safety:
+		// Test mode: 20 requests/second (0.05s = 50ms, 10% of Wikidata capacity)
+		// Normal mode: 5 requests/second (0.2s = 200ms, 2.5% of Wikidata capacity)
+		// Wikidata official limit: 200 requests/second (we use 2.5-10% max)
 		static $last_api_call = 0;
 		
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		$min_interval = $test_mode ? 0.1 : 1.0;  // 100ms vs 1000ms
+		$min_interval = $test_mode ? 0.05 : 0.2;  // 50ms vs 200ms
 		
 		$now = microtime( true );
 		$time_since_last_call = $now - $last_api_call;
@@ -1280,9 +1279,9 @@ class WTA_Structure_Processor {
 		WTA_Logger::info( 'Fetching GPS from Wikidata: ' . $wikidata_id . ' - ' . $url );
 		
 		$response = wp_remote_get( $url, array(
-			'timeout' => 10,
+			'timeout' => 5,  // Reduced from 10s for faster failover
 			'headers' => array(
-				'User-Agent' => 'WorldTimeAI-WordPress-Plugin/2.34.1'
+				'User-Agent' => 'WorldTimeAI-WordPress-Plugin/2.34.16'
 			)
 		) );
 		
