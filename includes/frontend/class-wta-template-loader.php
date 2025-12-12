@@ -684,8 +684,22 @@ class WTA_Template_Loader {
 				true
 			);
 			
-			// Add custom H1 handler for location posts only
+			// FAQ accordion script for city pages (v2.35.0)
 			if ( is_singular( WTA_POST_TYPE ) ) {
+				$post_id = get_the_ID();
+				$type = get_post_meta( $post_id, 'wta_type', true );
+				
+				if ( 'city' === $type ) {
+					wp_enqueue_script(
+						'wta-faq-accordion',
+						WTA_PLUGIN_URL . 'includes/frontend/assets/js/faq-accordion.js',
+						array(),
+						WTA_VERSION,
+						true
+					);
+				}
+				
+				// Add custom H1 handler
 				$this->inject_h1_script();
 			}
 		}

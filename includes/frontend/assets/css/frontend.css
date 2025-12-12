@@ -990,4 +990,234 @@ p.wta-no-nearby {
 	}
 }
 
+/* ========================================
+   FAQ Section (v2.35.0)
+   ======================================== */
+
+.wta-faq-section {
+	margin: 60px 0 40px 0 !important;
+	padding: 40px !important;
+	background: #f8f9fa !important;
+	border-radius: 12px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+	clear: both !important;
+}
+
+.wta-faq-heading {
+	color: #333 !important;
+	margin: 0 0 15px 0 !important;
+	font-size: 1.9em !important;
+	font-weight: 600 !important;
+	text-align: left !important;
+}
+
+.wta-faq-intro {
+	color: #666 !important;
+	line-height: 1.6 !important;
+	margin: 0 0 30px 0 !important;
+	font-size: 1.05em !important;
+}
+
+.wta-faq-container {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 12px !important;
+}
+
+/* FAQ Item */
+.wta-faq-item {
+	background: white !important;
+	border: 2px solid #e0e0e0 !important;
+	border-radius: 8px !important;
+	overflow: hidden !important;
+	transition: all 0.3s ease !important;
+}
+
+.wta-faq-item:hover {
+	border-color: #667eea !important;
+	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15) !important;
+}
+
+.wta-faq-expanded {
+	border-color: #667eea !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* FAQ Question Button */
+.wta-faq-question {
+	width: 100% !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	gap: 1em !important;
+	padding: 18px 20px !important;
+	background: white !important;
+	border: none !important;
+	text-align: left !important;
+	cursor: pointer !important;
+	font-size: 1.05em !important;
+	font-weight: 600 !important;
+	color: #333 !important;
+	transition: all 0.2s ease !important;
+	outline: none !important;
+}
+
+.wta-faq-question:hover {
+	background: #f8f9fa !important;
+	color: #667eea !important;
+}
+
+.wta-faq-question:focus {
+	outline: 2px solid #667eea !important;
+	outline-offset: -2px !important;
+}
+
+.wta-faq-expanded .wta-faq-question {
+	color: #667eea !important;
+	background: #f8f9fa !important;
+}
+
+/* Question Text with Icon */
+.wta-faq-question-text {
+	display: flex !important;
+	align-items: center !important;
+	gap: 10px !important;
+	flex: 1 !important;
+	min-width: 0 !important;
+}
+
+.wta-faq-icon-emoji {
+	font-size: 1.3em !important;
+	flex-shrink: 0 !important;
+	line-height: 1 !important;
+}
+
+/* Toggle Icon */
+.wta-faq-toggle-icon {
+	font-size: 0.9em !important;
+	color: #999 !important;
+	transition: transform 0.3s ease !important;
+	flex-shrink: 0 !important;
+}
+
+.wta-faq-expanded .wta-faq-toggle-icon {
+	transform: rotate(180deg) !important;
+	color: #667eea !important;
+}
+
+/* FAQ Answer */
+.wta-faq-answer {
+	max-height: 0 !important;
+	overflow: hidden !important;
+	transition: max-height 0.3s ease !important;
+}
+
+.wta-faq-answer[hidden] {
+	display: block !important;
+	max-height: 0 !important;
+}
+
+.wta-faq-expanded .wta-faq-answer {
+	max-height: none !important;
+}
+
+.wta-faq-answer-content {
+	padding: 0 20px 20px 20px !important;
+	color: #555 !important;
+	line-height: 1.7 !important;
+	font-size: 1em !important;
+	border-top: 1px solid #f0f0f0 !important;
+	padding-top: 15px !important;
+	margin-top: 5px !important;
+}
+
+.wta-faq-answer-content strong {
+	color: #333 !important;
+	font-weight: 600 !important;
+}
+
+.wta-faq-answer-content a {
+	color: #667eea !important;
+	text-decoration: none !important;
+	border-bottom: 1px dotted #667eea !important;
+}
+
+.wta-faq-answer-content a:hover {
+	color: #764ba2 !important;
+	border-bottom-style: solid !important;
+}
+
+/* Live Time in FAQ (updated via JS) */
+#faq-live-time {
+	font-family: 'Courier New', monospace !important;
+	color: #28a745 !important;
+}
+
+/* Responsive FAQ */
+@media (max-width: 968px) {
+	.wta-faq-section {
+		padding: 30px 20px !important;
+		margin: 50px 0 30px 0 !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.6em !important;
+	}
+}
+
+@media (max-width: 768px) {
+	.wta-faq-section {
+		padding: 25px 15px !important;
+		margin: 40px 0 25px 0 !important;
+		border-radius: 8px !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.4em !important;
+	}
+	
+	.wta-faq-intro {
+		font-size: 1em !important;
+	}
+	
+	.wta-faq-question {
+		padding: 15px !important;
+		font-size: 1em !important;
+	}
+	
+	.wta-faq-icon-emoji {
+		font-size: 1.2em !important;
+	}
+	
+	.wta-faq-answer-content {
+		padding: 0 15px 15px 15px !important;
+		font-size: 0.95em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-faq-section {
+		padding: 20px 12px !important;
+		margin: 30px 0 20px 0 !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.3em !important;
+	}
+	
+	.wta-faq-question {
+		padding: 12px !important;
+		font-size: 0.95em !important;
+		gap: 0.7em !important;
+	}
+	
+	.wta-faq-icon-emoji {
+		font-size: 1.1em !important;
+	}
+	
+	.wta-faq-container {
+		gap: 10px !important;
+	}
+}
+
 

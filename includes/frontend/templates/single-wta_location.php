@@ -44,9 +44,18 @@ while ( have_posts() ) :
 		$child_list_html .= '</ul></div>';
 	}
 	
-	// Add filter to append child list to content
-	add_filter( 'the_content', function( $content ) use ( $child_list_html ) {
-		return $content . $child_list_html;
+	// Generate FAQ section for cities (v2.35.0)
+	$faq_html = '';
+	if ( 'city' === $type ) {
+		$faq_data = get_post_meta( get_the_ID(), 'wta_faq_data', true );
+		if ( ! empty( $faq_data ) && is_array( $faq_data ) ) {
+			$faq_html = wta_render_faq_section( $faq_data );
+		}
+	}
+	
+	// Add filter to append child list and FAQ to content
+	add_filter( 'the_content', function( $content ) use ( $child_list_html, $faq_html ) {
+		return $content . $child_list_html . $faq_html;
 	}, 20 );
 	
 	// Use theme's template for single posts/pages

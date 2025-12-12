@@ -62,6 +62,8 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-wikidata-translator.php';
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php'; // v2.35.0
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php'; // v2.35.0
 
 		// Action Scheduler Processors
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
@@ -211,10 +213,11 @@ class WTA_Core {
 		$shortcodes = new WTA_Shortcodes();
 		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
 
-	// Shortcodes
-	$shortcodes = new WTA_Shortcodes();
-	$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
-}
+		// FAQ Schema integration with Yoast (v2.35.0)
+		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
+			$this->loader->add_filter( 'wpseo_schema_graph', 'WTA_FAQ_Renderer', 'inject_faq_schema', 11, 2 );
+		}
+	}
 
 	/**
 	 * Register Action Scheduler hooks.

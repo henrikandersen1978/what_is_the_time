@@ -111,6 +111,19 @@ class WTA_AI_Processor {
 			update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
 		}
 
+			// Generate FAQ for cities (v2.35.0)
+			if ( 'city' === $type ) {
+				$test_mode = get_option( 'wta_test_mode', 0 );
+				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $test_mode );
+				
+				if ( false !== $faq_data && ! empty( $faq_data ) ) {
+					update_post_meta( $post_id, 'wta_faq_data', $faq_data );
+					WTA_Logger::info( 'FAQ generated and saved', array( 'post_id' => $post_id ) );
+				} else {
+					WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
+				}
+			}
+
 			// Mark as done
 			update_post_meta( $post_id, 'wta_ai_status', 'done' );
 
