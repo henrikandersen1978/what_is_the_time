@@ -1335,6 +1335,9 @@ class WTA_Shortcodes {
 						<a href="<?php echo esc_url( $city_url ); ?>" class="wta-btn wta-btn-primary" target="_blank">
 							👁️ Se Side
 						</a>
+						<a href="<?php echo admin_url( 'post.php?post=' . $city->ID . '&action=edit' ); ?>" class="wta-btn wta-btn-secondary" target="_blank">
+							✏️ Rediger (ID: <?php echo $city->ID; ?>)
+						</a>
 					</div>
 				</div>
 				<?php endforeach; ?>
@@ -1441,6 +1444,13 @@ class WTA_Shortcodes {
 		.wta-btn-primary:hover {
 			background: #764ba2;
 		}
+		.wta-btn-secondary {
+			background: #f0f0f0;
+			color: #333;
+		}
+		.wta-btn-secondary:hover {
+			background: #e0e0e0;
+		}
 		
 		@media (max-width: 768px) {
 			.wta-recent-cities {
@@ -1476,52 +1486,20 @@ class WTA_Shortcodes {
 			'refresh' => 30, // Auto-refresh seconds (0 = disabled)
 		), $atts );
 		
-		// Get queue statistics
-		global $wpdb;
-		$queue_table = $wpdb->prefix . WTA_QUEUE_TABLE;
+		// Get queue statistics using same method as backend dashboard
+		$stats_data = WTA_Queue::get_stats();
 		
-		$stats = $wpdb->get_results( "
-			SELECT 
-				queue_type,
-				status,
-				COUNT(*) as count
-			FROM {$queue_table}
-			GROUP BY queue_type, status
-			ORDER BY queue_type, status
-		" );
-		
-		// Organize stats
-		$queue_data = array();
-		$totals = array(
-			'pending' => 0,
-			'processing' => 0,
-			'done' => 0,
-			'failed' => 0,
-		);
-		
-		foreach ( $stats as $stat ) {
-			if ( ! isset( $queue_data[ $stat->queue_type ] ) ) {
-				$queue_data[ $stat->queue_type ] = array(
-					'pending' => 0,
-					'processing' => 0,
-					'done' => 0,
-					'failed' => 0,
-				);
-			}
-			$queue_data[ $stat->queue_type ][ $stat->status ] = intval( $stat->count );
-			$totals[ $stat->status ] += intval( $stat->count );
-		}
+		// Extract data
+		$totals = $stats_data['by_status'];
+		$queue_data = $stats_data['by_type'];
 		
 		// Get published/draft counts
 		$posts_counts = wp_count_posts( WTA_POST_TYPE );
 		$published = isset( $posts_counts->publish ) ? $posts_counts->publish : 0;
 		$draft = isset( $posts_counts->draft ) ? $posts_counts->draft : 0;
 		
-		// Calculate totals per type
-		foreach ( $queue_data as $type => &$data ) {
-			$data['total'] = array_sum( $data );
-		}
-		$totals['total'] = array_sum( $totals );
+		// Add total to totals array
+		$totals['total'] = $stats_data['total']
 		
 		// Build output
 		ob_start();
@@ -1553,7 +1531,7 @@ class WTA_Shortcodes {
 					<div class="wta-stat-label">✅ Done</div>
 				</div>
 				<div class="wta-stat-card wta-stat-failed">
-					<div class="wta-stat-value"><?php echo number_format( $totals['failed'] ); ?></div>
+					<div class="wta-stat-value"><?php echo number_format( $totals['error'] ); ?></div>
 					<div class="wta-stat-label">❌ Failed</div>
 				</div>
 			</div>
@@ -1596,7 +1574,7 @@ class WTA_Shortcodes {
 							<td><?php echo number_format( $data['pending'] ); ?></td>
 							<td><?php echo number_format( $data['processing'] ); ?></td>
 							<td><?php echo number_format( $data['done'] ); ?></td>
-							<td><?php echo number_format( $data['failed'] ); ?></td>
+							<td><?php echo number_format( $data['error'] ); ?></td>
 							<td><strong><?php echo number_format( $data['total'] ); ?></strong></td>
 						</tr>
 						<?php endforeach; ?>

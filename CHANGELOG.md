@@ -2,6 +2,23 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.2] - 2025-12-12
+
+### Fixed
+- **Queue Status Shortcode Database Error**
+  - Fixed SQL query using wrong column name (`queue_type` → `type`)
+  - Fixed status name mismatch (`failed` → `error`)
+  - Now uses `WTA_Queue::get_stats()` method for consistency with backend
+  
+- **Recent Cities Shortcode Improvements**
+  - Added "Edit" button with Post ID visible
+  - Direct link to WordPress post editor for quick access
+  - Better mobile testing workflow
+
+### Changed
+- Queue status shortcode now matches backend dashboard exactly
+- Both shortcodes fully functional on mobile devices
+
 ## [2.35.1] - 2025-12-12
 
 ### Added
