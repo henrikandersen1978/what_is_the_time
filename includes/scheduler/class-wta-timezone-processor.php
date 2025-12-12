@@ -157,16 +157,21 @@ class WTA_Timezone_Processor {
 		update_post_meta( $post_id, 'wta_timezone', $timezone );
 		update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 
-			WTA_Logger::info( 'Timezone resolved', array(
-				'post_id'  => $post_id,
-				'timezone' => $timezone,
-			) );
+		WTA_Logger::info( 'Timezone resolved', array(
+			'post_id'  => $post_id,
+			'timezone' => $timezone,
+		) );
 
-			// Queue AI content generation now that timezone is resolved
-			WTA_Queue::add( 'ai_content', array(
-				'post_id' => $post_id,
-				'type'    => get_post_meta( $post_id, 'wta_type', true ),
-			), 'ai_' . get_post_meta( $post_id, 'wta_type', true ) . '_' . $post_id );
+		// ==========================================
+		// QUEUE AI CONTENT AFTER TIMEZONE RESOLVED (v2.35.8)
+		// For complex countries (US/RU/CA/etc), we wait for accurate timezone
+		// before generating AI content to ensure quality
+		// Simple countries skip this and queue AI immediately during city creation
+		// ==========================================
+		WTA_Queue::add( 'ai_content', array(
+			'post_id' => $post_id,
+			'type'    => get_post_meta( $post_id, 'wta_type', true ),
+		), 'ai_' . get_post_meta( $post_id, 'wta_type', true ) . '_' . $post_id );
 
 			WTA_Queue::mark_done( $item['id'] );
 

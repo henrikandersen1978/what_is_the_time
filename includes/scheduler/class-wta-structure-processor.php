@@ -606,13 +606,27 @@ class WTA_Structure_Processor {
 	// Update Yoast SEO title for proper schema integration
 	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_h1 );
 
-	// Queue AI content generation (only if timezone is resolved or not needed)
-	if ( ! $needs_timezone_api ) {
+	// ==========================================
+	// SMART AI QUEUEING STRATEGY (v2.35.8)
+	// - Simple countries: Queue AI immediately (timezone already correct)
+	// - Complex countries: Wait for timezone processor to queue AI after resolution
+	// This ensures quality (correct timezone in AI content) while maximizing speed
+	// ==========================================
+	
+	if ( ! WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+		// Simple country: Timezone is already correct from hardcoded list
+		// Queue AI content immediately for fast processing!
 		WTA_Queue::add( 'ai_content', array(
 			'post_id' => $post_id,
 			'type'    => 'city',
 		), 'ai_city_' . $post_id );
+		
+		WTA_Logger::info( 'AI content queued immediately (simple country)', array(
+			'post_id' => $post_id,
+			'country_code' => $country_code,
+		) );
 	}
+	// Complex countries: AI will be queued by timezone processor after resolution
 
 	WTA_Logger::info( 'City post created', array(
 		'post_id' => $post_id,

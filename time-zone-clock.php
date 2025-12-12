@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.35.7
+ * Version:           2.35.8
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.35.7' );
+define( 'WTA_VERSION', '2.35.8' );
 
 /**
  * Plugin directory path.
@@ -136,10 +136,58 @@ require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
  * @since 2.34.25
  */
 function wta_optimize_action_scheduler() {
-	// Increase concurrent batches: 5 → 20
-	// Allows 20 queues to process simultaneously for 4× faster throughput
+	// ==========================================
+	// ENABLE ASYNC MODE (v2.35.8)
+	// Critical for true parallel processing!
+	// ==========================================
+	
+	// Enable async request runner for concurrent batch processing
+	add_filter( 'action_scheduler_allow_async_request_runner', '__return_true', 999 );
+	
+	// Reduce sleep time between async requests: 5s → 1s for faster throughput
+	add_filter( 'action_scheduler_async_request_sleep_seconds', function() {
+		return 1;
+	}, 999 );
+	
+	// ==========================================
+	// DIFFERENTIATED CONCURRENT BATCHES (v2.35.8)
+	// Different limits per processor to respect API rate limits
+	// ==========================================
+	
 	add_filter( 'action_scheduler_queue_runner_concurrent_batches', function( $batches ) {
-		return 20; // High-resource server: 20 concurrent
+		// Structure processor (Wikidata: ~200 req/s limit)
+		// With 0.2s delay = 5 req/s per processor
+		// 15 concurrent = 75 req/s (safe buffer)
+		// This is checked by looking at the currently processing items
+		$store = ActionScheduler::store();
+		$processing_actions = $store->query_actions( array(
+			'status'   => 'in-progress',
+			'per_page' => 1,
+		) );
+		
+		if ( ! empty( $processing_actions ) ) {
+			$action = reset( $processing_actions );
+			$hook = $store->get_action( $action )->get_hook();
+			
+			if ( 'wta_process_structure' === $hook ) {
+				return 15; // High for Wikidata
+			}
+			
+			// Timezone processor (TimeZoneDB FREE: 1 req/s)
+			// With 1.5s delay = 0.67 req/s per processor
+			// MUST be 1 for free tier!
+			if ( 'wta_process_timezone' === $hook ) {
+				return 1; // Strict limit for free tier
+			}
+			
+			// AI processor (OpenAI Tier 5: 166 req/s + test mode = no calls)
+			// 15 concurrent = safe for Tier 5
+			if ( 'wta_process_ai_content' === $hook ) {
+				return 15; // Safe for Tier 5 + test mode
+			}
+		}
+		
+		return 5; // Default fallback
 	}, 999 );
 	
 	// Increase batch size: 25 → 150
