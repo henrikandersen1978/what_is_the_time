@@ -37,7 +37,7 @@ class WTA_FAQ_Renderer {
 		
 		<!-- FAQ Section (v2.35.0) -->
 		<section class="wta-faq-section" id="faq">
-			<h2 class="wta-faq-heading">Ofte Stillede Spørgsmål om Tid<?php echo ! empty( $city_name ) ? ' i ' . esc_html( $city_name ) : ''; ?></h2>
+			<h2 class="wta-faq-heading">Ofte stillede spørgsmål om tid<?php echo ! empty( $city_name ) ? ' i ' . esc_html( $city_name ) : ''; ?></h2>
 			
 			<?php if ( ! empty( $intro ) ) : ?>
 			<div class="wta-faq-intro">

@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.15] - 2025-12-12
+
+### Fixed
+- **FAQ Heading Typography** ✏️
+  - Changed "Ofte Stillede Spørgsmål" → "Ofte stillede spørgsmål"
+  - Now follows Danish grammar rules (only first word capitalized)
+  
+- **FAQ Icon Alignment** 🎨
+  - Icons now properly aligned with question text
+  - Added fixed width/height container for consistent spacing
+  - Improved vertical centering and gap spacing
+  - Better visual hierarchy in accordion items
+
+- **FAQ Schema Integration** 🔧
+  - Fixed critical bug: Schema was not being injected into Yoast SEO
+  - Root cause: Loader expected object, but we passed class name string
+  - Solution: Register static method directly with `add_filter()`
+  - FAQPage schema now properly added to Yoast SEO graph
+  - Schema.org validation will now pass
+
+### Technical Details
+- **File:** `includes/helpers/class-wta-faq-renderer.php`
+  - Heading text: lowercase after first word
+  
+- **File:** `includes/frontend/assets/css/frontend.css`
+  - `.wta-faq-icon-emoji`: Added fixed dimensions (1.5em × 1.5em)
+  - `.wta-faq-icon-emoji`: Added flex centering for perfect alignment
+  - `.wta-faq-question-text`: Increased gap to 12px
+  
+- **File:** `includes/class-wta-core.php`
+  - Created new `register_faq_schema()` method for static method registration
+  - Registers filter directly: `array( 'WTA_FAQ_Renderer', 'inject_faq_schema' )`
+  - Called in `__construct()` after other hook definitions
+
+### Impact
+- ✅ FAQ heading now grammatically correct in Danish
+- ✅ Icons align perfectly with text (no floating or misalignment)
+- ✅ FAQPage schema.org markup now injected into `<head>`
+- ✅ Google Rich Results Test will now detect FAQ schema
+
 ## [2.35.14] - 2025-12-12
 
 ### Fixed
