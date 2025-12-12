@@ -31,7 +31,9 @@ class WTA_Core {
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
-		$this->register_faq_schema(); // Register FAQ schema integration (v2.35.14)
+		
+		// Register FAQ schema integration after WordPress is loaded (v2.35.15)
+		add_action( 'wp', array( $this, 'register_faq_schema' ) );
 		
 		// Check for updates after WordPress is fully loaded
 		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
@@ -219,12 +221,13 @@ class WTA_Core {
 	/**
 	 * Register FAQ schema integration.
 	 * 
+	 * Called on 'wp' hook to ensure Yoast is loaded.
 	 * Must be registered directly (not via loader) because it's a static method.
 	 *
-	 * @since    2.35.14
-	 * @access   private
+	 * @since    2.35.15
+	 * @access   public
 	 */
-	private function register_faq_schema() {
+	public function register_faq_schema() {
 		// FAQ Schema integration with Yoast (v2.35.0)
 		// Uses static method, so must be registered directly with add_filter
 		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {

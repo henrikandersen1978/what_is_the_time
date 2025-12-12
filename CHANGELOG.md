@@ -2,6 +2,37 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.16] - 2025-12-12
+
+### Fixed
+- **FAQ Icon Vertical Alignment** 🎨
+  - Icons now vertically centered with question text
+  - Changed from inline-flex to inline-block with vertical-align: middle
+  - Removed fixed width/height that caused overflow issues
+  - Icons sit on same baseline as text (not above)
+
+- **FAQ Schema Integration - CRITICAL FIX** ⚠️
+  - Schema was not being injected (Yoast not loaded at constructor time)
+  - Moved registration to 'wp' hook to ensure Yoast is loaded
+  - Changed `register_faq_schema()` from private to public for hook access
+  - FAQ schema will now appear in page source and pass validation
+
+### Technical Details
+- **File:** `includes/frontend/assets/css/frontend.css`
+  - `.wta-faq-icon-emoji`: Simplified to inline-block with vertical-align
+  - Removed flex container that caused alignment issues
+  
+- **File:** `includes/class-wta-core.php`
+  - Moved `register_faq_schema()` call to 'wp' hook (line 36)
+  - Changed method visibility from private to public
+  - Ensures Yoast plugin is loaded before registering filter
+
+### Impact
+- ✅ FAQ icons perfectly aligned with text (no vertical offset)
+- ✅ FAQ schema now injected into Yoast SEO graph
+- ✅ Schema.org validator will now detect FAQPage markup
+- ✅ Google Rich Results Test will pass
+
 ## [2.35.15] - 2025-12-12
 
 ### Fixed

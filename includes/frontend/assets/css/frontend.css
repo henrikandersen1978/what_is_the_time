@@ -1088,14 +1088,12 @@ p.wta-no-nearby {
 }
 
 .wta-faq-icon-emoji {
-	font-size: 1.4em !important;
+	font-size: 1.3em !important;
 	flex-shrink: 0 !important;
 	line-height: 1 !important;
-	display: inline-flex !important;
-	align-items: center !important;
-	justify-content: center !important;
-	width: 1.5em !important;
-	height: 1.5em !important;
+	display: inline-block !important;
+	vertical-align: middle !important;
+	margin-right: 2px !important;
 }
 
 /* Toggle Icon */
