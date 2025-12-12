@@ -50,17 +50,21 @@ class WTA_FAQ_Renderer {
 					<?php if ( ! empty( $faq['question'] ) && ! empty( $faq['answer'] ) ) : ?>
 					<div class="wta-faq-item" data-faq-index="<?php echo esc_attr( $index ); ?>">
 						<button class="wta-faq-question" aria-expanded="false" aria-controls="faq-answer-<?php echo esc_attr( $index ); ?>">
+							<?php if ( ! empty( $faq['icon'] ) ) : ?>
+								<span class="wta-faq-icon-emoji"><?php echo $faq['icon']; ?></span>
+							<?php endif; ?>
 							<span class="wta-faq-question-text">
-								<?php if ( ! empty( $faq['icon'] ) ) : ?>
-									<span class="wta-faq-icon-emoji"><?php echo $faq['icon']; ?></span>
-								<?php endif; ?>
 								<?php echo esc_html( $faq['question'] ); ?>
 							</span>
 							<span class="wta-faq-toggle-icon" aria-hidden="true">▼</span>
 						</button>
 						<div class="wta-faq-answer" id="faq-answer-<?php echo esc_attr( $index ); ?>" hidden>
 							<div class="wta-faq-answer-content">
-								<?php echo wp_kses_post( $faq['answer'] ); ?>
+								<?php 
+								// Remove <br> tags and use CSS spacing instead
+								$answer_clean = str_replace( array( '<br>', '<br/>', '<br />' ), ' ', $faq['answer'] );
+								echo wp_kses_post( $answer_clean ); 
+								?>
 							</div>
 						</div>
 					</div>
@@ -148,19 +152,59 @@ class WTA_FAQ_Renderer {
 			return $data;
 		}
 		
-		// Generate schema
-		$faq_schema = self::generate_faq_schema( $faq_data, get_permalink( $post_id ) );
+		// Generate main entity (Questions)
+		$faqs = isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array();
+		$main_entity = array();
 		
-		if ( empty( $faq_schema ) ) {
+		foreach ( $faqs as $faq ) {
+			if ( empty( $faq['question'] ) || empty( $faq['answer'] ) ) {
+				continue;
+			}
+			
+			// Strip HTML tags and <br> from answer for schema
+			$answer_text = wp_strip_all_tags( $faq['answer'] );
+			$answer_text = str_replace( array( '<br>', '<br/>', '<br />' ), ' ', $answer_text );
+			
+			$main_entity[] = array(
+				'@type'          => 'Question',
+				'name'           => $faq['question'],
+				'acceptedAnswer' => array(
+					'@type' => 'Answer',
+					'text'  => $answer_text,
+				),
+			);
+		}
+		
+		if ( empty( $main_entity ) ) {
 			return $data;
 		}
 		
-		// Add to Yoast graph
+		// Initialize @graph if needed
 		if ( ! isset( $data['@graph'] ) ) {
 			$data['@graph'] = array();
 		}
 		
-		$data['@graph'][] = $faq_schema;
+		// Find existing WebPage node and convert to FAQPage (Yoast pattern)
+		$webpage_index = null;
+		foreach ( $data['@graph'] as $index => $node ) {
+			if ( isset( $node['@type'] ) && 'WebPage' === $node['@type'] ) {
+				$webpage_index = $index;
+				break;
+			}
+		}
+		
+		if ( null !== $webpage_index ) {
+			// Convert WebPage to FAQPage and add mainEntity
+			$data['@graph'][$webpage_index]['@type'] = 'FAQPage';
+			$data['@graph'][$webpage_index]['mainEntity'] = $main_entity;
+		} else {
+			// Fallback: Add as separate FAQPage node if no WebPage found
+			$data['@graph'][] = array(
+				'@type'      => 'FAQPage',
+				'@id'        => get_permalink( $post_id ) . '#faq',
+				'mainEntity' => $main_entity,
+			);
+		}
 		
 		return $data;
 	}

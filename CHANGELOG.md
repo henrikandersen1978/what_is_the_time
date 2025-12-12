@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.18] - 2025-12-12
+
+### Fixed
+- **FAQ Schema Integration - PROPER FIX** ✅  
+  - Now converts existing WebPage to FAQPage (Yoast pattern)
+  - Instead of adding separate FAQPage node that breaks structure
+  - Finds WebPage in @graph and changes @type + adds mainEntity
+  - Fixes "Ikke-angivet type" error in schema validator
+  - Schema structure now matches Yoast FAQ block behavior
+
+- **Removed `<br>` Tags from FAQ** 🧹
+  - All `<br>` tags stripped from FAQ answers
+  - Uses CSS margins/padding for spacing instead
+  - Cleaner HTML output
+  - Better semantic markup
+
+- **FAQ Icon/Text Layout - FINAL** 🎨
+  - Icon moved outside question-text span (flexbox children)
+  - Icon: left, fixed 1.5em × 1.5em, flex container for centering
+  - Text: right, fills remaining space, vertically centered
+  - Answer text indented to align with question text (68px left padding)
+  - Perfect horizontal alignment
+
+### Technical Details
+- **File:** `includes/helpers/class-wta-faq-renderer.php`
+  - `inject_faq_schema()`: Finds WebPage node and converts to FAQPage
+  - Adds mainEntity directly to WebPage node
+  - Fallback: adds separate FAQPage only if no WebPage found
+  - `<br>` tags stripped from FAQ answer HTML output
+  - Icon moved outside `.wta-faq-question-text` span
+
+- **File:** `includes/frontend/assets/css/frontend.css`
+  - `.wta-faq-question`: `justify-content: flex-start` + `gap: 12px`
+  - `.wta-faq-icon-emoji`: Fixed dimensions, flex container
+  - `.wta-faq-question-text`: `flex: 1` + `display: flex` + `align-items: center`
+  - `.wta-faq-answer-content`: Left padding 68px to align with question
+  - Added paragraph spacing rules
+
+### Impact
+- ✅ Schema validator shows clean FAQPage structure
+- ✅ No "Ikke-angivet type" errors
+- ✅ FAQ icons perfectly aligned left, text right
+- ✅ Clean HTML without `<br>` tags
+- ✅ Semantic spacing using CSS
+
 ## [2.35.17] - 2025-12-12
 
 ### Fixed

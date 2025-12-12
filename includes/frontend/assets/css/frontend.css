@@ -1048,8 +1048,8 @@ p.wta-no-nearby {
 	width: 100% !important;
 	display: flex !important;
 	align-items: center !important;
-	justify-content: space-between !important;
-	gap: 1em !important;
+	justify-content: flex-start !important;
+	gap: 12px !important;
 	padding: 18px 20px !important;
 	background: white !important;
 	border: none !important;
@@ -1077,21 +1077,26 @@ p.wta-no-nearby {
 	background: #f8f9fa !important;
 }
 
-/* Question Text with Icon */
+/* FAQ Icon - Left aligned, fixed width for consistency */
+.wta-faq-icon-emoji {
+	font-size: 1.4em !important;
+	line-height: 1 !important;
+	flex-shrink: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 1.5em !important;
+	height: 1.5em !important;
+}
+
+/* Question Text - Right of icon, fills remaining space */
 .wta-faq-question-text {
-	display: block !important;
 	flex: 1 !important;
 	min-width: 0 !important;
 	text-align: left !important;
 	line-height: 1.5 !important;
-}
-
-.wta-faq-icon-emoji {
-	font-size: 1.3em !important;
-	display: inline-block !important;
-	vertical-align: baseline !important;
-	margin-right: 8px !important;
-	line-height: 1 !important;
+	display: flex !important;
+	align-items: center !important;
 }
 
 /* Toggle Icon */
@@ -1124,18 +1129,27 @@ p.wta-no-nearby {
 }
 
 .wta-faq-answer-content {
-	padding: 0 20px 20px 20px !important;
+	padding: 20px 20px 20px 68px !important; /* Left padding to align with question text */
 	color: #555 !important;
-	line-height: 1.7 !important;
+	line-height: 1.8 !important;
 	font-size: 1em !important;
 	border-top: 1px solid #f0f0f0 !important;
-	padding-top: 15px !important;
 	margin-top: 5px !important;
 }
 
 .wta-faq-answer-content strong {
 	color: #333 !important;
 	font-weight: 600 !important;
+	display: inline !important;
+	margin: 0 0.2em !important;
+}
+
+.wta-faq-answer-content p {
+	margin: 0 0 0.8em 0 !important;
+}
+
+.wta-faq-answer-content p:last-child {
+	margin-bottom: 0 !important;
 }
 
 .wta-faq-answer-content a {
