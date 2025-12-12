@@ -2,6 +2,54 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.13] - 2025-12-12
+
+### Changed
+- **Optimized for Reality: 2 Concurrent Runners** 🎯
+  - Removed complex loopback runner implementation (didn't work as expected)
+  - Action Scheduler's `concurrent_batches` is GLOBAL, not per-runner
+  - Testing confirmed: Only ~2 runners ever active (WP-Cron + occasional async)
+  - Strategy shift: Optimize these 2 runners for maximum throughput
+  
+### Performance Optimizations
+- **Concurrent Batches:** 6 → **2** (reflects actual behavior)
+- **Batch Size:** 150 → **300** (2× increase per runner)
+- **Time Limit:** 120s → **180s** (3 minutes per runner)
+- **Throughput:** 2 runners × 300 batch = **600 actions per cycle**
+
+### API Rate Limit Compliance
+All optimizations respect API limits:
+- **Wikidata:** ~5 req/s per processor (safe under 200 req/s limit, 0.2s delay)
+- **TimeZoneDB FREE:** ~0.4 req/s per processor (safe under 1 req/s limit, 2.5s avg)
+- **OpenAI Tier 5:** Test mode = 0 requests, AI mode respects 166 req/s limit
+
+### Expected Performance
+**Test Mode (dummy content):**
+- City import: ~10-15 minutes for 10,000 cities
+- AI content: ~20-30 minutes for 10,000 cities
+- **Total: ~30-45 minutes** for full import
+
+**AI Mode (real OpenAI content):**
+- City import: ~10-15 minutes for 10,000 cities
+- AI content: ~1-2 hours for 10,000 cities (depends on OpenAI response time)
+- **Total: ~1.5-2.5 hours** for full import
+
+### Removed
+- Removed loopback runner implementation (v2.35.11-v2.35.12)
+- Removed `wta_concurrent_batches` backend setting (now hardcoded to 2)
+- Removed debug logging for loopback requests (no longer needed)
+
+### UI Changes
+- Replaced "Performance Settings" with "Performance Information" (read-only)
+- Shows current optimization values and expected performance
+- Explains why concurrent_batches is fixed at 2
+
+### Technical Details
+- File: `time-zone-clock.php` → v2.35.13
+- File: `includes/admin/views/data-import.php` → Performance info section
+- Simplified `wta_optimize_action_scheduler()` function
+- Focus: Maximize batch size and time limit within API constraints
+
 ## [2.35.12] - 2025-12-12
 
 ### Fixed
