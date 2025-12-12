@@ -2,6 +2,44 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.23] - 2025-12-12
+
+### Changed
+- **CRITICAL: Reduced chunk size from 15k to 2.5k cities for action-scheduler-high-volume compatibility**
+  - Designed to work with action-scheduler-high-volume plugin (120s timeout, 10 concurrent batches)
+  - Each chunk completes in 20-30 seconds (comfortable margin under 120s timeout)
+  - 60 chunks total for ~150k cities (vs 10 chunks previously)
+  - Total queuing time: ~20-30 minutes (acceptable for production use)
+
+- **Increased max_chunks safety limit from 10 to 65**
+  - Allows all 60 expected chunks to complete
+  - 5 chunks buffer for safety
+
+- **Removed internal Action Scheduler filters**
+  - Plugin now relies on action-scheduler-high-volume plugin for configuration
+  - Avoids conflicts between internal filters and external plugin
+  - Users must install: https://github.com/woocommerce/action-scheduler-high-volume
+
+### Performance Impact
+- **Queuing Phase:**
+  - Previous: 10 chunks × 5-10 min = 50-100 min (often timeout!)
+  - Current: 60 chunks × 0.5 min = 30 min ✅
+  
+- **Processing Phase (unchanged):**
+  - Test mode: ~40 cities/min × 10 concurrent = ~400 cities/min
+  - Normal mode: ~30 cities/min × 10 concurrent = ~300 cities/min
+  - Total: ~6-8 hours for 150k cities in test mode
+
+### Requirements
+- **action-scheduler-high-volume plugin:** Required for optimal performance
+- **Server memory:** Recommended 768MB per PHP process
+- **Concurrent processing:** Plugin enables 10 concurrent batches (vs 5 default)
+
+### Notes
+- Chunk size optimized for shared hosting with 4GB RAM and 2 CPU cores
+- Each chunk uses ~500-600MB memory (safe under 768MB limit)
+- 10 concurrent chunks = ~6GB peak (manageable with action-scheduler-high-volume)
+
 ## [2.34.22] - 2025-12-11
 
 ### Fixed

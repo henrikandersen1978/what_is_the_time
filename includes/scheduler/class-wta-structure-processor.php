@@ -794,13 +794,13 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 	
 	// ==========================================
-	// CHUNKED PROCESSING (v2.34.22 - OPTIMIZED)
+	// CHUNKED PROCESSING (v2.34.23 - OPTIMIZED FOR HIGH-VOLUME)
 	// ==========================================
-	// Split cities into chunks to work within 10-minute Action Scheduler timeout.
-	// Smaller chunks (15k) ensure completion under timeout even with detailed logging.
-	// Without detailed logging, chunks complete in 2-3 minutes with safe margin.
+	// Split cities into chunks to work within 120s timeout (action-scheduler-high-volume).
+	// Small chunks (2.5k) ensure completion in 20-30s with comfortable margin.
+	// Designed for use with action-scheduler-high-volume plugin (10 concurrent, 120s timeout).
 	
-	$chunk_size = 15000; // 15k cities per chunk (safe under 10 min timeout)
+	$chunk_size = 2500; // 2.5k cities per chunk (safe under 120s timeout with action-scheduler-high-volume)
 	$offset = isset( $options['offset'] ) ? intval( $options['offset'] ) : 0;
 	
 	// Extract current chunk
@@ -1140,7 +1140,7 @@ class WTA_Structure_Processor {
 	
 	$next_offset = $offset + $chunk_size;
 	$current_chunk_number = ( $offset / $chunk_size ) + 1;
-	$max_chunks = 10; // Safety limit: 10 chunks = 300k cities max
+	$max_chunks = 65; // Safety limit: 65 chunks = 162k cities max (150k + buffer)
 	
 	// SAFETY CHECK 1: Did we queue ANY cities in this chunk?
 	if ( $queued === 0 ) {
