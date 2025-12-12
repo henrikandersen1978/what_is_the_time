@@ -2,6 +2,52 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.11] - 2025-12-12
+
+### Added
+- **TRUE Concurrent Processing via Multiple Queue Runners** 🚀
+  - Implements Action Scheduler's recommended approach for true concurrency
+  - Creates (concurrent_batches - 1) additional loopback requests
+  - Each loopback request starts a separate queue runner process
+  - Based on official Action Scheduler documentation: https://actionscheduler.org/perf/
+  
+### How It Works
+1. **WP-Cron starts:** 1 queue runner (standard)
+2. **Our code triggers:** (concurrent_batches - 1) additional loopback requests
+3. **Each loopback:** Starts a separate `ActionScheduler_QueueRunner::instance()->run()`
+4. **Result:** True parallel processing with actual concurrent PHP processes
+
+### Example
+- Setting: `concurrent_batches = 6`
+- WP-Cron: Starts 1 runner
+- Our code: Creates 5 additional loopback requests
+- **Total: 6 simultaneous "in-progress" actions** ✅
+
+### Security
+- Uses nonce verification for each loopback request
+- Non-blocking HTTP requests prevent slowdown
+- Allows self-signed SSL for dev/staging environments
+
+### Performance Impact
+- **Before (v2.35.10):** Max 2 concurrent processes (1 from WP-Cron + 1 from async mode)
+- **After (v2.35.11):** Configurable 1-20 concurrent processes (matches setting)
+- **Real concurrency:** Each process runs in separate PHP thread
+
+### Technical Details
+- Action: `action_scheduler_run_queue` → triggers loopback creation
+- AJAX endpoint: `wp_ajax_nopriv_wta_create_additional_runner`
+- Nonce pattern: `wta_runner_{instance_id}`
+- File: `time-zone-clock.php` → v2.35.11
+
+### Warning
+⚠️ From Action Scheduler docs: "This kind of increase can very easily take down a site. Use only on high-powered servers."
+
+**Recommendations:**
+- Start with 3-5 concurrent batches
+- Monitor server load for first 10-15 minutes
+- Increase gradually if server handles it well
+- If site becomes slow/unresponsive, reduce immediately
+
 ## [2.35.10] - 2025-12-12
 
 ### Added

@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.35.10
+ * Version:           2.35.11
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.35.10' );
+define( 'WTA_VERSION', '2.35.11' );
 
 /**
  * Plugin directory path.
@@ -186,6 +186,62 @@ function wta_optimize_action_scheduler() {
 	add_filter( 'action_scheduler_failure_period', function( $timeout ) {
 		return 900; // 15 minutes
 	}, 999 );
+	
+	// ==========================================
+	// MULTIPLE QUEUE RUNNERS (v2.35.11)
+	// Start additional loopback requests to achieve true concurrency
+	// Based on Action Scheduler docs: https://actionscheduler.org/perf/
+	// ==========================================
+	
+	/**
+	 * Trigger additional loopback requests based on concurrent_batches setting.
+	 * WP-Cron starts 1 runner, this creates (concurrent_batches - 1) additional runners.
+	 */
+	add_action( 'action_scheduler_run_queue', function() {
+		// Get the concurrent batches setting
+		$concurrent = get_option( 'wta_concurrent_batches', 10 );
+		$concurrent = max( 1, min( 20, intval( $concurrent ) ) );
+		
+		// WP-Cron already starts 1 runner, so we need (concurrent - 1) additional
+		$additional_runners = $concurrent - 1;
+		
+		if ( $additional_runners < 1 ) {
+			return; // No additional runners needed
+		}
+		
+		// Allow self-signed SSL certificates for local/dev environments
+		add_filter( 'https_local_ssl_verify', '__return_false', 100 );
+		
+		// Create additional loopback requests
+		for ( $i = 0; $i < $additional_runners; $i++ ) {
+			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
+				'method'      => 'POST',
+				'timeout'     => 45,
+				'redirection' => 5,
+				'httpversion' => '1.0',
+				'blocking'    => false, // Non-blocking = concurrent!
+				'headers'     => array(),
+				'body'        => array(
+					'action'     => 'wta_create_additional_runner',
+					'instance'   => $i,
+					'wta_nonce'  => wp_create_nonce( 'wta_runner_' . $i ),
+				),
+				'cookies'     => array(),
+			) );
+		}
+	}, 0 );
+	
+	/**
+	 * Handle loopback requests and start additional queue runners.
+	 * This is called via AJAX (nopriv) from the loopback requests above.
+	 */
+	add_action( 'wp_ajax_nopriv_wta_create_additional_runner', function() {
+		if ( isset( $_POST['wta_nonce'] ) && isset( $_POST['instance'] ) && 
+		     wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
+			ActionScheduler_QueueRunner::instance()->run();
+		}
+		wp_die();
+	}, 0 );
 }
 
 // Hook early to ensure filters are applied before Action Scheduler runs
