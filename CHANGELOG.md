@@ -2,6 +2,23 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.9] - 2025-12-12
+
+### Fixed
+- **Critical Fatal Error in Action Scheduler** 🐛
+  - Fixed: `Call to undefined method ActionScheduler_DBStoreLegacyActions` error
+  - Issue: `concurrent_batches` filter was calling `get_action()` without proper error handling
+  - Solution: Changed to `fetch_action()` with comprehensive null checks and try-catch
+  - Added method_exists checks for all Action Scheduler API calls
+  - Prevents fatal errors if Action Scheduler store methods change or are unavailable
+  
+### Technical Details
+- Modified `action_scheduler_queue_runner_concurrent_batches` filter in `time-zone-clock.php`
+- Added try-catch wrapper around all Action Scheduler store operations
+- Uses `fetch_action()` instead of `get_action()` for compatibility
+- Added safe fallback (concurrent_batches = 5) on any error
+- File changed: `time-zone-clock.php` → v2.35.9
+
 ## [2.35.8] - 2025-12-12
 
 ### 🚀 **MAJOR PERFORMANCE UPGRADE** 
