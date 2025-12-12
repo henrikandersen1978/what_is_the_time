@@ -64,6 +64,7 @@ class WTA_AI_Processor {
 			$data = $item['payload'];
 			$post_id = $data['post_id'];
 			$type = $data['type'];
+			$force_ai = isset( $data['force_ai'] ) ? $data['force_ai'] : false;
 
 			// Validate post exists
 			$post = get_post( $post_id );
@@ -75,16 +76,18 @@ class WTA_AI_Processor {
 				return;
 			}
 
-			// Check if already processed
-			$ai_status = get_post_meta( $post_id, 'wta_ai_status', true );
-			if ( 'done' === $ai_status ) {
-				WTA_Logger::info( 'AI content already generated', array( 'post_id' => $post_id ) );
-				WTA_Queue::mark_done( $item['id'] );
-				return;
+			// Check if already processed (skip check if force_ai is true)
+			if ( ! $force_ai ) {
+				$ai_status = get_post_meta( $post_id, 'wta_ai_status', true );
+				if ( 'done' === $ai_status ) {
+					WTA_Logger::info( 'AI content already generated', array( 'post_id' => $post_id ) );
+					WTA_Queue::mark_done( $item['id'] );
+					return;
+				}
 			}
 
 			// Generate content
-			$result = $this->generate_ai_content( $post_id, $type );
+			$result = $this->generate_ai_content( $post_id, $type, $force_ai );
 
 			if ( false === $result ) {
 				WTA_Queue::mark_failed( $item['id'], 'AI content generation failed' );
@@ -113,12 +116,14 @@ class WTA_AI_Processor {
 
 			// Generate FAQ for cities (v2.35.0)
 			if ( 'city' === $type ) {
+				// Use test mode unless force_ai is true
 				$test_mode = get_option( 'wta_test_mode', 0 );
-				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $test_mode );
+				$use_test_mode = $test_mode && ! $force_ai;
+				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
 				
 				if ( false !== $faq_data && ! empty( $faq_data ) ) {
 					update_post_meta( $post_id, 'wta_faq_data', $faq_data );
-					WTA_Logger::info( 'FAQ generated and saved', array( 'post_id' => $post_id ) );
+					WTA_Logger::info( 'FAQ generated and saved', array( 'post_id' => $post_id, 'force_ai' => $force_ai ) );
 				} else {
 					WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
 				}
@@ -147,18 +152,19 @@ class WTA_AI_Processor {
 	 * Generate AI content for post with structured sections.
 	 *
 	 * @since    2.3.6
-	 * @param    int    $post_id Post ID.
-	 * @param    string $type    Location type.
-	 * @return   array|false     Generated content or false on failure.
+	 * @param    int    $post_id  Post ID.
+	 * @param    string $type     Location type.
+	 * @param    bool   $force_ai Force AI generation (ignore test mode).
+	 * @return   array|false      Generated content or false on failure.
 	 */
-	private function generate_ai_content( $post_id, $type ) {
+	private function generate_ai_content( $post_id, $type, $force_ai = false ) {
 		// Use multi-section generation for continents, countries, and cities
 		if ( 'continent' === $type ) {
-			return $this->generate_continent_content( $post_id );
+			return $this->generate_continent_content( $post_id, $force_ai );
 		} elseif ( 'country' === $type ) {
-			return $this->generate_country_content( $post_id );
+			return $this->generate_country_content( $post_id, $force_ai );
 		} elseif ( 'city' === $type ) {
-			return $this->generate_city_content( $post_id );
+			return $this->generate_city_content( $post_id, $force_ai );
 		}
 		
 		// Use standard generation for cities only (legacy fallback)
@@ -175,12 +181,17 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_continent_content( $post_id ) {
+	private function generate_continent_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
+		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		if ( $test_mode ) {
+		if ( $test_mode && ! $force_ai ) {
 			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
 			return $this->generate_template_continent_content( $post_id );
+		}
+		
+		if ( $force_ai ) {
+			WTA_Logger::info( 'Force AI enabled - using real AI (ignore test mode)', array( 'post_id' => $post_id ) );
 		}
 		
 		$api_key = get_option( 'wta_openai_api_key', '' );
@@ -312,12 +323,17 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_country_content( $post_id ) {
+	private function generate_country_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
+		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		if ( $test_mode ) {
+		if ( $test_mode && ! $force_ai ) {
 			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
 			return $this->generate_template_country_content( $post_id );
+		}
+		
+		if ( $force_ai ) {
+			WTA_Logger::info( 'Force AI enabled - using real AI (ignore test mode)', array( 'post_id' => $post_id ) );
 		}
 		
 		$api_key = get_option( 'wta_openai_api_key', '' );
@@ -451,12 +467,17 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_city_content( $post_id ) {
+	private function generate_city_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
+		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		if ( $test_mode ) {
+		if ( $test_mode && ! $force_ai ) {
 			WTA_Logger::info( 'Test mode enabled - using template content (no AI costs)', array( 'post_id' => $post_id ) );
 			return $this->generate_template_city_content( $post_id );
+		}
+		
+		if ( $force_ai ) {
+			WTA_Logger::info( 'Force AI enabled - using real AI (ignore test mode)', array( 'post_id' => $post_id ) );
 		}
 		
 		$api_key = get_option( 'wta_openai_api_key', '' );

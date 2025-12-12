@@ -833,12 +833,14 @@ class WTA_Admin {
 		// Reset AI status to trigger regeneration
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
-		// Add to AI content queue
+		// Add to AI content queue with force_ai flag
+		// force_ai=true ignores test mode for manual single-post regeneration
 		WTA_Queue::add(
 			'ai_content',
 			array(
 				'post_id' => $post_id,
 				'type'    => $type,
+				'force_ai' => true, // Ignore test mode for manual regeneration
 			),
 			'regenerate_' . $post_id
 		);

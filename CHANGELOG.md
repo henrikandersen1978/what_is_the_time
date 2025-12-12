@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.6] - 2025-12-12
+
+### Added
+- **Force AI Generation for Manual Regeneration** 🎯
+  - Manual "Regenerate AI Content" now ignores test mode
+  - Generates real AI content + FAQ for selected posts
+  - Perfect for testing AI output on specific pages
+  - Bulk import still respects test mode (saves costs)
+
+### Changed
+- Bulk action "Regenerate AI Content" sets `force_ai=true` flag
+- AI processor checks `force_ai` flag before respecting test mode
+- FAQ generation also respects `force_ai` flag
+- Skip "already processed" check when `force_ai=true`
+
+### Use Case
+```
+Test Mode: ENABLED (save AI costs on 150k import)
+↓
+Bulk Import: Uses dummy content ✅
+↓
+Select Tigre → "Regenerate AI Content"
+↓
+Generates REAL AI + FAQ (ignore test mode) ✅
+↓
+Perfect for testing output quality!
+```
+
+### Technical Details
+- Added `force_ai` parameter to queue payload
+- Modified `generate_ai_content()` signature
+- Updated all content generators (continent, country, city)
+- FAQ generator respects force_ai flag
+
 ## [2.35.5] - 2025-12-12
 
 ### Changed
