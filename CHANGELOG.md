@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.34.24] - 2025-12-12
+
+### Changed
+- **Increased chunk size from 2.5k to 5k cities for high-resource servers**
+  - Optimized for servers with 16+ CPU cores and 32GB+ RAM
+  - Each chunk completes in 40-60 seconds (safe under 120s timeout)
+  - 30 chunks total for ~150k cities (vs 60 chunks previously)
+  - Total queuing time: ~20-25 minutes (2× faster than v2.34.23)
+  
+- **Increased max_chunks safety limit from 65 to 35**
+  - Adjusted for larger chunk size
+  - Allows all 30 expected chunks to complete with buffer
+
+### Performance Impact (High-Resource Server)
+- **Queuing Phase:**
+  - Previous (2.5k): 60 chunks × 30s = 30 min
+  - Current (5k): 30 chunks × 50s = 25 min ✅
+  
+- **Processing Phase (with 20 concurrent batches):**
+  - 20 concurrent × 40 cities/min = 800 cities/min
+  - 148k cities ÷ 800 = 185 min = ~3 hours
+  - **Total: ~3.5 hours for 150k cities** ✅
+
+### Requirements
+- **Server Resources:** 16+ CPU cores, 32GB+ RAM (high-resource server)
+- **Memory Limit:** 1024MB per PHP process (recommended)
+- **action-scheduler-high-volume:** Required with increased settings:
+  - Concurrent batches: 20 (× 4 multiplier)
+  - Additional runners: 10
+  - Batch size: 150 (× 6 multiplier)
+
+### Notes
+- **NOT for shared hosting!** Use v2.34.23 (2.5k chunks) for shared hosting
+- This version optimized for dedicated/VPS servers with ample resources
+- 30 chunks × ~600MB = ~18GB peak memory (safe under 32GB)
+
 ## [2.34.23] - 2025-12-12
 
 ### Changed
