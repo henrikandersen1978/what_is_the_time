@@ -2,6 +2,33 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.17] - 2025-12-12
+
+### Fixed
+- **FAQ Icon Alignment - Final Fix** ✅
+  - Simplified CSS approach: removed flex, using inline-block
+  - Icon uses `vertical-align: baseline` to sit on text baseline
+  - Increased margin-right to 8px for better spacing
+  - Block-level question text with proper line-height
+  - Icons now perfectly aligned with question text (no offset)
+
+### Technical Details
+- **File:** `includes/frontend/assets/css/frontend.css`
+  - `.wta-faq-question-text`: Changed to `display: block` with line-height: 1.5
+  - `.wta-faq-icon-emoji`: Simplified to inline-block with vertical-align: baseline
+  - Removed flex container that caused alignment complexity
+
+### Note on "Ikke-angivet type" Schema
+- This is likely from Yoast SEO's own schema or another plugin
+- Our FAQPage schema has correct `@type: 'FAQPage'` and validates correctly
+- When added to Yoast's `@graph`, individual items should NOT have `@context`
+- FAQPage schema is working correctly as shown in validator
+
+### Impact
+- ✅ FAQ icons sit perfectly on text baseline
+- ✅ Clean, simple CSS without complex flex alignment
+- ✅ FAQPage schema validates correctly
+
 ## [2.35.16] - 2025-12-12
 
 ### Fixed

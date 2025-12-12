@@ -1079,21 +1079,19 @@ p.wta-no-nearby {
 
 /* Question Text with Icon */
 .wta-faq-question-text {
-	display: flex !important;
-	align-items: center !important;
-	gap: 12px !important;
+	display: block !important;
 	flex: 1 !important;
 	min-width: 0 !important;
 	text-align: left !important;
+	line-height: 1.5 !important;
 }
 
 .wta-faq-icon-emoji {
 	font-size: 1.3em !important;
-	flex-shrink: 0 !important;
-	line-height: 1 !important;
 	display: inline-block !important;
-	vertical-align: middle !important;
-	margin-right: 2px !important;
+	vertical-align: baseline !important;
+	margin-right: 8px !important;
+	line-height: 1 !important;
 }
 
 /* Toggle Icon */
