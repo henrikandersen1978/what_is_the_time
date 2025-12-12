@@ -357,19 +357,26 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			return;
 		}
 
-		// Process structure queue (continents, countries, cities) - Every 1 minute
+		// STAGGERED CONCURRENT SCHEDULING (v2.35.4)
+		// Spread processors across time to enable true parallel processing
+		// This prevents WP-Cron bottleneck where only 1 action runs per request
+		
+		// Process structure queue (continents, countries, cities) - Every 1 minute (PRIMARY)
+		// Starts immediately, handles chunks (now 2k for faster completion <30s)
 		if ( false === as_next_scheduled_action( 'wta_process_structure' ) ) {
 			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_structure', array(), 'world-time-ai' );
 		}
 
-		// Process timezone resolution - Every 1 minute
+		// Process timezone resolution - Every 30 seconds (offset +20s)
+		// Runs between structure chunks to maximize throughput
 		if ( false === as_next_scheduled_action( 'wta_process_timezone' ) ) {
-			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_timezone', array(), 'world-time-ai' );
+			as_schedule_recurring_action( time() + 20, 30, 'wta_process_timezone', array(), 'world-time-ai' );
 		}
 
-		// Process AI content generation - Every 1 minute
+		// Process AI content generation - Every 30 seconds (offset +40s)
+		// Runs between structure chunks and timezone to maximize throughput
 		if ( false === as_next_scheduled_action( 'wta_process_ai_content' ) ) {
-			as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, 'wta_process_ai_content', array(), 'world-time-ai' );
+			as_schedule_recurring_action( time() + 40, 30, 'wta_process_ai_content', array(), 'world-time-ai' );
 		}
 	}
 }
