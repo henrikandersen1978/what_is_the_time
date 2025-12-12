@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.14] - 2025-12-12
+
+### Fixed
+- **FAQ Content Rendering Issue** 🐛
+  - FAQ HTML was saved to meta but not displayed on city pages
+  - Root cause: FAQ was appended via `the_content` filter AFTER theme rendered content
+  - Solution: Append FAQ HTML directly to `post_content` during AI generation
+  - FAQ now renders alongside all other AI-generated sections
+  
+### Changed
+- **FAQ Generation Workflow** 📝
+  - Moved FAQ generation to BEFORE `wp_update_post()` call
+  - FAQ HTML is now rendered and appended to `$result['content']`
+  - Removed redundant FAQ rendering from `single-wta_location.php` template
+  - FAQ data still saved to `wta_faq_data` meta for schema generation
+  
+### Technical Details
+- **File:** `includes/scheduler/class-wta-ai-processor.php`
+  - FAQ generation moved from line 117-130 to line 97-121 (before wp_update_post)
+  - Added `WTA_FAQ_Renderer::render_faq_section()` call
+  - FAQ HTML appended to `$result['content']` with double newline separator
+  - Enhanced logging with FAQ count
+  
+- **File:** `includes/frontend/templates/single-wta_location.php`
+  - Removed `$faq_html` variable and FAQ rendering logic
+  - Simplified `the_content` filter to only append child list
+  
+### Schema Integration
+- ✅ FAQ Schema (FAQPage) still works via Yoast SEO integration
+- ✅ `wpseo_schema_graph` filter in `WTA_FAQ_Renderer::inject_faq_schema()`
+- ✅ Schema generated from `wta_faq_data` meta (separate from HTML rendering)
+
+### How It Works Now
+1. **AI Content Generated** → structured sections (intro, timezone, attractions, etc.)
+2. **FAQ Generated** → 12 FAQ items with intro
+3. **FAQ HTML Rendered** → accordion markup
+4. **FAQ Appended** → to AI content (`$result['content'] .= $faq_html`)
+5. **Post Updated** → `post_content` includes FAQ HTML
+6. **Schema Injected** → Yoast reads `wta_faq_data` meta and adds FAQPage schema
+
+### Impact
+- FAQ sections now visible on all city pages (test mode or AI mode)
+- FAQ schema.org markup properly added to Yoast SEO graph
+- Consistent with how all other city sections are displayed
+
 ## [2.35.13] - 2025-12-12
 
 ### Changed

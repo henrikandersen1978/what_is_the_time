@@ -86,48 +86,61 @@ class WTA_AI_Processor {
 				}
 			}
 
-			// Generate content
-			$result = $this->generate_ai_content( $post_id, $type, $force_ai );
+		// Generate content
+		$result = $this->generate_ai_content( $post_id, $type, $force_ai );
 
-			if ( false === $result ) {
-				WTA_Queue::mark_failed( $item['id'], 'AI content generation failed' );
-				return;
-			}
-
-			// Update post
-			wp_update_post( array(
-				'ID'           => $post_id,
-				'post_content' => $result['content'],
-				'post_status'  => 'publish', // PUBLISH the post!
-			) );
-
-		// Update Yoast SEO meta if available
-		if ( isset( $result['yoast_title'] ) ) {
-			update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
-			// Only update H1 for continents and countries, NOT cities (cities keep their structured H1)
-			$type = get_post_meta( $post_id, 'wta_type', true );
-			if ( 'city' !== $type ) {
-				update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
-			}
-		}
-		if ( isset( $result['yoast_desc'] ) ) {
-			update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
+		if ( false === $result ) {
+			WTA_Queue::mark_failed( $item['id'], 'AI content generation failed' );
+			return;
 		}
 
-			// Generate FAQ for cities (v2.35.0)
-			if ( 'city' === $type ) {
-				// Use test mode unless force_ai is true
-				$test_mode = get_option( 'wta_test_mode', 0 );
-				$use_test_mode = $test_mode && ! $force_ai;
-				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
+		// Generate FAQ for cities BEFORE saving content (v2.35.0)
+		if ( 'city' === $type ) {
+			// Use test mode unless force_ai is true
+			$test_mode = get_option( 'wta_test_mode', 0 );
+			$use_test_mode = $test_mode && ! $force_ai;
+			$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
+			
+			if ( false !== $faq_data && ! empty( $faq_data ) ) {
+				// Save FAQ data for schema
+				update_post_meta( $post_id, 'wta_faq_data', $faq_data );
 				
-				if ( false !== $faq_data && ! empty( $faq_data ) ) {
-					update_post_meta( $post_id, 'wta_faq_data', $faq_data );
-					WTA_Logger::info( 'FAQ generated and saved', array( 'post_id' => $post_id, 'force_ai' => $force_ai ) );
-				} else {
-					WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
+				// Render FAQ HTML and append to post content
+				$city_name = get_the_title( $post_id );
+				$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+				
+				if ( ! empty( $faq_html ) ) {
+					$result['content'] .= "\n\n" . $faq_html;
+					WTA_Logger::info( 'FAQ generated and appended to content', array( 
+						'post_id' => $post_id, 
+						'force_ai' => $force_ai,
+						'faq_count' => count( $faq_data['faqs'] )
+					) );
 				}
+			} else {
+				WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
 			}
+		}
+
+		// Update post with content (including FAQ HTML if city)
+		wp_update_post( array(
+			'ID'           => $post_id,
+			'post_content' => $result['content'],
+			'post_status'  => 'publish', // PUBLISH the post!
+		) );
+
+	// Update Yoast SEO meta if available
+	if ( isset( $result['yoast_title'] ) ) {
+		update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+		// Only update H1 for continents and countries, NOT cities (cities keep their structured H1)
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'city' !== $type ) {
+			update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
+		}
+	}
+	if ( isset( $result['yoast_desc'] ) ) {
+		update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
+	}
 
 			// Mark as done
 			update_post_meta( $post_id, 'wta_ai_status', 'done' );
