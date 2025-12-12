@@ -108,6 +108,44 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 			</form>
 		</div>
 
+		<!-- Performance Settings -->
+		<div class="wta-card wta-card-wide">
+			<h2><?php esc_html_e( 'Performance Settings', WTA_TEXT_DOMAIN ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Configure Action Scheduler performance for optimal import speed.', WTA_TEXT_DOMAIN ); ?>
+			</p>
+			<form method="post" action="options.php">
+				<?php settings_fields( 'wta_data_import_settings_group' ); ?>
+				
+				<table class="form-table">
+					<tr>
+						<th scope="row">
+							<label for="wta_concurrent_batches">
+								<?php esc_html_e( 'Concurrent Batches', WTA_TEXT_DOMAIN ); ?>
+							</label>
+						</th>
+						<td>
+							<input type="number" id="wta_concurrent_batches" name="wta_concurrent_batches" 
+								value="<?php echo esc_attr( get_option( 'wta_concurrent_batches', 10 ) ); ?>" 
+								min="1" max="20" step="1" style="width: 100px;" />
+							<p class="description">
+								<?php esc_html_e( 'Number of concurrent processes that can run simultaneously. Default: 10', WTA_TEXT_DOMAIN ); ?><br>
+								<strong><?php esc_html_e( '⚠️ Warning:', WTA_TEXT_DOMAIN ); ?></strong> 
+								<?php esc_html_e( 'Higher values = faster imports but more server load and API usage.', WTA_TEXT_DOMAIN ); ?><br>
+								<strong><?php esc_html_e( 'Recommendations:', WTA_TEXT_DOMAIN ); ?></strong><br>
+								• <?php esc_html_e( 'Small sites or shared hosting: 3-5', WTA_TEXT_DOMAIN ); ?><br>
+								• <?php esc_html_e( 'Medium sites or VPS: 10 (recommended)', WTA_TEXT_DOMAIN ); ?><br>
+								• <?php esc_html_e( 'Large sites or dedicated servers: 15-20', WTA_TEXT_DOMAIN ); ?><br>
+								• <?php esc_html_e( 'If you see API rate limit errors, reduce this value.', WTA_TEXT_DOMAIN ); ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+
+				<?php submit_button( __( 'Save Performance Settings', WTA_TEXT_DOMAIN ) ); ?>
+			</form>
+		</div>
+
 		<!-- Import Configuration -->
 		<div class="wta-card wta-card-wide">
 			<h2><?php esc_html_e( 'Import Configuration', WTA_TEXT_DOMAIN ); ?></h2>

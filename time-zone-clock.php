@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.35.9
+ * Version:           2.35.10
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.35.9' );
+define( 'WTA_VERSION', '2.35.10' );
 
 /**
  * Plugin directory path.
@@ -150,63 +150,18 @@ function wta_optimize_action_scheduler() {
 	}, 999 );
 	
 	// ==========================================
-	// DIFFERENTIATED CONCURRENT BATCHES (v2.35.8)
-	// Different limits per processor to respect API rate limits
+	// CONFIGURABLE CONCURRENT BATCHES (v2.35.10)
+	// Simple setting-based approach - admin can control via backend
 	// ==========================================
 	
 	add_filter( 'action_scheduler_queue_runner_concurrent_batches', function( $batches ) {
-		// Structure processor (Wikidata: ~200 req/s limit)
-		// With 0.2s delay = 5 req/s per processor
-		// 15 concurrent = 75 req/s (safe buffer)
-		// This is checked by looking at the currently processing items
-		try {
-			$store = ActionScheduler::store();
-			if ( ! $store || ! method_exists( $store, 'query_actions' ) ) {
-				return 5; // Safe fallback
-			}
-			
-			$processing_actions = $store->query_actions( array(
-				'status'   => 'in-progress',
-				'per_page' => 1,
-			) );
-			
-			if ( ! empty( $processing_actions ) ) {
-				$action_id = reset( $processing_actions );
-				
-				// Safely get the action object
-				if ( ! method_exists( $store, 'fetch_action' ) ) {
-					return 5; // Safe fallback
-				}
-				
-				$action = $store->fetch_action( $action_id );
-				
-				if ( $action && method_exists( $action, 'get_hook' ) ) {
-					$hook = $action->get_hook();
-					
-					if ( 'wta_process_structure' === $hook ) {
-						return 15; // High for Wikidata
-					}
-					
-					// Timezone processor (TimeZoneDB FREE: 1 req/s)
-					// With 1.5s delay = 0.67 req/s per processor
-					// MUST be 1 for free tier!
-					if ( 'wta_process_timezone' === $hook ) {
-						return 1; // Strict limit for free tier
-					}
-					
-					// AI processor (OpenAI Tier 5: 166 req/s + test mode = no calls)
-					// 15 concurrent = safe for Tier 5
-					if ( 'wta_process_ai_content' === $hook ) {
-						return 15; // Safe for Tier 5 + test mode
-					}
-				}
-			}
-		} catch ( Exception $e ) {
-			// Silently fallback on any error
-			return 5;
-		}
+		// Get admin-configurable concurrent batches setting
+		$concurrent = get_option( 'wta_concurrent_batches', 10 );
 		
-		return 5; // Default fallback
+		// Validate range (1-20)
+		$concurrent = max( 1, min( 20, intval( $concurrent ) ) );
+		
+		return $concurrent;
 	}, 999 );
 	
 	// Increase batch size: 25 → 150

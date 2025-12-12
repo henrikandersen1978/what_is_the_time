@@ -2,6 +2,34 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.10] - 2025-12-12
+
+### Added
+- **Backend Setting for Concurrent Batches** ⚙️
+  - New "Performance Settings" section in Data & Import page
+  - Admin-configurable concurrent batches (1-20, default: 10)
+  - Clear recommendations for different hosting environments:
+    - Small sites/shared hosting: 3-5
+    - Medium sites/VPS: 10 (recommended)
+    - Large sites/dedicated: 15-20
+  - Replaces complex dynamic logic with simple admin control
+  
+### Changed
+- **Simplified Concurrent Batches Logic** 🎯
+  - Removed complex dynamic detection of action types
+  - Fixed bug where checking first in-progress action affected ALL actions
+  - Now uses simple setting-based approach via `wta_concurrent_batches` option
+  - Validation: ensures value between 1-20
+  
+### Technical Details
+- Added `wta_concurrent_batches` setting to `class-wta-settings.php`
+- Added Performance Settings section to `includes/admin/views/data-import.php`
+- Simplified `action_scheduler_queue_runner_concurrent_batches` filter in `time-zone-clock.php`
+- Files changed:
+  - `includes/admin/class-wta-settings.php` → Added setting registration
+  - `includes/admin/views/data-import.php` → Added UI field
+  - `time-zone-clock.php` → v2.35.10, simplified filter logic
+
 ## [2.35.9] - 2025-12-12
 
 ### Fixed
