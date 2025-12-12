@@ -21,6 +21,8 @@ class WTA_Shortcodes {
 		add_shortcode( 'wta_nearby_countries', array( $this, 'nearby_countries_shortcode' ) );
 		add_shortcode( 'wta_global_time_comparison', array( $this, 'global_time_comparison_shortcode' ) );
 		add_shortcode( 'wta_continents_overview', array( $this, 'continents_overview_shortcode' ) );
+		add_shortcode( 'wta_recent_cities', array( $this, 'recent_cities_shortcode' ) ); // v2.35.1
+		add_shortcode( 'wta_queue_status', array( $this, 'queue_status_shortcode' ) ); // v2.35.1
 	}
 
 	/**
@@ -1242,6 +1244,518 @@ class WTA_Shortcodes {
 		$output .= '</script>' . "\n";
 		
 		return $output;
+	}
+
+	/**
+	 * Shortcode to display recently published cities (for monitoring during import).
+	 *
+	 * Usage: [wta_recent_cities count="20"]
+	 *
+	 * @since    2.35.1
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function recent_cities_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'count' => 20,
+		), $atts );
+		
+		// Get recently published cities
+		$recent_cities = get_posts( array(
+			'post_type'      => WTA_POST_TYPE,
+			'posts_per_page' => intval( $atts['count'] ),
+			'post_status'    => 'publish',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'meta_query'     => array(
+				array(
+					'key'     => 'wta_type',
+					'value'   => 'city',
+					'compare' => '='
+				)
+			)
+		) );
+		
+		if ( empty( $recent_cities ) ) {
+			return '<p>Ingen byer fundet endnu.</p>';
+		}
+		
+		// Build output
+		ob_start();
+		?>
+		
+		<div class="wta-recent-cities">
+			<h2>🏙️ Seneste <?php echo count( $recent_cities ); ?> Importerede Byer</h2>
+			<p class="wta-recent-intro">Disse byer er netop blevet importeret. Tjek om de har FAQ-sektion nederst på siden.</p>
+			
+			<div class="wta-recent-list">
+				<?php foreach ( $recent_cities as $city ) : 
+					$city_name = get_the_title( $city->ID );
+					$city_url = get_permalink( $city->ID );
+					$country_id = wp_get_post_parent_id( $city->ID );
+					$country_name = $country_id ? get_the_title( $country_id ) : '';
+					$timezone = get_post_meta( $city->ID, 'wta_timezone', true );
+					$ai_status = get_post_meta( $city->ID, 'wta_ai_status', true );
+					$has_faq = get_post_meta( $city->ID, 'wta_faq_data', true );
+					$publish_date = get_the_date( 'j. M Y, H:i', $city->ID );
+				?>
+				<div class="wta-recent-item">
+					<div class="wta-recent-header">
+						<h3 class="wta-recent-title">
+							<a href="<?php echo esc_url( $city_url ); ?>" target="_blank">
+								<?php echo esc_html( $city_name ); ?>
+							</a>
+						</h3>
+						<div class="wta-recent-badges">
+							<?php if ( 'done' === $ai_status ) : ?>
+								<span class="wta-badge wta-badge-success">✅ AI</span>
+							<?php else : ?>
+								<span class="wta-badge wta-badge-pending">⏳ Pending</span>
+							<?php endif; ?>
+							
+							<?php if ( ! empty( $has_faq ) ) : ?>
+								<span class="wta-badge wta-badge-success">📝 FAQ</span>
+							<?php else : ?>
+								<span class="wta-badge wta-badge-warning">📝 No FAQ</span>
+							<?php endif; ?>
+						</div>
+					</div>
+					
+					<div class="wta-recent-meta">
+						<?php if ( ! empty( $country_name ) ) : ?>
+							<span>🌍 <?php echo esc_html( $country_name ); ?></span>
+						<?php endif; ?>
+						<?php if ( ! empty( $timezone ) ) : ?>
+							<span>🕐 <?php echo esc_html( $timezone ); ?></span>
+						<?php endif; ?>
+						<span>📅 <?php echo esc_html( $publish_date ); ?></span>
+					</div>
+					
+					<div class="wta-recent-actions">
+						<a href="<?php echo esc_url( $city_url ); ?>" class="wta-btn wta-btn-primary" target="_blank">
+							👁️ Se Side
+						</a>
+					</div>
+				</div>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		
+		<style>
+		.wta-recent-cities {
+			margin: 2em 0;
+			padding: 1.5em;
+			background: #f8f9fa;
+			border-radius: 8px;
+		}
+		.wta-recent-cities h2 {
+			margin: 0 0 0.5em 0;
+			color: #333;
+			font-size: 1.5em;
+		}
+		.wta-recent-intro {
+			color: #666;
+			margin: 0 0 1.5em 0;
+		}
+		.wta-recent-list {
+			display: flex;
+			flex-direction: column;
+			gap: 1em;
+		}
+		.wta-recent-item {
+			background: white;
+			padding: 1em;
+			border-radius: 6px;
+			border: 2px solid #e0e0e0;
+		}
+		.wta-recent-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 0.75em;
+			flex-wrap: wrap;
+			gap: 0.5em;
+		}
+		.wta-recent-title {
+			margin: 0;
+			font-size: 1.2em;
+			flex: 1;
+			min-width: 200px;
+		}
+		.wta-recent-title a {
+			color: #667eea;
+			text-decoration: none;
+		}
+		.wta-recent-title a:hover {
+			text-decoration: underline;
+		}
+		.wta-recent-badges {
+			display: flex;
+			gap: 0.5em;
+			flex-wrap: wrap;
+		}
+		.wta-badge {
+			padding: 0.25em 0.6em;
+			border-radius: 4px;
+			font-size: 0.85em;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+		.wta-badge-success {
+			background: #d4edda;
+			color: #155724;
+		}
+		.wta-badge-warning {
+			background: #fff3cd;
+			color: #856404;
+		}
+		.wta-badge-pending {
+			background: #cce5ff;
+			color: #004085;
+		}
+		.wta-recent-meta {
+			display: flex;
+			gap: 1em;
+			flex-wrap: wrap;
+			margin-bottom: 0.75em;
+			font-size: 0.9em;
+			color: #666;
+		}
+		.wta-recent-actions {
+			display: flex;
+			gap: 0.5em;
+		}
+		.wta-btn {
+			display: inline-block;
+			padding: 0.5em 1em;
+			border-radius: 6px;
+			text-decoration: none;
+			font-weight: 600;
+			font-size: 0.9em;
+			transition: all 0.2s;
+		}
+		.wta-btn-primary {
+			background: #667eea;
+			color: white;
+		}
+		.wta-btn-primary:hover {
+			background: #764ba2;
+		}
+		
+		@media (max-width: 768px) {
+			.wta-recent-cities {
+				padding: 1em;
+			}
+			.wta-recent-item {
+				padding: 0.75em;
+			}
+			.wta-recent-header {
+				flex-direction: column;
+			}
+			.wta-recent-title {
+				font-size: 1.1em;
+			}
+		}
+		</style>
+		
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Shortcode to display queue status (for monitoring during import).
+	 *
+	 * Usage: [wta_queue_status refresh="30"]
+	 *
+	 * @since    2.35.1
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output.
+	 */
+	public function queue_status_shortcode( $atts ) {
+		$atts = shortcode_atts( array(
+			'refresh' => 30, // Auto-refresh seconds (0 = disabled)
+		), $atts );
+		
+		// Get queue statistics
+		global $wpdb;
+		$queue_table = $wpdb->prefix . WTA_QUEUE_TABLE;
+		
+		$stats = $wpdb->get_results( "
+			SELECT 
+				queue_type,
+				status,
+				COUNT(*) as count
+			FROM {$queue_table}
+			GROUP BY queue_type, status
+			ORDER BY queue_type, status
+		" );
+		
+		// Organize stats
+		$queue_data = array();
+		$totals = array(
+			'pending' => 0,
+			'processing' => 0,
+			'done' => 0,
+			'failed' => 0,
+		);
+		
+		foreach ( $stats as $stat ) {
+			if ( ! isset( $queue_data[ $stat->queue_type ] ) ) {
+				$queue_data[ $stat->queue_type ] = array(
+					'pending' => 0,
+					'processing' => 0,
+					'done' => 0,
+					'failed' => 0,
+				);
+			}
+			$queue_data[ $stat->queue_type ][ $stat->status ] = intval( $stat->count );
+			$totals[ $stat->status ] += intval( $stat->count );
+		}
+		
+		// Get published/draft counts
+		$posts_counts = wp_count_posts( WTA_POST_TYPE );
+		$published = isset( $posts_counts->publish ) ? $posts_counts->publish : 0;
+		$draft = isset( $posts_counts->draft ) ? $posts_counts->draft : 0;
+		
+		// Calculate totals per type
+		foreach ( $queue_data as $type => &$data ) {
+			$data['total'] = array_sum( $data );
+		}
+		$totals['total'] = array_sum( $totals );
+		
+		// Build output
+		ob_start();
+		?>
+		
+		<div class="wta-queue-status" id="wta-queue-status-widget">
+			<div class="wta-queue-header">
+				<h2>📊 Import Status</h2>
+				<div class="wta-queue-update">
+					<span class="wta-queue-time">Opdateret: <?php echo date( 'H:i:s' ); ?></span>
+					<?php if ( intval( $atts['refresh'] ) > 0 ) : ?>
+						<span class="wta-queue-refresh">🔄 Auto-refresh: <?php echo intval( $atts['refresh'] ); ?>s</span>
+					<?php endif; ?>
+				</div>
+			</div>
+			
+			<!-- Overall Stats -->
+			<div class="wta-queue-overall">
+				<div class="wta-stat-card wta-stat-pending">
+					<div class="wta-stat-value"><?php echo number_format( $totals['pending'] ); ?></div>
+					<div class="wta-stat-label">⏳ Pending</div>
+				</div>
+				<div class="wta-stat-card wta-stat-processing">
+					<div class="wta-stat-value"><?php echo number_format( $totals['processing'] ); ?></div>
+					<div class="wta-stat-label">⚙️ Processing</div>
+				</div>
+				<div class="wta-stat-card wta-stat-done">
+					<div class="wta-stat-value"><?php echo number_format( $totals['done'] ); ?></div>
+					<div class="wta-stat-label">✅ Done</div>
+				</div>
+				<div class="wta-stat-card wta-stat-failed">
+					<div class="wta-stat-value"><?php echo number_format( $totals['failed'] ); ?></div>
+					<div class="wta-stat-label">❌ Failed</div>
+				</div>
+			</div>
+			
+			<!-- Published Posts -->
+			<div class="wta-queue-posts">
+				<div class="wta-post-card">
+					<div class="wta-post-value"><?php echo number_format( $published ); ?></div>
+					<div class="wta-post-label">📝 Published</div>
+				</div>
+				<div class="wta-post-card">
+					<div class="wta-post-value"><?php echo number_format( $draft ); ?></div>
+					<div class="wta-post-label">📄 Draft</div>
+				</div>
+				<div class="wta-post-card">
+					<div class="wta-post-value"><?php echo number_format( $published + $draft ); ?></div>
+					<div class="wta-post-label">📦 Total</div>
+				</div>
+			</div>
+			
+			<!-- Queue by Type -->
+			<?php if ( ! empty( $queue_data ) ) : ?>
+			<div class="wta-queue-types">
+				<h3>Queue by Type</h3>
+				<table class="wta-queue-table">
+					<thead>
+						<tr>
+							<th>Type</th>
+							<th>Pending</th>
+							<th>Processing</th>
+							<th>Done</th>
+							<th>Failed</th>
+							<th>Total</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $queue_data as $type => $data ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( $type ); ?></strong></td>
+							<td><?php echo number_format( $data['pending'] ); ?></td>
+							<td><?php echo number_format( $data['processing'] ); ?></td>
+							<td><?php echo number_format( $data['done'] ); ?></td>
+							<td><?php echo number_format( $data['failed'] ); ?></td>
+							<td><strong><?php echo number_format( $data['total'] ); ?></strong></td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<?php endif; ?>
+		</div>
+		
+		<style>
+		.wta-queue-status {
+			margin: 2em 0;
+			padding: 1.5em;
+			background: #f8f9fa;
+			border-radius: 8px;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		}
+		.wta-queue-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 1.5em;
+			flex-wrap: wrap;
+			gap: 0.5em;
+		}
+		.wta-queue-header h2 {
+			margin: 0;
+			color: #333;
+			font-size: 1.5em;
+		}
+		.wta-queue-update {
+			display: flex;
+			gap: 1em;
+			font-size: 0.9em;
+			color: #666;
+		}
+		.wta-queue-refresh {
+			color: #667eea;
+			font-weight: 600;
+		}
+		.wta-queue-overall {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+			gap: 1em;
+			margin-bottom: 1.5em;
+		}
+		.wta-stat-card {
+			background: white;
+			padding: 1.5em 1em;
+			border-radius: 8px;
+			text-align: center;
+			border: 2px solid #e0e0e0;
+		}
+		.wta-stat-pending { border-color: #ffc107; }
+		.wta-stat-processing { border-color: #2196F3; }
+		.wta-stat-done { border-color: #4CAF50; }
+		.wta-stat-failed { border-color: #f44336; }
+		.wta-stat-value {
+			font-size: 2em;
+			font-weight: 700;
+			color: #333;
+			margin-bottom: 0.25em;
+		}
+		.wta-stat-label {
+			font-size: 0.9em;
+			color: #666;
+			font-weight: 600;
+		}
+		.wta-queue-posts {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+			gap: 1em;
+			margin-bottom: 1.5em;
+		}
+		.wta-post-card {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			padding: 1.5em 1em;
+			border-radius: 8px;
+			text-align: center;
+			color: white;
+		}
+		.wta-post-value {
+			font-size: 2em;
+			font-weight: 700;
+			margin-bottom: 0.25em;
+		}
+		.wta-post-label {
+			font-size: 0.9em;
+			opacity: 0.9;
+			font-weight: 600;
+		}
+		.wta-queue-types {
+			background: white;
+			padding: 1.5em;
+			border-radius: 8px;
+		}
+		.wta-queue-types h3 {
+			margin: 0 0 1em 0;
+			color: #333;
+		}
+		.wta-queue-table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+		.wta-queue-table th,
+		.wta-queue-table td {
+			padding: 0.75em;
+			text-align: left;
+			border-bottom: 1px solid #e0e0e0;
+		}
+		.wta-queue-table th {
+			background: #f8f9fa;
+			font-weight: 600;
+			color: #333;
+		}
+		.wta-queue-table tbody tr:hover {
+			background: #f8f9fa;
+		}
+		
+		@media (max-width: 768px) {
+			.wta-queue-status {
+				padding: 1em;
+			}
+			.wta-queue-header {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+			.wta-queue-overall,
+			.wta-queue-posts {
+				grid-template-columns: repeat(2, 1fr);
+			}
+			.wta-stat-value,
+			.wta-post-value {
+				font-size: 1.5em;
+			}
+			.wta-queue-table {
+				font-size: 0.85em;
+			}
+			.wta-queue-table th,
+			.wta-queue-table td {
+				padding: 0.5em 0.25em;
+			}
+		}
+		</style>
+		
+		<?php if ( intval( $atts['refresh'] ) > 0 ) : ?>
+		<script>
+		(function() {
+			var refreshInterval = <?php echo intval( $atts['refresh'] ); ?> * 1000;
+			
+			setInterval(function() {
+				location.reload();
+			}, refreshInterval);
+		})();
+		</script>
+		<?php endif; ?>
+		
+		<?php
+		return ob_get_clean();
 	}
 }
 

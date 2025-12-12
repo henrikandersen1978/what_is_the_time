@@ -2,6 +2,47 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.1] - 2025-12-12
+
+### Added
+- **Mobile Monitoring Shortcodes (Temporary)**
+  - `[wta_recent_cities count="20"]` - Display recently published cities
+  - `[wta_queue_status refresh="30"]` - Display import queue status with auto-refresh
+  - Both shortcodes designed for mobile monitoring during import
+  - Shows FAQ status badges (✅ FAQ / 📝 No FAQ)
+  - Shows AI status badges (✅ AI Done / ⏳ Pending)
+  - Auto-refresh capability for real-time monitoring
+
+### Features
+- **Recent Cities Shortcode:**
+  - Lists newest published cities with links
+  - Shows country, timezone, publish date
+  - FAQ and AI status indicators
+  - "Se Side" button to view city page
+  - Responsive design for mobile viewing
+
+- **Queue Status Shortcode:**
+  - Real-time queue statistics (Pending/Processing/Done/Failed)
+  - Published/Draft post counts
+  - Queue breakdown by type (city/country/continent/etc.)
+  - Auto-refresh option (default 30 seconds)
+  - Mobile-optimized layout
+
+### Usage
+```
+# On any page or post:
+[wta_recent_cities count="20"]
+[wta_queue_status refresh="30"]
+
+# Disable auto-refresh:
+[wta_queue_status refresh="0"]
+```
+
+### Notes
+- These shortcodes are temporary for monitoring during import
+- Will be removed or moved to admin-only in future version
+- Designed for quick mobile checks while on the go
+
 ## [2.35.0] - 2025-12-12
 
 ### Added
