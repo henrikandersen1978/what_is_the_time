@@ -794,14 +794,14 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 	
 	// ==========================================
-	// CHUNKED PROCESSING (v2.35.4 - CONCURRENT OPTIMIZATION)
+	// CHUNKED PROCESSING (v2.35.5 - OPTIMAL SWEET SPOT)
 	// ==========================================
-	// Split cities into smaller chunks optimized for parallel processing.
-	// Smaller chunks (2k) complete faster (<30s) allowing other processors (timezone, AI)
-	// to run concurrently via staggered cron schedules (every 30s with offset).
-	// Requires: 512MB+ memory per process, concurrent scheduling (20 concurrent).
+	// Split cities into optimal chunks (1k) for consistent parallel processing.
+	// 1k chunks complete in 20-25s throughout entire import, ensuring timezone/AI
+	// processors always have time slots (30s staggered schedules).
+	// Balance: Fast enough for concurrency, large enough to minimize overhead.
 	
-	$chunk_size = 2000; // 2k cities per chunk (optimized for concurrent processing)
+	$chunk_size = 1000; // 1k cities per chunk (optimal sweet spot: 20-25s processing)
 	$offset = isset( $options['offset'] ) ? intval( $options['offset'] ) : 0;
 	
 	// Extract current chunk
@@ -1141,7 +1141,7 @@ class WTA_Structure_Processor {
 	
 	$next_offset = $offset + $chunk_size;
 	$current_chunk_number = ( $offset / $chunk_size ) + 1;
-	$max_chunks = 80; // Safety limit: 80 chunks × 2k = 160k cities max (150k + buffer)
+	$max_chunks = 160; // Safety limit: 160 chunks × 1k = 160k cities max (150k + buffer)
 	
 	// SAFETY CHECK 1: Did we queue ANY cities in this chunk?
 	if ( $queued === 0 ) {
