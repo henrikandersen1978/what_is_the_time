@@ -2,6 +2,14 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.3] - 2025-12-12
+
+### Fixed
+- **Critical Parse Error in Queue Status Shortcode**
+  - Missing semicolon on line 1502 causing PHP parse error
+  - Fixed: `$totals['total'] = $stats_data['total'];`
+  - Shortcodes now work correctly on frontend
+
 ## [2.35.2] - 2025-12-12
 
 ### Fixed

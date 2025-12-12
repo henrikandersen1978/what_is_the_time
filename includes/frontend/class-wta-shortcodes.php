@@ -1499,7 +1499,7 @@ class WTA_Shortcodes {
 		$draft = isset( $posts_counts->draft ) ? $posts_counts->draft : 0;
 		
 		// Add total to totals array
-		$totals['total'] = $stats_data['total']
+		$totals['total'] = $stats_data['total'];
 		
 		// Build output
 		ob_start();
