@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.34.24
+ * Version:           2.34.25
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.34.24' );
+define( 'WTA_VERSION', '2.34.25' );
 
 /**
  * Plugin directory path.
@@ -123,6 +123,51 @@ add_action( 'admin_init', 'wta_check_plugin_upgrade' );
  * The core plugin class.
  */
 require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
+
+/**
+ * High-Resource Server Optimization (v2.34.25)
+ * 
+ * Optimize Action Scheduler for servers with 16+ CPU cores and 32GB+ RAM.
+ * These settings enable faster concurrent processing of large queues.
+ * 
+ * CRITICAL: Only use on high-resource servers!
+ * For shared hosting (2-4 CPU, 4GB RAM), use v2.34.23 with default settings.
+ * 
+ * @since 2.34.25
+ */
+function wta_optimize_action_scheduler() {
+	// Increase concurrent batches: 5 → 20
+	// Allows 20 queues to process simultaneously for 4× faster throughput
+	add_filter( 'action_scheduler_queue_runner_concurrent_batches', function( $batches ) {
+		return 20; // High-resource server: 20 concurrent
+	}, 999 );
+	
+	// Increase batch size: 25 → 150
+	// Process more actions per batch to reduce overhead
+	add_filter( 'action_scheduler_queue_runner_batch_size', function( $size ) {
+		return 150; // 6× default
+	}, 999 );
+	
+	// Increase time limit: 30s → 120s
+	// Allow longer processing time for complex operations
+	add_filter( 'action_scheduler_queue_runner_time_limit', function( $limit ) {
+		return 120; // 2 minutes per queue
+	}, 999 );
+	
+	// Increase timeout period: 5 min → 15 min
+	// Prevent premature action reset for longer-running tasks
+	add_filter( 'action_scheduler_timeout_period', function( $timeout ) {
+		return 900; // 15 minutes
+	}, 999 );
+	
+	// Increase failure period: 5 min → 15 min
+	add_filter( 'action_scheduler_failure_period', function( $timeout ) {
+		return 900; // 15 minutes
+	}, 999 );
+}
+
+// Hook early to ensure filters are applied before Action Scheduler runs
+add_action( 'plugins_loaded', 'wta_optimize_action_scheduler', 1 );
 
 /**
  * DIRECT post type registration for debugging.
