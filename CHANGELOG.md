@@ -2,6 +2,30 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.7] - 2025-12-12
+
+### Added
+- **Automatic Log Cleanup** 🧹
+  - Deletes old log files daily at 04:00
+  - Keeps only today's log to prevent disk space issues
+  - Runs via Action Scheduler: `wta_cleanup_old_logs`
+  - New class: `WTA_Log_Cleaner` with utility methods
+
+### Technical Details
+- New file: `includes/helpers/class-wta-log-cleaner.php`
+- Scheduled in `class-wta-activator.php` (daily at 04:00)
+- Registered in `class-wta-core.php` (Action Scheduler hook)
+- Logs cleanup activity for monitoring
+- Prevents large log files from consuming server disk space
+
+### Files Changed
+- `time-zone-clock.php` → v2.35.7
+- `includes/class-wta-activator.php` → Added daily log cleanup schedule
+- `includes/class-wta-core.php` → Registered log cleanup hook
+- `includes/helpers/class-wta-log-cleaner.php` → NEW
+
+---
+
 ## [2.35.6] - 2025-12-12
 
 ### Added

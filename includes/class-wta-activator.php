@@ -373,11 +373,18 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			as_schedule_recurring_action( time() + 20, 30, 'wta_process_timezone', array(), 'world-time-ai' );
 		}
 
-		// Process AI content generation - Every 30 seconds (offset +40s)
-		// Runs between structure chunks and timezone to maximize throughput
-		if ( false === as_next_scheduled_action( 'wta_process_ai_content' ) ) {
-			as_schedule_recurring_action( time() + 40, 30, 'wta_process_ai_content', array(), 'world-time-ai' );
-		}
+	// Process AI content generation - Every 30 seconds (offset +40s)
+	// Runs between structure chunks and timezone to maximize throughput
+	if ( false === as_next_scheduled_action( 'wta_process_ai_content' ) ) {
+		as_schedule_recurring_action( time() + 40, 30, 'wta_process_ai_content', array(), 'world-time-ai' );
 	}
+
+	// Cleanup old log files - Daily at 04:00 (v2.35.7)
+	// Deletes all logs except today's to prevent disk space issues
+	if ( false === as_next_scheduled_action( 'wta_cleanup_old_logs' ) ) {
+		$tomorrow_4am = strtotime( 'tomorrow 04:00:00' );
+		as_schedule_recurring_action( $tomorrow_4am, DAY_IN_SECONDS, 'wta_cleanup_old_logs', array(), 'world-time-ai' );
+	}
+}
 }
 
