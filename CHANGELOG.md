@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.12] - 2025-12-12
+
+### Fixed
+- **Disabled Action Scheduler's Async Mode** 🔧
+  - Action Scheduler's async mode conflicts with manual loopback implementation
+  - When async mode is enabled, `action_scheduler_run_queue` hook is NOT triggered
+  - This prevented our manual loopback requests from being created
+  - Result: Only 2 concurrent runners instead of the configured amount
+  
+### Changed
+- **Disabled async mode filters:**
+  - `action_scheduler_allow_async_request_runner` → commented out
+  - `action_scheduler_async_request_sleep_seconds` → commented out
+  - Now WP-Cron triggers `action_scheduler_run_queue` reliably
+  - Our manual loopback code can now create additional runners
+  
+### Added
+- **Comprehensive Debug Logging** 🔍
+  - Logs when `action_scheduler_run_queue` hook is triggered
+  - Logs each loopback request being sent (URL, instance)
+  - Logs if loopback requests fail (with error message)
+  - Logs when AJAX handler receives requests
+  - Logs nonce verification success/failure
+  - Logs when additional runners start and complete
+  - Check logs at: `wp-content/uploads/world-time-ai-data/logs/YYYY-MM-DD-log.txt`
+
+### How It Now Works
+1. **WP-Cron triggers:** `action_scheduler_run_queue` action (every 1 minute)
+2. **Our hook runs:** Creates (concurrent_batches - 1) loopback requests
+3. **Each loopback:** Calls AJAX endpoint → starts separate queue runner
+4. **Result:** True concurrent processing matching the configured setting
+
+### Technical Details
+- File: `time-zone-clock.php` → v2.35.12
+- Removed conflict with Action Scheduler's own async implementation
+- Added `WTA_Logger::info()` and `WTA_Logger::error()` throughout loopback code
+- Loopback requests are non-blocking (`'blocking' => false`)
+
+### Testing
+After updating:
+1. Check logs to verify `action_scheduler_run_queue` is triggered
+2. Verify loopback requests are being sent
+3. Monitor Action Scheduler → should see concurrent_batches amount of "in-progress"
+4. If still only 2 in-progress, check logs for error messages
+
 ## [2.35.11] - 2025-12-12
 
 ### Added

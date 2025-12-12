@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.35.11
+ * Version:           2.35.12
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.35.11' );
+define( 'WTA_VERSION', '2.35.12' );
 
 /**
  * Plugin directory path.
@@ -137,17 +137,19 @@ require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
  */
 function wta_optimize_action_scheduler() {
 	// ==========================================
-	// ENABLE ASYNC MODE (v2.35.8)
-	// Critical for true parallel processing!
+	// ASYNC MODE DISABLED (v2.35.12)
+	// Conflicts with our manual loopback implementation
+	// Action Scheduler's async mode doesn't trigger 'action_scheduler_run_queue' hook
+	// So our loopback code never runs. We use manual loopback instead.
 	// ==========================================
 	
-	// Enable async request runner for concurrent batch processing
-	add_filter( 'action_scheduler_allow_async_request_runner', '__return_true', 999 );
+	// DISABLED: Action Scheduler's own async mode
+	// add_filter( 'action_scheduler_allow_async_request_runner', '__return_true', 999 );
 	
-	// Reduce sleep time between async requests: 5s → 1s for faster throughput
-	add_filter( 'action_scheduler_async_request_sleep_seconds', function() {
-		return 1;
-	}, 999 );
+	// DISABLED: Async sleep time (not needed with manual loopback)
+	// add_filter( 'action_scheduler_async_request_sleep_seconds', function() {
+	// 	return 1;
+	// }, 999 );
 	
 	// ==========================================
 	// CONFIGURABLE CONCURRENT BATCHES (v2.35.10)
@@ -205,7 +207,14 @@ function wta_optimize_action_scheduler() {
 		// WP-Cron already starts 1 runner, so we need (concurrent - 1) additional
 		$additional_runners = $concurrent - 1;
 		
+		// DEBUG: Log that hook was triggered
+		WTA_Logger::info( 'action_scheduler_run_queue triggered', array(
+			'concurrent_setting' => $concurrent,
+			'additional_runners' => $additional_runners,
+		) );
+		
 		if ( $additional_runners < 1 ) {
+			WTA_Logger::info( 'No additional runners needed (concurrent_batches = 1)' );
 			return; // No additional runners needed
 		}
 		
@@ -214,7 +223,14 @@ function wta_optimize_action_scheduler() {
 		
 		// Create additional loopback requests
 		for ( $i = 0; $i < $additional_runners; $i++ ) {
-			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
+			$ajax_url = admin_url( 'admin-ajax.php' );
+			
+			WTA_Logger::info( 'Sending loopback request', array(
+				'instance' => $i,
+				'url'      => $ajax_url,
+			) );
+			
+			$response = wp_remote_post( $ajax_url, array(
 				'method'      => 'POST',
 				'timeout'     => 45,
 				'redirection' => 5,
@@ -228,7 +244,19 @@ function wta_optimize_action_scheduler() {
 				),
 				'cookies'     => array(),
 			) );
+			
+			// Check if request failed
+			if ( is_wp_error( $response ) ) {
+				WTA_Logger::error( 'Loopback request failed', array(
+					'instance' => $i,
+					'error'    => $response->get_error_message(),
+				) );
+			}
 		}
+		
+		WTA_Logger::info( 'All loopback requests sent', array(
+			'count' => $additional_runners,
+		) );
 	}, 0 );
 	
 	/**
@@ -236,9 +264,28 @@ function wta_optimize_action_scheduler() {
 	 * This is called via AJAX (nopriv) from the loopback requests above.
 	 */
 	add_action( 'wp_ajax_nopriv_wta_create_additional_runner', function() {
+		WTA_Logger::info( 'AJAX handler called', array(
+			'has_nonce'    => isset( $_POST['wta_nonce'] ),
+			'has_instance' => isset( $_POST['instance'] ),
+			'instance'     => isset( $_POST['instance'] ) ? $_POST['instance'] : 'N/A',
+		) );
+		
 		if ( isset( $_POST['wta_nonce'] ) && isset( $_POST['instance'] ) && 
 		     wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
+			
+			WTA_Logger::info( 'Starting additional queue runner', array(
+				'instance' => $_POST['instance'],
+			) );
+			
 			ActionScheduler_QueueRunner::instance()->run();
+			
+			WTA_Logger::info( 'Additional queue runner completed', array(
+				'instance' => $_POST['instance'],
+			) );
+		} else {
+			WTA_Logger::error( 'Nonce verification failed for additional runner', array(
+				'instance' => isset( $_POST['instance'] ) ? $_POST['instance'] : 'N/A',
+			) );
 		}
 		wp_die();
 	}, 0 );
