@@ -90,9 +90,10 @@ class WTA_FAQ_Renderer {
 		<?php
 		$output = ob_get_clean();
 		
-		// FAQ schema now injected via Yoast filter using array type (v2.35.21)
-		// No longer adding as separate JSON-LD script tag
-		// BEST PRACTICE: @type = ['WebPage', 'FAQPage'] preserves all Yoast properties
+		// Add FAQ schema as direct JSON-LD script tag (v2.35.30)
+		// Yoast SEO 26.5+ doesn't pass @graph to filters, so we use direct injection
+		// Same pattern as ItemList - proven stable and Google-compatible
+		$output .= self::generate_faq_schema_tag( $faq_data, $city_name );
 		
 		return $output;
 	}
@@ -317,12 +318,10 @@ class WTA_FAQ_Renderer {
 	/**
 	 * Generate standalone FAQ schema as JSON-LD script tag.
 	 * 
-	 * FALLBACK ONLY: Not currently used (v2.35.21).
-	 * FAQ schema now injected via Yoast filter using array type.
-	 * Kept for potential future use if Yoast is not active.
+	 * Direct JSON-LD injection (same pattern as ItemList).
+	 * Yoast SEO 26.5+ doesn't pass @graph to filters, so this is the correct approach.
 	 * 
 	 * @since    2.35.20
-	 * @deprecated 2.35.21 Use Yoast filter integration with array type instead
 	 * @param    array  $faq_data  FAQ data with 'faqs' array.
 	 * @param    string $city_name City name for schema title.
 	 * @return   string            JSON-LD script tag with FAQPage schema.

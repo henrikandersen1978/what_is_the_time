@@ -2,6 +2,85 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.30] - 2025-12-13
+
+### Fixed
+- **FAQ Schema - Direct JSON-LD Injection (Final Fix)** ✅
+  - Switched back to direct JSON-LD script tag injection
+  - Yoast SEO 26.5+ doesn't pass @graph to `wpseo_schema_graph` filter
+  - Disabled Yoast filter integration (doesn't work in Yoast 26.5+)
+  - Same pattern as ItemList - proven stable and Google-compatible
+
+### The Discovery (From Logs)
+```
+[15:39:17] INFO: === FAQ FILTER TRIGGERED ===
+Context: {
+    "has_graph": false,           ← Yoast doesn't pass @graph!
+    "graph_type": "N/A"
+}
+
+[15:39:17] INFO: === FAQ FILTER PROCESSING ===
+Context: {
+    "graph_structure": "DOES_NOT_EXIST"  ← No @graph to modify!
+}
+```
+
+**Root Cause:**
+- Yoast SEO 26.5 changed how schema is generated
+- `wpseo_schema_graph` filter receives empty/incomplete data
+- Even at priority 999, we get "NO GRAPH"
+- Cannot modify what doesn't exist!
+
+### The Solution
+
+**Stop trying to modify Yoast's @graph. Generate our own JSON-LD.**
+
+Same approach as ItemList schema:
+```php
+// Add as separate <script type="application/ld+json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [...]
+}
+</script>
+```
+
+### Benefits
+- ✅ Works with Yoast SEO 26.5+
+- ✅ No dependency on Yoast's filter system
+- ✅ Google reads multiple JSON-LD scripts on same page
+- ✅ Same proven pattern as ItemList
+- ✅ No timing issues or missing @graph
+- ✅ Clean, predictable output
+
+### Technical Details
+- **File:** `includes/helpers/class-wta-faq-renderer.php`
+  - Re-enabled `generate_faq_schema_tag()` method
+  - Called directly from `render_faq_section()`
+  - Generates standalone FAQPage schema
+  
+- **File:** `includes/class-wta-core.php`
+  - Disabled `register_faq_schema()` hook
+  - No longer using Yoast filter integration
+
+### Expected Schema Structure
+```
+Separate JSON-LD scripts:
+1. Yoast's schema (WebPage, BreadcrumbList, WebSite, Place)
+2. ItemList schemas (from shortcodes)
+3. FAQPage schema (from FAQ section)
+
+Google reads all and combines correctly.
+```
+
+### Why Separate is OK
+- Multiple JSON-LD scripts per page is standard
+- Google's parser handles it perfectly
+- Many major sites use this pattern
+- More reliable than trying to modify Yoast's output
+
 ## [2.35.29] - 2025-12-13
 
 ### Added

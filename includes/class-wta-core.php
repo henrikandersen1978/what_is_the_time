@@ -32,8 +32,11 @@ class WTA_Core {
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
 		
-		// FAQ schema integration with Yoast - array type ['WebPage', 'FAQPage'] (v2.35.21)
-		add_action( 'wp', array( $this, 'register_faq_schema' ) );
+		// FAQ schema via direct JSON-LD injection (v2.35.30)
+		// Yoast SEO 26.5+ doesn't pass @graph to wpseo_schema_graph filter
+		// Instead, FAQ schema added directly in render_faq_section() as <script> tag
+		// Same pattern as ItemList - proven stable
+		// add_action( 'wp', array( $this, 'register_faq_schema' ) ); // DISABLED v2.35.30
 		
 		// Check for updates after WordPress is fully loaded
 		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
