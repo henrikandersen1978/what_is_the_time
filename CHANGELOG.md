@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.35] - 2025-12-13
+
+### Changed
+- **Global Time Comparison - Random Country Selection:**
+  - Now selects **random countries per continent** (not just largest)
+  - Fetches ALL countries in continent, then shuffles using daily seed
+  - Ensures maximum variation in displayed countries each day
+  - Combined with existing random city selection (top 5 per country)
+  - **Result**: Daily variation at both COUNTRY and CITY level for superior internal link diversity
+  - Better SEO through broader geographic representation across the site
+
 ## [2.35.34] - 2025-12-13
 
 ### Changed

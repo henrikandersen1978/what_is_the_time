@@ -936,30 +936,40 @@ class WTA_Shortcodes {
 	private function get_cities_for_continent( $continent_code, $current_tz, $current_post_id, $count ) {
 		global $wpdb;
 		
-		// Get top countries in continent (by max city population)
-		$countries = $wpdb->get_results( $wpdb->prepare( "
-			SELECT pm_cc.meta_value as country_code, MAX(CAST(pm_pop.meta_value AS UNSIGNED)) as max_pop
+		// Get ALL countries in continent (not just top N, for better randomness)
+		$all_countries = $wpdb->get_col( $wpdb->prepare( "
+			SELECT DISTINCT pm_cc.meta_value as country_code
 			FROM {$wpdb->posts} p
 			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
 			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
 			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
 			AND pm_type.meta_value = 'city'
 			AND pm_cont.meta_value = %s
 			AND pm_cc.meta_value IS NOT NULL
-			GROUP BY pm_cc.meta_value
-			ORDER BY max_pop DESC
-			LIMIT %d
-		", WTA_POST_TYPE, $continent_code, $count * 2 ) ); // Fetch 2x more countries for better randomness
+		", WTA_POST_TYPE, $continent_code ) );
 		
 		$cities = array();
 		
-		// For each country, pick one random city from top 5
-		foreach ( $countries as $country ) {
+		if ( empty( $all_countries ) ) {
+			return $cities;
+		}
+		
+		// Seed random with daily date + current_post_id + continent for consistent randomness
+		$seed = intval( date( 'Ymd' ) ) + $current_post_id + crc32( $continent_code );
+		mt_srand( $seed );
+		
+		// Shuffle countries randomly (changes daily)
+		shuffle( $all_countries );
+		
+		// Select first $count countries from shuffled list
+		$selected_countries = array_slice( $all_countries, 0, $count );
+		
+		// For each selected country, pick one random city from top 5
+		foreach ( $selected_countries as $country_code ) {
 			$city_id = $this->get_random_city_for_country( 
-				$country->country_code, 
+				$country_code, 
 				$current_post_id, 
 				$current_tz 
 			);
