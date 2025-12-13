@@ -176,6 +176,15 @@ class WTA_FAQ_Renderer {
 			return $data;
 		}
 		
+		// Debug: Log that filter is running
+		WTA_Logger::info( 'FAQ schema filter running', array(
+			'post_id'     => $post_id,
+			'graph_keys'  => isset( $data['@graph'] ) ? array_keys( $data['@graph'] ) : 'NO GRAPH',
+			'graph_types' => isset( $data['@graph'] ) ? array_map( function($node) {
+				return isset( $node['@type'] ) ? $node['@type'] : 'NO TYPE';
+			}, $data['@graph'] ) : 'NO GRAPH'
+		) );
+		
 		// Build mainEntity array
 		$faqs = $faq_data['faqs'];
 		$main_entity = array();
@@ -210,7 +219,7 @@ class WTA_FAQ_Renderer {
 			$data['@graph'] = array();
 		}
 		
-		// Find WebPage node
+		// Find WebPage node (works with both array and object @graph)
 		$webpage_index = null;
 		foreach ( $data['@graph'] as $index => $node ) {
 			if ( ! isset( $node['@type'] ) ) {
@@ -243,14 +252,37 @@ class WTA_FAQ_Renderer {
 			// Add FAQ mainEntity (preserves all other Yoast properties!)
 			$data['@graph'][$webpage_index]['mainEntity'] = $main_entity;
 			
+			// Log success for debugging
+			WTA_Logger::info( 'FAQ schema injected into WebPage node', array(
+				'post_id'      => $post_id,
+				'webpage_key'  => $webpage_index,
+				'faq_count'    => count( $main_entity )
+			) );
+			
 		} else {
-			// Fallback: No WebPage found, add standalone FAQPage
-			// This should rarely happen, but ensures FAQ schema is always present
-			$data['@graph'][] = array(
+			// Fallback: No WebPage found, find next available numeric key
+			// Yoast uses object with numeric keys ("0", "1", "2"), not array
+			// We need to add at next numeric key to avoid nested @graph
+			$max_key = 0;
+			foreach ( array_keys( $data['@graph'] ) as $key ) {
+				if ( is_numeric( $key ) && $key > $max_key ) {
+					$max_key = $key;
+				}
+			}
+			$next_key = $max_key + 1;
+			
+			$data['@graph'][$next_key] = array(
 				'@type'      => 'FAQPage',
 				'@id'        => get_permalink( $post_id ) . '#faq',
 				'mainEntity' => $main_entity,
 			);
+			
+			// Log fallback for debugging
+			WTA_Logger::warning( 'FAQ schema added as fallback (WebPage not found)', array(
+				'post_id'    => $post_id,
+				'graph_keys' => array_keys( $data['@graph'] ),
+				'next_key'   => $next_key
+			) );
 		}
 		
 		return $data;

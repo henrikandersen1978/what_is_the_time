@@ -2,6 +2,63 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.27] - 2025-12-13
+
+### Fixed
+- **FAQ Schema - Nested @graph Bug** 🐛
+  - Fixed invalid nested "@graph" structure in schema output
+  - Yoast uses object with numeric keys ("0", "1", "2"), not array
+  - Fallback was using `$data['@graph'][] = ...` which creates nested "@graph" key
+  - Now finds next numeric key and adds FAQPage correctly
+  - Prevents "Ikke-angivet type" schema validation error
+
+### Added
+- **Debug Logging for FAQ Schema** 🔍
+  - Added logging when filter runs successfully
+  - Added logging when WebPage not found (fallback)
+  - Logs graph keys and types for debugging
+  - Helps diagnose why WebPage node not found
+
+### Technical Details
+- **File:** `includes/helpers/class-wta-faq-renderer.php`
+  - Fallback now calculates next numeric key:
+    ```php
+    $max_key = 0;
+    foreach ( array_keys( $data['@graph'] ) as $key ) {
+        if ( is_numeric( $key ) && $key > $max_key ) {
+            $max_key = $key;
+        }
+    }
+    $next_key = $max_key + 1;
+    $data['@graph'][$next_key] = array(...);  // Not []
+    ```
+  - Added WTA_Logger calls for success and fallback scenarios
+  - Debug logs show graph keys and node types
+
+### The Problem
+**Before:**
+```json
+"@graph": {
+  "0": { "@type": "WebPage" },
+  "1": { "@type": "BreadcrumbList" },
+  "2": { "@type": "WebSite" },
+  "@graph": [{ "@type": "FAQPage" }]  ← Nested! Invalid!
+}
+```
+
+**After:**
+```json
+"@graph": {
+  "0": { "@type": ["WebPage", "FAQPage"], "mainEntity": [...] },
+  "1": { "@type": "BreadcrumbList" },
+  "2": { "@type": "WebSite" }
+}
+```
+
+### Next Steps
+Check logs to see if WebPage is found correctly now.
+If still using fallback, logs will show why.
+
 ## [2.35.26] - 2025-12-13
 
 ### Added
