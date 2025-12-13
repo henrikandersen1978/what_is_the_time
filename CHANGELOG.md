@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.23] - 2025-12-13
+
+### Fixed
+- **Force Regenerate - Missing Dependencies** 🔧
+  - Fixed fatal error when using Force Regenerate tool
+  - Added proper loading of all required dependencies before processor instantiation
+  - Now loads: WTA_Queue, WTA_Logger, WTA_OpenAI_Client, WTA_FAQ_Generator, WTA_FAQ_Renderer
+  - Prevents "Class not found" errors
+
+### Technical Details
+- **File:** `includes/admin/views/force-regenerate.php`
+  - Added `require_once` for all WTA_AI_Processor dependencies
+  - Ensures clean instantiation without missing class errors
+  - Dependencies loaded in correct order
+
 ## [2.35.22] - 2025-12-13
 
 ### Added

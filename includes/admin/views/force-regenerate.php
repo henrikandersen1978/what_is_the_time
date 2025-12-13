@@ -16,13 +16,19 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 	$post_id = absint( $_POST['post_id'] );
 	
 	if ( $post_id > 0 && get_post_type( $post_id ) === WTA_POST_TYPE ) {
-		// Run AI processor immediately
-		require_once WTA_PLUGIN_DIR . '/includes/scheduler/class-wta-ai-processor.php';
-		
-		$processor = new WTA_AI_Processor();
 		$start_time = microtime( true );
 		
 		try {
+			// Load all required dependencies
+			require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-queue.php';
+			require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-logger.php';
+			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-openai-client.php';
+			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php';
+			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php';
+			require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-ai-processor.php';
+			
+			// Run AI processor immediately
+			$processor = new WTA_AI_Processor();
 			$processor->process( array(
 				'id'      => 0,
 				'payload' => array(
