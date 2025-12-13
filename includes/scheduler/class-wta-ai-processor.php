@@ -11,6 +11,101 @@
 class WTA_AI_Processor {
 
 	/**
+	 * Force regenerate single post immediately (no queue).
+	 * 
+	 * Dedicated method for manual regeneration that bypasses queue system entirely.
+	 * Copies logic from process_item() but without queue dependencies.
+	 *
+	 * @since    2.35.26
+	 * @param    int  $post_id  Post ID to regenerate.
+	 * @return   bool           Success or failure.
+	 */
+	public function force_regenerate_single( $post_id ) {
+		try {
+			$type = get_post_meta( $post_id, 'wta_type', true );
+			$force_ai = true; // Always use real AI for manual regeneration
+			
+			// Validate post exists
+			$post = get_post( $post_id );
+			if ( ! $post ) {
+				WTA_Logger::warning( 'Post not found for AI generation', array( 'post_id' => $post_id ) );
+				return false;
+			}
+			
+			// Generate content
+			$result = $this->generate_ai_content( $post_id, $type, $force_ai );
+			
+			if ( false === $result ) {
+				WTA_Logger::error( 'AI content generation failed', array( 'post_id' => $post_id ) );
+				return false;
+			}
+			
+			// Generate FAQ for cities
+			if ( 'city' === $type ) {
+				$test_mode = get_option( 'wta_test_mode', 0 );
+				$use_test_mode = $test_mode && ! $force_ai;
+				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
+				
+				if ( false !== $faq_data && ! empty( $faq_data ) ) {
+					// Save FAQ data for schema
+					update_post_meta( $post_id, 'wta_faq_data', $faq_data );
+					
+					// Render FAQ HTML and append to post content
+					$city_name = get_the_title( $post_id );
+					$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+					
+					if ( ! empty( $faq_html ) ) {
+						$result['content'] .= "\n\n" . $faq_html;
+						WTA_Logger::info( 'FAQ generated and appended to content', array( 
+							'post_id'   => $post_id,
+							'force_ai'  => $force_ai,
+							'faq_count' => count( $faq_data['faqs'] )
+						) );
+					}
+				} else {
+					WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
+				}
+			}
+			
+			// Update post with content (including FAQ HTML if city)
+			wp_update_post( array(
+				'ID'           => $post_id,
+				'post_content' => $result['content'],
+				'post_status'  => 'publish',
+			) );
+			
+			// Update Yoast SEO meta if available
+			if ( isset( $result['yoast_title'] ) ) {
+				update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+				// Only update H1 for continents and countries, NOT cities
+				if ( 'city' !== $type ) {
+					update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
+				}
+			}
+			if ( isset( $result['yoast_desc'] ) ) {
+				update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
+			}
+			
+			// Mark as done
+			update_post_meta( $post_id, 'wta_ai_status', 'done' );
+			
+			WTA_Logger::info( 'AI content generated and post published (force regenerate)', array(
+				'post_id' => $post_id,
+				'type'    => $type,
+			) );
+			
+			return true;
+			
+		} catch ( Exception $e ) {
+			WTA_Logger::error( 'Failed to force regenerate post', array(
+				'post_id' => $post_id,
+				'error'   => $e->getMessage(),
+			) );
+			return false;
+		}
+	}
+
+	/**
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every minute.

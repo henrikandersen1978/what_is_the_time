@@ -19,10 +19,7 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 		$start_time = microtime( true );
 		
 		try {
-			// Load all required dependencies (v2.35.25)
-			if ( ! class_exists( 'WTA_Queue' ) ) {
-				require_once WTA_PLUGIN_DIR . '/includes/core/class-wta-queue.php';
-			}
+			// Load all required dependencies (v2.35.26)
 			if ( ! class_exists( 'WTA_Logger' ) ) {
 				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-logger.php';
 			}
@@ -36,24 +33,23 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 				require_once WTA_PLUGIN_DIR . '/includes/scheduler/class-wta-ai-processor.php';
 			}
 			
-			// Queue the post for AI generation
-			WTA_Queue::add( 'ai_content', array(
-				'post_id'  => $post_id,
-				'type'     => get_post_meta( $post_id, 'wta_type', true ),
-				'force_ai' => true  // Always use real AI (ignore test mode)
-			), 'force_regenerate_' . $post_id );
-			
-			// Process the queue immediately
+			// Force regenerate single post (NO queue involvement)
 			$processor = new WTA_AI_Processor();
-			$processor->process_batch();
+			$success = $processor->force_regenerate_single( $post_id );
 			
 			$elapsed = round( microtime( true ) - $start_time, 2 );
 			$post_title = get_the_title( $post_id );
 			
-			echo '<div class="notice notice-success is-dismissible"><p>';
-			echo '<strong>✅ Success!</strong> "' . esc_html( $post_title ) . '" (ID: ' . $post_id . ') regenerated in ' . $elapsed . ' seconds.';
-			echo ' <a href="' . get_permalink( $post_id ) . '" target="_blank">View page</a>';
-			echo '</p></div>';
+			if ( $success ) {
+				echo '<div class="notice notice-success is-dismissible"><p>';
+				echo '<strong>✅ Success!</strong> "' . esc_html( $post_title ) . '" (ID: ' . $post_id . ') regenerated in ' . $elapsed . ' seconds.';
+				echo ' <a href="' . get_permalink( $post_id ) . '" target="_blank">View page</a>';
+				echo '</p></div>';
+			} else {
+				echo '<div class="notice notice-error"><p>';
+				echo '<strong>❌ Error:</strong> Failed to regenerate "' . esc_html( $post_title ) . '". Check logs for details.';
+				echo '</p></div>';
+			}
 			
 		} catch ( Exception $e ) {
 			echo '<div class="notice notice-error"><p>';

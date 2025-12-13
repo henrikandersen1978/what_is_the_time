@@ -2,6 +2,57 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.26] - 2025-12-13
+
+### Added
+- **Force Regenerate - Dedicated Single Post Method** 🎯
+  - New `force_regenerate_single()` method in WTA_AI_Processor
+  - Completely bypasses queue system
+  - Only processes the ONE specific post requested
+  - No infinite loops or processing all pending items
+  
+### Fixed
+- **Force Regenerate - Infinite Loop** 🔧
+  - Fixed issue where process_batch() processed ALL pending queue items
+  - If 1000+ items in queue, would process them all
+  - Now uses dedicated method that processes only target post
+  - No queue involvement whatsoever
+
+### Technical Details
+- **File:** `includes/scheduler/class-wta-ai-processor.php`
+  - Added new public method: `force_regenerate_single( $post_id )`
+  - Copies logic from `process_item()` without queue dependencies
+  - No calls to WTA_Queue::mark_processing(), mark_done(), mark_failed()
+  - Returns boolean: true on success, false on failure
+  - Always uses `force_ai = true` (ignores test mode)
+  
+- **File:** `includes/admin/views/force-regenerate.php`
+  - Changed from queue + process_batch() approach
+  - Now calls force_regenerate_single() directly
+  - No WTA_Queue dependency needed
+  - Cleaner error handling with success/failure messages
+
+### How It Works Now
+```
+User clicks "Regenerate Now"
+  ↓
+Load dependencies (Logger, FAQ Generator, FAQ Renderer, AI Processor)
+  ↓
+Call: $processor->force_regenerate_single( $post_id )
+  ↓
+Generate AI content → Generate FAQ → Save post → Update meta
+  ↓
+Show success (30-60 seconds)
+```
+
+### Benefits
+- ✅ No queue system involvement
+- ✅ Only processes requested post
+- ✅ No risk of infinite loops
+- ✅ Predictable execution time
+- ✅ Clean success/failure feedback
+- ✅ Perfect for testing and development
+
 ## [2.35.25] - 2025-12-13
 
 ### Fixed
