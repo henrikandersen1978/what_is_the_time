@@ -2,6 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.24] - 2025-12-13
+
+### Fixed
+- **Force Regenerate - Correct File Paths** 🔧
+  - Fixed incorrect file paths for dependencies
+  - `WTA_Logger` is in `includes/helpers/` not `includes/core/`
+  - Removed non-existent `class-wta-openai-client.php` (not used)
+  - Added leading slashes to all paths for consistency
+  - Added `class_exists()` checks to prevent duplicate loading
+
+### Technical Details
+- **File:** `includes/admin/views/force-regenerate.php`
+  - Corrected paths:
+    - ✅ `includes/core/class-wta-queue.php`
+    - ✅ `includes/helpers/class-wta-logger.php` (was incorrectly in core/)
+    - ✅ `includes/helpers/class-wta-faq-generator.php`
+    - ✅ `includes/helpers/class-wta-faq-renderer.php`
+    - ❌ Removed: `class-wta-openai-client.php` (doesn't exist)
+  - Added conditional loading with `class_exists()`
+  - Added leading slashes to WTA_PLUGIN_DIR paths
+
 ## [2.35.23] - 2025-12-13
 
 ### Fixed

@@ -19,13 +19,22 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 		$start_time = microtime( true );
 		
 		try {
-			// Load all required dependencies
-			require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-queue.php';
-			require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-logger.php';
-			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-openai-client.php';
-			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php';
-			require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php';
-			require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-ai-processor.php';
+			// Load all required dependencies (correct paths v2.35.24)
+			if ( ! class_exists( 'WTA_Queue' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/core/class-wta-queue.php';
+			}
+			if ( ! class_exists( 'WTA_Logger' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-logger.php';
+			}
+			if ( ! class_exists( 'WTA_FAQ_Generator' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-faq-generator.php';
+			}
+			if ( ! class_exists( 'WTA_FAQ_Renderer' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-faq-renderer.php';
+			}
+			if ( ! class_exists( 'WTA_AI_Processor' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/scheduler/class-wta-ai-processor.php';
+			}
 			
 			// Run AI processor immediately
 			$processor = new WTA_AI_Processor();
