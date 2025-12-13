@@ -88,7 +88,13 @@ class WTA_FAQ_Renderer {
 		</section>
 		
 		<?php
-		return ob_get_clean();
+		$output = ob_get_clean();
+		
+		// Add FAQ schema as direct JSON-LD script tag (v2.35.20)
+		// Pattern: Same as ItemList schema - direct injection, not via Yoast filter
+		$output .= self::generate_faq_schema_tag( $faq_data, $city_name );
+		
+		return $output;
 	}
 
 	/**
@@ -242,6 +248,70 @@ class WTA_FAQ_Renderer {
 		}
 		
 		return $data;
+	}
+	
+	/**
+	 * Generate standalone FAQ schema as JSON-LD script tag.
+	 * 
+	 * Follows ItemList schema pattern - direct injection, not via Yoast filter.
+	 * This prevents "Ikke-angivet type" conflicts with Yoast's WebPage schema.
+	 * 
+	 * @since    2.35.20
+	 * @param    array  $faq_data  FAQ data with 'faqs' array.
+	 * @param    string $city_name City name for schema title.
+	 * @return   string            JSON-LD script tag with FAQPage schema.
+	 */
+	private static function generate_faq_schema_tag( $faq_data, $city_name = '' ) {
+		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+			return '';
+		}
+		
+		$faqs = $faq_data['faqs'];
+		$main_entity = array();
+		
+		foreach ( $faqs as $faq ) {
+			if ( empty( $faq['question'] ) || empty( $faq['answer'] ) ) {
+				continue;
+			}
+			
+			// Clean answer for schema: strip ALL HTML and normalize whitespace
+			$answer_text = wp_strip_all_tags( $faq['answer'] );
+			// Remove all <br> variants that might have been in original
+			$answer_text = str_replace( array( '<br>', '<br/>', '<br />', '<br/ >' ), ' ', $answer_text );
+			// Multiple spaces → single space
+			$answer_text = preg_replace( '/\s+/', ' ', $answer_text );
+			$answer_text = trim( $answer_text );
+			
+			$main_entity[] = array(
+				'@type'          => 'Question',
+				'name'           => $faq['question'],
+				'acceptedAnswer' => array(
+					'@type' => 'Answer',
+					'text'  => $answer_text,
+				),
+			);
+		}
+		
+		if ( empty( $main_entity ) ) {
+			return '';
+		}
+		
+		$schema_name = ! empty( $city_name ) 
+			? sprintf( 'Ofte stillede spørgsmål om tid i %s', $city_name )
+			: 'Ofte stillede spørgsmål om tid';
+		
+		$schema = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'FAQPage',
+			'name'       => $schema_name,
+			'mainEntity' => $main_entity,
+		);
+		
+		$output = "\n" . '<script type="application/ld+json">' . "\n";
+		$output .= wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+		$output .= "\n" . '</script>' . "\n";
+		
+		return $output;
 	}
 }
 

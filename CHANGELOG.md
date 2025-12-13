@@ -2,6 +2,53 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.20] - 2025-12-13
+
+### Fixed
+- **`<br>` Tags in FAQ - Complete Fix** 🧹
+  - Disabled `wpautop()` for `wta_location` post type
+  - WordPress was auto-adding `<br>` tags when saving content via `wp_update_post()`
+  - FAQ HTML now renders clean without unwanted line breaks
+  - Uses priority 0 filter to run before wpautop (priority 10)
+  
+- **FAQ Schema - No More Conflicts** ✨
+  - Changed from Yoast filter integration to direct JSON-LD injection
+  - Follows same pattern as ItemList schema (proven stable)
+  - Eliminates "Ikke-angivet type" error in schema validator
+  - FAQ schema now added as separate `<script type="application/ld+json">` tag
+  - No longer tries to modify Yoast's WebPage node
+
+### Technical Details
+- **File:** `includes/class-wta-core.php`
+  - Added `the_content` filter (priority 0) to disable wpautop for our post type
+  - Disabled Yoast FAQ schema integration (commented out `register_faq_schema()`)
+  
+- **File:** `includes/helpers/class-wta-faq-renderer.php`  
+  - Added `generate_faq_schema_tag()` method for direct JSON-LD injection
+  - Schema appended to FAQ section HTML in `render_faq_section()`
+  - Pattern: Same as ItemList - standalone schema, not via Yoast filter
+
+### Why This Fixes Both Issues
+
+**`<br>` Problem:**
+WordPress's `wpautop()` function automatically converts:
+- Newlines → `<br>` tags
+- Double newlines → `<p>` tags
+- Multiple spaces → Non-breaking spaces
+
+By disabling wpautop for our post type, FAQ HTML is saved and displayed exactly as generated.
+
+**Schema Problem:**
+Yoast SEO's schema graph is complex - trying to modify WebPage nodes creates conflicts.
+Direct JSON-LD injection is simpler, more reliable, and Google reads it correctly.
+
+### Impact
+- ✅ Clean FAQ HTML - no `<br>` tags
+- ✅ Perfect CSS layout with spacing
+- ✅ FAQ schema validates correctly
+- ✅ No "Ikke-angivet type" errors
+- ✅ Separate FAQPage schema works alongside Yoast's WebPage schema
+
 ## [2.35.19] - 2025-12-12
 
 ### Fixed

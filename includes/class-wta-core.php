@@ -32,8 +32,9 @@ class WTA_Core {
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
 		
-		// Register FAQ schema integration after WordPress is loaded (v2.35.15)
-		add_action( 'wp', array( $this, 'register_faq_schema' ) );
+		// FAQ schema now injected directly as JSON-LD in render_faq_section() (v2.35.20)
+		// No longer using Yoast filter integration to avoid "Ikke-angivet type" conflicts
+		// add_action( 'wp', array( $this, 'register_faq_schema' ) ); // DISABLED v2.35.20
 		
 		// Check for updates after WordPress is fully loaded
 		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
@@ -216,24 +217,33 @@ class WTA_Core {
 		// Register shortcodes
 		$shortcodes = new WTA_Shortcodes();
 		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
+		
+		// Disable wpautop for our post type (v2.35.20)
+		// Prevents WordPress from auto-adding <br> and <p> tags to our structured content
+		add_filter( 'the_content', function( $content ) {
+			if ( WTA_POST_TYPE === get_post_type() ) {
+				remove_filter( 'the_content', 'wpautop' );
+			}
+			return $content;
+		}, 0 ); // Priority 0 = run before wpautop (priority 10)
 	}
 	
 	/**
 	 * Register FAQ schema integration.
 	 * 
-	 * Called on 'wp' hook to ensure Yoast is loaded.
-	 * Must be registered directly (not via loader) because it's a static method.
-	 *
+	 * DISABLED v2.35.20: FAQ schema now injected as direct JSON-LD to avoid conflicts.
+	 * 
 	 * @since    2.35.15
+	 * @deprecated 2.35.20 Use direct JSON-LD injection instead
 	 * @access   public
 	 */
-	public function register_faq_schema() {
-		// FAQ Schema integration with Yoast (v2.35.0)
-		// Uses static method, so must be registered directly with add_filter
-		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
-			add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 11, 2 );
-		}
-	}
+	// public function register_faq_schema() {
+	// 	// FAQ Schema integration with Yoast (v2.35.0)
+	// 	// Uses static method, so must be registered directly with add_filter
+	// 	if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
+	// 		add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 11, 2 );
+	// 	}
+	// }
 
 	/**
 	 * Register Action Scheduler hooks.
