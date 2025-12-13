@@ -2,6 +2,53 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.22] - 2025-12-13
+
+### Added
+- **Force Regenerate Tool** 🚀
+  - New admin page for instant AI content regeneration
+  - Bypass queue system for immediate testing
+  - Enter post ID and click "Regenerate Now"
+  - Runs synchronously (30-60 seconds)
+  - Shows execution time and success/error message
+  - Quick links to recent posts with IDs
+  - Perfect for testing AI content changes without waiting for cron
+
+### Technical Details
+- **File:** `includes/admin/views/force-regenerate.php`
+  - New admin interface for manual regeneration
+  - Form with post ID input
+  - Calls `WTA_AI_Processor` directly (bypass queue)
+  - Always uses `force_ai` flag (ignores test mode)
+  - Shows recent posts with IDs, types, and AI status
+  
+- **File:** `includes/admin/class-wta-admin.php`
+  - Added submenu "🚀 Force Regenerate"
+  - Added `display_force_regenerate_page()` method
+
+### Usage
+
+1. Go to **World Time AI** → **🚀 Force Regenerate**
+2. Enter post ID (find in edit URL: `post.php?post=12345`)
+3. Click "Regenerate Now"
+4. Wait 30-60 seconds for completion
+5. View updated page immediately
+
+### Benefits
+- ✅ No waiting for cron jobs
+- ✅ Instant feedback for testing
+- ✅ Always uses real AI (ignores test mode)
+- ✅ Shows execution time
+- ✅ Direct link to view result
+- ✅ Perfect for development workflow
+
+### Use Cases
+- Testing AI prompt changes
+- Regenerating specific problematic pages
+- Verifying FAQ rendering
+- Testing schema integration
+- Quick content updates during development
+
 ## [2.35.21] - 2025-12-13
 
 ### Changed

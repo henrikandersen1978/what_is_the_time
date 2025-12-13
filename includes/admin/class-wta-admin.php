@@ -87,6 +87,15 @@ class WTA_Admin {
 			array( $this, 'display_debug_page' )
 		);
 
+		add_submenu_page(
+			'world-time-ai',
+			__( 'Force Regenerate', WTA_TEXT_DOMAIN ),
+			__( '🚀 Force Regenerate', WTA_TEXT_DOMAIN ),
+			'manage_options',
+			'wta-force-regenerate',
+			array( $this, 'display_force_regenerate_page' )
+		);
+
 		// Add submenu for All Locations (CPT)
 		add_submenu_page(
 			'world-time-ai',
@@ -261,6 +270,15 @@ class WTA_Admin {
 	 */
 	public function display_debug_page() {
 		include WTA_PLUGIN_DIR . 'includes/admin/views/debug.php';
+	}
+
+	/**
+	 * Display Force Regenerate page.
+	 *
+	 * @since    2.35.22
+	 */
+	public function display_force_regenerate_page() {
+		include WTA_PLUGIN_DIR . 'includes/admin/views/force-regenerate.php';
 	}
 
 	/**
