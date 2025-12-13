@@ -61,9 +61,23 @@ class WTA_FAQ_Renderer {
 						<div class="wta-faq-answer" id="faq-answer-<?php echo esc_attr( $index ); ?>" hidden>
 							<div class="wta-faq-answer-content">
 								<?php 
-								// Remove <br> tags and use CSS spacing instead
-								$answer_clean = str_replace( array( '<br>', '<br/>', '<br />' ), ' ', $faq['answer'] );
-								echo wp_kses_post( $answer_clean ); 
+								// Clean answer text: strip ALL HTML including <br>
+								// Then allow only specific tags back (strong, em, a)
+								$answer = $faq['answer'];
+								
+								// First strip all <br> variants
+								$answer = str_replace( array( '<br>', '<br/>', '<br />', '<br/ >' ), ' ', $answer );
+								
+								// Allow only safe HTML tags
+								$allowed_html = array(
+									'strong' => array(),
+									'b'      => array(),
+									'em'     => array(),
+									'i'      => array(),
+									'a'      => array( 'href' => array(), 'title' => array() ),
+								);
+								
+								echo wp_kses( $answer, $allowed_html ); 
 								?>
 							</div>
 						</div>
@@ -187,15 +201,36 @@ class WTA_FAQ_Renderer {
 		// Find existing WebPage node and convert to FAQPage (Yoast pattern)
 		$webpage_index = null;
 		foreach ( $data['@graph'] as $index => $node ) {
-			if ( isset( $node['@type'] ) && 'WebPage' === $node['@type'] ) {
-				$webpage_index = $index;
-				break;
+			if ( isset( $node['@type'] ) ) {
+				// Check for both string and array @type
+				$node_types = is_array( $node['@type'] ) ? $node['@type'] : array( $node['@type'] );
+				
+				if ( in_array( 'WebPage', $node_types, true ) ) {
+					$webpage_index = $index;
+					break;
+				}
 			}
 		}
 		
 		if ( null !== $webpage_index ) {
 			// Convert WebPage to FAQPage and add mainEntity
-			$data['@graph'][$webpage_index]['@type'] = 'FAQPage';
+			// Preserve @type as array if it was array, or convert to FAQPage
+			$existing_types = is_array( $data['@graph'][$webpage_index]['@type'] ) 
+				? $data['@graph'][$webpage_index]['@type'] 
+				: array( $data['@graph'][$webpage_index]['@type'] );
+			
+			// Replace WebPage with FAQPage in types array
+			$new_types = array();
+			foreach ( $existing_types as $type ) {
+				if ( 'WebPage' === $type ) {
+					$new_types[] = 'FAQPage';
+				} else {
+					$new_types[] = $type;
+				}
+			}
+			
+			// Update @type (as array if multiple, string if single)
+			$data['@graph'][$webpage_index]['@type'] = count( $new_types ) === 1 ? $new_types[0] : $new_types;
 			$data['@graph'][$webpage_index]['mainEntity'] = $main_entity;
 		} else {
 			// Fallback: Add as separate FAQPage node if no WebPage found

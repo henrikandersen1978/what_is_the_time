@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.19] - 2025-12-12
+
+### Fixed
+- **FAQ Schema - Handle Array @type** 🔧
+  - Yoast sometimes uses array for @type (e.g., `["WebPage", "ItemPage"]`)
+  - Now checks both string and array @type formats
+  - Preserves other types when converting WebPage → FAQPage
+  - Handles mixed type arrays correctly
+  
+- **`<br>` Tags - Aggressive Removal** 🧹
+  - Changed from `wp_kses_post()` to `wp_kses()` with strict allowed tags
+  - Strips ALL `<br>` variants before rendering
+  - Only allows: strong, b, em, i, a (semantic tags only)
+  - Prevents WordPress autop from injecting `<br>` tags
+
+### Technical Details
+- **File:** `includes/helpers/class-wta-faq-renderer.php`
+  - `inject_faq_schema()`: Check `in_array( 'WebPage', $node_types )`
+  - Handles @type as both string and array
+  - Preserves non-WebPage types in array
+  - HTML rendering: `wp_kses()` with custom allowed tags list
+  - Aggressive `<br>` stripping with multiple variants
+
+### Why This Fixes Schema
+Yoast SEO can set @type as:
+- String: `"@type": "WebPage"` 
+- Array: `"@type": ["WebPage", "ItemPage"]`
+
+Our old code only checked string, so array @types were missed.
+Now we convert array to FAQPage correctly and preserve other types.
+
+### Impact
+- ✅ FAQ schema works even when Yoast uses array @type
+- ✅ No more `<br>` tags in FAQ HTML output
+- ✅ Clean, semantic markup with CSS-only spacing
+- ✅ Schema validator should show clean FAQPage structure
+
 ## [2.35.18] - 2025-12-12
 
 ### Fixed
