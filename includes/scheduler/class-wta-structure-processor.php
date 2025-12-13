@@ -66,11 +66,20 @@ class WTA_Structure_Processor {
 		}
 
 	// 4. Finally process individual cities (only after cities_import is done)
-	// Dynamic batch size optimized for Wikidata API with safety margins:
-	// Test mode: 40 cities (fast, 20 req/sec = 10% Wikidata capacity, ~2 days for 150k)
-	// Normal mode: 30 cities (safe, 5 req/sec = 2.5% Wikidata capacity, ~3.5 days for 150k)
+	// Dynamic batch size based on cron interval and test mode
+	// Each city: ~0.5s (Wikidata + GPS lookup)
+	$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
 	$test_mode = get_option( 'wta_test_mode', 0 );
-	$batch_size = $test_mode ? 40 : 30;
+	
+	if ( $test_mode ) {
+		// Test mode: Faster processing
+		// 1-min: 40 cities (~20s), 5-min: 200 cities (~100s)
+		$batch_size = ( $cron_interval >= 300 ) ? 200 : 40;
+	} else {
+		// Normal mode: Conservative for API limits
+		// 1-min: 10 cities (~5s), 5-min: 50 cities (~25s)
+		$batch_size = ( $cron_interval >= 300 ) ? 50 : 10;
+	}
 	$cities = WTA_Queue::get_pending( 'city', $batch_size );
 	if ( ! empty( $cities ) ) {
 		WTA_Logger::info( 'Processing cities', array( 'count' => count( $cities ) ) );

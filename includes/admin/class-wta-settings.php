@@ -38,6 +38,12 @@ class WTA_Settings {
 		register_setting( 'wta_timezone_language', 'wta_base_language', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'wta_timezone_language', 'wta_base_language_description', array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 		register_setting( 'wta_timezone_language', 'wta_complex_countries', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		
+		// Background processing interval
+		register_setting( 'wta_data_import_settings_group', 'wta_cron_interval', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 60
+		) );
 
 		// AI Prompts
 		$prompt_types = array(

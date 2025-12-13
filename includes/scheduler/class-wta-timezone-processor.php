@@ -21,8 +21,14 @@ class WTA_Timezone_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// Conservative batch size for reliable processing
-		$items = WTA_Queue::get_pending( 'timezone', 8 );
+		// Dynamic batch size based on cron interval
+		// Each item: ~1.5s (API call + 1.5s delay)
+		$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
+		
+		// 1-min: 8 items (~12s), 5-min: 20 items (~30s)
+		$batch_size = ( $cron_interval >= 300 ) ? 20 : 8;
+		
+		$items = WTA_Queue::get_pending( 'timezone', $batch_size );
 
 		if ( empty( $items ) ) {
 			return;

@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           2.35.31
+ * Version:           2.35.32
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '2.35.31' );
+define( 'WTA_VERSION', '2.35.32' );
 
 /**
  * Plugin directory path.
@@ -136,19 +136,28 @@ require WTA_PLUGIN_DIR . 'includes/class-wta-core.php';
  * @since 2.34.25
  */
 function wta_optimize_action_scheduler() {
+	// Get user-configured cron interval (60s or 300s)
+	$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
+	
+	// Calculate optimal time limits based on interval
+	if ( $cron_interval >= 300 ) {
+		// 5-minute interval: Allow longer processing (90% of interval)
+		$time_limit = 270;      // 4.5 minutes
+		$timeout_period = 600;  // 10 minutes
+		$failure_period = 600;  // 10 minutes
+	} else {
+		// 1-minute interval: Keep short to avoid overlap (83% of interval)
+		$time_limit = 50;       // 50 seconds
+		$timeout_period = 180;  // 3 minutes
+		$failure_period = 180;  // 3 minutes
+	}
+	
 	// ==========================================
-	// OPTIMIZED FOR 2 CONCURRENT RUNNERS (v2.35.13)
+	// OPTIMIZED FOR 2 CONCURRENT RUNNERS (v2.35.32)
 	// Action Scheduler's concurrent_batches is GLOBAL across all runners
 	// Reality: ~2 runners active (1 from WP-Cron + 1 from occasional async)
 	// Strategy: Optimize these 2 runners for maximum throughput within API limits
 	// ==========================================
-	
-	// ==========================================
-	// CONCURRENT BATCHES - Reflects Reality
-	// ==========================================
-	// Testing showed: Only 2 runners ever active, regardless of concurrent_batches setting
-	// concurrent_batches is a GLOBAL limit, not per-runner
-	// So we set this to 2 to match actual behavior and reduce overhead
 	
 	add_filter( 'action_scheduler_queue_runner_concurrent_batches', function( $batches ) {
 		return 2; // Realistic: WP-Cron + occasional async
@@ -158,39 +167,44 @@ function wta_optimize_action_scheduler() {
 	// BATCH SIZE - Maximize throughput per runner
 	// ==========================================
 	// With 2 runners × 300 batch size = 600 actions per cycle
-	// Within 3-minute time limit, respecting API rate limits:
+	// Respecting API rate limits:
 	// - Wikidata: 5 req/s per processor (0.2s delay) = safe under 200 req/s limit
 	// - TimeZoneDB: 0.4 req/s per processor (2.5s avg) = safe under 1 req/s limit  
-	// - OpenAI: Test mode = 0 requests, AI mode would need monitoring
+	// - OpenAI: Parallel API calls with Tier 5 limits
 	
 	add_filter( 'action_scheduler_queue_runner_batch_size', function( $size ) {
-		return 300; // 12× default, optimized for 3-min time limit
+		return 300; // 12× default
 	}, 999 );
 	
 	// ==========================================
-	// TIME LIMIT - Allow longer processing
+	// TIME LIMIT - Dynamic based on cron interval
 	// ==========================================
-	// 180s (3 minutes) gives adequate time for:
-	// - Structure: 300 items × 0.2s = 60s
-	// - Timezone: 300 items × 2.5s = 750s (but only 8-50 items per batch typically)
-	// - AI: 300 items × 2s = 600s (but test mode is faster)
+	// 1-min interval: 50s (83% of 60s - buffer for completion)
+	// 5-min interval: 270s (90% of 300s - max utilization with buffer)
 	
-	add_filter( 'action_scheduler_queue_runner_time_limit', function( $limit ) {
-		return 180; // 3 minutes per runner
+	add_filter( 'action_scheduler_queue_runner_time_limit', function( $limit ) use ( $time_limit ) {
+		return $time_limit;
 	}, 999 );
 	
 	// ==========================================
-	// TIMEOUT & FAILURE PERIODS
+	// TIMEOUT & FAILURE PERIODS - Dynamic
 	// ==========================================
-	// Longer periods prevent premature action resets during processing
+	// Prevents premature action resets during processing
 	
-	add_filter( 'action_scheduler_timeout_period', function( $timeout ) {
-		return 900; // 15 minutes
+	add_filter( 'action_scheduler_timeout_period', function( $timeout ) use ( $timeout_period ) {
+		return $timeout_period;
 	}, 999 );
 	
-	add_filter( 'action_scheduler_failure_period', function( $timeout ) {
-		return 900; // 15 minutes
+	add_filter( 'action_scheduler_failure_period', function( $timeout ) use ( $failure_period ) {
+		return $failure_period;
 	}, 999 );
+	
+	WTA_Logger::info( 'Action Scheduler optimized', array(
+		'cron_interval'   => $cron_interval . 's',
+		'time_limit'      => $time_limit . 's',
+		'timeout_period'  => $timeout_period . 's',
+		'failure_period'  => $failure_period . 's',
+	) );
 }
 
 // Hook early to ensure filters are applied before Action Scheduler runs

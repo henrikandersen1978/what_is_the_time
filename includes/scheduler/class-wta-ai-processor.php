@@ -113,11 +113,20 @@ class WTA_AI_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// Dynamic batch size based on test mode
-		// Test mode: 50 items (fast template generation, ~1.2s per city = 60s total)
-		// Normal mode: 10 items (slow AI generation, ~13s per city = 130s total)
+		// Dynamic batch size based on cron interval and test mode
+		$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		$batch_size = $test_mode ? 50 : 10;
+		
+		if ( $test_mode ) {
+			// Test mode: Fast template generation (~1s per city)
+			// 1-min: 50 cities, 5-min: 250 cities
+			$batch_size = ( $cron_interval >= 300 ) ? 250 : 50;
+		} else {
+			// AI mode with parallel calls: ~15s per city
+			// 1-min interval: 3 cities (45s - safe under 50s limit)
+			// 5-min interval: 15 cities (225s - safe under 270s limit)
+			$batch_size = ( $cron_interval >= 300 ) ? 15 : 3;
+		}
 		
 		// Get pending AI content items
 		$items = WTA_Queue::get_pending( 'ai_content', $batch_size );

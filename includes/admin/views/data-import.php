@@ -108,6 +108,47 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 			</form>
 		</div>
 
+		<!-- Background Processing Settings -->
+		<div class="wta-card wta-card-wide">
+			<h2><?php esc_html_e( 'Background Processing Settings', WTA_TEXT_DOMAIN ); ?></h2>
+			<form method="post" action="options.php">
+				<?php settings_fields( 'wta_data_import_settings_group' ); ?>
+				<table class="form-table">
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'Processing Frequency', WTA_TEXT_DOMAIN ); ?>
+						</th>
+						<td>
+							<?php $cron_interval = intval( get_option( 'wta_cron_interval', 60 ) ); ?>
+							<fieldset>
+								<label>
+									<input type="radio" name="wta_cron_interval" value="60" <?php checked( $cron_interval, 60 ); ?>>
+									<strong><?php esc_html_e( '1 minute', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Quick feedback, smaller batches', WTA_TEXT_DOMAIN ); ?>
+								</label>
+								<br>
+								<label>
+									<input type="radio" name="wta_cron_interval" value="300" <?php checked( $cron_interval, 300 ); ?>>
+									<strong><?php esc_html_e( '5 minutes', WTA_TEXT_DOMAIN ); ?></strong> - <?php esc_html_e( 'Larger batches, better for big imports (recommended)', WTA_TEXT_DOMAIN ); ?>
+								</label>
+							</fieldset>
+							<p class="description">
+								<strong><?php esc_html_e( 'Current:', WTA_TEXT_DOMAIN ); ?></strong> <?php echo esc_html( $cron_interval === 300 ? '5 minutes' : '1 minute' ); ?>
+								<br>
+								<strong><?php esc_html_e( 'Batch sizes adjust automatically:', WTA_TEXT_DOMAIN ); ?></strong>
+								<br>• 1 min: AI = 3 cities (45s), Structure = 10 cities
+								<br>• 5 min: AI = 15 cities (225s), Structure = 30 cities
+								<br>
+								<br>⚠️ <strong><?php esc_html_e( 'Important:', WTA_TEXT_DOMAIN ); ?></strong> 
+								<?php esc_html_e( 'If using server cron, update your crontab:', WTA_TEXT_DOMAIN ); ?>
+								<br><code>*<?php echo $cron_interval === 300 ? '/5' : ''; ?> * * * * wget -q -O - <?php echo esc_url( site_url( 'wp-cron.php' ) ); ?>?doing_wp_cron</code>
+							</p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Save Processing Settings', WTA_TEXT_DOMAIN ) ); ?>
+			</form>
+		</div>
+
 		<!-- Performance Information -->
 		<div class="wta-card wta-card-wide">
 			<h2><?php esc_html_e( 'Performance Information', WTA_TEXT_DOMAIN ); ?></h2>

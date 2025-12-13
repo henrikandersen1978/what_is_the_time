@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.32] - 2025-12-13
+
+### Added
+- **DYNAMIC CRON INTERVAL SETTING**: Backend toggle for 1-min or 5-min processing frequency
+  - New `wta_cron_interval` setting in Data Import settings page
+  - Radio buttons to choose between 1-minute (default) or 5-minute intervals
+  - Automatic reschedule of all recurring actions when interval changes
+  - Helpful crontab command displayed for server cron users
+  
+### Changed
+- **Dynamic Action Scheduler time limits** based on cron interval:
+  - 1-min interval: 50s time limit, 180s timeout/failure (prevents overlap)
+  - 5-min interval: 270s time limit (4.5min), 600s timeout/failure (max utilization)
+  
+- **Dynamic batch sizes** automatically adjust based on interval:
+  - **AI Processor:**
+    - 1-min: 3 cities (45s with parallel calls)
+    - 5-min: 15 cities (225s with parallel calls)
+    - Test mode: 50 cities (1-min) or 250 cities (5-min)
+  - **Structure Processor:**
+    - 1-min: 10 cities (~5s)
+    - 5-min: 50 cities (~25s)
+    - Test mode: 40 cities (1-min) or 200 cities (5-min)
+  - **Timezone Processor:**
+    - 1-min: 8 items (~12s)
+    - 5-min: 20 items (~30s)
+
+- Updated `ensure_actions_scheduled()` to use dynamic interval from settings
+
+### Performance Impact
+- **5-min interval (recommended for large imports):**
+  - 141,000 cities: ~6 days (vs ~10 days with 1-min)
+  - Larger batches = fewer overhead, better throughput
+  - No concurrent conflicts (batches complete within interval)
+  
+- **1-min interval (quick feedback):**
+  - Better for small imports or monitoring
+  - More frequent dashboard updates
+  - Smaller batches to avoid blocking
+
 ## [2.35.31] - 2025-12-13
 
 ### Added

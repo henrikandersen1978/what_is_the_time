@@ -170,6 +170,9 @@ class WTA_Core {
 		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_scripts' );
 		$this->loader->add_action( 'admin_notices', $admin, 'show_admin_notices' );
+		
+		// Reschedule recurring actions when cron interval changes (v2.35.32)
+		$this->loader->add_action( 'update_option_wta_cron_interval', $this, 'reschedule_recurring_actions' );
 
 		// Admin columns and bulk actions (Content Health Check)
 		$this->loader->add_filter( 'manage_' . WTA_POST_TYPE . '_posts_columns', $admin, 'add_content_status_column' );
@@ -324,14 +327,67 @@ class WTA_Core {
 			'wta_process_ai_content',
 		);
 
+		// Get current cron interval setting
+		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
+
 		// Check and schedule missing actions
 		foreach ( $required_actions as $action ) {
 			if ( false === as_next_scheduled_action( $action ) ) {
-				as_schedule_recurring_action( time(), MINUTE_IN_SECONDS, $action, array(), 'world-time-ai' );
+				as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
 				
-				WTA_Logger::info( "Auto-scheduled missing action: $action" );
+				WTA_Logger::info( "Auto-scheduled missing action: $action", array( 'interval' => $interval . 's' ) );
 			}
 		}
+	}
+	
+	/**
+	 * Reschedule recurring actions when cron interval setting changes.
+	 * 
+	 * Unschedules all existing actions and reschedules with new interval.
+	 * This ensures batch sizes and time limits match the new interval.
+	 *
+	 * @since    2.35.32
+	 */
+	public function reschedule_recurring_actions() {
+		// Only if Action Scheduler is available
+		if ( ! function_exists( 'as_unschedule_all_actions' ) || ! function_exists( 'as_schedule_recurring_action' ) ) {
+			return;
+		}
+
+		$actions = array(
+			'wta_process_structure',
+			'wta_process_timezone',
+			'wta_process_ai_content',
+		);
+
+		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
+
+		foreach ( $actions as $action ) {
+			// Unschedule all instances of this action
+			as_unschedule_all_actions( $action, array(), 'world-time-ai' );
+			
+			// Reschedule with new interval
+			as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
+			
+			WTA_Logger::info( "Rescheduled recurring action", array(
+				'action'   => $action,
+				'interval' => $interval . 's',
+			) );
+		}
+		
+		// Clear the auto-schedule check so it re-validates immediately
+		delete_transient( 'wta_actions_checked' );
+		
+		// Add admin notice
+		add_settings_error(
+			'wta_cron_interval',
+			'wta_cron_interval_updated',
+			sprintf( 
+				__( 'Background processing interval updated to %s. All recurring actions have been rescheduled. Batch sizes will automatically adjust.', 'world-time-ai' ),
+				$interval === 300 ? '5 minutes' : '1 minute'
+			),
+			'success'
+		);
 	}
 
 	/**
