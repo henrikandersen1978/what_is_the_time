@@ -2,6 +2,28 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.25] - 2025-12-13
+
+### Fixed
+- **Force Regenerate - Use Correct API** 🔧
+  - Fixed "Call to undefined method process()" error
+  - Changed approach: Queue post, then run process_batch()
+  - WTA_AI_Processor::process() doesn't exist
+  - Correct method is process_batch() which processes pending queue items
+  
+### Technical Details
+- **File:** `includes/admin/views/force-regenerate.php`
+  - Uses WTA_Queue::add() to queue the post
+  - Calls process_batch() to process immediately
+  - process_batch() is the public method that processes queued items
+  - Works correctly with all dependencies loaded
+
+### How It Works Now
+1. Add post to queue with force_ai flag
+2. Call process_batch() immediately
+3. Batch processor picks up the pending item and processes it
+4. Result: Immediate AI content generation
+
 ## [2.35.24] - 2025-12-13
 
 ### Fixed

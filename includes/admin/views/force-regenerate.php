@@ -19,7 +19,7 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 		$start_time = microtime( true );
 		
 		try {
-			// Load all required dependencies (correct paths v2.35.24)
+			// Load all required dependencies (v2.35.25)
 			if ( ! class_exists( 'WTA_Queue' ) ) {
 				require_once WTA_PLUGIN_DIR . '/includes/core/class-wta-queue.php';
 			}
@@ -36,16 +36,16 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 				require_once WTA_PLUGIN_DIR . '/includes/scheduler/class-wta-ai-processor.php';
 			}
 			
-			// Run AI processor immediately
+			// Queue the post for AI generation
+			WTA_Queue::add( 'ai_content', array(
+				'post_id'  => $post_id,
+				'type'     => get_post_meta( $post_id, 'wta_type', true ),
+				'force_ai' => true  // Always use real AI (ignore test mode)
+			), 'force_regenerate_' . $post_id );
+			
+			// Process the queue immediately
 			$processor = new WTA_AI_Processor();
-			$processor->process( array(
-				'id'      => 0,
-				'payload' => array(
-					'post_id'  => $post_id,
-					'type'     => get_post_meta( $post_id, 'wta_type', true ),
-					'force_ai' => true  // Always use real AI (ignore test mode)
-				)
-			) );
+			$processor->process_batch();
 			
 			$elapsed = round( microtime( true ) - $start_time, 2 );
 			$post_title = get_the_title( $post_id );
