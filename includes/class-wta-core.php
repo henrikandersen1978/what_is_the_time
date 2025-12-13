@@ -237,11 +237,31 @@ class WTA_Core {
 	 * @access   public
 	 */
 	public function register_faq_schema() {
-		// FAQ Schema integration with Yoast (v2.35.28)
+		// FAQ Schema integration with Yoast (v2.35.29 - debug mode)
 		// Priority 999 = Run AFTER Yoast builds complete @graph (Yoast uses priority 10-100)
 		// This ensures @graph exists before we modify it
 		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
+			// Debug: Log when filter is registered
+			WTA_Logger::info( '=== FAQ FILTER REGISTRATION ===', array(
+				'priority'   => 999,
+				'yoast_seo'  => function_exists( 'YoastSEO' ) ? 'exists' : 'not found',
+				'timestamp'  => current_time( 'mysql' )
+			) );
+			
 			add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 999, 2 );
+			
+			// Verify filter was added
+			global $wp_filter;
+			if ( isset( $wp_filter['wpseo_schema_graph'] ) ) {
+				WTA_Logger::info( '=== FILTER CONFIRMED ADDED ===', array(
+					'priorities' => array_keys( $wp_filter['wpseo_schema_graph']->callbacks )
+				) );
+			}
+		} else {
+			WTA_Logger::warning( '=== YOAST NOT FOUND - FAQ FILTER NOT REGISTERED ===', array(
+				'yoast_function' => function_exists( 'YoastSEO' ),
+				'yoast_class'    => class_exists( 'WPSEO_Options' )
+			) );
 		}
 	}
 

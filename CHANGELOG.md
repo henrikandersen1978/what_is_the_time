@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.29] - 2025-12-13
+
+### Added
+- **Aggressive Debug Logging for FAQ Schema** 🔍
+  - Added logging when filter is registered
+  - Added logging when filter triggers
+  - Logs full @graph structure before modification
+  - Logs all priorities in wp_filter
+  - Logs why filter might be skipped
+  - Helps diagnose why nested @graph still appears
+
+### Debug Information Logged
+1. **On Registration:**
+   - Priority used (should be 999)
+   - Yoast SEO detected or not
+   - All filter priorities registered
+   
+2. **On Trigger:**
+   - Post type and ID
+   - Whether @graph exists
+   - @graph structure (keys and types)
+   - FAQ data availability
+   - Why filter proceeds or skips
+
+3. **On Processing:**
+   - Full graph keys array
+   - Each node's @type
+   - WebPage found at which key
+   - Success or fallback path taken
+
+### Purpose
+Determine why nested @graph still appears despite priority 999.
+Logs will show if filter never runs, runs too early, or @graph malformed.
+
+### Next Steps
+1. Upload plugin
+2. Force regenerate Pozo del Tigre
+3. Check logs for complete diagnostic info
+4. Identify exact problem based on log output
+
 ## [2.35.28] - 2025-12-13
 
 ### Fixed

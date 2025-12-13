@@ -157,8 +157,18 @@ class WTA_FAQ_Renderer {
 	 * @return   array           Modified schema graph.
 	 */
 	public static function inject_faq_schema( $data, $context ) {
+		// Debug: Log IMMEDIATELY when filter triggers
+		WTA_Logger::info( '=== FAQ FILTER TRIGGERED ===', array(
+			'is_singular'  => is_singular( WTA_POST_TYPE ),
+			'post_type'    => get_post_type(),
+			'post_id'      => get_the_ID(),
+			'has_graph'    => isset( $data['@graph'] ),
+			'graph_type'   => isset( $data['@graph'] ) ? gettype( $data['@graph'] ) : 'N/A'
+		) );
+		
 		// Only for single location pages
 		if ( ! is_singular( WTA_POST_TYPE ) ) {
+			WTA_Logger::info( '=== FILTER SKIPPED: Not singular wta_location ===' );
 			return $data;
 		}
 		
@@ -167,22 +177,38 @@ class WTA_FAQ_Renderer {
 		
 		// Only for city pages
 		if ( 'city' !== $type ) {
+			WTA_Logger::info( '=== FILTER SKIPPED: Not a city ===', array( 'type' => $type ) );
 			return $data;
 		}
 		
 		// Get FAQ data
 		$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
 		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+			WTA_Logger::warning( '=== FILTER SKIPPED: No FAQ data ===', array(
+				'faq_data_empty' => empty( $faq_data ),
+				'has_faqs_key'   => isset( $faq_data['faqs'] ),
+				'faqs_empty'     => isset( $faq_data['faqs'] ) ? empty( $faq_data['faqs'] ) : true
+			) );
 			return $data;
 		}
 		
-		// Debug: Log that filter is running
-		WTA_Logger::info( 'FAQ schema filter running', array(
-			'post_id'     => $post_id,
-			'graph_keys'  => isset( $data['@graph'] ) ? array_keys( $data['@graph'] ) : 'NO GRAPH',
-			'graph_types' => isset( $data['@graph'] ) ? array_map( function($node) {
-				return isset( $node['@type'] ) ? $node['@type'] : 'NO TYPE';
-			}, $data['@graph'] ) : 'NO GRAPH'
+		// Debug: Log that filter is running with FULL graph structure
+		$graph_debug = array();
+		if ( isset( $data['@graph'] ) && is_array( $data['@graph'] ) ) {
+			foreach ( $data['@graph'] as $key => $node ) {
+				$graph_debug[$key] = isset( $node['@type'] ) ? $node['@type'] : 'NO_TYPE';
+			}
+		} else if ( isset( $data['@graph'] ) ) {
+			$graph_debug = 'EXISTS_BUT_NOT_ARRAY: ' . gettype( $data['@graph'] );
+		} else {
+			$graph_debug = 'DOES_NOT_EXIST';
+		}
+		
+		WTA_Logger::info( '=== FAQ FILTER PROCESSING ===', array(
+			'post_id'      => $post_id,
+			'faq_count'    => count( $faq_data['faqs'] ),
+			'graph_keys'   => isset( $data['@graph'] ) ? array_keys( $data['@graph'] ) : 'NO_GRAPH',
+			'graph_structure' => $graph_debug
 		) );
 		
 		// Build mainEntity array
