@@ -869,22 +869,10 @@ class WTA_Shortcodes {
 		
 		$selected_cities = array();
 		
-		// 1. Always add base country city (København)
-		$base_city = $wpdb->get_row( $wpdb->prepare( "
-			SELECT p.ID
-			FROM {$wpdb->posts} p
-			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
-			WHERE p.post_type = %s
-			AND p.post_status = 'publish'
-			AND pm_type.meta_value = 'city'
-			AND pm_cc.meta_value = 'DK'
-			ORDER BY p.post_title ASC
-			LIMIT 1
-		", WTA_POST_TYPE ) );
-		
-		if ( $base_city && $base_city->ID != $current_post_id ) {
-			$selected_cities[] = get_post( $base_city->ID );
+		// 1. Always add base country city (Denmark - random among top 5 largest)
+		$base_city_id = $this->get_random_city_for_country( 'DK', $current_post_id, $current_timezone );
+		if ( $base_city_id ) {
+			$selected_cities[] = get_post( $base_city_id );
 		}
 		
 		// 2. Get current city's continent
@@ -963,11 +951,9 @@ class WTA_Shortcodes {
 		// Shuffle countries randomly (changes daily)
 		shuffle( $all_countries );
 		
-		// Select first $count countries from shuffled list
-		$selected_countries = array_slice( $all_countries, 0, $count );
-		
-		// For each selected country, pick one random city from top 5
-		foreach ( $selected_countries as $country_code ) {
+		// Iterate through ALL shuffled countries until we have $count cities
+		// (some countries may return null if all cities have same timezone as current)
+		foreach ( $all_countries as $country_code ) {
 			$city_id = $this->get_random_city_for_country( 
 				$country_code, 
 				$current_post_id, 

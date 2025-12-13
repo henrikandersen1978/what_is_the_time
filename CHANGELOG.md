@@ -2,6 +2,20 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.36] - 2025-12-13
+
+### Fixed
+- **Global Time Comparison - Base Country Selection:**
+  - Denmark base city now randomly selected from top 5 largest cities (København, Aarhus, Odense, Aalborg, Esbjerg)
+  - Previously always showed "Aabenraa" due to alphabetical sorting
+  - Ensures major cities are represented for better SEO
+  
+- **Global Time Comparison - Full 24 Cities:**
+  - Now iterates through ALL shuffled countries until 24 cities are found
+  - Previously stopped after N countries, resulting in only 14-18 cities when some countries returned null
+  - Handles edge cases where cities share same timezone as current city
+  - Guarantees full 24-city table for consistent UX
+
 ## [2.35.35] - 2025-12-13
 
 ### Changed
