@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.34] - 2025-12-13
+
+### Changed
+- **GLOBAL TIME COMPARISON - Major UX & SEO improvements:**
+  - **One city per country** (no duplicates) for better internal link diversity
+  - **Daily randomization**: Picks random city from top 5 in each country (fresh content each day)
+  - **Daily cache keys** ensure new city selection every day while maintaining performance
+  - **Internal links on countries** - Both city AND country names are now linkable (2x internal links per row)
+  - **Sorted by time difference** - Logical flow from negative to positive offsets (better UX)
+  - **Fixed Danish grammar**: "+1 time" (singular) vs "+2 timer" (plural)
+  - **Enhanced CSS** for country links with hover effects
+
+### Performance & SEO Impact
+- **Link diversity**: 24 unique countries per display (vs potential duplicates before)
+- **365 variations per year** per city page (daily seed rotation)
+- **2x internal links** per table row (city + country)
+- **Better UX**: Sorted by time offset makes table easier to scan
+
 ## [2.35.33] - 2025-12-13
 
 ### Added

@@ -714,11 +714,27 @@ a.wta-auto-link:hover {
 	text-decoration: none !important;
 	font-weight: 500 !important;
 	transition: color 0.2s !important;
+	border-bottom: 1px solid transparent !important;
 }
 
 .wta-time-comparison-table a:hover {
-	text-decoration: underline !important;
+	border-bottom-color: #764ba2 !important;
 	color: #764ba2 !important;
+}
+
+/* City links slightly bolder */
+.wta-time-comparison-table td:first-child a {
+	font-weight: 600 !important;
+}
+
+/* Country links with flag */
+.wta-time-comparison-table td:nth-child(2) a {
+	font-weight: 500 !important;
+	color: #555 !important;
+}
+
+.wta-time-comparison-table td:nth-child(2) a:hover {
+	color: #667eea !important;
 }
 
 .wta-live-comparison-time {

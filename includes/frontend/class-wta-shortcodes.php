@@ -740,8 +740,9 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get globally distributed cities (cached for 24 hours)
-		$cache_key = 'wta_global_cities_' . $post_id;
+		// Get globally distributed cities (cached daily with date-based key for variation)
+		// Daily cache ensures fresh city selection each day while maintaining performance
+		$cache_key = 'wta_global_cities_' . $post_id . '_' . date( 'Ymd' );
 		$comparison_cities = get_transient( $cache_key );
 		
 		if ( false === $comparison_cities ) {
@@ -752,6 +753,17 @@ class WTA_Shortcodes {
 		if ( empty( $comparison_cities ) ) {
 			return '';
 		}
+		
+		// Sort cities by time difference for better UX (v2.35.34)
+		usort( $comparison_cities, function( $a, $b ) use ( $current_timezone ) {
+			$tz_a = get_post_meta( $a->ID, 'wta_timezone', true );
+			$tz_b = get_post_meta( $b->ID, 'wta_timezone', true );
+			
+			$offset_a = $this->get_timezone_offset_hours( $current_timezone, $tz_a );
+			$offset_b = $this->get_timezone_offset_hours( $current_timezone, $tz_b );
+			
+			return $offset_a <=> $offset_b;
+		} );
 		
 		// Get intro text (test mode or AI-generated)
 		$test_mode = get_option( 'wta_test_mode', 0 );
@@ -791,9 +803,10 @@ class WTA_Shortcodes {
 		$city_name = get_post_field( 'post_title', $city->ID );
 		$city_timezone = get_post_meta( $city->ID, 'wta_timezone', true );
 		
-		// Get country name and ISO code for flag
+		// Get country name, URL and ISO code for flag
 		$parent_id = wp_get_post_parent_id( $city->ID );
 		$country_name = $parent_id ? get_post_field( 'post_title', $parent_id ) : '';
+		$country_url = $parent_id ? get_permalink( $parent_id ) : '';
 		$country_iso = $parent_id ? get_post_meta( $parent_id, 'wta_country_code', true ) : '';
 		
 		// Calculate time difference
@@ -801,10 +814,21 @@ class WTA_Shortcodes {
 		$local_time = $this->get_local_time( $city_timezone );
 		
 		$output .= '<tr>' . "\n";
-		$output .= sprintf( '<td><a href="%s">%s</a></td>' . "\n", esc_url( get_permalink( $city->ID ) ), esc_html( $city_name ) );
 		
-		// Add flag icon before country name
-		if ( ! empty( $country_iso ) ) {
+		// City column with internal link
+		$output .= sprintf( '<td><a href="%s">%s</a></td>' . "\n", 
+			esc_url( get_permalink( $city->ID ) ), 
+			esc_html( $city_name ) 
+		);
+		
+		// Country column with flag and internal link
+		if ( ! empty( $country_iso ) && ! empty( $country_url ) ) {
+			$output .= sprintf( '<td><span class="fi fi-%s"></span> <a href="%s">%s</a></td>' . "\n", 
+				esc_attr( strtolower( $country_iso ) ),
+				esc_url( $country_url ),
+				esc_html( $country_name ) 
+			);
+		} elseif ( ! empty( $country_iso ) ) {
 			$output .= sprintf( '<td><span class="fi fi-%s"></span> %s</td>' . "\n", 
 				esc_attr( strtolower( $country_iso ) ), 
 				esc_html( $country_name ) 
@@ -898,41 +922,58 @@ class WTA_Shortcodes {
 	
 	/**
 	 * Get cities for a specific continent.
+	 * 
+	 * NEW (v2.35.34): One city per country for better link diversity.
+	 * Randomizes among top 5 cities in each country for daily variation.
 	 *
 	 * @since    2.26.0
 	 * @param    string $continent_code  Continent code (EU, AS, NA, SA, AF, OC).
 	 * @param    string $current_tz      Current timezone to exclude same timezone.
 	 * @param    int    $current_post_id Current post ID to exclude.
-	 * @param    int    $count           Number of cities to fetch.
+	 * @param    int    $count           Number of cities to fetch (one per country).
 	 * @return   array                   Array of WP_Post objects.
 	 */
 	private function get_cities_for_continent( $continent_code, $current_tz, $current_post_id, $count ) {
 		global $wpdb;
 		
-		$results = $wpdb->get_results( $wpdb->prepare( "
-			SELECT p.ID
+		// Get top countries in continent (by max city population)
+		$countries = $wpdb->get_results( $wpdb->prepare( "
+			SELECT pm_cc.meta_value as country_code, MAX(CAST(pm_pop.meta_value AS UNSIGNED)) as max_pop
 			FROM {$wpdb->posts} p
 			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
-			LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
 			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
 			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
-			AND p.ID != %d
 			AND pm_type.meta_value = 'city'
 			AND pm_cont.meta_value = %s
-			AND pm_tz.meta_value IS NOT NULL
-			AND pm_tz.meta_value != 'multiple'
-			AND pm_tz.meta_value != %s
-			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			AND pm_cc.meta_value IS NOT NULL
+			GROUP BY pm_cc.meta_value
+			ORDER BY max_pop DESC
 			LIMIT %d
-		", WTA_POST_TYPE, $current_post_id, $continent_code, $current_tz, $count ) );
+		", WTA_POST_TYPE, $continent_code, $count * 2 ) ); // Fetch 2x more countries for better randomness
 		
 		$cities = array();
-		foreach ( $results as $result ) {
-			$post = get_post( $result->ID );
-			if ( $post ) {
-				$cities[] = $post;
+		
+		// For each country, pick one random city from top 5
+		foreach ( $countries as $country ) {
+			$city_id = $this->get_random_city_for_country( 
+				$country->country_code, 
+				$current_post_id, 
+				$current_tz 
+			);
+			
+			if ( $city_id ) {
+				$post = get_post( $city_id );
+				if ( $post ) {
+					$cities[] = $post;
+					
+					// Stop when we have enough cities
+					if ( count( $cities ) >= $count ) {
+						break;
+					}
+				}
 			}
 		}
 		
@@ -940,7 +981,57 @@ class WTA_Shortcodes {
 	}
 	
 	/**
+	 * Get one random city from top 5 cities in a country.
+	 * 
+	 * Uses daily seed for consistent randomness within same day.
+	 * Different days = different cities for content freshness!
+	 *
+	 * @since    2.35.34
+	 * @param    string $country_code    Country code (ISO2).
+	 * @param    int    $exclude_id      Current city ID to exclude.
+	 * @param    string $exclude_tz      Current timezone to exclude.
+	 * @return   int|null                City post ID or null.
+	 */
+	private function get_random_city_for_country( $country_code, $exclude_id, $exclude_tz ) {
+		global $wpdb;
+		
+		// Get top 5 cities in country
+		$city_ids = $wpdb->get_col( $wpdb->prepare( "
+			SELECT p.ID
+			FROM {$wpdb->posts} p
+			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+			LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			WHERE p.post_type = %s
+			AND p.post_status = 'publish'
+			AND p.ID != %d
+			AND pm_type.meta_value = 'city'
+			AND pm_cc.meta_value = %s
+			AND pm_tz.meta_value IS NOT NULL
+			AND pm_tz.meta_value != 'multiple'
+			AND pm_tz.meta_value != %s
+			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			LIMIT 5
+		", WTA_POST_TYPE, $exclude_id, $country_code, $exclude_tz ) );
+		
+		if ( empty( $city_ids ) ) {
+			return null;
+		}
+		
+		// Use daily seed + country code for consistent randomness per day per country
+		// Same day = same city, next day = different city (content freshness!)
+		$seed = intval( date( 'Ymd' ) ) + crc32( $country_code . $exclude_id );
+		mt_srand( $seed );
+		$random_index = mt_rand( 0, count( $city_ids ) - 1 );
+		
+		return $city_ids[ $random_index ];
+	}
+	
+	/**
 	 * Calculate time difference between two timezones.
+	 * 
+	 * NEW (v2.35.34): Correct Danish grammar (time/timer).
 	 *
 	 * @since    2.26.0
 	 * @param    string $tz1 Timezone 1.
@@ -962,15 +1053,39 @@ class WTA_Shortcodes {
 				? intval( $hours_abs ) 
 				: number_format( $hours_abs, 1, ',', '' );
 			
+			// Danish grammar: "time" (singular) vs "timer" (plural)
+			$plural = ( $hours_abs == 1 ) ? 'time' : 'timer';
+			
 			if ( $hours_diff > 0 ) {
-				return '+' . $hours_formatted . ' timer';
+				return '+' . $hours_formatted . ' ' . $plural;
 			} elseif ( $hours_diff < 0 ) {
-				return '-' . $hours_formatted . ' timer';
+				return $hours_formatted . ' ' . $plural; // Negative sign already in number
 			} else {
 				return 'Samme tid';
 			}
 		} catch ( Exception $e ) {
 			return '';
+		}
+	}
+	
+	/**
+	 * Get timezone offset in hours (for sorting).
+	 *
+	 * @since    2.35.34
+	 * @param    string $tz1 Base timezone.
+	 * @param    string $tz2 Target timezone.
+	 * @return   float       Hour difference.
+	 */
+	private function get_timezone_offset_hours( $tz1, $tz2 ) {
+		try {
+			$timezone1 = new DateTimeZone( $tz1 );
+			$timezone2 = new DateTimeZone( $tz2 );
+			$now = new DateTime( 'now' );
+			
+			$offset = $timezone2->getOffset( $now ) - $timezone1->getOffset( $now );
+			return $offset / 3600;
+		} catch ( Exception $e ) {
+			return 0;
 		}
 	}
 	
