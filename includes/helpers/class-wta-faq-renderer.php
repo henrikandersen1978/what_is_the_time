@@ -90,9 +90,9 @@ class WTA_FAQ_Renderer {
 		<?php
 		$output = ob_get_clean();
 		
-		// Add FAQ schema as direct JSON-LD script tag (v2.35.20)
-		// Pattern: Same as ItemList schema - direct injection, not via Yoast filter
-		$output .= self::generate_faq_schema_tag( $faq_data, $city_name );
+		// FAQ schema now injected via Yoast filter using array type (v2.35.21)
+		// No longer adding as separate JSON-LD script tag
+		// BEST PRACTICE: @type = ['WebPage', 'FAQPage'] preserves all Yoast properties
 		
 		return $output;
 	}
@@ -145,7 +145,11 @@ class WTA_FAQ_Renderer {
 	}
 
 	/**
-	 * Inject FAQ schema into Yoast SEO graph.
+	 * Inject FAQ schema into Yoast SEO graph (BEST PRACTICE v2.35.21).
+	 * 
+	 * Converts WebPage to array type ['WebPage', 'FAQPage'] and adds mainEntity.
+	 * Preserves ALL existing WebPage properties (breadcrumb, organization, etc.).
+	 * Only runs for wta_location post type with FAQ data.
 	 *
 	 * @since    2.35.0
 	 * @param    array  $data    Yoast schema graph data.
@@ -168,12 +172,12 @@ class WTA_FAQ_Renderer {
 		
 		// Get FAQ data
 		$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
-		if ( empty( $faq_data ) ) {
+		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
 			return $data;
 		}
 		
-		// Generate main entity (Questions)
-		$faqs = isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array();
+		// Build mainEntity array
+		$faqs = $faq_data['faqs'];
 		$main_entity = array();
 		
 		foreach ( $faqs as $faq ) {
@@ -181,9 +185,11 @@ class WTA_FAQ_Renderer {
 				continue;
 			}
 			
-			// Strip HTML tags and <br> from answer for schema
+			// Clean answer for schema
 			$answer_text = wp_strip_all_tags( $faq['answer'] );
-			$answer_text = str_replace( array( '<br>', '<br/>', '<br />' ), ' ', $answer_text );
+			$answer_text = str_replace( array( '<br>', '<br/>', '<br />', '<br/ >' ), ' ', $answer_text );
+			$answer_text = preg_replace( '/\s+/', ' ', $answer_text );
+			$answer_text = trim( $answer_text );
 			
 			$main_entity[] = array(
 				'@type'          => 'Question',
@@ -200,46 +206,46 @@ class WTA_FAQ_Renderer {
 		}
 		
 		// Initialize @graph if needed
-		if ( ! isset( $data['@graph'] ) ) {
+		if ( ! isset( $data['@graph'] ) || ! is_array( $data['@graph'] ) ) {
 			$data['@graph'] = array();
 		}
 		
-		// Find existing WebPage node and convert to FAQPage (Yoast pattern)
+		// Find WebPage node
 		$webpage_index = null;
 		foreach ( $data['@graph'] as $index => $node ) {
-			if ( isset( $node['@type'] ) ) {
-				// Check for both string and array @type
-				$node_types = is_array( $node['@type'] ) ? $node['@type'] : array( $node['@type'] );
-				
-				if ( in_array( 'WebPage', $node_types, true ) ) {
-					$webpage_index = $index;
-					break;
-				}
+			if ( ! isset( $node['@type'] ) ) {
+				continue;
+			}
+			
+			// Check both string and array @type
+			$node_types = is_array( $node['@type'] ) ? $node['@type'] : array( $node['@type'] );
+			
+			if ( in_array( 'WebPage', $node_types, true ) ) {
+				$webpage_index = $index;
+				break;
 			}
 		}
 		
+		// If WebPage found: Add FAQPage to @type array and add mainEntity
 		if ( null !== $webpage_index ) {
-			// Convert WebPage to FAQPage and add mainEntity
-			// Preserve @type as array if it was array, or convert to FAQPage
 			$existing_types = is_array( $data['@graph'][$webpage_index]['@type'] ) 
 				? $data['@graph'][$webpage_index]['@type'] 
 				: array( $data['@graph'][$webpage_index]['@type'] );
 			
-			// Replace WebPage with FAQPage in types array
-			$new_types = array();
-			foreach ( $existing_types as $type ) {
-				if ( 'WebPage' === $type ) {
-					$new_types[] = 'FAQPage';
-				} else {
-					$new_types[] = $type;
-				}
+			// Add FAQPage if not already present (BEST PRACTICE: array type)
+			if ( ! in_array( 'FAQPage', $existing_types, true ) ) {
+				$existing_types[] = 'FAQPage';
 			}
 			
-			// Update @type (as array if multiple, string if single)
-			$data['@graph'][$webpage_index]['@type'] = count( $new_types ) === 1 ? $new_types[0] : $new_types;
+			// Update @type to array - preserves WebPage, adds FAQPage
+			$data['@graph'][$webpage_index]['@type'] = $existing_types;
+			
+			// Add FAQ mainEntity (preserves all other Yoast properties!)
 			$data['@graph'][$webpage_index]['mainEntity'] = $main_entity;
+			
 		} else {
-			// Fallback: Add as separate FAQPage node if no WebPage found
+			// Fallback: No WebPage found, add standalone FAQPage
+			// This should rarely happen, but ensures FAQ schema is always present
 			$data['@graph'][] = array(
 				'@type'      => 'FAQPage',
 				'@id'        => get_permalink( $post_id ) . '#faq',
@@ -253,10 +259,12 @@ class WTA_FAQ_Renderer {
 	/**
 	 * Generate standalone FAQ schema as JSON-LD script tag.
 	 * 
-	 * Follows ItemList schema pattern - direct injection, not via Yoast filter.
-	 * This prevents "Ikke-angivet type" conflicts with Yoast's WebPage schema.
+	 * FALLBACK ONLY: Not currently used (v2.35.21).
+	 * FAQ schema now injected via Yoast filter using array type.
+	 * Kept for potential future use if Yoast is not active.
 	 * 
 	 * @since    2.35.20
+	 * @deprecated 2.35.21 Use Yoast filter integration with array type instead
 	 * @param    array  $faq_data  FAQ data with 'faqs' array.
 	 * @param    string $city_name City name for schema title.
 	 * @return   string            JSON-LD script tag with FAQPage schema.

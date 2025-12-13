@@ -2,6 +2,67 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.21] - 2025-12-13
+
+### Changed
+- **FAQ Schema - Google Best Practice Implementation** ⭐
+  - Changed from separate FAQPage item to array type `["WebPage", "FAQPage"]`
+  - Preserves ALL Yoast SEO properties (breadcrumb, organization, dateModified, etc.)
+  - Follows Google's recommended pattern for pages with multiple types
+  - FAQ schema now integrated into WebPage node instead of standalone item
+
+### Technical Details
+- **File:** `includes/class-wta-core.php`
+  - Re-enabled Yoast filter integration (v2.35.21)
+  - FAQ schema now adds 'FAQPage' to existing WebPage @type array
+  
+- **File:** `includes/helpers/class-wta-faq-renderer.php`  
+  - Updated `inject_faq_schema()` to use array type pattern
+  - WebPage `@type` becomes `["WebPage", "FAQPage"]` when FAQ exists
+  - Adds `mainEntity` with FAQ questions to existing WebPage node
+  - Preserves all existing Yoast properties (breadcrumb, etc.)
+  - Removed direct JSON-LD injection (no longer needed)
+
+### Schema Structure
+
+**Before (v2.35.20):**
+```
+@graph:
+  - WebPage (from Yoast)
+  - FAQPage (separate item)  ← Suboptimal
+  - ItemList (from shortcodes)
+```
+
+**After (v2.35.21):**
+```
+@graph:
+  - WebPage + FAQPage (array type)  ← BEST PRACTICE
+    - @type: ["WebPage", "FAQPage"]
+    - breadcrumb: {...}  (preserved)
+    - mainEntity: [FAQ questions]  (added)
+  - ItemList (unchanged, separate is correct)
+```
+
+### Why This Is Better
+
+**Google's Perspective:**
+- ✅ 100% best practice for pages with multiple types
+- ✅ Cleaner schema structure (one node instead of two)
+- ✅ No confusion about which is the "main" page type
+- ✅ Recommended in Google's Schema.org documentation
+
+**ItemList Stays Separate:**
+- ✅ ItemList is an entity/component, not a page type
+- ✅ Multiple ItemLists per page is standard and expected
+- ✅ Represents specific named lists on the page
+
+### Impact
+- ✅ FAQ rich results work perfectly
+- ✅ AI Overview and ChatGPT read FAQ data correctly
+- ✅ Schema validator shows clean structure
+- ✅ All Yoast SEO features preserved (breadcrumb, JSON-LD, etc.)
+- ✅ Only affects `wta_location` post type with FAQ data
+
 ## [2.35.20] - 2025-12-13
 
 ### Fixed

@@ -32,9 +32,8 @@ class WTA_Core {
 		$this->define_public_hooks();
 		$this->define_action_scheduler_hooks();
 		
-		// FAQ schema now injected directly as JSON-LD in render_faq_section() (v2.35.20)
-		// No longer using Yoast filter integration to avoid "Ikke-angivet type" conflicts
-		// add_action( 'wp', array( $this, 'register_faq_schema' ) ); // DISABLED v2.35.20
+		// FAQ schema integration with Yoast - array type ['WebPage', 'FAQPage'] (v2.35.21)
+		add_action( 'wp', array( $this, 'register_faq_schema' ) );
 		
 		// Check for updates after WordPress is fully loaded
 		add_action( 'init', array( $this, 'check_plugin_update' ), 5 );
@@ -231,19 +230,19 @@ class WTA_Core {
 	/**
 	 * Register FAQ schema integration.
 	 * 
-	 * DISABLED v2.35.20: FAQ schema now injected as direct JSON-LD to avoid conflicts.
+	 * Adds FAQ schema to Yoast SEO graph using array type ['WebPage', 'FAQPage'].
+	 * Best practice: Preserves all Yoast properties, just adds FAQPage to @type array.
 	 * 
 	 * @since    2.35.15
-	 * @deprecated 2.35.20 Use direct JSON-LD injection instead
 	 * @access   public
 	 */
-	// public function register_faq_schema() {
-	// 	// FAQ Schema integration with Yoast (v2.35.0)
-	// 	// Uses static method, so must be registered directly with add_filter
-	// 	if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
-	// 		add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 11, 2 );
-	// 	}
-	// }
+	public function register_faq_schema() {
+		// FAQ Schema integration with Yoast (v2.35.21)
+		// Uses static method, so must be registered directly with add_filter
+		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
+			add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 11, 2 );
+		}
+	}
 
 	/**
 	 * Register Action Scheduler hooks.
