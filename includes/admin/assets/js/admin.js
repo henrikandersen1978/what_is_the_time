@@ -126,4 +126,64 @@
 		});
 	});
 
+	// Force Reschedule Actions button handler
+	$('#wta-force-reschedule').on('click', function(e) {
+		e.preventDefault();
+		
+		if (!confirm('Are you sure you want to reschedule all recurring actions? This will delete existing schedules and recreate them with the current interval setting.')) {
+			return;
+		}
+		
+		var $button = $(this);
+		var $spinner = $('#wta-reschedule-spinner');
+		var $resultDiv = $('#wta-reschedule-result');
+		
+		// Disable button and show spinner
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$resultDiv.hide().html('');
+		
+		// Make AJAX request
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_force_reschedule',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+				
+				if (response.success) {
+					$resultDiv.html(
+						'<div class="notice notice-success inline"><p>' +
+						response.data.message +
+						'</p></div>'
+					).show();
+					
+					// Auto-hide success message after 10 seconds
+					setTimeout(function() {
+						$resultDiv.fadeOut();
+					}, 10000);
+				} else {
+					$resultDiv.html(
+						'<div class="notice notice-error inline"><p>' +
+						'<strong>Error:</strong> ' + (response.data.message || 'Unknown error') +
+						'</p></div>'
+					).show();
+				}
+			},
+			error: function(xhr, status, error) {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+				$resultDiv.html(
+					'<div class="notice notice-error inline"><p>' +
+					'<strong>AJAX Error:</strong> ' + error +
+					'</p></div>'
+				).show();
+			}
+		});
+	});
+
 })(jQuery);

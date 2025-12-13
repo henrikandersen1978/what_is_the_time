@@ -147,6 +147,19 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 				</table>
 				<?php submit_button( __( 'Save Processing Settings', WTA_TEXT_DOMAIN ) ); ?>
 			</form>
+			
+			<!-- Force Reschedule Actions -->
+			<div style="margin-top: 20px; padding: 15px; background: #f0f6fc; border-left: 4px solid #0073aa;">
+				<h3 style="margin-top: 0;"><?php esc_html_e( 'Troubleshooting', WTA_TEXT_DOMAIN ); ?></h3>
+				<p class="description">
+					<?php esc_html_e( 'If recurring actions are not using the correct interval after changing settings, click this button to force reschedule all actions:', WTA_TEXT_DOMAIN ); ?>
+				</p>
+				<button type="button" id="wta-force-reschedule" class="button button-secondary">
+					<?php esc_html_e( '🔄 Force Reschedule Actions Now', WTA_TEXT_DOMAIN ); ?>
+				</button>
+				<span id="wta-reschedule-spinner" class="spinner" style="float: none; margin: 0 10px;"></span>
+				<div id="wta-reschedule-result" style="margin-top: 10px;"></div>
+			</div>
 		</div>
 
 		<!-- Performance Information -->

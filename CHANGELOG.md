@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.33] - 2025-12-13
+
+### Added
+- **"Force Reschedule Actions" button** in Data Import settings
+  - Manually triggers reschedule of all recurring actions
+  - Useful when actions don't automatically update after changing cron interval
+  - Includes confirmation dialog and success/error messages
+  - Shows real-time feedback with spinner
+
+### Fixed
+- Issue where recurring actions kept old interval (1 min) after changing to 5 min
+  - `update_option` hook only triggers when value actually changes
+  - Force Reschedule button provides manual workaround
+  - Deletes existing schedules and recreates with current interval setting
+
 ## [2.35.32] - 2025-12-13
 
 ### Added

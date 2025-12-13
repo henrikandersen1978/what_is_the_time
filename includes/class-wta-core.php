@@ -198,6 +198,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_get_logs', $admin, 'ajax_get_logs' );
 		$this->loader->add_action( 'wp_ajax_wta_clear_translation_cache', $admin, 'ajax_clear_translation_cache' );
 		$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
+		$this->loader->add_action( 'wp_ajax_wta_force_reschedule', $admin, 'ajax_force_reschedule' ); // v2.35.33
 
 		// Settings
 		$settings = new WTA_Settings();

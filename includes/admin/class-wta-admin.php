@@ -731,6 +731,72 @@ class WTA_Admin {
 	}
 
 	/**
+	 * Force reschedule recurring actions (AJAX handler).
+	 * 
+	 * Manually triggers reschedule of all recurring actions with current interval setting.
+	 * Useful when actions are not automatically rescheduled after changing cron interval.
+	 *
+	 * @since    2.35.33
+	 */
+	public function ajax_force_reschedule() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		// Check if Action Scheduler is available
+		if ( ! function_exists( 'as_unschedule_all_actions' ) || ! function_exists( 'as_schedule_recurring_action' ) ) {
+			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
+		}
+
+		$actions = array(
+			'wta_process_structure',
+			'wta_process_timezone',
+			'wta_process_ai_content',
+		);
+
+		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
+		$rescheduled = 0;
+
+		WTA_Logger::info( 'Force rescheduling recurring actions', array(
+			'interval' => $interval . 's',
+			'user'     => wp_get_current_user()->user_login,
+		) );
+
+		foreach ( $actions as $action ) {
+			// Unschedule all instances of this action
+			$unscheduled = as_unschedule_all_actions( $action, array(), 'world-time-ai' );
+			
+			// Reschedule with current interval
+			as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
+			
+			WTA_Logger::info( "Rescheduled recurring action", array(
+				'action'       => $action,
+				'interval'     => $interval . 's',
+				'unscheduled'  => $unscheduled,
+			) );
+			
+			$rescheduled++;
+		}
+
+		// Clear the auto-schedule check so it re-validates immediately
+		delete_transient( 'wta_actions_checked' );
+
+		$interval_text = ( $interval === 300 ) ? '5 minutes' : '1 minute';
+
+		wp_send_json_success( array(
+			'message'     => sprintf( 
+				'✅ Successfully rescheduled %d recurring actions to run every %s. Check Tools → Scheduled Actions to verify.', 
+				$rescheduled, 
+				$interval_text 
+			),
+			'rescheduled' => $rescheduled,
+			'interval'    => $interval_text,
+		) );
+	}
+
+	/**
 	 * Add custom admin columns for content status.
 	 *
 	 * @since    2.34.8
