@@ -2,6 +2,77 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.28] - 2025-12-13
+
+### Fixed
+- **FAQ Schema - Filter Priority Timing** ⏱️
+  - Changed filter priority from 11 to 999
+  - Now runs AFTER Yoast builds complete @graph
+  - Prevents "NO GRAPH" error in logs
+  - Prevents nested @graph structure
+
+### The Problem (Found in Logs)
+```
+[15:25:33] INFO: FAQ schema filter running
+Context: {
+    "graph_keys": "NO GRAPH",  ← Filter ran too early!
+    "graph_types": "NO GRAPH"
+}
+
+[15:25:33] WARNING: FAQ schema added as fallback (WebPage not found)
+Context: {
+    "graph_keys": [1],
+    "next_key": 1
+}
+```
+
+**What happened:**
+1. ❌ Our filter ran at priority 11
+2. ❌ Yoast hadn't built @graph yet → "NO GRAPH"
+3. ❌ We created empty @graph and added FAQ at key "1"
+4. ❌ Then Yoast built ITS @graph at keys "0", "1", "2"
+5. 💥 Result: Nested "@graph" structure (invalid schema)
+
+### The Fix
+```php
+// BEFORE (v2.35.27):
+add_filter( 'wpseo_schema_graph', ..., 11, 2 );  // Too early!
+
+// NOW (v2.35.28):
+add_filter( 'wpseo_schema_graph', ..., 999, 2 ); // Run LAST!
+```
+
+**Priority levels:**
+- 10: Yoast's default priority
+- 11-100: Yoast's internal filters
+- 999: Our filter (runs after everything)
+
+### Expected Result After Fix
+```
+@graph: {
+  "0": {
+    "@type": ["WebPage", "FAQPage"],  ← Combined!
+    "breadcrumb": {...},               ← Preserved
+    "mainEntity": [FAQ questions]      ← Added
+  },
+  "1": { "@type": "BreadcrumbList" },
+  "2": { "@type": "WebSite" }
+}
+```
+
+### Technical Details
+- **File:** `includes/class-wta-core.php`
+  - Changed priority from 11 to 999
+  - Added comment explaining timing requirement
+  - Ensures @graph exists before modification
+
+### Next Steps
+1. Upload plugin
+2. Force regenerate Pozo del Tigre
+3. Check logs: Should see graph_keys ["0", "1", "2"] 
+4. Check schema: Should be clean WebPage+FAQPage combination
+5. Validator: No more "Ikke-angivet type" or nested @graph
+
 ## [2.35.27] - 2025-12-13
 
 ### Fixed

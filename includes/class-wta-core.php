@@ -237,10 +237,11 @@ class WTA_Core {
 	 * @access   public
 	 */
 	public function register_faq_schema() {
-		// FAQ Schema integration with Yoast (v2.35.21)
-		// Uses static method, so must be registered directly with add_filter
+		// FAQ Schema integration with Yoast (v2.35.28)
+		// Priority 999 = Run AFTER Yoast builds complete @graph (Yoast uses priority 10-100)
+		// This ensures @graph exists before we modify it
 		if ( function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Options' ) ) {
-			add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 11, 2 );
+			add_filter( 'wpseo_schema_graph', array( 'WTA_FAQ_Renderer', 'inject_faq_schema' ), 999, 2 );
 		}
 	}
 
