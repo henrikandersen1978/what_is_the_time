@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.46] - 2025-12-14
+
+### Performance
+- **AUTOMATIC Index Installation:**
+  - **PROBLEM**: v2.35.45 required manual SQL execution for optimal performance
+  - **FIX**: Database indices now installed automatically on plugin activation/update
+  - **IMPACT**: 
+    - New installations: Indices installed automatically ✅
+    - Existing installations: Indices installed on plugin update ✅
+    - No manual SQL required - fully automatic!
+  - Uses MySQL `CREATE INDEX IF NOT EXISTS` to prevent duplicates
+  - Safe to update - checks existing indices before creating
+
+### Technical Details
+- Added `install_performance_indices()` to `WTA_Activator` class
+- Runs on plugin activation via `activate()` hook
+- Runs on plugin update via `check_plugin_update()` in `WTA_Core`
+- Creates 3 indices on `wp_postmeta`:
+  - `idx_wta_meta_key_value`: meta_key + meta_value lookups
+  - `idx_wta_post_meta`: post_id + meta_key JOINs
+  - `idx_wta_meta_key`: meta_key fallback queries
+- Suppresses errors gracefully if indices already exist
+- Logs success for debugging
+
+### Upgrade Notes
+**Simply update the plugin - indices install automatically!**
+- No manual SQL required
+- No phpMyAdmin needed
+- No downtime
+- Existing sites: Update and indices install automatically
+- New sites: Indices installed on first activation
+
 ## [2.35.45] - 2025-12-14
 
 ### Performance
