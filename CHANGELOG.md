@@ -2,6 +2,61 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.47] - 2025-12-14
+
+### Performance
+- **AI Processor Batch Optimization (Conservative)** 🚀
+  - **Test Mode**: Kept at 250 cities per 5-min (already optimal)
+  - **Normal Mode (AI)**: 12 → 16 cities per 5-min (+33% throughput)
+  - **1-min Mode (AI)**: 2 → 3 cities (+50% throughput)
+  - **Safety**: Good buffer to 10-min timeout limit
+    - 16 cities × 13s = 208s (52s buffer to 260s Action Scheduler limit)
+    - Action Scheduler limit: 260s (buffer to 10-min cron timeout)
+
+### Optimization
+- **Removed OpenAI Rate Limit Delay** ⚡
+  - Removed 200ms delay between cities (not needed with Tier 5)
+  - **OpenAI Tier 5 Capacity**: 15,000 RPM (250 RPS)
+  - **Our Usage**: 16 cities × 8 API calls = 128 calls per 5-min = 0.4 RPS
+  - **Utilization**: Only 0.16% of Tier 5 capacity - zero rate limit risk!
+  - **Time Saved**: 3.2 seconds per batch (200ms × 16 cities)
+
+### Impact
+**Before (v2.35.46):**
+```
+AI Mode (5-min): 12 cities × 12 jobs/hour = 144 cities/hour
+AI Mode (1-min): 2 cities × 60 jobs/hour = 120 cities/hour
+```
+
+**After (v2.35.47):**
+```
+AI Mode (5-min): 16 cities × 12 jobs/hour = 192 cities/hour (+33%)
+AI Mode (1-min): 3 cities × 60 jobs/hour = 180 cities/hour (+50%)
+```
+
+**For 23k pending AI jobs:**
+```
+Before: 160 hours (~6.7 days)
+After:  120 hours (~5.0 days)
+Saved:  40 hours (~1.7 days) 🎉
+```
+
+### Technical Details
+- File: `includes/scheduler/class-wta-ai-processor.php`
+- Batch size calculation (line 120-128):
+  - Test mode 5-min: 250 cities (~200s processing time)
+  - Normal mode 5-min: 16 cities (~208s processing time)
+  - Normal mode 1-min: 3 cities (~39s processing time)
+- Removed `usleep(200000)` delay (line 150-155)
+- Updated comments to reflect Tier 5 optimization
+
+### Safety
+- ✅ Conservative batch sizes with good buffers
+- ✅ Time limit checks prevent timeout (line 157-169)
+- ✅ OpenAI Tier 5 utilization: 0.16% (no rate limit risk)
+- ✅ Database optimized (indices from v2.35.46)
+- ✅ Tested approach - incremental optimization from proven baseline
+
 ## [2.35.46] - 2025-12-14
 
 ### Performance

@@ -117,16 +117,16 @@ class WTA_AI_Processor {
 		$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
 		$test_mode = get_option( 'wta_test_mode', 0 );
 		
-		if ( $test_mode ) {
-			// Test mode: Fast template generation (~1s per city)
-			// 1-min: 50 cities, 5-min: 250 cities
-			$batch_size = ( $cron_interval >= 300 ) ? 250 : 50;
-		} else {
-			// AI mode with parallel calls: ~15s per city
-			// 1-min interval: 2 cities (30s - safe under 50s limit)
-			// 5-min interval: 12 cities (180s - safe under 270s limit)
-			$batch_size = ( $cron_interval >= 300 ) ? 12 : 2;
-		}
+	if ( $test_mode ) {
+		// Test mode: Fast template generation (~0.8s per city after DB optimization)
+		// 1-min: 50 cities (~40s), 5-min: 250 cities (~200s)
+		$batch_size = ( $cron_interval >= 300 ) ? 250 : 50;
+	} else {
+		// AI mode with Tier 5 + DB optimization: ~12-13s per city
+		// 1-min interval: 3 cities (39s - safe buffer under 50s limit)
+		// 5-min interval: 16 cities (208s - good buffer under 270s limit)
+		$batch_size = ( $cron_interval >= 300 ) ? 16 : 3;
+	}
 		
 		// Get pending AI content items
 		$items = WTA_Queue::get_pending( 'ai_content', $batch_size );
@@ -147,12 +147,9 @@ class WTA_AI_Processor {
 			$this->process_item( $item );
 			$processed++;
 
-			// Dynamic delay between items based on test mode:
-			// Test mode: No delay (template generation, no API calls)
-			// Normal mode: 200ms delay (conservative OpenAI rate limiting)
-			if ( ! $test_mode ) {
-				usleep( 200000 ); // 200ms delay for AI safety
-			}
+		// No delay needed with OpenAI Tier 5 (15,000 RPM = 250 RPS)
+		// Our usage: 16 cities × 8 API calls = 128 calls per 5-min = 0.4 RPS
+		// = Only 0.16% of Tier 5 capacity - no rate limiting risk!
 
 			// Safety check: Stop early to respect time limit
 			$elapsed = microtime( true ) - $start_time;
