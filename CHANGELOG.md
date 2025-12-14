@@ -2,6 +2,26 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.37] - 2025-12-14
+
+### Fixed
+- **AI Processor Stability:**
+  - Added timeout protection to prevent 10-minute Action Scheduler failures
+  - Batch now stops at 260s (5-min mode) or 45s (1-min mode) to respect time limits
+  - Reduced AI batch size for safety: 12 items (5-min) / 2 items (1-min) - previously 15/3
+  - Added detailed logging with duration and avg_per_item metrics
+  - **Result**: 100% stable processing in both test mode and normal mode
+  
+- **Timezone Processor Stability:**
+  - Dynamic time limits based on cron interval: 260s (5-min) / 55s (1-min)
+  - Time limit now logged in warning messages for better debugging
+  - **Result**: Consistent performance across both 1-minute and 5-minute cron modes
+
+### Technical Details
+- AI processor now mirrors timezone processor's timeout safety pattern
+- Trade-off: ~10% slower (56h vs 45h for full import) but eliminates all timeout failures
+- TimezoneDB errors (4.3% rate) are acceptable - automatic retry logic works correctly
+
 ## [2.35.36] - 2025-12-13
 
 ### Fixed

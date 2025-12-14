@@ -123,9 +123,9 @@ class WTA_AI_Processor {
 			$batch_size = ( $cron_interval >= 300 ) ? 250 : 50;
 		} else {
 			// AI mode with parallel calls: ~15s per city
-			// 1-min interval: 3 cities (45s - safe under 50s limit)
-			// 5-min interval: 15 cities (225s - safe under 270s limit)
-			$batch_size = ( $cron_interval >= 300 ) ? 15 : 3;
+			// 1-min interval: 2 cities (30s - safe under 50s limit)
+			// 5-min interval: 12 cities (180s - safe under 270s limit)
+			$batch_size = ( $cron_interval >= 300 ) ? 12 : 2;
 		}
 		
 		// Get pending AI content items
@@ -135,12 +135,17 @@ class WTA_AI_Processor {
 			return;
 		}
 
+		$start_time = microtime( true );
+
 		WTA_Logger::info( 'AI processor started', array(
 			'items' => count( $items ),
+			'test_mode' => $test_mode ? 'yes' : 'no',
 		) );
 
+		$processed = 0;
 		foreach ( $items as $item ) {
 			$this->process_item( $item );
+			$processed++;
 
 			// Dynamic delay between items based on test mode:
 			// Test mode: No delay (template generation, no API calls)
@@ -148,10 +153,28 @@ class WTA_AI_Processor {
 			if ( ! $test_mode ) {
 				usleep( 200000 ); // 200ms delay for AI safety
 			}
+
+			// Safety check: Stop early to respect time limit
+			$elapsed = microtime( true ) - $start_time;
+			$time_limit = ( $cron_interval >= 300 ) ? 260 : 45;
+			
+			if ( $elapsed > $time_limit ) {
+				WTA_Logger::warning( 'AI batch stopped early to respect time limit', array(
+					'processed' => $processed,
+					'remaining' => count( $items ) - $processed,
+					'elapsed_seconds' => round( $elapsed, 2 ),
+					'time_limit' => $time_limit,
+				) );
+				break;
+			}
 		}
 
+		$duration = round( microtime( true ) - $start_time, 2 );
+
 		WTA_Logger::info( 'AI processor completed', array(
-			'processed' => count( $items ),
+			'processed' => $processed,
+			'duration_seconds' => $duration,
+			'avg_per_item' => $processed > 0 ? round( $duration / $processed, 2 ) : 0,
 		) );
 	}
 

@@ -67,11 +67,14 @@ class WTA_Timezone_Processor {
 
 			// Safety check: Stop early to respect time limit
 			$elapsed = microtime( true ) - $start_time;
-			if ( $elapsed > 55 ) {
+			$time_limit = ( $cron_interval >= 300 ) ? 260 : 55;
+			
+			if ( $elapsed > $time_limit ) {
 				WTA_Logger::warning( 'Timezone batch stopped early to respect time limit', array(
 					'processed' => $processed,
 					'remaining' => count( $items ) - $processed,
 					'elapsed_seconds' => round( $elapsed, 2 ),
+					'time_limit' => $time_limit,
 				) );
 				break;
 			}
