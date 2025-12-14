@@ -461,12 +461,24 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
+		// Cache nearby cities list (24 hours)
+		$cache_key = 'wta_nearby_cities_' . $post_id . '_' . intval( $atts['count'] );
+		$cached_data = get_transient( $cache_key );
+		
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			return $cached_data['output'];
+		}
+		
 		// Find nearby cities
 		$nearby_cities = $this->find_nearby_cities( $post_id, $parent_country_id, $latitude, $longitude, intval( $atts['count'] ) );
 		
 		if ( empty( $nearby_cities ) ) {
 			return '<p class="wta-no-nearby">Der er ingen andre byer i databasen endnu.</p>';
 		}
+		
+		// Batch prefetch post meta for all cities (1 query instead of N)
+		$city_ids = wp_list_pluck( $nearby_cities, 'id' );
+		update_meta_cache( 'post', $city_ids );
 		
 		// Build output
 		$output = '<div class="wta-nearby-list wta-nearby-cities-list">' . "\n";
@@ -502,13 +514,18 @@ class WTA_Shortcodes {
 		$city_name = get_post_field( 'post_title', $post_id );
 		$schema_name = sprintf( 'Byer i nærheden af %s', $city_name );
 		
-		// Convert nearby cities array to WP_Post objects for schema
-		$nearby_posts = array();
-		foreach ( $nearby_cities as $city_data ) {
-			$nearby_posts[] = get_post( $city_data['id'] );
-		}
+		// Batch fetch city posts for schema (reuse query results)
+		$nearby_posts = get_posts( array(
+			'post_type'   => WTA_POST_TYPE,
+			'post__in'    => $city_ids,
+			'orderby'     => 'post__in',
+			'post_status' => 'publish',
+		) );
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
+		
+		// Cache the output (24 hours)
+		set_transient( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS );
 		
 		return $output;
 	}
@@ -548,6 +565,14 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
+		// Cache nearby countries list (24 hours)
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_' . intval( $atts['count'] );
+		$cached_data = get_transient( $cache_key );
+		
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			return $cached_data['output'];
+		}
+		
 		// Find nearby countries
 		$nearby_countries = $this->find_nearby_countries( $parent_continent_id, $parent_country_id, intval( $atts['count'] ) );
 		
@@ -555,42 +580,57 @@ class WTA_Shortcodes {
 			return '<p class="wta-no-nearby">Der er ingen andre lande i databasen endnu.</p>';
 		}
 		
+		// Batch prefetch post meta for all countries (1 query instead of N×2)
+		update_meta_cache( 'post', $nearby_countries );
+		
+		// Batch count cities for all countries (1 query instead of N queries)
+		global $wpdb;
+		$country_ids_string = implode( ',', array_map( 'intval', $nearby_countries ) );
+		
+		$city_counts = $wpdb->get_results( 
+			$wpdb->prepare(
+				"SELECT post_parent, COUNT(*) as city_count 
+				FROM {$wpdb->posts} 
+				WHERE post_parent IN (%1s)
+				AND post_type = %s 
+				AND post_status = 'publish'
+				GROUP BY post_parent",
+				$country_ids_string,
+				WTA_POST_TYPE
+			),
+			OBJECT_K 
+		);
+		
 		// Build output
 		$output = '<div class="wta-nearby-list wta-nearby-countries-list">' . "\n";
 		
-	foreach ( $nearby_countries as $country_id ) {
-		$country_name = get_post_field( 'post_title', $country_id );
-		$country_link = get_permalink( $country_id );
-		
-		// Get ISO code for flag icon
-		$iso_code = get_post_meta( $country_id, 'wta_country_code', true );
-		
-		// Count cities in country
-		$cities_count = count( get_posts( array(
-			'post_type'      => WTA_POST_TYPE,
-			'post_parent'    => $country_id,
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
-			'fields'         => 'ids',
-		) ) );
-		
-		$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
-		
-		$output .= '<div class="wta-nearby-item">' . "\n";
-		
-		// Use flag icon instead of generic globe emoji
-		if ( ! empty( $iso_code ) ) {
-			$output .= '  <div class="wta-nearby-icon"><span class="fi fi-' . esc_attr( strtolower( $iso_code ) ) . '"></span></div>' . "\n";
-		} else {
-			$output .= '  <div class="wta-nearby-icon">🌍</div>' . "\n";
+		foreach ( $nearby_countries as $country_id ) {
+			$country_name = get_post_field( 'post_title', $country_id );
+			$country_link = get_permalink( $country_id );
+			
+			// Get ISO code for flag icon (now from cache)
+			$iso_code = get_post_meta( $country_id, 'wta_country_code', true );
+			
+			// Get city count from batch query
+			$cities_count = isset( $city_counts[ $country_id ] ) ? intval( $city_counts[ $country_id ]->city_count ) : 0;
+			
+			$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
+			
+			$output .= '<div class="wta-nearby-item">' . "\n";
+			
+			// Use flag icon instead of generic globe emoji
+			if ( ! empty( $iso_code ) ) {
+				$output .= '  <div class="wta-nearby-icon"><span class="fi fi-' . esc_attr( strtolower( $iso_code ) ) . '"></span></div>' . "\n";
+			} else {
+				$output .= '  <div class="wta-nearby-icon">🌍</div>' . "\n";
+			}
+			
+			$output .= '  <div class="wta-nearby-content">' . "\n";
+			$output .= '    <a href="' . esc_url( $country_link ) . '" class="wta-nearby-title">' . esc_html( $country_name ) . '</a>' . "\n";
+			$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
+			$output .= '  </div>' . "\n";
+			$output .= '</div>' . "\n";
 		}
-		
-		$output .= '  <div class="wta-nearby-content">' . "\n";
-		$output .= '    <a href="' . esc_url( $country_link ) . '" class="wta-nearby-title">' . esc_html( $country_name ) . '</a>' . "\n";
-		$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
-		$output .= '  </div>' . "\n";
-		$output .= '</div>' . "\n";
-	}
 		
 		$output .= '</div>' . "\n";
 		
@@ -598,13 +638,18 @@ class WTA_Shortcodes {
 		$city_name = get_post_field( 'post_title', $post_id );
 		$schema_name = sprintf( 'Lande i nærheden af %s', $city_name );
 		
-		// Convert country IDs to WP_Post objects for schema
-		$nearby_posts = array();
-		foreach ( $nearby_countries as $country_id ) {
-			$nearby_posts[] = get_post( $country_id );
-		}
+		// Batch fetch country posts for schema (reuse query results)
+		$nearby_posts = get_posts( array(
+			'post_type'   => WTA_POST_TYPE,
+			'post__in'    => $nearby_countries,
+			'orderby'     => 'post__in',
+			'post_status' => 'publish',
+		) );
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
+		
+		// Cache the output (24 hours)
+		set_transient( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS );
 		
 		return $output;
 	}
@@ -634,9 +679,14 @@ class WTA_Shortcodes {
 			return array();
 		}
 		
+		// Batch prefetch ALL meta for all cities (1 query instead of N×2)
+		$city_ids = wp_list_pluck( $cities, 'ID' );
+		update_meta_cache( 'post', $city_ids );
+		
 		$cities_with_distance = array();
 		
 		foreach ( $cities as $city ) {
+			// Get meta from cache (no DB hit!)
 			$city_lat = get_post_meta( $city->ID, 'wta_latitude', true );
 			$city_lon = get_post_meta( $city->ID, 'wta_longitude', true );
 			
@@ -707,9 +757,14 @@ class WTA_Shortcodes {
 			return array();
 		}
 		
+		// Batch prefetch ALL meta for all countries (1 query instead of N×2)
+		$country_ids = wp_list_pluck( $countries, 'ID' );
+		update_meta_cache( 'post', $country_ids );
+		
 		$countries_with_distance = array();
 		
 		foreach ( $countries as $country ) {
+			// Get meta from cache (no DB hit!)
 			$country_lat = get_post_meta( $country->ID, 'wta_latitude', true );
 			$country_lon = get_post_meta( $country->ID, 'wta_longitude', true );
 			
