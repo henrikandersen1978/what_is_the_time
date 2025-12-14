@@ -2,6 +2,28 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.38] - 2025-12-14
+
+### Changed
+- **Nearby Countries - Geographic Distance Sorting:**
+  - Countries now sorted by actual GPS distance (Haversine formula) instead of alphabetical
+  - Uses same proven distance calculation as nearby cities feature
+  - Fallback to alphabetical if GPS coordinates unavailable
+  - **Result**: Shows truly nearby countries based on geographic proximity
+  
+- **Nearby Countries - 2-Column Grid Layout:**
+  - Changed from vertical list to 2-column CSS grid for better space efficiency
+  - 18 countries now display in 9 rows instead of 18 rows (50% space reduction)
+  - Responsive: Collapses to 1 column on mobile (≤768px)
+  - Maintains all existing functionality (flags, links, ItemList schema)
+  - **UX Impact**: More compact, scannable, professional layout
+
+### Technical Details
+- Updated `find_nearby_countries()` in `class-wta-shortcodes.php` to calculate distances
+- Changed CSS from `flex-direction: column` to `grid-template-columns: repeat(2, 1fr)`
+- Added mobile-responsive grid with `@media` query
+- Schema.org ItemList preserved for SEO
+
 ## [2.35.37] - 2025-12-14
 
 ### Fixed

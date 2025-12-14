@@ -665,27 +665,78 @@ class WTA_Shortcodes {
 	}
 
 	/**
-	 * Find nearby countries in same continent.
+	 * Find nearby countries in same continent by geographic distance.
 	 *
 	 * @since    2.20.0
 	 * @param    int $continent_id       Continent post ID.
 	 * @param    int $current_country_id Current country ID to exclude.
 	 * @param    int $count              Number of countries to return.
-	 * @return   array                   Array of country IDs.
+	 * @return   array                   Array of country IDs sorted by distance.
 	 */
 	private function find_nearby_countries( $continent_id, $current_country_id, $count = 5 ) {
+		// Get current country's GPS coordinates
+		$current_lat = get_post_meta( $current_country_id, 'wta_latitude', true );
+		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
+		
+		// Fallback to alphabetical if no coordinates
+		if ( empty( $current_lat ) || empty( $current_lon ) ) {
+			$countries = get_posts( array(
+				'post_type'      => WTA_POST_TYPE,
+				'post_parent'    => $continent_id,
+				'posts_per_page' => $count,
+				'post__not_in'   => array( $current_country_id ),
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+			) );
+			
+			return $countries;
+		}
+		
+		// Get all countries in same continent
 		$countries = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_parent'    => $continent_id,
-			'posts_per_page' => $count + 1,
+			'posts_per_page' => -1,
 			'post__not_in'   => array( $current_country_id ),
-			'orderby'        => 'title',
-			'order'          => 'ASC',
 			'post_status'    => 'publish',
-			'fields'         => 'ids',
 		) );
 		
-		return array_slice( $countries, 0, $count );
+		if ( empty( $countries ) ) {
+			return array();
+		}
+		
+		$countries_with_distance = array();
+		
+		foreach ( $countries as $country ) {
+			$country_lat = get_post_meta( $country->ID, 'wta_latitude', true );
+			$country_lon = get_post_meta( $country->ID, 'wta_longitude', true );
+			
+			// Skip countries without coordinates
+			if ( empty( $country_lat ) || empty( $country_lon ) ) {
+				continue;
+			}
+			
+			$distance = $this->calculate_distance( $current_lat, $current_lon, $country_lat, $country_lon );
+			
+			$countries_with_distance[] = array(
+				'id'       => $country->ID,
+				'distance' => $distance,
+			);
+		}
+		
+		// Sort by distance (closest first)
+		usort( $countries_with_distance, function( $a, $b ) {
+			return $a['distance'] <=> $b['distance'];
+		} );
+		
+		// Extract IDs and return top N
+		$sorted_country_ids = array_map( function( $item ) {
+			return $item['id'];
+		}, $countries_with_distance );
+		
+		return array_slice( $sorted_country_ids, 0, $count );
 	}
 
 	/**
