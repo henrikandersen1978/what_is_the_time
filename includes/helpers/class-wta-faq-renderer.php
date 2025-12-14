@@ -90,10 +90,9 @@ class WTA_FAQ_Renderer {
 		<?php
 		$output = ob_get_clean();
 		
-		// Add FAQ schema as direct JSON-LD script tag (v2.35.30)
-		// Yoast SEO 26.5+ doesn't pass @graph to filters, so we use direct injection
-		// Same pattern as ItemList - proven stable and Google-compatible
-		$output .= self::generate_faq_schema_tag( $faq_data, $city_name );
+		// FAQ schema is now outputted via the_content filter (v2.35.40)
+		// NOT saved in post_content to avoid WordPress escaping <script> tags
+		// Schema is generated dynamically on page load (same pattern as breadcrumb schema)
 		
 		return $output;
 	}
@@ -326,7 +325,7 @@ class WTA_FAQ_Renderer {
 	 * @param    string $city_name City name for schema title.
 	 * @return   string            JSON-LD script tag with FAQPage schema.
 	 */
-	private static function generate_faq_schema_tag( $faq_data, $city_name = '' ) {
+	public static function generate_faq_schema_tag( $faq_data, $city_name = '' ) {
 		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
 			return '';
 		}

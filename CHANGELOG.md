@@ -2,6 +2,28 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.40] - 2025-12-14
+
+### Fixed
+- **FAQ Schema Output - Critical Fix:**
+  - FAQ JSON-LD schema now outputted dynamically via `the_content` filter instead of being saved in `post_content`
+  - Prevents WordPress from escaping/stripping `<script type="application/ld+json">` tags
+  - Schema now appears correctly in HTML source code instead of as visible text on page
+  - Uses same proven pattern as breadcrumb schema and ItemList schemas
+  - **Result**: FAQ schema now validates correctly in Google Schema Validator ✅
+
+### Technical Details
+- `WTA_FAQ_Renderer::render_faq_section()`: No longer appends schema tag (HTML only)
+- `WTA_Template_Loader::append_faq_schema()`: New method to inject schema dynamically on page load
+- `WTA_FAQ_Renderer::generate_faq_schema_tag()`: Changed from private to public
+- FAQ schema NOT saved in database - generated fresh on each page view from `wta_faq_data` post meta
+- Priority 20 on `the_content` filter ensures schema appends after all content processing
+
+### FAQ Test Mode
+- FAQ section automatically generates with template/dummy data in test mode (no AI cost)
+- Both HTML and schema work correctly in test mode
+- Test mode uses template-based answers instead of AI-generated content
+
 ## [2.35.39] - 2025-12-14
 
 ### Performance

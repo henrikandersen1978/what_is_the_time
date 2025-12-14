@@ -19,6 +19,9 @@ class WTA_Template_Loader {
 		
 		// Inject breadcrumb and quick nav before content
 		add_filter( 'the_content', array( $this, 'inject_navigation' ), 5 );
+		
+		// Append FAQ schema after content (v2.35.40)
+		add_filter( 'the_content', array( $this, 'append_faq_schema' ), 20 );
 	}
 
 	/**
@@ -743,6 +746,45 @@ class WTA_Template_Loader {
 		});
 		</script>
 		<?php
+	}
+	
+	/**
+	 * Append FAQ JSON-LD schema to city content.
+	 * 
+	 * Schema is NOT saved in database - generated dynamically on page load.
+	 * This prevents WordPress from escaping/stripping <script> tags.
+	 * Same pattern as breadcrumb schema in single template.
+	 * 
+	 * @since    2.35.40
+	 * @param    string $content Post content.
+	 * @return   string          Content with FAQ schema appended.
+	 */
+	public function append_faq_schema( $content ) {
+		// Only on single location pages
+		if ( ! is_singular( WTA_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+			return $content;
+		}
+		
+		$post_id = get_the_ID();
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		
+		// Only for cities
+		if ( 'city' !== $type ) {
+			return $content;
+		}
+		
+		// Get FAQ data
+		$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
+		
+		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+			return $content;
+		}
+		
+		// Generate and append FAQ schema
+		$city_name = get_the_title( $post_id );
+		$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $city_name );
+		
+		return $content;
 	}
 }
 
