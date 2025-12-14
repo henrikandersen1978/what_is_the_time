@@ -2,6 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.42] - 2025-12-14
+
+### Fixed
+- **Wikidata Import - Wikipedia Internal Pages Filter:**
+  - Added validation to reject Wikipedia templates, categories, and internal pages from Wikidata
+  - Prevents entries like "Skabelon:Kortpositioner Island" from being imported as city names
+  - Filters 25+ invalid prefixes across multiple languages (Template:, Category:, Module:, etc.)
+  - Applies to Danish, English, German, French, Spanish, Norwegian, Swedish, Dutch languages
+  - **Result**: Only valid location names are imported from Wikidata ✅
+
+### Technical Details
+- Added validation in `WTA_Wikidata_Translator::get_label()` after label retrieval
+- Invalid labels are logged and cached as `__NOTFOUND__` to prevent repeated API calls
+- Covers all common Wikipedia namespaces: templates, categories, modules, portals, help pages, user pages
+- Examples of rejected prefixes: "Skabelon:", "Template:", "Categoria:", "Kategori:", "Module:", "Wikipedia:"
+
+### Impact
+- Prevents Wikipedia metadata from appearing in city lists and global comparison tables
+- Improves data quality for all future imports
+- Existing invalid entries (like "Skabelon:Kortpositioner Island") can be manually deleted
+
 ## [2.35.41] - 2025-12-14
 
 ### Fixed

@@ -110,6 +110,49 @@ class WTA_Wikidata_Translator {
 	// Clean label (remove unexpected formatting)
 	$label = trim( $label );
 	
+	// Reject Wikipedia internal pages (templates, categories, modules, etc.)
+	// These should never be used as location names
+	$invalid_prefixes = array(
+		'Skabelon:',         // Danish template
+		'Template:',         // English template
+		'Mal:',              // Norwegian/Swedish template
+		'Sjabloon:',         // Dutch template
+		'Vorlage:',          // German template
+		'Modèle:',           // French template
+		'Plantilla:',        // Spanish template
+		'Categoria:',        // Portuguese/Spanish category
+		'Category:',         // English category
+		'Kategori:',         // Danish/Norwegian category
+		'Kategorie:',        // German category
+		'Catégorie:',        // French category
+		'Module:',           // Lua modules (all languages)
+		'Wikipedia:',        // Wikipedia namespace
+		'Help:',             // Help pages
+		'Hjælp:',            // Danish help
+		'File:',             // File pages
+		'Fil:',              // Danish/Norwegian file
+		'Media:',            // Media pages
+		'Special:',          // Special pages
+		'Speciel:',          // Danish special
+		'Portal:',           // Portal pages
+		'Project:',          // Project pages
+		'User:',             // User pages
+		'Bruger:',           // Danish user
+	);
+	
+	foreach ( $invalid_prefixes as $prefix ) {
+		if ( stripos( $label, $prefix ) !== false ) {
+			WTA_Logger::warning( 'Wikidata label rejected: Wikipedia internal page', array(
+				'wikidata_id' => $wikidata_id,
+				'label'       => $label,
+				'prefix'      => $prefix,
+			) );
+			// Cache failure to prevent repeated API calls
+			set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+			return false;
+		}
+	}
+	
 	// Remove administrative suffixes from city names
 	// Wikidata often includes "Kommune", "Municipality", etc. in localized labels
 	// We want clean city names without these administrative designations
