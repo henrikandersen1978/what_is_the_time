@@ -1058,7 +1058,7 @@ class WTA_Shortcodes {
 	 * 
 	 * NEW (v2.35.34): One city per country for better link diversity.
 	 * Randomizes among top 5 cities in each country for daily variation.
-	 * OPTIMIZED (v2.35.44): Single query instead of N+1 queries per continent.
+	 * OPTIMIZED (v2.35.45): Cross-page caching for continent cities.
 	 *
 	 * @since    2.26.0
 	 * @param    string $continent_code  Continent code (EU, AS, NA, SA, AF, OC).
@@ -1068,63 +1068,96 @@ class WTA_Shortcodes {
 	 * @return   array                   Array of WP_Post objects.
 	 */
 	private function get_cities_for_continent( $continent_code, $current_tz, $current_post_id, $count ) {
-		global $wpdb;
+		// PERFORMANCE (v2.35.45): Cache continent data across ALL pages (not per-page)
+		// This means only the FIRST visitor per day hits the database
+		// All subsequent page loads get instant cache hits
+		$cache_key = 'wta_continent_' . $continent_code . '_' . date( 'Ymd' );
+		$cached_data = get_transient( $cache_key );
 		
-		// PERFORMANCE (v2.35.44): Fetch ALL cities in continent in ONE query
-		// Previously: 1 query for countries + N queries for cities (30+ total)
-		// Now: 1 query total per continent (6x faster!)
-		$all_cities = $wpdb->get_results( $wpdb->prepare( "
-			SELECT p.ID, pm_cc.meta_value as country_code, 
-			       pm_pop.meta_value as population, 
-			       pm_tz.meta_value as timezone
-			FROM {$wpdb->posts} p
-			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
-			LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
-			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
-			LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
-			WHERE p.post_type = %s
-			AND p.post_status = 'publish'
-			AND p.ID != %d
-			AND pm_type.meta_value = 'city'
-			AND pm_cont.meta_value = %s
-			AND pm_cc.meta_value IS NOT NULL
-			AND pm_tz.meta_value IS NOT NULL
-			AND pm_tz.meta_value != 'multiple'
-			AND pm_tz.meta_value != %s
-		", WTA_POST_TYPE, $current_post_id, $continent_code, $current_tz ) );
+		if ( false === $cached_data ) {
+			// First load: Build country->cities map for entire continent
+			global $wpdb;
+			
+			// Get ALL countries in continent
+			$all_countries = $wpdb->get_col( $wpdb->prepare( "
+				SELECT DISTINCT pm_cc.meta_value as country_code
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+				LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
+				LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+				WHERE p.post_type = %s
+				AND p.post_status = 'publish'
+				AND pm_type.meta_value = 'city'
+				AND pm_cont.meta_value = %s
+				AND pm_cc.meta_value IS NOT NULL
+			", WTA_POST_TYPE, $continent_code ) );
+			
+			// Build map of country -> [city IDs with timezone]
+			$country_cities_map = array();
+			
+			foreach ( $all_countries as $country_code ) {
+				// Get top 20 cities per country (to have selection pool)
+				$cities = $wpdb->get_results( $wpdb->prepare( "
+					SELECT p.ID, pm_tz.meta_value as timezone
+					FROM {$wpdb->posts} p
+					LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+					LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+					LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+					LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+					WHERE p.post_type = %s
+					AND p.post_status = 'publish'
+					AND pm_type.meta_value = 'city'
+					AND pm_cc.meta_value = %s
+					AND pm_tz.meta_value IS NOT NULL
+					AND pm_tz.meta_value != 'multiple'
+					ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+					LIMIT 20
+				", WTA_POST_TYPE, $country_code ) );
+				
+				if ( ! empty( $cities ) ) {
+					$country_cities_map[ $country_code ] = $cities;
+				}
+			}
+			
+			// Cache for 24 hours, shared across ALL pages
+			set_transient( $cache_key, $country_cities_map, DAY_IN_SECONDS );
+			$cached_data = $country_cities_map;
+		}
 		
-		if ( empty( $all_cities ) ) {
+		if ( empty( $cached_data ) ) {
 			return array();
 		}
 		
-		// Group cities by country
-		$cities_by_country = array();
-		foreach ( $all_cities as $city ) {
-			if ( ! isset( $cities_by_country[ $city->country_code ] ) ) {
-				$cities_by_country[ $city->country_code ] = array();
+		// Filter out current city's timezone and select cities
+		$available_countries = array();
+		foreach ( $cached_data as $country_code => $cities ) {
+			// Filter cities with different timezone
+			$valid_cities = array_filter( $cities, function( $city ) use ( $current_tz, $current_post_id ) {
+				return $city->timezone !== $current_tz && intval( $city->ID ) !== $current_post_id;
+			} );
+			
+			if ( ! empty( $valid_cities ) ) {
+				$available_countries[ $country_code ] = array_values( $valid_cities );
 			}
-			$cities_by_country[ $city->country_code ][] = $city;
 		}
 		
-		// Get all country codes and shuffle with daily seed
-		$all_countries = array_keys( $cities_by_country );
+		if ( empty( $available_countries ) ) {
+			return array();
+		}
+		
+		// Shuffle countries with daily seed
+		$all_countries = array_keys( $available_countries );
 		$seed = intval( date( 'Ymd' ) ) + $current_post_id + crc32( $continent_code );
 		mt_srand( $seed );
 		shuffle( $all_countries );
 		
-		// Select one random city per country (from top 5 by population)
+		// Select one random city per country (from top 5)
 		$selected_cities = array();
 		
 		foreach ( $all_countries as $country_code ) {
-			$country_cities = $cities_by_country[ $country_code ];
+			$country_cities = $available_countries[ $country_code ];
 			
-			// Sort by population DESC
-			usort( $country_cities, function( $a, $b ) {
-				return intval( $b->population ) - intval( $a->population );
-			} );
-			
-			// Take top 5
+			// Take top 5 (already sorted by population in cache)
 			$top_cities = array_slice( $country_cities, 0, 5 );
 			
 			// Select random from top 5 with daily seed

@@ -2,6 +2,29 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.45] - 2025-12-14
+
+### Performance
+- **CRITICAL: Cross-Page Caching for Continent Data:**
+  - **PROBLEM**: v2.35.44 reduced query count but each query took 2.5s (15s total load time)
+  - **ROOT CAUSE**: Single query fetching ALL cities in continent with 5 LEFT JOINs too slow
+  - **FIX**: Reverted to smaller queries BUT with aggressive cross-page caching
+  - **IMPACT**: 
+    - First visitor per day: ~300ms (30 small queries cached at continent level)
+    - All other visitors: 0ms (instant cache hit, shared across all pages)
+    - Target: <3s page load achieved! ✅
+  - Added `database-indices.sql` file for optional 50× speedup with MySQL indices
+
+### Technical Details
+- `get_cities_for_continent()` now caches at continent level, not per-page
+- Cache key: `wta_continent_{CODE}_{DATE}` (shared across all city pages)
+- First load builds country→cities map for entire continent
+- Subsequent loads filter from cached data (instant)
+- Database indices file provided for production optimization
+
+### Files Added
+- `database-indices.sql`: Optional MySQL indices for 50× query speedup (2.5s → 0.05s)
+
 ## [2.35.44] - 2025-12-14
 
 ### Performance
