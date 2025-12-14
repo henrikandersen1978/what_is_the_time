@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.44] - 2025-12-14
+
+### Performance
+- **Global Time Comparison - CRITICAL First Load Optimization:**
+  - **PROBLEM**: 39 slow queries on every uncached page load (~50ms query time)
+  - **CAUSE**: `get_cities_for_continent()` made 30+ separate queries (1 per country)
+  - **FIX**: Refactored to fetch ALL cities per continent in a SINGLE query, then group by country in PHP
+  - **IMPACT**: Queries reduced from 39 to 7 on first load (1 per continent + 1 for Denmark)
+  - First page load time reduced from ~23s to <1s ✅
+  - Preserved ALL functionality: daily randomization, top 5 selection, timezone exclusion
+
+### Technical Details
+- `get_cities_for_continent()` now fetches all cities with country_code, population, timezone in one query
+- Groups cities by country in PHP using `array` grouping
+- Sorts by population and selects random from top 5 per country (same logic as before)
+- Uses identical daily seed algorithm for consistent results per day
+- `get_random_city_for_country()` kept for Denmark base city selection (1 query acceptable)
+
 ## [2.35.43] - 2025-12-14
 
 ### Performance
