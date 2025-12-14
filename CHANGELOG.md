@@ -2,6 +2,23 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.41] - 2025-12-14
+
+### Fixed
+- **CRITICAL: Permalink Redirect Bug:**
+  - Fixed redirect logic that incorrectly matched "/l" inside country names like "Brasilien"
+  - URLs like `/sydamerika/brasilien/lavras/` were redirected to `/sydamerika/brasilienavras/`
+  - Changed `str_contains($url, "/l")` to `str_contains($url, "/l/")` (with trailing slash)
+  - Changed `str_replace("/l", '', $url)` to `str_replace("/l/", '/', $url)`
+  - Now only matches "/l/" as a complete URL path segment, not "l" within words
+  - **Result**: All hierarchical permalinks now work correctly ✅
+
+### Technical Details
+- Bug was in `WTA_Post_Type::redirect_old_urls()` method
+- The dummy slug "/l/" is used for clean URLs and removed by filter
+- Previous regex matched ANY "/l" substring, causing partial matches in country/city names
+- Fixed by requiring trailing slash to match complete path segments only
+
 ## [2.35.40] - 2025-12-14
 
 ### Fixed

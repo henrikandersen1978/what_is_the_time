@@ -108,9 +108,10 @@ class WTA_Post_Type {
 		$slug = $this->get_post_type_slug( get_post_type() );
 		$current_url = trailingslashit( $this->get_current_url() );
 		
-		// If URL contains the slug, redirect to clean version
-		if ( $slug && str_contains( $current_url, "/{$slug}" ) ) {
-			wp_safe_redirect( esc_url( str_replace( "/{$slug}", '', $current_url ) ), 301 );
+		// If URL contains the slug as a complete path segment, redirect to clean version
+		// CRITICAL: Match "/{$slug}/" (with trailing slash) to avoid matching "l" inside words like "brasilien"
+		if ( $slug && str_contains( $current_url, "/{$slug}/" ) ) {
+			wp_safe_redirect( esc_url( str_replace( "/{$slug}/", '/', $current_url ) ), 301 );
 			exit;
 		}
 	}
