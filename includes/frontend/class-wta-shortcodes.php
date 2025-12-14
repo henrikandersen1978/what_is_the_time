@@ -846,30 +846,38 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get globally distributed cities (cached daily with date-based key for variation)
-		// Daily cache ensures fresh city selection each day while maintaining performance
-		$cache_key = 'wta_global_cities_' . $post_id . '_' . date( 'Ymd' );
-		$comparison_cities = get_transient( $cache_key );
+	// Get globally distributed cities (cached daily with date-based key for variation)
+	// Daily cache ensures fresh city selection each day while maintaining performance
+	$cache_key = 'wta_global_cities_' . $post_id . '_' . date( 'Ymd' );
+	$comparison_cities = get_transient( $cache_key );
+	
+	if ( false === $comparison_cities ) {
+		// First load: select, batch prefetch, sort, then cache (all in select_global_cities)
+		$comparison_cities = $this->select_global_cities( $post_id, $current_timezone );
+		set_transient( $cache_key, $comparison_cities, DAY_IN_SECONDS );
+	} else {
+		// PERFORMANCE (v2.35.43): Cached hit - refresh meta cache for fast access
+		// This prevents WordPress from re-querying meta one-by-one in table loop
+		$city_ids = wp_list_pluck( $comparison_cities, 'ID' );
+		update_meta_cache( 'post', $city_ids );
 		
-		if ( false === $comparison_cities ) {
-			$comparison_cities = $this->select_global_cities( $post_id, $current_timezone );
-			set_transient( $cache_key, $comparison_cities, DAY_IN_SECONDS );
+		// Also refresh parent country meta
+		$parent_ids = array();
+		foreach ( $comparison_cities as $city ) {
+			$parent_id = wp_get_post_parent_id( $city->ID );
+			if ( $parent_id ) {
+				$parent_ids[] = $parent_id;
+			}
 		}
-		
-		if ( empty( $comparison_cities ) ) {
-			return '';
+		if ( ! empty( $parent_ids ) ) {
+			$parent_ids = array_unique( $parent_ids );
+			update_meta_cache( 'post', $parent_ids );
 		}
-		
-		// Sort cities by time difference for better UX (v2.35.34)
-		usort( $comparison_cities, function( $a, $b ) use ( $current_timezone ) {
-			$tz_a = get_post_meta( $a->ID, 'wta_timezone', true );
-			$tz_b = get_post_meta( $b->ID, 'wta_timezone', true );
-			
-			$offset_a = $this->get_timezone_offset_hours( $current_timezone, $tz_a );
-			$offset_b = $this->get_timezone_offset_hours( $current_timezone, $tz_b );
-			
-			return $offset_a <=> $offset_b;
-		} );
+	}
+	
+	if ( empty( $comparison_cities ) ) {
+		return '';
+	}
 		
 		// Get intro text (test mode or AI-generated)
 		$test_mode = get_option( 'wta_test_mode', 0 );
@@ -1011,7 +1019,38 @@ class WTA_Shortcodes {
 			}
 		}
 		
-		return array_slice( $unique_cities, 0, 24 );
+		$final_cities = array_slice( $unique_cities, 0, 24 );
+		
+		// PERFORMANCE (v2.35.43): Batch prefetch all meta before sorting
+		// This reduces N+1 queries from ~48 to 1 on first load
+		$city_ids = wp_list_pluck( $final_cities, 'ID' );
+		update_meta_cache( 'post', $city_ids );
+		
+		// Also prefetch parent country meta (for flags/names in table)
+		$parent_ids = array();
+		foreach ( $final_cities as $city ) {
+			$parent_id = wp_get_post_parent_id( $city->ID );
+			if ( $parent_id ) {
+				$parent_ids[] = $parent_id;
+			}
+		}
+		if ( ! empty( $parent_ids ) ) {
+			$parent_ids = array_unique( $parent_ids );
+			update_meta_cache( 'post', $parent_ids );
+		}
+		
+		// Sort cities by time difference for better UX (moved from shortcode to cache sorted result)
+		usort( $final_cities, function( $a, $b ) use ( $current_timezone ) {
+			$tz_a = get_post_meta( $a->ID, 'wta_timezone', true );
+			$tz_b = get_post_meta( $b->ID, 'wta_timezone', true );
+			
+			$offset_a = $this->get_timezone_offset_hours( $current_timezone, $tz_a );
+			$offset_b = $this->get_timezone_offset_hours( $current_timezone, $tz_b );
+			
+			return $offset_a <=> $offset_b;
+		} );
+		
+		return $final_cities;
 	}
 	
 	/**

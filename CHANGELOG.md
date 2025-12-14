@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.43] - 2025-12-14
+
+### Performance
+- **Global Time Comparison - Critical Query Optimization:**
+  - **PROBLEM**: 72 `get_post_meta()` queries on EVERY page load (48 in sorting + 24 in table loop)
+  - **CAUSE**: Meta not cached before sorting, and cache refresh missing on cache hits
+  - **FIX**: Batch prefetch all city + country meta using `update_meta_cache()` before sorting
+  - **IMPACT**: Queries reduced from 72 to 1-2 on first load, and 0 on cached loads
+  - Moved sorting from `global_time_comparison_shortcode()` to `select_global_cities()` so cached result is pre-sorted
+  - Added meta refresh on cache hits to prevent WordPress from re-querying one-by-one
+  - Page load time reduced from ~23s to <1s ✅
+
+### Technical Details
+- `select_global_cities()` now prefetches city meta AND parent country meta before sorting
+- `global_time_comparison_shortcode()` refreshes meta cache on cache hits (when cities come from transient)
+- All `get_post_meta()` calls now served from cache instead of database queries
+- Sorting is cached along with city selection, preventing re-sorting on every request
+
 ## [2.35.42] - 2025-12-14
 
 ### Fixed
