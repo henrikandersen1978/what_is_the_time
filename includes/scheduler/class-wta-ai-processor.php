@@ -119,13 +119,15 @@ class WTA_AI_Processor {
 		
 	if ( $test_mode ) {
 		// Test mode: Fast template generation (~0.8s per city after DB optimization)
-		// 1-min: 50 cities (~40s), 5-min: 250 cities (~200s)
-		$batch_size = ( $cron_interval >= 300 ) ? 250 : 50;
+		// 1-min: 55 cities (~44s - safe under 50s limit)
+		// 5-min: 280 cities (~224s - safe under 270s limit, well under 10min timeout)
+		$batch_size = ( $cron_interval >= 300 ) ? 280 : 55;
 	} else {
 		// AI mode with Tier 5 + DB optimization: ~12-13s per city
 		// 1-min interval: 3 cities (39s - safe buffer under 50s limit)
-		// 5-min interval: 16 cities (208s - good buffer under 270s limit)
-		$batch_size = ( $cron_interval >= 300 ) ? 16 : 3;
+		// 5-min interval: 18 cities (234s - safe under 270s limit, well under 10min timeout)
+		// Conservative to avoid timeouts while maximizing throughput
+		$batch_size = ( $cron_interval >= 300 ) ? 18 : 3;
 	}
 		
 		// Get pending AI content items

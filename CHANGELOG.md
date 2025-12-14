@@ -2,6 +2,59 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.48] - 2025-12-14
+
+### Performance
+- **Conservative Batch Size Optimization** 🚀
+  - **Test Mode (5-min)**: 250 → 280 cities (+12% throughput)
+  - **Test Mode (1-min)**: 50 → 55 cities (+10% throughput)
+  - **AI Mode (5-min)**: 16 → 18 cities (+12.5% throughput)
+  - **AI Mode (1-min)**: 3 cities (unchanged - already optimal)
+  
+### Safety First
+- ✅ **Well under 10-minute cron timeout:**
+  - Test mode: 280 cities × 0.8s = 224s (3.7 min) - safe!
+  - AI mode: 18 cities × 13s = 234s (3.9 min) - safe!
+- ✅ **Within Action Scheduler limits:**
+  - 5-min time limit: 270s
+  - Both modes complete with 30-40s buffer
+- ✅ **Conservative approach:** Small incremental increases for stability
+
+### Impact
+
+**Test Mode:**
+```
+Before: 250 cities × 12 jobs/hour = 3,000 cities/hour
+After:  280 cities × 12 jobs/hour = 3,360 cities/hour (+12%)
+```
+
+**AI Mode (Normal):**
+```
+Before: 16 cities × 12 jobs/hour = 192 cities/hour
+After:  18 cities × 12 jobs/hour = 216 cities/hour (+12.5%)
+```
+
+**For 23k pending AI jobs:**
+```
+Before: 120 hours (~5.0 days)
+After:  106 hours (~4.4 days)
+Saved:  14 hours (~0.6 days) 🎉
+```
+
+### Technical Details
+- File: `includes/scheduler/class-wta-ai-processor.php`
+- Batch sizes optimized based on:
+  - 10-minute cron timeout (hard limit)
+  - 5-minute wp-cron.php activation interval
+  - Conservative buffers for stability
+  - OpenAI Tier 5 capacity (no rate limit concerns)
+
+### Rationale
+- Avoids aggressive parallelism approaches (loopback runners) that failed in v2.35.11-v2.35.13
+- Focuses on "safe and steady" optimization within single WP-Cron process
+- Maximizes batch sizes without risking timeouts
+- Proven approach with incremental gains
+
 ## [2.35.47] - 2025-12-14
 
 ### Performance
