@@ -2,6 +2,13 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.54] - 2025-12-15
+
+### Admin Bar Enhancement
+- **Added**: "Edit" link in admin bar for location posts when viewing on frontend
+- **Technical**: Added `show_in_admin_bar => true` to post type registration
+- **Benefit**: Quick access to edit locations directly from frontend view
+
 ## [2.35.53] - 2025-12-15
 
 ### Shortcode Hardcoding Fix - Nearby Countries

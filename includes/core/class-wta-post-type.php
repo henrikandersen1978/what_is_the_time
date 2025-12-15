@@ -228,6 +228,7 @@ class WTA_Post_Type {
 			'publicly_queryable' => true,
 			'show_ui'            => true,
 			'show_in_menu'       => false,
+			'show_in_admin_bar'  => true,
 			'query_var'          => true,
 			'rewrite'            => array(
 				'slug'         => 'l', // Dummy slug - removed by permalink filter
