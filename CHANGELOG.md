@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.60] - 2025-12-15
+
+### Fixed - Hardcoded Shortcode Counts in AI Processor
+- **Removed**: All hardcoded `count` attributes from `[wta_major_cities]` in AI-generated content
+- **Changed**: 4 locations in AI processor (both normal AI mode and test mode)
+  - Normal AI mode: `count="30"` → uses default (12)
+  - Test mode: `count="12"` → uses default (12)
+- **Benefit**: Shortcode defaults can now be changed in one place (shortcode class)
+- **Consistency**: Same behavior across AI-generated and manually created content
+- **Future-proof**: No need to update AI processor when adjusting display counts
+
 ## [2.35.59] - 2025-12-15
 
 ### Fixed - All Shortcode Batch Prefetch Queries

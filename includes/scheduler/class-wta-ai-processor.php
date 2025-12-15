@@ -410,7 +410,7 @@ class WTA_AI_Processor {
 		
 		// Add dynamic shortcode to display major cities with live clocks
 		// This shortcode queries the database when the page loads, so no timing issues!
-		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
+		$cities_content .= "\n\n" . '[wta_major_cities]';
 		
 	// === 5. GEOGRAPHY ===
 	$geo_system = get_option( 'wta_prompt_continent_geography_system', '' );
@@ -636,8 +636,8 @@ class WTA_AI_Processor {
 		$yoast_title = ! empty( $results['yoast_title'] ) ? $results['yoast_title'] : '';
 		$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
 		
-		// Add dynamic shortcode for live city clocks (30 cities)
-		$cities_content .= "\n\n" . '[wta_major_cities count="30"]';
+		// Add dynamic shortcode for live city clocks (uses default count)
+		$cities_content .= "\n\n" . '[wta_major_cities]';
 		
 		// === COMBINE ALL SECTIONS ===
 		// Add paragraph breaks to make content more readable
@@ -1543,7 +1543,7 @@ class WTA_AI_Processor {
 		// Major cities section
 		$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
 		$content .= "<p>Dummy tekst om største byer.</p>\n";
-		$content .= "[wta_major_cities count=\"12\"]\n\n";
+		$content .= "[wta_major_cities]\n\n";
 		
 		// Weather section
 		$content .= "<h2>Vejr og klima i {$name_local}</h2>\n";
@@ -1592,7 +1592,7 @@ class WTA_AI_Processor {
 		// Major cities section
 		$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
 		$content .= "<p>Dummy tekst om største byer.</p>\n";
-		$content .= "[wta_major_cities count=\"12\"]\n\n";
+		$content .= "[wta_major_cities]\n\n";
 		
 		// Geography section
 		$content .= "<h2>Geografi og beliggenhed</h2>\n";
