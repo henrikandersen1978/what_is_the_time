@@ -2,6 +2,15 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.58] - 2025-12-15
+
+### Removed - Unused Sitemap Priority Code
+- **Removed**: Yoast SEO sitemap priority customization (unused)
+- **Reason**: Modern Yoast SEO versions don't include `<priority>` tags in XML sitemaps
+- **Why**: Google officially ignores priority tags since ~2020, Yoast removed support
+- **Better SEO Strategy**: Our internal linking structure (300 cities, 60 nearby) is far more effective
+- **Cleanup**: Removed `customize_sitemap_priority()` method and filter hook
+
 ## [2.35.57] - 2025-12-15
 
 ### Fixed - Batch Prefetch Query Missing nopaging

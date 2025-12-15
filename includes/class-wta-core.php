@@ -233,9 +233,6 @@ class WTA_Core {
 			}
 			return $content;
 		}, 0 ); // Priority 0 = run before wpautop (priority 10)
-		
-		// Yoast SEO sitemap priority customization (v2.35.50)
-		$this->loader->add_filter( 'wpseo_sitemap_entry', $this, 'customize_sitemap_priority', 10, 3 );
 	}
 	
 	/**
@@ -430,53 +427,6 @@ class WTA_Core {
 			</p>
 		</div>
 		<?php
-	}
-
-	/**
-	 * Customize sitemap entry priorities for better crawl efficiency.
-	 * 
-	 * Prioritizes continents and countries highest, then cities by population.
-	 * This guides Google to crawl most important pages first.
-	 *
-	 * @since    2.35.50
-	 * @param    array   $url  Sitemap URL entry array.
-	 * @param    string  $type Post type.
-	 * @param    WP_Post $post Post object.
-	 * @return   array         Modified URL entry.
-	 */
-	public function customize_sitemap_priority( $url, $type, $post ) {
-		// Only customize our location posts
-		if ( $type !== 'post' || ! isset( $post->post_type ) || $post->post_type !== WTA_POST_TYPE ) {
-			return $url;
-		}
-		
-		$location_type = get_post_meta( $post->ID, 'wta_type', true );
-		$population = intval( get_post_meta( $post->ID, 'wta_population', true ) );
-		
-		// Set priority and change frequency based on location type
-		if ( 'continent' === $location_type ) {
-			$url['pri'] = 1.0;
-			$url['chf'] = 'weekly';
-		} elseif ( 'country' === $location_type ) {
-			$url['pri'] = 0.9;
-			$url['chf'] = 'weekly';
-		} elseif ( 'city' === $location_type ) {
-			// Prioritize cities by population (top 300 get higher priority)
-			if ( $population > 1000000 ) {
-				$url['pri'] = 0.8;  // Mega cities
-			} elseif ( $population > 500000 ) {
-				$url['pri'] = 0.7;  // Large cities
-			} elseif ( $population > 100000 ) {
-				$url['pri'] = 0.6;  // Medium cities (top 300)
-			} elseif ( $population > 50000 ) {
-				$url['pri'] = 0.5;  // Small cities
-			} else {
-				$url['pri'] = 0.4;  // Very small cities
-			}
-			$url['chf'] = 'monthly';  // Cities change infrequently
-		}
-		
-		return $url;
 	}
 
 	/**
