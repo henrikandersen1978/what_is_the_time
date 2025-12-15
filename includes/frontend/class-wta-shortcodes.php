@@ -45,6 +45,14 @@ class WTA_Shortcodes {
 			return '<!-- Major Cities: No post ID -->';
 		}
 		
+		// Check cache first (24 hours)
+		$cache_key = 'wta_major_cities_' . $post_id . '_' . intval( $atts['count'] );
+		$cached = get_transient( $cache_key );
+		
+		if ( false !== $cached ) {
+			return $cached;
+		}
+		
 		// Get location type
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		
@@ -52,53 +60,58 @@ class WTA_Shortcodes {
 			return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
 		}
 		
-		// Get child posts (countries or cities)
+		// Get major cities using optimized SQL query
+		global $wpdb;
+		
 		if ( $type === 'continent' ) {
-			// For continent: get all child countries first
-			$children = get_posts( array(
-				'post_type'      => WTA_POST_TYPE,
-				'post_parent'    => $post_id,
-				'posts_per_page' => -1,
-				'post_status'    => 'publish',
-			) );
+			// For continent: Use optimized SQL to get top cities across all countries
+			$city_ids = $wpdb->get_col( $wpdb->prepare( "
+				SELECT p.ID
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+				INNER JOIN {$wpdb->posts} parent ON p.post_parent = parent.ID
+				WHERE p.post_type = %s
+				AND p.post_status = 'publish'
+				AND pm_type.meta_value = 'city'
+				AND parent.post_parent = %d
+				ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+				LIMIT %d
+			", WTA_POST_TYPE, $post_id, intval( $atts['count'] ) ) );
 			
-			if ( empty( $children ) ) {
-				return '<!-- Major Cities: No child countries found for continent (ID: ' . $post_id . ') -->';
-			}
-			
-			$child_ids = wp_list_pluck( $children, 'ID' );
-			
-			// Then find major cities across all countries
-			$major_cities = get_posts( array(
-				'post_type'      => WTA_POST_TYPE,
-				'posts_per_page' => intval( $atts['count'] ),
-				'post_parent__in' => $child_ids,
-				'orderby'        => 'meta_value_num',
-				'meta_key'       => 'wta_population',
-				'order'          => 'DESC',
-				'post_status'    => 'publish',
-			) );
-			
-			// Debug info
-			if ( empty( $major_cities ) ) {
-				return '<!-- Major Cities: No cities found. Countries: ' . count( $children ) . ' (IDs: ' . implode( ', ', $child_ids ) . ') -->';
+			if ( empty( $city_ids ) ) {
+				return '<!-- Major Cities: No cities found for continent (ID: ' . $post_id . ') -->';
 			}
 		} else {
-			// For country: get direct child cities
-			$major_cities = get_posts( array(
-				'post_type'      => WTA_POST_TYPE,
-				'posts_per_page' => intval( $atts['count'] ),
-				'post_parent'    => $post_id,
-				'orderby'        => 'meta_value_num',
-				'meta_key'       => 'wta_population',
-				'order'          => 'DESC',
-				'post_status'    => 'publish',
-			) );
+			// For country: Use optimized SQL to get top cities
+			$city_ids = $wpdb->get_col( $wpdb->prepare( "
+				SELECT p.ID
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+				WHERE p.post_type = %s
+				AND p.post_parent = %d
+				AND p.post_status = 'publish'
+				AND pm_type.meta_value = 'city'
+				ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+				LIMIT %d
+			", WTA_POST_TYPE, $post_id, intval( $atts['count'] ) ) );
 			
-			if ( empty( $major_cities ) ) {
+			if ( empty( $city_ids ) ) {
 				return '<!-- Major Cities: No cities found for country (ID: ' . $post_id . ') -->';
 			}
 		}
+		
+		// Batch fetch posts
+		$major_cities = get_posts( array(
+			'post_type'   => WTA_POST_TYPE,
+			'post__in'    => $city_ids,
+			'orderby'     => 'post__in',
+			'post_status' => 'publish',
+		) );
+		
+		// Batch prefetch meta
+		update_meta_cache( 'post', $city_ids );
 		
 		// Build output with anchor ID for navigation
 		$output = '<div id="major-cities" class="wta-city-times-grid">' . "\n";
@@ -172,6 +185,9 @@ class WTA_Shortcodes {
 		$schema_name = sprintf( 'Største byer i %s', $parent_name );
 		$schema_description = sprintf( 'Se hvad klokken er i de største byer i %s', $parent_name );
 		$output .= $this->generate_item_list_schema( $major_cities, $schema_name, $schema_description );
+		
+		// Cache for 24 hours
+		set_transient( $cache_key, $output, DAY_IN_SECONDS );
 		
 		return $output;
 	}
@@ -284,19 +300,48 @@ class WTA_Shortcodes {
 		}
 		
 		$atts = shortcode_atts( array(
-			'orderby' => 'title',
-			'order'   => 'ASC',
-			'limit'   => -1,  // Show ALL child locations
+			'orderby'  => 'meta_value_num',
+			'meta_key' => 'wta_population',
+			'order'    => 'DESC',
+			'limit'    => 300,  // Top 300 cities by population (optimized for performance)
 		), $atts );
 		
+		// Check cache first (24 hours)
+		$cache_key = 'wta_child_locations_' . $post->ID . '_' . md5( serialize( $atts ) );
+		$cached = get_transient( $cache_key );
+		
+		if ( false !== $cached ) {
+			return $cached;
+		}
+		
 		// Get child locations
-		$children = get_posts( array(
+		$query_args = array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_parent'    => $post->ID,
 			'posts_per_page' => (int) $atts['limit'],
 			'orderby'        => $atts['orderby'],
 			'order'          => $atts['order'],
 			'post_status'    => 'publish',
+			'fields'         => 'ids',  // Only get IDs for better performance
+		);
+		
+		// Add meta_key if sorting by population
+		if ( 'meta_value_num' === $atts['orderby'] && ! empty( $atts['meta_key'] ) ) {
+			$query_args['meta_key'] = $atts['meta_key'];
+		}
+		
+		$children_ids = get_posts( $query_args );
+		
+		if ( empty( $children_ids ) ) {
+			return '';
+		}
+		
+		// Batch prefetch post data
+		$children = get_posts( array(
+			'post_type'   => WTA_POST_TYPE,
+			'post__in'    => $children_ids,
+			'orderby'     => 'post__in',
+			'post_status' => 'publish',
 		) );
 		
 		if ( empty( $children ) ) {
@@ -421,6 +466,9 @@ class WTA_Shortcodes {
 		
 		$output .= $this->generate_item_list_schema( $children, $schema_name, $schema_description );
 		
+		// Cache for 24 hours
+		set_transient( $cache_key, $output, DAY_IN_SECONDS );
+		
 		return $output;
 	}
 
@@ -435,7 +483,7 @@ class WTA_Shortcodes {
 	 */
 	public function nearby_cities_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 18,
+			'count' => 100,  // Increased from 18 for denser internal linking mesh
 		), $atts );
 		
 		$post_id = get_the_ID();
