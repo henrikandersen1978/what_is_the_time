@@ -2,6 +2,39 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.53] - 2025-12-15
+
+### Shortcode Hardcoding Fix - Nearby Countries
+- **Fixed**: Removed hardcoded `count="18"` from `[wta_nearby_countries]` shortcode
+- **Impact**: Future AI-generated content will use shortcode defaults for both cities and countries
+- **Flexibility**: Changing default counts now only requires updating one place (shortcode class)
+- **Complete list of removed hardcoding**:
+  - `[wta_nearby_cities count="18"]` → `[wta_nearby_cities]` (default: 60)
+  - `[wta_nearby_countries count="18"]` → `[wta_nearby_countries]` (default: 18)
+
+### Database Update Instructions
+For existing content, run this SQL in phpMyAdmin:
+```sql
+UPDATE wp_posts 
+SET post_content = REPLACE(
+    REPLACE(
+        REPLACE(post_content, 
+            '[wta_nearby_cities count="18"]', 
+            '[wta_nearby_cities]'
+        ),
+        '[wta_nearby_cities count="100"]',
+        '[wta_nearby_cities]'
+    ),
+    '[wta_nearby_countries count="18"]',
+    '[wta_nearby_countries]'
+)
+WHERE post_type = 'wta_location'
+AND (
+    post_content LIKE '%count="18"%' 
+    OR post_content LIKE '%count="100"%'
+);
+```
+
 ## [2.35.52] - 2025-12-15
 
 ### Shortcode Count Corrections

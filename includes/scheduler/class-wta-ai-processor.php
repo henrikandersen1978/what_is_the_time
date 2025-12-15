@@ -850,7 +850,7 @@ class WTA_AI_Processor {
 		if ( ! empty( $nearby_countries_intro ) ) {
 			$full_content .= '<p>' . $nearby_countries_intro . "</p>\n";
 		}
-		$full_content .= '[wta_nearby_countries count="18"]' . "\n</div>\n\n";
+		$full_content .= '[wta_nearby_countries]' . "\n</div>\n\n";  // Uses default count=18
 		
 		// Global time comparison section
 		$full_content .= '[wta_global_time_comparison]';
@@ -1501,7 +1501,7 @@ class WTA_AI_Processor {
 		// Nearby countries (with shortcode)
 		$content .= "<div id=\"nearby-countries\"><h2>Udforsk nærliggende lande</h2>\n";
 		$content .= "<p>Dummy intro tekst om nærliggende lande.</p>\n";
-		$content .= "[wta_nearby_countries count=\"18\"]\n</div>\n\n";
+		$content .= "[wta_nearby_countries]\n</div>\n\n";  // Uses default count=18
 		
 		// Global time comparison
 		$content .= "<div id=\"global-time\"><h2>Sammenlign med storbyer rundt om i verden</h2>\n";
