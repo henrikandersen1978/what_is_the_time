@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.56] - 2025-12-15
+
+### Fixed - Critical WordPress Query Issue
+- **Fixed**: `[wta_child_locations]` now correctly shows ALL children for continents
+- **Root Cause**: WordPress ignores `posts_per_page => -1` with custom `orderby` parameters
+- **Solution**: Use `'nopaging' => true` instead of `posts_per_page => -1` for unlimited results
+- **Impact**: 
+  - Europa page now shows all 53 countries (not just 5)
+  - Frankrig page now shows top 300 cities (not just 5)
+- **Technical**: WordPress's `WP_Query` has known issues with `posts_per_page => -1` when combined with `meta_value_num` orderby
+
 ## [2.35.55] - 2025-12-15
 
 ### Fixed - Critical Shortcode Issue

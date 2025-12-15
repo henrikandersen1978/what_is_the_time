@@ -336,12 +336,20 @@ class WTA_Shortcodes {
 		$query_args = array(
 			'post_type'      => WTA_POST_TYPE,
 			'post_parent'    => $post->ID,
-			'posts_per_page' => (int) $atts['limit'],
 			'orderby'        => $atts['orderby'],
 			'order'          => $atts['order'],
 			'post_status'    => 'publish',
 			'fields'         => 'ids',  // Only get IDs for better performance
 		);
+		
+		// For continents: show ALL (no pagination)
+		// For countries: limit to specific number
+		// CRITICAL: Use 'nopaging' instead of posts_per_page=-1 for proper behavior with custom orderby
+		if ( $atts['limit'] === -1 ) {
+			$query_args['nopaging'] = true;
+		} else {
+			$query_args['posts_per_page'] = (int) $atts['limit'];
+		}
 		
 		// Add meta_key if sorting by population
 		if ( 'meta_value_num' === $atts['orderby'] && ! empty( $atts['meta_key'] ) ) {
