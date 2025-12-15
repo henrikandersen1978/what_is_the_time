@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.55] - 2025-12-15
+
+### Fixed - Critical Shortcode Issue
+- **Fixed**: `[wta_child_locations]` now adapts to parent location type automatically
+- **Continents (e.g., Europa)**: Shows ALL countries, sorted alphabetically by name
+- **Countries (e.g., Frankrig)**: Shows top 300 cities, sorted by population
+- **Root Cause**: Previous version tried to sort countries by population (which they don't have)
+- **Impact**: Europa page now shows all 53 countries, Frankrig shows top 300 cities
+
+### Technical Details
+- Dynamic defaults based on `wta_type` meta of parent location
+- Continents: `orderby=title, limit=-1` (all countries, A-Z)
+- Countries: `orderby=meta_value_num, meta_key=wta_population, limit=300` (top cities)
+- Maintains 24-hour caching for optimal performance
+
 ## [2.35.54] - 2025-12-15
 
 ### Admin Bar Enhancement

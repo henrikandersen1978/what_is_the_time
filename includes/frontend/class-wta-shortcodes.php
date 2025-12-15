@@ -299,11 +299,29 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
+		// Get parent type to determine appropriate defaults
+		$parent_type = get_post_meta( $post->ID, 'wta_type', true );
+		
+		// Dynamic defaults based on location type
+		if ( 'continent' === $parent_type ) {
+			// Continents → Countries (no population, alphabetical, show all)
+			$default_orderby = 'title';
+			$default_meta_key = '';
+			$default_order = 'ASC';
+			$default_limit = -1;  // Show ALL countries
+		} else {
+			// Countries → Cities (sort by population, limit for performance)
+			$default_orderby = 'meta_value_num';
+			$default_meta_key = 'wta_population';
+			$default_order = 'DESC';
+			$default_limit = 300;  // Top 300 cities by population
+		}
+		
 		$atts = shortcode_atts( array(
-			'orderby'  => 'meta_value_num',
-			'meta_key' => 'wta_population',
-			'order'    => 'DESC',
-			'limit'    => 300,  // Top 300 cities by population (optimized for performance)
+			'orderby'  => $default_orderby,
+			'meta_key' => $default_meta_key,
+			'order'    => $default_order,
+			'limit'    => $default_limit,
 		), $atts );
 		
 		// Check cache first (24 hours)
