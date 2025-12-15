@@ -94,6 +94,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div id="wta-translation-cache-result"></div>
 		</div>
 
+		<!-- Shortcode Cache -->
+		<div class="wta-card">
+			<h2><?php esc_html_e( 'Shortcode Cache', WTA_TEXT_DOMAIN ); ?></h2>
+			<p><?php esc_html_e( 'Clear cached shortcode data (child locations, nearby cities, major cities, etc.). Use this after updating the plugin or if shortcodes show old data.', WTA_TEXT_DOMAIN ); ?></p>
+			<p>
+				<button type="button" class="button" id="wta-clear-shortcode-cache"><?php esc_html_e( 'Clear Shortcode Cache', WTA_TEXT_DOMAIN ); ?></button>
+				<span class="spinner"></span>
+			</p>
+			<div id="wta-shortcode-cache-result"></div>
+		</div>
+
 		<!-- Permalink Regeneration -->
 		<div class="wta-card">
 			<h2><?php esc_html_e( 'Regenerate Permalinks', WTA_TEXT_DOMAIN ); ?></h2>
@@ -235,6 +246,40 @@ jQuery(document).ready(function($) {
 			type: 'POST',
 			data: {
 				action: 'wta_clear_translation_cache',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Clear shortcode cache
+	$('#wta-clear-shortcode-cache').on('click', function() {
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-shortcode-cache-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_clear_shortcode_cache',
 				nonce: wtaAdmin.nonce
 			},
 			success: function(response) {

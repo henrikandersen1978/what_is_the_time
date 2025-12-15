@@ -664,6 +664,42 @@ class WTA_Admin {
 	}
 
 	/**
+	 * AJAX: Clear shortcode cache.
+	 *
+	 * @since    2.35.51
+	 */
+	public function ajax_clear_shortcode_cache() {
+		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		global $wpdb;
+		
+		// Delete all WTA shortcode transients
+		$deleted = $wpdb->query( "
+			DELETE FROM {$wpdb->options} 
+			WHERE option_name LIKE '_transient_wta_child_locations_%'
+			OR option_name LIKE '_transient_timeout_wta_child_locations_%'
+			OR option_name LIKE '_transient_wta_nearby_cities_%'
+			OR option_name LIKE '_transient_timeout_wta_nearby_cities_%'
+			OR option_name LIKE '_transient_wta_major_cities_%'
+			OR option_name LIKE '_transient_timeout_wta_major_cities_%'
+			OR option_name LIKE '_transient_wta_global_time_%'
+			OR option_name LIKE '_transient_timeout_wta_global_time_%'
+			OR option_name LIKE '_transient_wta_continent_data_%'
+			OR option_name LIKE '_transient_timeout_wta_continent_data_%'
+		" );
+
+		WTA_Logger::info( 'Shortcode cache cleared by user (' . $deleted . ' entries)' );
+
+		wp_send_json_success( array(
+			'message' => 'Shortcode cache has been cleared (' . $deleted . ' entries). Pages will regenerate on next visit.',
+		) );
+	}
+
+	/**
 	 * AJAX: Regenerate all permalinks for location posts.
 	 *
 	 * @since    2.28.7

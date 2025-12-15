@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.51] - 2025-12-15
+
+### Admin Tools Enhancement
+- **Added**: "Clear Shortcode Cache" button in admin Tools page
+- **Purpose**: Allows instant cache clearing after plugin updates
+- **Impact**: No need to wait 24 hours for new shortcode changes to appear
+- **Clears**: All cached data from child_locations, nearby_cities, major_cities, and global_time shortcodes
+- **UI**: Matches existing admin design with success/error feedback
+
+### Technical Details
+- New AJAX handler: `ajax_clear_shortcode_cache()`
+- Deletes transients matching: `wta_child_locations_*`, `wta_nearby_cities_*`, `wta_major_cities_*`, `wta_global_time_*`, `wta_continent_data_*`
+- Returns count of deleted cache entries
+- Logs action to WTA_Logger
+
 ## [2.35.50] - 2025-12-15
 
 ### Internal Linking Optimization - MASSIVE SEO Boost 🚀
