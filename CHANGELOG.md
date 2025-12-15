@@ -2,6 +2,18 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.59] - 2025-12-15
+
+### Fixed - All Shortcode Batch Prefetch Queries
+- **Fixed**: Added `nopaging => true` to 3 additional shortcodes with batch prefetch
+  - `major_cities_shortcode` (line 106)
+  - `nearby_cities_shortcode` (line 593)
+  - `nearby_countries_shortcode` (line 717)
+- **Changed**: `major_cities` default count from 30 → 12 for optimal UX
+- **Root Cause**: Same as v2.35.57 - WordPress uses default limit (5) when nopaging is missing
+- **Impact**: All shortcodes now correctly display the requested number of items
+- **Complete**: All batch prefetch queries in plugin now have proper nopaging handling
+
 ## [2.35.58] - 2025-12-15
 
 ### Removed - Unused Sitemap Priority Code

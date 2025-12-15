@@ -36,7 +36,7 @@ class WTA_Shortcodes {
 	 */
 	public function major_cities_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 30,
+			'count' => 12,  // Show top 12 cities for optimal UX
 		), $atts );
 		
 		// Get current post ID
@@ -108,6 +108,7 @@ class WTA_Shortcodes {
 			'post__in'    => $city_ids,
 			'orderby'     => 'post__in',
 			'post_status' => 'publish',
+			'nopaging'    => true,  // CRITICAL: Fetch ALL posts matching the IDs
 		) );
 		
 		// Batch prefetch meta
@@ -595,6 +596,7 @@ class WTA_Shortcodes {
 			'post__in'    => $city_ids,
 			'orderby'     => 'post__in',
 			'post_status' => 'publish',
+			'nopaging'    => true,  // CRITICAL: Fetch ALL posts matching the IDs
 		) );
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
@@ -719,6 +721,7 @@ class WTA_Shortcodes {
 			'post__in'    => $nearby_countries,
 			'orderby'     => 'post__in',
 			'post_status' => 'publish',
+			'nopaging'    => true,  // CRITICAL: Fetch ALL posts matching the IDs
 		) );
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
