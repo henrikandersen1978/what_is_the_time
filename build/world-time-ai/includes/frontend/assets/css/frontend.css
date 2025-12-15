@@ -1,0 +1,1259 @@
+/* World Time AI - Frontend Styles */
+
+/* Breadcrumb Navigation - High Specificity */
+nav.wta-breadcrumb {
+	margin: 0 0 2em 0 !important;
+	padding: 1em 0 !important;
+	border-bottom: 2px solid #e8e8e8 !important;
+	background: none !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list {
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 0.3em !important;
+	background: none !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item {
+	display: inline-flex !important;
+	align-items: center !important;
+	font-size: 0.9em !important;
+	color: #666 !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	background: none !important;
+	line-height: 1.5 !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item::before {
+	content: none !important;
+	display: none !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item:not(:last-child)::after {
+	content: "›" !important;
+	margin: 0 0.4em !important;
+	color: #999 !important;
+	font-weight: normal !important;
+	font-size: 1.1em !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a {
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	transition: color 0.2s !important;
+	font-weight: 400 !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-item a:hover {
+	color: #135e96 !important;
+	text-decoration: underline !important;
+}
+
+nav.wta-breadcrumb ol.wta-breadcrumb-list li.wta-breadcrumb-current span {
+	color: #333 !important;
+	font-weight: 600 !important;
+}
+
+/* SEO Direct Answer Section - Enhanced */
+.wta-seo-direct-answer {
+	margin: 1.5em 0 2em 0 !important;
+	padding: 2.5em !important;
+	background: linear-gradient(135deg, #667eea, #764ba2) !important;
+	border-radius: 12px !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+	box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3) !important;
+	color: #ffffff !important;
+	text-align: center !important;
+}
+
+.wta-current-time-statement {
+	margin: 0 0 0.3em 0 !important;
+	font-size: 1.2em !important;
+	line-height: 1.4 !important;
+	color: rgba(255,255,255,0.95) !important;
+}
+
+.wta-current-time-statement strong {
+	font-weight: 600 !important;
+	color: #ffffff !important;
+}
+
+.wta-live-time {
+	display: block !important;
+	font-size: 3.5em !important;
+	font-weight: 700 !important;
+	letter-spacing: 2px !important;
+	margin: 0.2em 0 !important;
+	color: #ffffff !important;
+	text-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+.wta-current-date-statement {
+	margin: 0 0 1em 0 !important;
+	font-size: 1.2em !important;
+	color: rgba(255,255,255,0.9) !important;
+	line-height: 1.4 !important;
+}
+
+.wta-live-date {
+	font-weight: 600 !important;
+	color: #ffffff !important;
+}
+
+.wta-timezone-statement {
+	margin: 1em 0 0.3em 0 !important;
+	font-size: 0.95em !important;
+	color: rgba(255,255,255,0.85) !important;
+	padding-top: 1em !important;
+	border-top: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.wta-timezone-name {
+	font-weight: 600 !important;
+	color: rgba(255,255,255,0.95) !important;
+}
+
+.wta-time-diff-statement {
+	margin: 0 0 1em 0 !important;
+	font-size: 1em !important;
+	color: rgba(255,255,255,0.9) !important;
+	font-weight: 500 !important;
+	padding-bottom: 1em !important;
+	border-bottom: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.wta-dst-statement,
+.wta-dst-change,
+.wta-gps-statement,
+.wta-sun-statement,
+.wta-moon-statement,
+.wta-hemisphere-statement,
+.wta-season-statement {
+	margin: 0.3em 0 !important;
+	font-size: 0.95em !important;
+	color: rgba(255,255,255,0.85) !important;
+	line-height: 1.5 !important;
+}
+
+.wta-dst-change {
+	font-size: 0.9em !important;
+	color: rgba(255,255,255,0.75) !important;
+}
+
+.wta-hemisphere-statement,
+.wta-season-statement {
+	font-size: 0.95em !important;
+}
+
+/* Quick Navigation */
+.wta-quick-nav {
+	display: flex !important;
+	gap: 1em !important;
+	margin: 1.5em 0 2em 0 !important;
+	padding: 1.5em !important;
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)) !important;
+	border-radius: 8px !important;
+	justify-content: center !important;
+	flex-wrap: wrap !important;
+	border: 1px solid rgba(102, 126, 234, 0.15) !important;
+}
+
+.wta-quick-nav-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 0.5em !important;
+	padding: 0.75em 1.5em !important;
+	background: white !important;
+	border: 2px solid #667eea !important;
+	border-radius: 6px !important;
+	color: #667eea !important;
+	text-decoration: none !important;
+	font-weight: 600 !important;
+	font-size: 0.95em !important;
+	transition: all 0.3s ease !important;
+	cursor: pointer !important;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.wta-quick-nav-btn:hover {
+	background: #667eea !important;
+	color: white !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+	text-decoration: none !important;
+}
+
+.wta-quick-nav-btn:active {
+	transform: translateY(0) !important;
+}
+
+/* Smooth scroll behavior */
+html {
+	scroll-behavior: smooth !important;
+}
+
+/* Responsive Time Display - Optimized for mobile devices */
+@media (max-width: 768px) {
+	.wta-live-time {
+		font-size: 2.5em !important;
+		letter-spacing: 1px !important;
+	}
+	
+	.wta-current-time-statement {
+		font-size: 1.1em !important;
+	}
+	
+	.wta-seo-direct-answer {
+		padding: 2em 1.5em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-live-time {
+		font-size: 2em !important;
+		letter-spacing: 0.5px !important;
+		margin: 0.3em 0 !important;
+	}
+	
+	.wta-current-time-statement {
+		font-size: 1em !important;
+	}
+	
+	.wta-current-date-statement {
+		font-size: 1em !important;
+	}
+	
+	.wta-seo-direct-answer {
+		padding: 1.5em 1em !important;
+		margin: 1em 0 1.5em 0 !important;
+	}
+}
+
+/* Responsive Breadcrumb & Quick Nav */
+@media (max-width: 768px) {
+	.wta-breadcrumb {
+		font-size: 0.9em !important;
+	}
+	
+	.wta-breadcrumb-item {
+		font-size: 0.85em !important;
+	}
+	
+	.wta-quick-nav {
+		flex-direction: column !important;
+		padding: 1em !important;
+	}
+	
+	.wta-quick-nav-btn {
+		width: 100% !important;
+		justify-content: center !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-breadcrumb-list {
+		font-size: 0.85em !important;
+	}
+}
+
+/* Child Locations Grid - High Specificity to Override Theme */
+div.wta-plugin-locations-grid.wta-child-list {
+	margin: 2em 0 !important;
+	padding: 0 !important;
+	clear: both;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list {
+	list-style: none !important;
+	list-style-type: none !important;
+	padding: 0 !important;
+	margin: 1em 0 !important;
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+	gap: 1em !important;
+	background: none !important;
+	border: none !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item {
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	background: none !important;
+	border: none !important;
+	display: block !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item::before {
+	content: none !important;
+	display: none !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	height: 100px !important;
+	padding: 0.75em 1em !important;
+	background: #f5f5f5 !important;
+	border: 1px solid #e0e0e0 !important;
+	border-radius: 4px !important;
+	text-decoration: none !important;
+	color: #333 !important;
+	transition: all 0.2s ease !important;
+	text-align: center !important;
+	font-weight: 500 !important;
+	font-size: 0.95em !important;
+	line-height: 1.3 !important;
+	box-sizing: border-box !important;
+	word-break: break-word !important;
+	hyphens: auto !important;
+	-webkit-hyphens: auto !important;
+	-ms-hyphens: auto !important;
+	overflow: hidden !important;
+}
+
+div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link:hover {
+	background: #fff !important;
+	border-color: #2271b1 !important;
+	color: #2271b1 !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+	text-decoration: none !important;
+}
+
+/* City Times Grid (3x4 for 12 cities) */
+div.wta-city-times-grid {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 1.5em !important;
+	margin: 2em 0 !important;
+	padding: 0 !important;
+}
+
+/* Individual Live City Clock */
+div.wta-live-city-clock {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 1.5em 1em !important;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+	border-radius: 8px !important;
+	color: white !important;
+	text-align: center !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+	transition: transform 0.2s ease !important;
+	min-height: 140px !important;
+}
+
+div.wta-live-city-clock:hover {
+	transform: translateY(-4px) !important;
+	box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+div.wta-city-name {
+	font-size: 1.1em !important;
+	font-weight: 600 !important;
+	margin-bottom: 0.5em !important;
+	color: white !important;
+}
+
+div.wta-city-name a {
+	color: white !important;
+	text-decoration: none !important;
+	transition: opacity 0.2s ease !important;
+}
+
+div.wta-city-name a:hover {
+	opacity: 0.85 !important;
+	text-decoration: underline !important;
+}
+
+div.wta-time {
+	font-size: 2em !important;
+	font-family: 'Courier New', Courier, monospace !important;
+	font-weight: 700 !important;
+	margin: 0.3em 0 !important;
+	letter-spacing: 0.05em !important;
+	color: white !important;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+div.wta-time-diff {
+	font-size: 0.85em !important;
+	opacity: 0.9 !important;
+	color: white !important;
+	margin-top: 0.3em !important;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1.2em !important;
+	}
+}
+
+@media (max-width: 768px) {
+	div.wta-plugin-locations-grid ul.wta-grid-list {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+		gap: 0.75em !important;
+	}
+	
+	div.wta-plugin-locations-grid ul.wta-grid-list li.wta-grid-item a.wta-location-link {
+		padding: 0.75em !important;
+		font-size: 0.9em !important;
+	}
+	
+	div.wta-city-times-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-time {
+		font-size: 1.8em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	div.wta-city-times-grid {
+		grid-template-columns: 1fr !important;
+		gap: 1em !important;
+	}
+	
+	div.wta-live-city-clock {
+		padding: 1.2em 1em !important;
+		min-height: 120px !important;
+	}
+}
+
+.wta-location-single {
+	max-width: 800px;
+	margin: 0 auto;
+	padding: 40px 20px;
+}
+
+.wta-location-header {
+	text-align: center;
+	margin-bottom: 40px;
+}
+
+.wta-location-title {
+	font-size: 2.5em;
+	margin: 0 0 20px 0;
+	color: #1d2327;
+}
+
+/* Clock Container */
+.wta-clock-container {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 20px;
+	padding: 40px;
+	margin: 40px 0;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+	text-align: center;
+}
+
+.wta-clock {
+	color: #fff;
+}
+
+.wta-clock-time {
+	font-size: 4em;
+	font-weight: 700;
+	font-family: 'Courier New', Courier, monospace;
+	letter-spacing: 0.05em;
+	margin-bottom: 10px;
+	text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.wta-clock-date {
+	font-size: 1.5em;
+	margin-bottom: 10px;
+	opacity: 0.9;
+}
+
+.wta-clock-timezone {
+	font-size: 1em;
+	opacity: 0.7;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+
+/* Clock Widget (Shortcode) */
+.wta-clock-widget {
+	background: #f6f7f7;
+	border: 2px solid #ddd;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+	max-width: 300px;
+	margin: 20px auto;
+}
+
+.wta-clock-widget .wta-time {
+	font-size: 2.5em;
+	font-weight: 700;
+	font-family: 'Courier New', Courier, monospace;
+	color: #1d2327;
+}
+
+.wta-clock-widget .wta-date {
+	font-size: 1.2em;
+	color: #646970;
+	margin-top: 10px;
+}
+
+.wta-clock-title {
+	font-size: 1.3em;
+	margin: 0 0 15px 0;
+	color: #1d2327;
+}
+
+/* Content */
+.wta-location-content {
+	font-size: 1.1em;
+	line-height: 1.8;
+	margin: 40px 0;
+}
+
+.wta-location-content p {
+	margin-bottom: 1.5em;
+}
+
+/* Children List */
+.wta-children-list {
+	margin-top: 60px;
+	padding-top: 40px;
+	border-top: 2px solid #eee;
+}
+
+.wta-children-list h2 {
+	font-size: 2em;
+	margin-bottom: 30px;
+	color: #1d2327;
+}
+
+.wta-locations-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 15px;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.wta-locations-grid li {
+	background: #f6f7f7;
+	border-radius: 8px;
+	transition: all 0.3s ease;
+}
+
+.wta-locations-grid li:hover {
+	background: #e8e9ea;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.wta-locations-grid a {
+	display: block;
+	padding: 15px 20px;
+	color: #2271b1;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.wta-locations-grid a:hover {
+	color: #135e96;
+}
+
+/* Error */
+.wta-error {
+	background: #ffebee;
+	color: #c62828;
+	padding: 15px;
+	border-radius: 5px;
+	border-left: 4px solid #c62828;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.wta-location-title {
+		font-size: 2em;
+	}
+
+	.wta-clock-time {
+		font-size: 3em;
+	}
+
+	.wta-clock-date {
+		font-size: 1.2em;
+	}
+
+	.wta-clock-container {
+		padding: 30px 20px;
+	}
+
+	.wta-locations-grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-location-title {
+		font-size: 1.5em;
+	}
+
+	.wta-clock-time {
+		font-size: 2.5em;
+	}
+
+	.wta-locations-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Auto-linked Location Names (City Pages) */
+a.wta-auto-link {
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	border-bottom: 1px dotted #2271b1 !important;
+	transition: all 0.2s ease !important;
+	font-weight: 500 !important;
+}
+
+a.wta-auto-link:hover {
+	color: #135e96 !important;
+	border-bottom-style: solid !important;
+	border-bottom-width: 2px !important;
+}
+
+/* ========================================
+   Global Time Comparison Section
+   ======================================== */
+
+.wta-comparison-section {
+	margin: 60px 0 !important;
+	padding: 40px !important;
+	background: #f8f9fa !important;
+	border-radius: 12px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+.wta-comparison-section h2 {
+	color: #333 !important;
+	margin: 0 0 15px 0 !important;
+	font-size: 1.8em !important;
+	font-weight: 600 !important;
+}
+
+.wta-comparison-intro {
+	color: #666 !important;
+	line-height: 1.6 !important;
+	margin: 0 0 30px 0 !important;
+	font-size: 1.05em !important;
+}
+
+.wta-table-wrapper {
+	overflow-x: auto !important;
+	-webkit-overflow-scrolling: touch !important;
+}
+
+.wta-time-comparison-table {
+	width: 100% !important;
+	border-collapse: collapse !important;
+	background: white !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+	border-radius: 8px !important;
+	overflow: hidden !important;
+}
+
+.wta-time-comparison-table thead {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.wta-time-comparison-table th {
+	color: white !important;
+	padding: 15px 12px !important;
+	text-align: left !important;
+	font-weight: 600 !important;
+	font-size: 0.95em !important;
+	letter-spacing: 0.3px !important;
+}
+
+.wta-time-comparison-table td {
+	padding: 12px !important;
+	border-bottom: 1px solid #e9ecef !important;
+	font-size: 0.95em !important;
+	color: #333 !important;
+}
+
+.wta-time-comparison-table tbody tr:last-child td {
+	border-bottom: none !important;
+}
+
+.wta-time-comparison-table tbody tr:hover {
+	background: #f8f9fa !important;
+	transition: background 0.2s !important;
+}
+
+.wta-time-comparison-table a {
+	color: #667eea !important;
+	text-decoration: none !important;
+	font-weight: 500 !important;
+	transition: color 0.2s !important;
+	border-bottom: 1px solid transparent !important;
+}
+
+.wta-time-comparison-table a:hover {
+	border-bottom-color: #764ba2 !important;
+	color: #764ba2 !important;
+}
+
+/* City links slightly bolder */
+.wta-time-comparison-table td:first-child a {
+	font-weight: 600 !important;
+}
+
+/* Country links with flag */
+.wta-time-comparison-table td:nth-child(2) a {
+	font-weight: 500 !important;
+	color: #555 !important;
+}
+
+.wta-time-comparison-table td:nth-child(2) a:hover {
+	color: #667eea !important;
+}
+
+.wta-live-comparison-time {
+	font-family: 'Courier New', monospace !important;
+	font-weight: 600 !important;
+	color: #28a745 !important;
+	font-size: 1em !important;
+}
+
+.wta-time-diff {
+	color: #6c757d !important;
+	font-weight: 500 !important;
+}
+
+/* Responsive Table */
+@media (max-width: 968px) {
+	.wta-comparison-section {
+		padding: 30px 20px !important;
+	}
+	
+	.wta-time-comparison-table {
+		font-size: 0.9em !important;
+	}
+	
+	.wta-time-comparison-table th,
+	.wta-time-comparison-table td {
+		padding: 10px 8px !important;
+	}
+}
+
+@media (max-width: 768px) {
+	.wta-comparison-section {
+		padding: 20px !important;
+		margin: 40px 0 !important;
+	}
+	
+	.wta-comparison-section h2 {
+		font-size: 1.5em !important;
+	}
+	
+	.wta-time-comparison-table {
+		font-size: 0.85em !important;
+	}
+	
+	.wta-time-comparison-table th,
+	.wta-time-comparison-table td {
+		padding: 8px 6px !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-time-comparison-table th:nth-child(2),
+	.wta-time-comparison-table td:nth-child(2) {
+		display: none !important;
+	}
+}
+
+/* ========================================
+   Nearby Cities/Countries Lists
+   ======================================== */
+
+div.wta-nearby-list {
+	display: grid !important;
+	grid-template-columns: repeat(2, 1fr) !important;
+	gap: 1em !important;
+	margin: 1.5em 0 !important;
+	padding: 0 !important;
+}
+
+div.wta-nearby-item {
+	display: flex !important;
+	align-items: flex-start !important;
+	gap: 1em !important;
+	padding: 1em !important;
+	background: #f9f9f9 !important;
+	border-left: 3px solid #2271b1 !important;
+	border-radius: 4px !important;
+	transition: all 0.2s ease !important;
+}
+
+div.wta-nearby-item:hover {
+	background: #f0f5fa !important;
+	border-left-color: #135e96 !important;
+	transform: translateX(3px) !important;
+}
+
+div.wta-nearby-icon {
+	font-size: 1.5em !important;
+	line-height: 1 !important;
+	flex-shrink: 0 !important;
+}
+
+div.wta-nearby-content {
+	flex: 1 !important;
+	min-width: 0 !important;
+}
+
+a.wta-nearby-title {
+	display: block !important;
+	font-size: 1.1em !important;
+	font-weight: 600 !important;
+	color: #2271b1 !important;
+	text-decoration: none !important;
+	margin: 0 0 0.3em 0 !important;
+	line-height: 1.3 !important;
+}
+
+a.wta-nearby-title:hover {
+	color: #135e96 !important;
+	text-decoration: underline !important;
+}
+
+div.wta-nearby-meta {
+	font-size: 0.9em !important;
+	color: #666 !important;
+	line-height: 1.4 !important;
+}
+
+p.wta-no-nearby {
+	padding: 1em !important;
+	background: #fff3cd !important;
+	border-left: 3px solid #ffc107 !important;
+	color: #856404 !important;
+	font-style: italic !important;
+	border-radius: 4px !important;
+	margin: 1em 0 !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+	div.wta-nearby-list {
+		grid-template-columns: 1fr !important;
+	}
+	
+	div.wta-nearby-item {
+		padding: 0.8em !important;
+		gap: 0.8em !important;
+	}
+	
+	div.wta-nearby-icon {
+		font-size: 1.3em !important;
+	}
+	
+	a.wta-nearby-title {
+		font-size: 1em !important;
+	}
+}
+
+/* ========================================
+   Continents Overview Shortcode
+   ======================================== */
+
+.wta-continents-overview {
+	display: grid !important;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+	gap: 2em !important;
+	margin: 2em 0 !important;
+}
+
+.wta-continent-card {
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)) !important;
+	border: 2px solid rgba(102, 126, 234, 0.15) !important;
+	border-radius: 12px !important;
+	padding: 1.5em !important;
+	transition: all 0.3s ease !important;
+}
+
+.wta-continent-card:hover {
+	transform: translateY(-4px) !important;
+	box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2) !important;
+	border-color: rgba(102, 126, 234, 0.3) !important;
+}
+
+.wta-continent-title {
+	margin: 0 0 1em 0 !important;
+	font-size: 1.5em !important;
+	font-weight: 700 !important;
+}
+
+.wta-continent-title a {
+	color: #667eea !important;
+	text-decoration: none !important;
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5em !important;
+}
+
+.wta-continent-title a:hover {
+	color: #764ba2 !important;
+}
+
+.wta-country-list {
+	list-style: none !important;
+	padding: 0.5em 0 !important;
+	margin: 0 !important;
+}
+
+.wta-country-list li {
+	margin: 0 0 0.6em 0 !important;
+	padding: 0.2em 0 !important;
+	position: relative !important;
+	line-height: 1.5 !important;
+}
+
+.wta-country-list li:last-child {
+	margin-bottom: 0 !important;
+}
+
+.wta-country-list li::before {
+	content: none !important;
+	display: none !important;
+}
+
+.wta-country-list a {
+	color: #333 !important;
+	text-decoration: none !important;
+	transition: color 0.2s ease !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	font-size: 0.95em !important;
+	word-break: break-word !important;
+}
+
+.wta-country-list a:hover {
+	color: #667eea !important;
+	text-decoration: underline !important;
+}
+
+/* Flag icons styling (flag-icons library) */
+.wta-country-list .fi {
+	width: 1.33em !important;
+	min-width: 1.33em !important;
+	line-height: 1em !important;
+	margin-right: 0.6em !important;
+	display: inline-block !important;
+	vertical-align: middle !important;
+	flex-shrink: 0 !important;
+}
+
+/* Flag icons in child locations grid (country boxes) */
+.wta-location-link .fi {
+	margin-right: 0.5em !important;
+	font-size: 1.2em !important;
+	vertical-align: middle !important;
+}
+
+/* Flag icons in nearby countries list */
+.wta-nearby-icon .fi {
+	font-size: 2em !important;
+	line-height: 1 !important;
+}
+
+/* Flag icons in time comparison table */
+.wta-time-comparison-table .fi {
+	margin-right: 0.5em !important;
+	font-size: 1.2em !important;
+	vertical-align: middle !important;
+}
+
+/* Debug message styling */
+.wta-debug {
+	font-size: 0.85em !important;
+	color: #999 !important;
+	font-style: italic !important;
+	margin: 0.5em 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.wta-continents-overview {
+		grid-template-columns: 1fr !important;
+		gap: 1.5em !important;
+	}
+}
+
+/* ========================================
+   FAQ Section (v2.35.0)
+   ======================================== */
+
+.wta-faq-section {
+	margin: 60px 0 40px 0 !important;
+	padding: 40px !important;
+	background: #f8f9fa !important;
+	border-radius: 12px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+	clear: both !important;
+}
+
+.wta-faq-heading {
+	color: #333 !important;
+	margin: 0 0 15px 0 !important;
+	font-size: 1.9em !important;
+	font-weight: 600 !important;
+	text-align: left !important;
+}
+
+.wta-faq-intro {
+	color: #666 !important;
+	line-height: 1.6 !important;
+	margin: 0 0 30px 0 !important;
+	font-size: 1.05em !important;
+}
+
+.wta-faq-container {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 12px !important;
+}
+
+/* FAQ Item */
+.wta-faq-item {
+	background: white !important;
+	border: 2px solid #e0e0e0 !important;
+	border-radius: 8px !important;
+	overflow: hidden !important;
+	transition: all 0.3s ease !important;
+}
+
+.wta-faq-item:hover {
+	border-color: #667eea !important;
+	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15) !important;
+}
+
+.wta-faq-expanded {
+	border-color: #667eea !important;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* FAQ Question Button */
+.wta-faq-question {
+	width: 100% !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	gap: 12px !important;
+	padding: 18px 20px !important;
+	background: white !important;
+	border: none !important;
+	text-align: left !important;
+	cursor: pointer !important;
+	font-size: 1.05em !important;
+	font-weight: 600 !important;
+	color: #333 !important;
+	transition: all 0.2s ease !important;
+	outline: none !important;
+}
+
+.wta-faq-question:hover {
+	background: #f8f9fa !important;
+	color: #667eea !important;
+}
+
+.wta-faq-question:focus {
+	outline: 2px solid #667eea !important;
+	outline-offset: -2px !important;
+}
+
+.wta-faq-expanded .wta-faq-question {
+	color: #667eea !important;
+	background: #f8f9fa !important;
+}
+
+/* FAQ Icon - Left aligned, fixed width for consistency */
+.wta-faq-icon-emoji {
+	font-size: 1.4em !important;
+	line-height: 1 !important;
+	flex-shrink: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 1.5em !important;
+	height: 1.5em !important;
+}
+
+/* Question Text - Right of icon, fills remaining space */
+.wta-faq-question-text {
+	flex: 1 !important;
+	min-width: 0 !important;
+	text-align: left !important;
+	line-height: 1.5 !important;
+	display: flex !important;
+	align-items: center !important;
+}
+
+/* Toggle Icon */
+.wta-faq-toggle-icon {
+	font-size: 0.9em !important;
+	color: #999 !important;
+	transition: transform 0.3s ease !important;
+	flex-shrink: 0 !important;
+}
+
+.wta-faq-expanded .wta-faq-toggle-icon {
+	transform: rotate(180deg) !important;
+	color: #667eea !important;
+}
+
+/* FAQ Answer */
+.wta-faq-answer {
+	max-height: 0 !important;
+	overflow: hidden !important;
+	transition: max-height 0.3s ease !important;
+}
+
+.wta-faq-answer[hidden] {
+	display: block !important;
+	max-height: 0 !important;
+}
+
+.wta-faq-expanded .wta-faq-answer {
+	max-height: none !important;
+}
+
+.wta-faq-answer-content {
+	padding: 20px 20px 20px 68px !important; /* Left padding to align with question text */
+	color: #555 !important;
+	line-height: 1.8 !important;
+	font-size: 1em !important;
+	border-top: 1px solid #f0f0f0 !important;
+	margin-top: 5px !important;
+}
+
+.wta-faq-answer-content strong {
+	color: #333 !important;
+	font-weight: 600 !important;
+	display: inline !important;
+	margin: 0 0.2em !important;
+}
+
+.wta-faq-answer-content p {
+	margin: 0 0 0.8em 0 !important;
+}
+
+.wta-faq-answer-content p:last-child {
+	margin-bottom: 0 !important;
+}
+
+.wta-faq-answer-content a {
+	color: #667eea !important;
+	text-decoration: none !important;
+	border-bottom: 1px dotted #667eea !important;
+}
+
+.wta-faq-answer-content a:hover {
+	color: #764ba2 !important;
+	border-bottom-style: solid !important;
+}
+
+/* Live Time in FAQ (updated via JS) */
+#faq-live-time {
+	font-family: 'Courier New', monospace !important;
+	color: #28a745 !important;
+}
+
+/* Responsive FAQ */
+@media (max-width: 968px) {
+	.wta-faq-section {
+		padding: 30px 20px !important;
+		margin: 50px 0 30px 0 !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.6em !important;
+	}
+}
+
+@media (max-width: 768px) {
+	.wta-faq-section {
+		padding: 25px 15px !important;
+		margin: 40px 0 25px 0 !important;
+		border-radius: 8px !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.4em !important;
+	}
+	
+	.wta-faq-intro {
+		font-size: 1em !important;
+	}
+	
+	.wta-faq-question {
+		padding: 15px !important;
+		font-size: 1em !important;
+	}
+	
+	.wta-faq-icon-emoji {
+		font-size: 1.2em !important;
+	}
+	
+	.wta-faq-answer-content {
+		padding: 0 15px 15px 15px !important;
+		font-size: 0.95em !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.wta-faq-section {
+		padding: 20px 12px !important;
+		margin: 30px 0 20px 0 !important;
+	}
+	
+	.wta-faq-heading {
+		font-size: 1.3em !important;
+	}
+	
+	.wta-faq-question {
+		padding: 12px !important;
+		font-size: 0.95em !important;
+		gap: 0.7em !important;
+	}
+	
+	.wta-faq-icon-emoji {
+		font-size: 1.1em !important;
+	}
+	
+	.wta-faq-container {
+		gap: 10px !important;
+	}
+}
+
+
