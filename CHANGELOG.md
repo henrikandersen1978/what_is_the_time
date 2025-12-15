@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.52] - 2025-12-15
+
+### Shortcode Count Corrections
+- **Fixed**: Nearby cities default count corrected from 100 to 60 for optimal balance
+- **Fixed**: Removed hardcoded `count="18"` from AI-generated content
+- **Impact**: New content will use correct defaults (60 nearby cities, 300 child locations)
+- **Note**: Use Search & Replace plugin to update existing content:
+  - Replace: `[wta_nearby_cities count="18"]` → `[wta_nearby_cities]`
+  - Replace: `[wta_child_locations limit="5"]` → `[wta_child_locations]` (if any)
+
+### Technical Details
+- Updated `nearby_cities_shortcode()` default: 100 → 60
+- Removed explicit count attributes in AI content generation
+- Future AI-generated content will automatically use updated defaults
+
 ## [2.35.51] - 2025-12-15
 
 ### Admin Tools Enhancement

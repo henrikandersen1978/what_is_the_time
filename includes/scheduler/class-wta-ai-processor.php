@@ -843,7 +843,7 @@ class WTA_AI_Processor {
 		if ( ! empty( $nearby_cities_intro ) ) {
 			$full_content .= '<p>' . $nearby_cities_intro . "</p>\n";
 		}
-		$full_content .= '[wta_nearby_cities count="18"]' . "\n</div>\n\n";
+		$full_content .= '[wta_nearby_cities]' . "\n</div>\n\n";  // Uses default count=60
 		
 		// Nearby countries section with dynamic shortcode
 		$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
@@ -1496,7 +1496,7 @@ class WTA_AI_Processor {
 		// Nearby cities (with shortcode)
 		$content .= "<div id=\"nearby-cities\"><h2>Nærliggende byer værd at besøge</h2>\n";
 		$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
-		$content .= "[wta_nearby_cities count=\"18\"]\n</div>\n\n";
+		$content .= "[wta_nearby_cities]\n</div>\n\n";  // Uses default count=60
 		
 		// Nearby countries (with shortcode)
 		$content .= "<div id=\"nearby-countries\"><h2>Udforsk nærliggende lande</h2>\n";
