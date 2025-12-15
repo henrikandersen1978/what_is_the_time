@@ -2,6 +2,16 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.57] - 2025-12-15
+
+### Fixed - Batch Prefetch Query Missing nopaging
+- **Fixed**: Added `nopaging => true` to batch prefetch query in `child_locations_shortcode`
+- **Root Cause**: First query correctly fetched all IDs, but second query (batch prefetch) used WordPress default limit of 5
+- **Impact**: Now correctly displays all children on both continent and country pages
+- **Result**: 
+  - Europa: All 53 countries displayed
+  - Frankrig: Top 300 cities displayed
+
 ## [2.35.56] - 2025-12-15
 
 ### Fixed - Critical WordPress Query Issue

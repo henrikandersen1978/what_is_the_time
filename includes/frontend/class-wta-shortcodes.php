@@ -368,6 +368,7 @@ class WTA_Shortcodes {
 			'post__in'    => $children_ids,
 			'orderby'     => 'post__in',
 			'post_status' => 'publish',
+			'nopaging'    => true,  // CRITICAL: Fetch ALL posts matching the IDs
 		) );
 		
 		if ( empty( $children ) ) {
