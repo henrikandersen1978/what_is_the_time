@@ -72,7 +72,7 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-log-cleaner.php'; // v2.35.7
 
-	// Action Scheduler Processors
+		// Action Scheduler Processors
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-timezone-processor.php';
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-ai-processor.php';
@@ -223,7 +223,7 @@ class WTA_Core {
 		// Register shortcodes
 		$shortcodes = new WTA_Shortcodes();
 		$this->loader->add_action( 'init', $shortcodes, 'register_shortcodes' );
-		
+
 		// Disable wpautop for our post type (v2.35.20)
 		// Prevents WordPress from auto-adding <br> and <p> tags to our structured content
 		add_filter( 'the_content', function( $content ) {
@@ -270,7 +270,7 @@ class WTA_Core {
 				'yoast_class'    => class_exists( 'WPSEO_Options' )
 			) );
 		}
-	}
+}
 
 	/**
 	 * Register Action Scheduler hooks.
@@ -290,13 +290,13 @@ class WTA_Core {
 		$timezone_processor = new WTA_Timezone_Processor();
 		$this->loader->add_action( 'wta_process_timezone', $timezone_processor, 'process_batch' );
 
-	// AI processor
-	$ai_processor = new WTA_AI_Processor();
-	$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
+		// AI processor
+		$ai_processor = new WTA_AI_Processor();
+		$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
 
 	// Log cleanup (v2.35.7) - Runs daily at 04:00
 	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
-}
+	}
 
 	/**
 	 * Auto-heal: Ensure Action Scheduler actions are scheduled.

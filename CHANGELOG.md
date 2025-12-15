@@ -2,6 +2,36 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.49] - 2025-12-15
+
+### Release
+- **Stable Release with Complete Performance Optimization** 🎉
+  - All batch sizes verified and tested
+  - Dashboard version tracking confirmed working
+  - Ready for production deployment
+  
+### Included Features (from v2.35.45-2.35.48)
+- ✅ **Performance**: Page load time: 19s → 0.6s (97% faster)
+- ✅ **Database**: Automatic index installation
+- ✅ **AI Processing**: 12 → 18 cities per batch (+50% throughput)
+- ✅ **Test Mode**: 250 → 280 cities per batch (+12% throughput)
+- ✅ **Safety**: Conservative batch sizes with good timeout buffers
+
+### Batch Sizes (Final)
+**Test Mode:**
+- 1-min: 55 cities (~44s processing, 6s buffer)
+- 5-min: 280 cities (~224s processing, 46s buffer)
+
+**AI Mode:**
+- 1-min: 3 cities (~39s processing, 11s buffer)
+- 5-min: 18 cities (~234s processing, 36s buffer)
+
+### Technical Details
+- OpenAI Tier 5 utilization: 0.19% (no rate limit risk)
+- Database indices: Auto-installed on plugin activation
+- Transient caching: 24-hour cache for cross-page data
+- All timeouts: Well under 10-minute cron limit
+
 ## [2.35.48] - 2025-12-14
 
 ### Performance
