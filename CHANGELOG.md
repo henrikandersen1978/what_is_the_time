@@ -2,7 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.72] - 2025-12-16
+
+### Fixed - Reverted to Simple Query for Stability (v2.35.71 caused timeouts)
+- **Problem**: v2.35.71's complex optimized query caused 60+ second timeouts, preventing pages from loading
+- **Root Cause**: Complex nested subquery with multiple joins was too slow on production database
+- **Solution**: Reverted to simple loop approach with post_parent hierarchy (prioritizes stability over micro-optimization)
+- **Performance**: 
+  - Simple loop: ~1-2 seconds on first load (200 simple queries)
+  - Cached for 24 hours, so only runs once per day per city
+  - **Pages load immediately** on cached hits
+- **Trade-off**: Chose reliability over speed - 1-2 sec initial load is acceptable when cached for 24h
+- **Fix Applied**: Uses `post_parent` hierarchy (not `wta_country_id` meta) - **Finland now appears!**
+- **Cache**: Updated to v6 to invalidate problematic v5 cache
+- **Philosophy**: "Working and slow" beats "fast and broken" - we can optimize later if needed
+
 ## [2.35.71] - 2025-12-16
+
+### ⚠️ REVERTED - Complex Query Caused Timeouts
 
 ### Fixed - Nearby Countries Now Uses post_parent Hierarchy + 100x Performance Boost
 - **Problem**: v2.35.70 used `wta_country_id` meta to find cities, but cities use `post_parent` hierarchy (Finland's 44 cities were invisible)

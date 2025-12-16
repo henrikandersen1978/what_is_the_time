@@ -692,8 +692,8 @@ class WTA_Shortcodes {
 		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
 		
-		// Cache nearby countries list (24 hours) - v5 for post_parent hierarchy + performance
-		$cache_key = 'wta_nearby_countries_' . $post_id . '_v5_' . intval( $atts['count'] );
+		// Cache nearby countries list (24 hours) - v6 for post_parent hierarchy (simple & stable)
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_v6_' . intval( $atts['count'] );
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
@@ -1185,19 +1185,30 @@ class WTA_Shortcodes {
 		$current_lat = floatval( $current_city->lat );
 		$current_lon = floatval( $current_city->lon );
 		
-		// Get largest city per country in ONE optimized query (100x faster than loop)
-		// Uses post_parent hierarchy (consistent with find_nearby_cities)
-		$countries = $wpdb->get_results( $wpdb->prepare(
-			"SELECT 
-				c.country_id,
-				c.lat,
-				c.lon
-			FROM (
-				SELECT 
-					p.post_parent as country_id,
-					pm_lat.meta_value as lat,
-					pm_lon.meta_value as lon,
-					pm_pop.meta_value as pop
+		// Get ALL countries with at least one city (using post_parent hierarchy)
+		// Simple and stable - runs once per 24h due to caching
+		$all_countries = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT p.post_parent
+			FROM {$wpdb->posts} p
+			WHERE p.post_parent > 0
+			AND p.post_parent != %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'",
+			$current_country_id,
+			WTA_POST_TYPE
+		) );
+		
+		if ( empty( $all_countries ) ) {
+			return array();
+		}
+		
+		$countries_with_distance = array();
+		
+		// For each country, get largest city and calculate distance
+		// Simple loop - cached for 24h so performance is acceptable
+		foreach ( $all_countries as $country_id ) {
+			$country_city = $wpdb->get_row( $wpdb->prepare(
+				"SELECT pm_lat.meta_value as lat, pm_lon.meta_value as lon
 				FROM {$wpdb->posts} p
 				INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
 					AND pm_lat.meta_key = 'wta_latitude'
@@ -1205,53 +1216,35 @@ class WTA_Shortcodes {
 					AND pm_lon.meta_key = 'wta_longitude'
 				LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
 					AND pm_pop.meta_key = 'wta_population'
-				WHERE p.post_parent > 0
-				AND p.post_parent != %d
+				WHERE p.post_parent = %d
 				AND p.post_type = %s
 				AND p.post_status = 'publish'
-			) c
-			INNER JOIN (
-				SELECT 
-					p.post_parent as country_id,
-					MAX(CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED)) as max_pop
-				FROM {$wpdb->posts} p
-				LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
-					AND pm_pop.meta_key = 'wta_population'
-				WHERE p.post_parent > 0
-				AND p.post_parent != %d
-				AND p.post_type = %s
-				AND p.post_status = 'publish'
-				GROUP BY p.post_parent
-			) max_countries ON c.country_id = max_countries.country_id 
-				AND CAST(COALESCE(c.pop, 0) AS UNSIGNED) = max_countries.max_pop
-			WHERE c.lat IS NOT NULL 
-			AND c.lon IS NOT NULL
-			GROUP BY c.country_id, c.lat, c.lon",
-			$current_country_id,
-			WTA_POST_TYPE,
-			$current_country_id,
-			WTA_POST_TYPE
-		) );
-		
-		if ( empty( $countries ) ) {
-			return array();
-		}
-		
-		$countries_with_distance = array();
-		
-		foreach ( $countries as $country ) {
-			// Calculate distance from current country (using largest city)
+				ORDER BY CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED) DESC
+				LIMIT 1",
+				$country_id,
+				WTA_POST_TYPE
+			) );
+			
+			if ( ! $country_city || empty( $country_city->lat ) || empty( $country_city->lon ) ) {
+				continue; // Skip countries without cities or coordinates
+			}
+			
+			// Calculate distance from current country
 			$distance = $this->calculate_distance(
 				$current_lat,
 				$current_lon,
-				floatval( $country->lat ),
-				floatval( $country->lon )
+				floatval( $country_city->lat ),
+				floatval( $country_city->lon )
 			);
 			
 			$countries_with_distance[] = array(
-				'id'       => intval( $country->country_id ),
+				'id'       => intval( $country_id ),
 				'distance' => $distance,
 			);
+		}
+		
+		if ( empty( $countries_with_distance ) ) {
+			return array();
 		}
 		
 		// Sort by distance (closest first)
