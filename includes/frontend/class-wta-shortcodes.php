@@ -786,8 +786,8 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get parent country
-		$country_id = wp_get_post_parent_id( $post_id );
+		// Get parent country from meta (not post_parent column)
+		$country_id = get_post_meta( $post_id, 'wta_country_id', true );
 		if ( ! $country_id ) {
 			return '';
 		}
@@ -951,7 +951,8 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $current_city_id );
-		$country_name = get_post_field( 'post_title', wp_get_post_parent_id( $current_city_id ) );
+		$country_id = get_post_meta( $current_city_id, 'wta_country_id', true );
+		$country_name = get_post_field( 'post_title', $country_id );
 		$schema_name = sprintf( 'Byer i forskellige dele af %s', $country_name );
 		
 		$output .= $this->generate_item_list_schema( $posts, $schema_name );

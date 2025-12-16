@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.65] - 2025-12-16
+
+### Fixed - Regional Centres Country ID Retrieval
+- **Fixed**: Changed from `wp_get_post_parent_id()` to `get_post_meta( 'wta_country_id' )`
+  - Location: `regional_centres_shortcode()` line ~790
+  - Location: `render_regional_centres()` line ~954
+- **Root Cause**: Plugin uses meta-based hierarchy (wta_country_id), not post_parent column
+- **Impact**: Regional centres now correctly identifies parent country and displays cities
+- **Result**: Shortcode `[wta_regional_centres]` now works on all city pages (Argentina, Denmark, etc.)
+- **Note**: v2.35.64 fixed SQL meta keys but missed the country ID retrieval method
+
 ## [2.35.64] - 2025-12-16
 
 ### Fixed - Regional Centres Critical Bugs
