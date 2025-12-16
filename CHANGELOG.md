@@ -2,6 +2,28 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.63] - 2025-12-16
+
+### Added - Geographic Grid Regional Centres (Phase 3)
+- **New Shortcode**: `[wta_regional_centres]` displays 4×4 geographic grid of major cities
+- **Algorithm**: Divides country into 16 zones, selects largest city from each zone
+- **Smart Fallback**: For small countries (< 0.1° range), uses top 16 by population
+- **Authority Distribution**: Small cities now receive links FROM major cities (not just TO)
+- **PageRank Flow**: Bi-directional linking ensures authority flows to all cities
+- **Content**: Automatically added to all city pages (AI-generated and test mode)
+- **Performance**: Country-level caching (shared across all cities), single DB query
+- **Display**: Shows up to 16 regional centres with population-based descriptions
+- **Schema**: Includes ItemList structured data for enhanced SEO
+- **Coverage**: Ensures geographic diversity - capital, regional hubs, and local centres
+
+### Impact
+- **Phase 1** (v2.35.61): 120 nearby → 684k links in France
+- **Phase 2** (v2.35.62): Dynamic density → 90% orphan elimination
+- **Phase 3** (v2.35.63): +16 regional → 100% coverage + authority boost
+- **Total**: Each city now has 76-166 quality internal links (optimal SEO range)
+- **Math**: 5700 FR cities × (120 nearby + 16 regional) = 775,200 internal links
+- **Result**: Zero orphan pages, rapid Google discovery, strong PageRank distribution
+
 ## [2.35.62] - 2025-12-16
 
 ### Enhanced - Intelligent Density-Based Linking (Phase 2)

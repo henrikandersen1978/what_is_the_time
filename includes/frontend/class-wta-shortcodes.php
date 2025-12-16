@@ -19,6 +19,7 @@ class WTA_Shortcodes {
 		add_shortcode( 'wta_major_cities', array( $this, 'major_cities_shortcode' ) );
 		add_shortcode( 'wta_nearby_cities', array( $this, 'nearby_cities_shortcode' ) );
 		add_shortcode( 'wta_nearby_countries', array( $this, 'nearby_countries_shortcode' ) );
+		add_shortcode( 'wta_regional_centres', array( $this, 'regional_centres_shortcode' ) ); // v2.35.63
 		add_shortcode( 'wta_global_time_comparison', array( $this, 'global_time_comparison_shortcode' ) );
 		add_shortcode( 'wta_continents_overview', array( $this, 'continents_overview_shortcode' ) );
 		add_shortcode( 'wta_recent_cities', array( $this, 'recent_cities_shortcode' ) ); // v2.35.1
@@ -759,6 +760,199 @@ class WTA_Shortcodes {
 		
 		// Cache the output (24 hours)
 		set_transient( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS );
+		
+		return $output;
+	}
+
+	/**
+	 * Shortcode to display regional centre cities using geographic grid.
+	 * Divides country into 4×4 grid and shows largest city from each zone.
+	 * Ensures small cities get authority links from major cities.
+	 *
+	 * @since    2.35.63
+	 * @param    array $atts Shortcode attributes.
+	 * @return   string      HTML output with regional centres and schema.
+	 */
+	public function regional_centres_shortcode( $atts ) {
+		global $wpdb;
+		
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return '';
+		}
+		
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		if ( 'city' !== $type ) {
+			return '';
+		}
+		
+		// Get parent country
+		$country_id = wp_get_post_parent_id( $post_id );
+		if ( ! $country_id ) {
+			return '';
+		}
+		
+		// Cache regional centres list (24 hours)
+		$cache_key = 'wta_regional_centres_' . $country_id;
+		$cached_data = get_transient( $cache_key );
+		
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			// Filter out current city
+			$filtered_ids = array_diff( $cached_data['ids'], array( $post_id ) );
+			if ( empty( $filtered_ids ) ) {
+				return '';
+			}
+			return $this->render_regional_centres( $filtered_ids, $post_id );
+		}
+		
+		// Get all cities in country with coordinates and population
+		$cities = $wpdb->get_results( $wpdb->prepare(
+			"SELECT p.ID, 
+				MAX(CASE WHEN pm.meta_key = '_wta_latitude' THEN pm.meta_value END) as lat,
+				MAX(CASE WHEN pm.meta_key = '_wta_longitude' THEN pm.meta_value END) as lon,
+				MAX(CASE WHEN pm.meta_key = '_wta_population' THEN pm.meta_value END) as pop
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			WHERE p.post_parent = %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'
+			AND pm.meta_key IN ('_wta_latitude', '_wta_longitude', '_wta_population')
+			GROUP BY p.ID
+			HAVING lat IS NOT NULL AND lon IS NOT NULL",
+			$country_id,
+			WTA_POST_TYPE
+		) );
+		
+		if ( count( $cities ) < 2 ) {
+			return ''; // Not enough cities for regional grid
+		}
+		
+		// Find lat/lon boundaries
+		$lats = array_column( $cities, 'lat' );
+		$lons = array_column( $cities, 'lon' );
+		$min_lat = min( $lats );
+		$max_lat = max( $lats );
+		$min_lon = min( $lons );
+		$max_lon = max( $lons );
+		
+		// Avoid division by zero for small countries
+		$lat_range = $max_lat - $min_lat;
+		$lon_range = $max_lon - $min_lon;
+		
+		if ( $lat_range < 0.1 || $lon_range < 0.1 ) {
+			// Very small country: just get top 16 by population
+			usort( $cities, function( $a, $b ) {
+				return (int)$b->pop - (int)$a->pop;
+			} );
+			$grid_cities = array_slice( array_column( $cities, 'ID' ), 0, 16 );
+		} else {
+			// Divide into 4×4 grid
+			$lat_step = $lat_range / 4;
+			$lon_step = $lon_range / 4;
+			
+			$grid_cities = array();
+			
+			for ( $i = 0; $i < 4; $i++ ) {
+				for ( $j = 0; $j < 4; $j++ ) {
+					$zone_min_lat = $min_lat + ( $i * $lat_step );
+					$zone_max_lat = $min_lat + ( ($i + 1) * $lat_step );
+					$zone_min_lon = $min_lon + ( $j * $lon_step );
+					$zone_max_lon = $min_lon + ( ($j + 1) * $lon_step );
+					
+					// Find largest city in this zone
+					$zone_cities = array_filter( $cities, function( $city ) use ( $zone_min_lat, $zone_max_lat, $zone_min_lon, $zone_max_lon ) {
+						return $city->lat >= $zone_min_lat && $city->lat < $zone_max_lat
+							&& $city->lon >= $zone_min_lon && $city->lon < $zone_max_lon;
+					} );
+					
+					if ( ! empty( $zone_cities ) ) {
+						// Sort by population and take the largest
+						usort( $zone_cities, function( $a, $b ) {
+							return (int)$b->pop - (int)$a->pop;
+						} );
+						$grid_cities[] = $zone_cities[0]->ID;
+					}
+				}
+			}
+		}
+		
+		// Remove duplicates
+		$grid_cities = array_unique( $grid_cities );
+		
+		// Cache the grid cities for this country (shared across all cities)
+		set_transient( $cache_key, array( 'ids' => $grid_cities ), DAY_IN_SECONDS );
+		
+		// Filter out current city
+		$grid_cities = array_diff( $grid_cities, array( $post_id ) );
+		
+		if ( empty( $grid_cities ) ) {
+			return '';
+		}
+		
+		return $this->render_regional_centres( $grid_cities, $post_id );
+	}
+	
+	/**
+	 * Render regional centres HTML output.
+	 *
+	 * @since    2.35.63
+	 * @param    array $city_ids Array of city post IDs.
+	 * @param    int   $current_city_id Current city ID for schema.
+	 * @return   string HTML output.
+	 */
+	private function render_regional_centres( $city_ids, $current_city_id ) {
+		// Batch prefetch post meta
+		update_meta_cache( 'post', $city_ids );
+		
+		// Get posts
+		$posts = get_posts( array(
+			'post_type'   => WTA_POST_TYPE,
+			'post__in'    => $city_ids,
+			'orderby'     => 'meta_value_num',
+			'meta_key'    => '_wta_population',
+			'order'       => 'DESC',
+			'post_status' => 'publish',
+			'nopaging'    => true,
+		) );
+		
+		if ( empty( $posts ) ) {
+			return '';
+		}
+		
+		// Build output
+		$output = '<div class="wta-nearby-list wta-regional-centres-list">' . "\n";
+		
+		foreach ( $posts as $city ) {
+			$city_name = $city->post_title;
+			$city_link = get_permalink( $city->ID );
+			$population = get_post_meta( $city->ID, '_wta_population', true );
+			
+			$description = '';
+			if ( $population && $population > 100000 ) {
+				$description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
+			} elseif ( $population && $population > 50000 ) {
+				$description = 'Regional by';
+			} else {
+				$description = 'Lokalcenter';
+			}
+			
+			$output .= '<div class="wta-nearby-item">' . "\n";
+			$output .= '  <div class="wta-nearby-icon">🏛️</div>' . "\n";
+			$output .= '  <div class="wta-nearby-content">' . "\n";
+			$output .= '    <a href="' . esc_url( $city_link ) . '" class="wta-nearby-title">' . esc_html( $city_name ) . '</a>' . "\n";
+			$output .= '    <div class="wta-nearby-meta">' . esc_html( $description ) . '</div>' . "\n";
+			$output .= '  </div>' . "\n";
+			$output .= '</div>' . "\n";
+		}
+		
+		$output .= '</div>' . "\n";
+		
+		// Add ItemList schema
+		$city_name = get_post_field( 'post_title', $current_city_id );
+		$country_name = get_post_field( 'post_title', wp_get_post_parent_id( $current_city_id ) );
+		$schema_name = sprintf( 'Regionale centre i %s', $country_name );
+		
+		$output .= $this->generate_item_list_schema( $posts, $schema_name );
 		
 		return $output;
 	}

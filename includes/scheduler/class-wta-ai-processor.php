@@ -845,6 +845,11 @@ class WTA_AI_Processor {
 		}
 		$full_content .= '[wta_nearby_cities]' . "\n</div>\n\n";  // Uses default count=60
 		
+		// Regional centres section (v2.35.63)
+		$full_content .= '<div id="regional-centres"><h2>Regionale centre i landet</h2>' . "\n";
+		$full_content .= '<p>Udforsk de vigtigste byer i forskellige dele af landet.</p>' . "\n";
+		$full_content .= '[wta_regional_centres]' . "\n</div>\n\n";
+		
 		// Nearby countries section with dynamic shortcode
 		$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
 		if ( ! empty( $nearby_countries_intro ) ) {
@@ -1497,6 +1502,11 @@ class WTA_AI_Processor {
 		$content .= "<div id=\"nearby-cities\"><h2>Nærliggende byer værd at besøge</h2>\n";
 		$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
 		$content .= "[wta_nearby_cities]\n</div>\n\n";  // Uses default count=60
+		
+		// Regional centres (v2.35.63)
+		$content .= "<div id=\"regional-centres\"><h2>Regionale centre i landet</h2>\n";
+		$content .= "<p>Udforsk de vigtigste byer i forskellige dele af landet.</p>\n";
+		$content .= "[wta_regional_centres]\n</div>\n\n";
 		
 		// Nearby countries (with shortcode)
 		$content .= "<div id=\"nearby-countries\"><h2>Udforsk nærliggende lande</h2>\n";
