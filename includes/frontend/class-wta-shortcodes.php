@@ -952,7 +952,29 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $current_city_id );
-		$country_name = get_post_field( 'post_title', $country_id );
+		
+		// Robust country name lookup with fallback
+		// Try post_parent first (might exist for hierarchy display)
+		$country_post_id = wp_get_post_parent_id( $current_city_id );
+		
+		// Fallback: If country_id is actually a country CODE (like "AR"), lookup the post
+		if ( ! $country_post_id && ! empty( $country_id ) ) {
+			global $wpdb;
+			$country_post_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT p.ID 
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+				WHERE p.post_type = %s
+				AND pm.meta_key = 'wta_country_code'
+				AND pm.meta_value = %s
+				LIMIT 1",
+				WTA_POST_TYPE,
+				$country_id
+			) );
+		}
+		
+		// Get country name with fallback
+		$country_name = $country_post_id ? get_post_field( 'post_title', $country_post_id ) : 'landet';
 		$schema_name = sprintf( 'Byer i forskellige dele af %s', $country_name );
 		
 		$output .= $this->generate_item_list_schema( $posts, $schema_name );

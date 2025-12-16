@@ -2,6 +2,19 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.67] - 2025-12-16
+
+### Fixed - Regional Centres Schema Country Name (Robust Lookup)
+- **Fixed**: Country name now correctly resolves in ItemList schema
+- **Root Cause**: `wta_country_id` meta stores country CODE ("AR"), not post ID (11)
+- **Solution**: Implemented two-tier lookup strategy:
+  1. Try `wp_get_post_parent_id()` first (if post hierarchy exists)
+  2. Fallback: Lookup country post by `wta_country_code` meta match
+  3. Default: Use "landet" if both methods fail
+- **Impact**: Schema now displays "Byer i forskellige dele af Argentina" correctly
+- **Code**: Added robust country post ID resolution with global wpdb query fallback
+- **Result**: Works regardless of whether country relation is stored as post_parent or meta
+
 ## [2.35.66] - 2025-12-16
 
 ### Fixed - Regional Centres Schema Country Name
