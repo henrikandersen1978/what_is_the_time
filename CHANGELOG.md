@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.66] - 2025-12-16
+
+### Fixed - Regional Centres Schema Country Name
+- **Fixed**: ItemList schema now correctly includes country name in label
+  - Changed: `render_regional_centres()` now accepts `$country_id` as third parameter
+  - Changed: Pass country_id directly from parent method (already fetched and validated)
+  - Removed: Redundant `get_post_meta()` call for country_id inside render method
+- **Result**: Schema now displays "Byer i forskellige dele af Argentina" (with country name)
+- **Impact**: Better structured data for search engines, correct ItemList labeling
+- **Note**: Keep dynamic city count (no forced even numbers) - geographic grid determines quantity
+
 ## [2.35.65] - 2025-12-16
 
 ### Fixed - Regional Centres Country ID Retrieval

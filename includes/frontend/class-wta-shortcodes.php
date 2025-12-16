@@ -802,7 +802,7 @@ class WTA_Shortcodes {
 			if ( empty( $filtered_ids ) ) {
 				return '';
 			}
-			return $this->render_regional_centres( $filtered_ids, $post_id );
+			return $this->render_regional_centres( $filtered_ids, $post_id, $country_id );
 		}
 		
 		// Get all cities in country with coordinates and population
@@ -891,7 +891,7 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		return $this->render_regional_centres( $grid_cities, $post_id );
+		return $this->render_regional_centres( $grid_cities, $post_id, $country_id );
 	}
 	
 	/**
@@ -900,9 +900,10 @@ class WTA_Shortcodes {
 	 * @since    2.35.63
 	 * @param    array $city_ids Array of city post IDs.
 	 * @param    int   $current_city_id Current city ID for schema.
+	 * @param    int   $country_id Country ID for schema label.
 	 * @return   string HTML output.
 	 */
-	private function render_regional_centres( $city_ids, $current_city_id ) {
+	private function render_regional_centres( $city_ids, $current_city_id, $country_id ) {
 		// Batch prefetch post meta
 		update_meta_cache( 'post', $city_ids );
 		
@@ -951,7 +952,6 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $current_city_id );
-		$country_id = get_post_meta( $current_city_id, 'wta_country_id', true );
 		$country_name = get_post_field( 'post_title', $country_id );
 		$schema_name = sprintf( 'Byer i forskellige dele af %s', $country_name );
 		
