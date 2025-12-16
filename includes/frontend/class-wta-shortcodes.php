@@ -808,15 +808,17 @@ class WTA_Shortcodes {
 		// Get all cities in country with coordinates and population
 		$cities = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, 
-				MAX(CASE WHEN pm.meta_key = '_wta_latitude' THEN pm.meta_value END) as lat,
-				MAX(CASE WHEN pm.meta_key = '_wta_longitude' THEN pm.meta_value END) as lon,
-				MAX(CASE WHEN pm.meta_key = '_wta_population' THEN pm.meta_value END) as pop
+				MAX(CASE WHEN pm.meta_key = 'wta_latitude' THEN pm.meta_value END) as lat,
+				MAX(CASE WHEN pm.meta_key = 'wta_longitude' THEN pm.meta_value END) as lon,
+				MAX(CASE WHEN pm.meta_key = 'wta_population' THEN pm.meta_value END) as pop
 			FROM {$wpdb->posts} p
 			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-			WHERE p.post_parent = %d
-			AND p.post_type = %s
+			INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id 
+				AND pm_country.meta_key = 'wta_country_id' 
+				AND pm_country.meta_value = %d
+			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
-			AND pm.meta_key IN ('_wta_latitude', '_wta_longitude', '_wta_population')
+			AND pm.meta_key IN ('wta_latitude', 'wta_longitude', 'wta_population')
 			GROUP BY p.ID
 			HAVING lat IS NOT NULL AND lon IS NOT NULL",
 			$country_id,
@@ -909,7 +911,7 @@ class WTA_Shortcodes {
 			'post_type'   => WTA_POST_TYPE,
 			'post__in'    => $city_ids,
 			'orderby'     => 'meta_value_num',
-			'meta_key'    => '_wta_population',
+			'meta_key'    => 'wta_population',
 			'order'       => 'DESC',
 			'post_status' => 'publish',
 			'nopaging'    => true,
@@ -925,7 +927,7 @@ class WTA_Shortcodes {
 		foreach ( $posts as $city ) {
 			$city_name = $city->post_title;
 			$city_link = get_permalink( $city->ID );
-			$population = get_post_meta( $city->ID, '_wta_population', true );
+			$population = get_post_meta( $city->ID, 'wta_population', true );
 			
 			$description = '';
 			if ( $population && $population > 100000 ) {
@@ -950,7 +952,7 @@ class WTA_Shortcodes {
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $current_city_id );
 		$country_name = get_post_field( 'post_title', wp_get_post_parent_id( $current_city_id ) );
-		$schema_name = sprintf( 'Regionale centre i %s', $country_name );
+		$schema_name = sprintf( 'Byer i forskellige dele af %s', $country_name );
 		
 		$output .= $this->generate_item_list_schema( $posts, $schema_name );
 		

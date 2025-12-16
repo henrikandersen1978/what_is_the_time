@@ -845,9 +845,9 @@ class WTA_AI_Processor {
 		}
 		$full_content .= '[wta_nearby_cities]' . "\n</div>\n\n";  // Uses default count=60
 		
-		// Regional centres section (v2.35.63)
-		$full_content .= '<div id="regional-centres"><h2>Regionale centre i landet</h2>' . "\n";
-		$full_content .= '<p>Udforsk de vigtigste byer i forskellige dele af landet.</p>' . "\n";
+		// Regional centres section (v2.35.64) - Dynamic country name
+		$full_content .= '<div id="regional-centres"><h2>Byer i forskellige dele af ' . esc_html( $country_name ) . '</h2>' . "\n";
+		$full_content .= '<p>Udforsk større byer spredt over hele ' . esc_html( $country_name ) . '.</p>' . "\n";
 		$full_content .= '[wta_regional_centres]' . "\n</div>\n\n";
 		
 		// Nearby countries section with dynamic shortcode
@@ -1503,9 +1503,9 @@ class WTA_AI_Processor {
 		$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
 		$content .= "[wta_nearby_cities]\n</div>\n\n";  // Uses default count=60
 		
-		// Regional centres (v2.35.63)
-		$content .= "<div id=\"regional-centres\"><h2>Regionale centre i landet</h2>\n";
-		$content .= "<p>Udforsk de vigtigste byer i forskellige dele af landet.</p>\n";
+		// Regional centres (v2.35.64) - Dynamic country name
+		$content .= "<div id=\"regional-centres\"><h2>Byer i forskellige dele af " . esc_html( $country_name ) . "</h2>\n";
+		$content .= "<p>Udforsk større byer spredt over hele " . esc_html( $country_name ) . ".</p>\n";
 		$content .= "[wta_regional_centres]\n</div>\n\n";
 		
 		// Nearby countries (with shortcode)

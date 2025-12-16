@@ -2,6 +2,25 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.64] - 2025-12-16
+
+### Fixed - Regional Centres Critical Bugs
+- **Fixed**: SQL query now uses correct meta key names without underscore prefix
+  - Changed: `_wta_latitude` → `wta_latitude`
+  - Changed: `_wta_longitude` → `wta_longitude`
+  - Changed: `_wta_population` → `wta_population`
+- **Fixed**: Parent country relation now uses `wta_country_id` meta (not `post_parent` column)
+  - Added: JOIN on `wta_country_id` meta table
+  - Impact: Argentina and other countries now correctly retrieve their cities
+- **Changed**: Heading from "Regionale centre i landet" → "Byer i forskellige dele af [Land]"
+  - Now dynamically includes country name (e.g., "Byer i forskellige dele af Argentina")
+  - Better describes the geographic grid concept
+  - More natural Danish phrasing
+- **Changed**: Intro text: "Udforsk større byer spredt over hele [Land]"
+- **Changed**: Schema label matches new heading format
+- **Root Cause**: v2.35.63 used incorrect meta key format (with underscore) and wrong parent relation method
+- **Result**: Regional centres shortcode now works correctly on all countries
+
 ## [2.35.63] - 2025-12-16
 
 ### Added - Geographic Grid Regional Centres (Phase 3)
