@@ -692,8 +692,8 @@ class WTA_Shortcodes {
 		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
 		
-		// Cache nearby countries list (24 hours) - v2 for global search
-		$cache_key = 'wta_nearby_countries_' . $post_id . '_v2_' . intval( $atts['count'] );
+		// Cache nearby countries list (24 hours) - v3 for capital/largest city GPS
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_v3_' . intval( $atts['count'] );
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
@@ -1159,31 +1159,58 @@ class WTA_Shortcodes {
 	private function find_nearby_countries_global( $current_country_id, $count = 24 ) {
 		global $wpdb;
 		
-		// Get current country's GPS coordinates
-		$current_lat = get_post_meta( $current_country_id, 'wta_latitude', true );
-		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
-		
-		// Fallback to continent-based if no coordinates
-		if ( empty( $current_lat ) || empty( $current_lon ) ) {
-			return array();
-		}
-		
-		// Get ALL countries worldwide (not filtered by continent)
-		$countries = $wpdb->get_results( $wpdb->prepare(
-			"SELECT p.ID,
-				MAX(CASE WHEN pm.meta_key = 'wta_latitude' THEN pm.meta_value END) as lat,
-				MAX(CASE WHEN pm.meta_key = 'wta_longitude' THEN pm.meta_value END) as lon
+		// Get current country's largest city GPS coordinates (capital/largest city)
+		$current_city = $wpdb->get_row( $wpdb->prepare(
+			"SELECT pm_lat.meta_value as lat, pm_lon.meta_value as lon
 			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-			INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id 
-				AND pm_type.meta_key = 'wta_type' 
-				AND pm_type.meta_value = 'country'
+			INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id 
+				AND pm_country.meta_key = 'wta_country_id' 
+				AND pm_country.meta_value = %d
+			INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
+				AND pm_lat.meta_key = 'wta_latitude'
+			INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
+				AND pm_lon.meta_key = 'wta_longitude'
+			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
+				AND pm_pop.meta_key = 'wta_population'
 			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
-			AND p.ID != %d
-			AND pm.meta_key IN ('wta_latitude', 'wta_longitude')
-			GROUP BY p.ID
-			HAVING lat IS NOT NULL AND lon IS NOT NULL",
+			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			LIMIT 1",
+			$current_country_id,
+			WTA_POST_TYPE
+		) );
+		
+		if ( ! $current_city || empty( $current_city->lat ) || empty( $current_city->lon ) ) {
+			return array(); // No cities in this country
+		}
+		
+		$current_lat = floatval( $current_city->lat );
+		$current_lon = floatval( $current_city->lon );
+		
+		// Get ALL countries worldwide with their largest city coordinates
+		// Subquery finds largest city per country
+		$countries = $wpdb->get_results( $wpdb->prepare(
+			"SELECT country_id, lat, lon FROM (
+				SELECT 
+					pm_country.meta_value as country_id,
+					pm_lat.meta_value as lat,
+					pm_lon.meta_value as lon,
+					CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED) as pop,
+					ROW_NUMBER() OVER (PARTITION BY pm_country.meta_value ORDER BY CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED) DESC) as rn
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id 
+					AND pm_country.meta_key = 'wta_country_id'
+				INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
+					AND pm_lat.meta_key = 'wta_latitude'
+				INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
+					AND pm_lon.meta_key = 'wta_longitude'
+				LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
+					AND pm_pop.meta_key = 'wta_population'
+				WHERE p.post_type = %s
+				AND p.post_status = 'publish'
+			) ranked
+			WHERE rn = 1 AND country_id != %d
+			AND lat IS NOT NULL AND lon IS NOT NULL",
 			WTA_POST_TYPE,
 			$current_country_id
 		) );
@@ -1195,7 +1222,7 @@ class WTA_Shortcodes {
 		$countries_with_distance = array();
 		
 		foreach ( $countries as $country ) {
-			// Calculate distance from current country
+			// Calculate distance from current country (using largest city)
 			$distance = $this->calculate_distance(
 				$current_lat,
 				$current_lon,
@@ -1204,7 +1231,7 @@ class WTA_Shortcodes {
 			);
 			
 			$countries_with_distance[] = array(
-				'id'       => $country->ID,
+				'id'       => intval( $country->country_id ),
 				'distance' => $distance,
 			);
 		}

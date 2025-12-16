@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.69] - 2025-12-16
+
+### Fixed - Nearby Countries GPS Source (Capital/Largest City)
+- **Problem**: Countries were not showing in "Nærliggende Lande" (e.g., Finland missing for Copenhagen)
+- **Root Cause**: Countries don't have GPS coordinates stored in database
+- **Solution**: Use capital/largest city GPS coordinates to represent each country
+- **Method**: 
+  - For current country: Find largest city by population, use its coordinates
+  - For all other countries: Find largest city per country (ROW_NUMBER window function)
+  - Calculate distances between capital cities
+  - Sort by distance, return top 24
+- **Benefits**:
+  - All countries with cities now appear in proximity calculations
+  - More accurate representation (capitals reflect geographic/political center)
+  - Performant (single SQL query with window function)
+- **Cache**: Updated to v3 to invalidate old cached data
+- **Example**: Copenhagen → Now correctly shows Finland, Norway, Sweden, etc.
+
 ## [2.35.68] - 2025-12-16
 
 ### Enhanced - Global Proximity for Nearby Countries
