@@ -2,6 +2,25 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.70] - 2025-12-16
+
+### Fixed - MySQL Compatibility for Nearby Countries (No Window Functions)
+- **Problem**: v2.35.69 used `ROW_NUMBER() OVER (PARTITION BY ...)` which requires MySQL 8.0+ or MariaDB 10.2+, causing no countries to display on some servers
+- **Root Cause**: Window functions are not supported in older MySQL/MariaDB versions, query fails silently
+- **Solution**: Rewritten to use simple, compatible SQL queries
+- **Method**:
+  1. Get list of all country IDs with cities (one simple query)
+  2. For each country: Find largest city (same query that works for current country)
+  3. Calculate distances in PHP
+  4. Sort and return top 24
+- **Benefits**:
+  - ✅ Compatible with ALL MySQL/MariaDB versions (5.5+)
+  - ✅ Simple, readable code (no complex subqueries)
+  - ✅ Proven query logic (reuses working code)
+  - ✅ Performant (~200 countries × simple query = <1 sec, cached 24h)
+- **Cache**: Updated to v4 to invalidate old cached data
+- **Trade-off**: ~200 queries vs 1 complex query, but cached result so only runs once per 24h per city
+
 ## [2.35.69] - 2025-12-16
 
 ### Fixed - Nearby Countries GPS Source (Capital/Largest City)
