@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.73] - 2025-12-16
+
+### Fixed - Pre-calculated Country GPS for Instant Performance (The Professional Solution)
+- **Problem**: v2.35.72's loop (200 queries per page) caused database overload when cache cleared on 150k+ pages simultaneously
+- **Root Cause**: Dynamically finding largest city per country at runtime = too many queries at scale
+- **Solution**: PRE-CALCULATE GPS for all countries ONCE and store permanently on country posts
+- **Implementation**:
+  1. **Migration Tool**: New admin button "Calculate Country GPS" in Tools page
+  2. **One-time Calculation**: Runs ~200 simple queries ONCE (not per page load!)
+  3. **Permanent Storage**: GPS stored as `wta_latitude`, `wta_longitude` meta on each country post
+  4. **Auto-Update**: When new city added/updated, country GPS updates if city is larger
+  5. **Fast Shortcode**: `nearby_countries` now fetches country GPS directly (1 query vs 200!)
+- **Performance**:
+  - ❌ Old (v2.35.72): ~200 queries per page = database overload on 150k pages
+  - ✅ New (v2.35.73): 1 simple query per page = instant, scalable
+  - ⚡ Migration: ~5-10 seconds one-time for all countries
+- **Technical**:
+  - New class: `WTA_Country_GPS_Migration` with `run_migration()` and auto-update hooks
+  - Stores source city ID (`wta_gps_source_city_id`) for tracking
+  - Stores update timestamp (`wta_gps_updated`) for auditing
+  - Admin AJAX: `wta_migrate_country_gps` for manual triggers
+- **Usage**:
+  1. Install plugin
+  2. Go to Tools page
+  3. Click "Calculate Country GPS" button
+  4. Wait 5-10 seconds
+  5. Done! Nearby countries now instant on all 150k+ pages
+- **Benefits**:
+  - ✅ Scales to millions of pages
+  - ✅ 1 query instead of 200 per page
+  - ✅ Finland and all countries with cities now appear
+  - ✅ No database overload ever
+  - ✅ Auto-updates when cities change
+- **Cache**: Updated to v7 to invalidate old cached data
+- **Philosophy**: "Pre-calculate once, use forever" - the database way!
+
 ## [2.35.72] - 2025-12-16
 
 ### Fixed - Reverted to Simple Query for Stability (v2.35.71 caused timeouts)

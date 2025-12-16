@@ -71,6 +71,7 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-log-cleaner.php'; // v2.35.7
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-country-gps-migration.php'; // v2.35.73
 
 		// Action Scheduler Processors
 		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
@@ -200,6 +201,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_clear_shortcode_cache', $admin, 'ajax_clear_shortcode_cache' ); // v2.35.51
 		$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
 		$this->loader->add_action( 'wp_ajax_wta_force_reschedule', $admin, 'ajax_force_reschedule' ); // v2.35.33
+		$this->loader->add_action( 'wp_ajax_wta_migrate_country_gps', $admin, 'ajax_migrate_country_gps' ); // v2.35.73
 
 		// Settings
 		$settings = new WTA_Settings();

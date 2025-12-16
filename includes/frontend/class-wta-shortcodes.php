@@ -692,8 +692,8 @@ class WTA_Shortcodes {
 		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
 		
-		// Cache nearby countries list (24 hours) - v6 for post_parent hierarchy (simple & stable)
-		$cache_key = 'wta_nearby_countries_' . $post_id . '_v6_' . intval( $atts['count'] );
+		// Cache nearby countries list (24 hours) - v7 for pre-calculated country GPS
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_v7_' . intval( $atts['count'] );
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
@@ -1159,92 +1159,54 @@ class WTA_Shortcodes {
 	private function find_nearby_countries_global( $current_country_id, $count = 24 ) {
 		global $wpdb;
 		
-		// Get current country's largest city GPS coordinates (using post_parent hierarchy)
-		$current_city = $wpdb->get_row( $wpdb->prepare(
-			"SELECT pm_lat.meta_value as lat, pm_lon.meta_value as lon
+		// Get current country's GPS (pre-calculated and stored on country post)
+		$current_lat = get_post_meta( $current_country_id, 'wta_latitude', true );
+		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
+		
+		if ( empty( $current_lat ) || empty( $current_lon ) ) {
+			return array(); // Country GPS not calculated yet - run migration
+		}
+		
+		// Get ALL countries with pre-calculated GPS coordinates (ONE fast query!)
+		$countries = $wpdb->get_results( $wpdb->prepare(
+			"SELECT 
+				p.ID as country_id,
+				pm_lat.meta_value as lat,
+				pm_lon.meta_value as lon
 			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id 
+				AND pm_type.meta_key = 'wta_type' 
+				AND pm_type.meta_value = 'country'
 			INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
 				AND pm_lat.meta_key = 'wta_latitude'
 			INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
 				AND pm_lon.meta_key = 'wta_longitude'
-			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
-				AND pm_pop.meta_key = 'wta_population'
-			WHERE p.post_parent = %d
-			AND p.post_type = %s
+			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
-			ORDER BY CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED) DESC
-			LIMIT 1",
-			$current_country_id,
-			WTA_POST_TYPE
+			AND p.ID != %d",
+			WTA_POST_TYPE,
+			$current_country_id
 		) );
 		
-		if ( ! $current_city || empty( $current_city->lat ) || empty( $current_city->lon ) ) {
-			return array(); // No cities in this country
-		}
-		
-		$current_lat = floatval( $current_city->lat );
-		$current_lon = floatval( $current_city->lon );
-		
-		// Get ALL countries with at least one city (using post_parent hierarchy)
-		// Simple and stable - runs once per 24h due to caching
-		$all_countries = $wpdb->get_col( $wpdb->prepare(
-			"SELECT DISTINCT p.post_parent
-			FROM {$wpdb->posts} p
-			WHERE p.post_parent > 0
-			AND p.post_parent != %d
-			AND p.post_type = %s
-			AND p.post_status = 'publish'",
-			$current_country_id,
-			WTA_POST_TYPE
-		) );
-		
-		if ( empty( $all_countries ) ) {
+		if ( empty( $countries ) ) {
 			return array();
 		}
 		
 		$countries_with_distance = array();
 		
-		// For each country, get largest city and calculate distance
-		// Simple loop - cached for 24h so performance is acceptable
-		foreach ( $all_countries as $country_id ) {
-			$country_city = $wpdb->get_row( $wpdb->prepare(
-				"SELECT pm_lat.meta_value as lat, pm_lon.meta_value as lon
-				FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
-					AND pm_lat.meta_key = 'wta_latitude'
-				INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
-					AND pm_lon.meta_key = 'wta_longitude'
-				LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
-					AND pm_pop.meta_key = 'wta_population'
-				WHERE p.post_parent = %d
-				AND p.post_type = %s
-				AND p.post_status = 'publish'
-				ORDER BY CAST(COALESCE(pm_pop.meta_value, 0) AS UNSIGNED) DESC
-				LIMIT 1",
-				$country_id,
-				WTA_POST_TYPE
-			) );
-			
-			if ( ! $country_city || empty( $country_city->lat ) || empty( $country_city->lon ) ) {
-				continue; // Skip countries without cities or coordinates
-			}
-			
-			// Calculate distance from current country
+		// Calculate distances (fast - just math, no DB queries!)
+		foreach ( $countries as $country ) {
 			$distance = $this->calculate_distance(
-				$current_lat,
-				$current_lon,
-				floatval( $country_city->lat ),
-				floatval( $country_city->lon )
+				floatval( $current_lat ),
+				floatval( $current_lon ),
+				floatval( $country->lat ),
+				floatval( $country->lon )
 			);
 			
 			$countries_with_distance[] = array(
-				'id'       => intval( $country_id ),
+				'id'       => intval( $country->country_id ),
 				'distance' => $distance,
 			);
-		}
-		
-		if ( empty( $countries_with_distance ) ) {
-			return array();
 		}
 		
 		// Sort by distance (closest first)
