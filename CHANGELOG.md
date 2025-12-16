@@ -2,6 +2,17 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.61] - 2025-12-16
+
+### Enhanced - Internal Linking Strategy (Phase 1)
+- **Increased**: `nearby_cities` shortcode default count from 60 → 120
+- **Goal**: Improve crawlability and eliminate orphan pages through denser mesh network
+- **Impact**: Each city page now links to 120 nearest neighbors (up from 60)
+- **Math**: France (5700 cities) now generates 684,000 internal links (vs 342,000 previously)
+- **SEO**: Better PageRank distribution and faster Google discovery of all 150,000+ pages
+- **Performance**: No impact on page load (prefetch optimization remains intact)
+- **Note**: Phase 1 of 3-phase internal linking optimization
+
 ## [2.35.60] - 2025-12-15
 
 ### Fixed - Hardcoded Shortcode Counts in AI Processor

@@ -511,7 +511,7 @@ class WTA_Shortcodes {
 	 */
 	public function nearby_cities_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 60,  // Optimized for internal linking density and page performance
+			'count' => 120,  // Optimized for internal linking density and page performance
 		), $atts );
 		
 		$post_id = get_the_ID();
