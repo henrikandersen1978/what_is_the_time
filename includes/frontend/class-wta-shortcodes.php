@@ -538,15 +538,46 @@ class WTA_Shortcodes {
 		}
 		
 		// Cache nearby cities list (24 hours)
-		$cache_key = 'wta_nearby_cities_' . $post_id . '_' . intval( $atts['count'] );
+		$cache_key = 'wta_nearby_cities_' . $post_id . '_v2';  // v2 = dynamic density-based
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
 			return $cached_data['output'];
 		}
 		
-		// Find nearby cities
-		$nearby_cities = $this->find_nearby_cities( $post_id, $parent_country_id, $latitude, $longitude, intval( $atts['count'] ) );
+		// Phase 1: Find cities within 500km (no limit)
+		$nearby_cities_500km = $this->find_nearby_cities( $post_id, $parent_country_id, $latitude, $longitude, 9999, 500 );
+		$count_500km = count( $nearby_cities_500km );
+		
+		// Phase 2: Determine optimal radius and count based on density
+		$radius = 500;
+		$nearby_cities = $nearby_cities_500km;
+		
+		if ( $count_500km < 60 ) {
+			// Sparse area: expand to 1000km to find more neighbors
+			$nearby_cities = $this->find_nearby_cities( $post_id, $parent_country_id, $latitude, $longitude, 9999, 1000 );
+			$radius = 1000;
+		}
+		
+		$found_count = count( $nearby_cities );
+		
+		// Phase 3: Dynamic limit based on actual density
+		if ( $found_count < 60 ) {
+			// Very sparse: show all available
+			$limit = $found_count;
+		} elseif ( $found_count < 120 ) {
+			// Normal density: show what we have
+			$limit = $found_count;
+		} elseif ( $found_count < 300 ) {
+			// Dense area: show 120
+			$limit = 120;
+		} else {
+			// Very dense: show 150 (cap to avoid spam)
+			$limit = 150;
+		}
+		
+		// Apply the dynamic limit
+		$nearby_cities = array_slice( $nearby_cities, 0, $limit );
 		
 		if ( empty( $nearby_cities ) ) {
 			return '<p class="wta-no-nearby">Der er ingen andre byer i databasen endnu.</p>';
@@ -743,7 +774,7 @@ class WTA_Shortcodes {
 	 * @param    int    $count           Number of cities to return.
 	 * @return   array                   Array of cities with distance.
 	 */
-	private function find_nearby_cities( $current_city_id, $country_id, $lat, $lon, $count = 5 ) {
+	private function find_nearby_cities( $current_city_id, $country_id, $lat, $lon, $count = 5, $radius_km = 500 ) {
 		// Get all cities in same country
 		$cities = get_posts( array(
 			'post_type'      => WTA_POST_TYPE,
@@ -774,8 +805,8 @@ class WTA_Shortcodes {
 			
 			$distance = $this->calculate_distance( $lat, $lon, $city_lat, $city_lon );
 			
-			// Only include cities within 500km
-			if ( $distance <= 500 ) {
+			// Only include cities within specified radius
+			if ( $distance <= $radius_km ) {
 				$cities_with_distance[] = array(
 					'id'       => $city->ID,
 					'distance' => $distance,

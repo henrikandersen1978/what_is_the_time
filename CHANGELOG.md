@@ -2,6 +2,22 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.62] - 2025-12-16
+
+### Enhanced - Intelligent Density-Based Linking (Phase 2)
+- **Added**: Dynamic city count based on actual geographic density
+- **Logic**: Automatically adjusts number of nearby cities shown:
+  - < 60 cities in 500km → Expand radius to 1000km to find more neighbors
+  - < 60 found total → Show all available (sparse area)
+  - 60-119 found → Show all (normal density)
+  - 120-299 found → Show 120 (dense area)
+  - 300+ found → Show 150 cap (very dense, prevent spam)
+- **Smart**: Mountain village with 8 neighbors → Shows 8 (not empty)
+- **Smart**: Paris with 450 neighbors → Shows 150 (not overwhelming)
+- **Impact**: Eliminates orphan pages in sparse regions while maintaining quality in dense areas
+- **Performance**: Single calculation per page, cached 24h
+- **Geographic fairness**: Rural and urban areas both get optimal link coverage
+
 ## [2.35.61] - 2025-12-16
 
 ### Enhanced - Internal Linking Strategy (Phase 1)
