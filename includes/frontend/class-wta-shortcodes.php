@@ -650,7 +650,7 @@ class WTA_Shortcodes {
 	 */
 	public function nearby_countries_shortcode( $atts ) {
 		$atts = shortcode_atts( array(
-			'count' => 18,
+			'count' => 24,  // Increased for better global coverage
 		), $atts );
 		
 		$post_id = get_the_ID();
@@ -663,27 +663,52 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get parent country and continent
+		// Get parent country - robust lookup (handles both post ID and country code)
+		$country_id_or_code = get_post_meta( $post_id, 'wta_country_id', true );
+		
+		// Try as post_parent first
 		$parent_country_id = wp_get_post_parent_id( $post_id );
+		
+		// Fallback: Lookup by country code if not found
+		if ( ! $parent_country_id && ! empty( $country_id_or_code ) ) {
+			global $wpdb;
+			$parent_country_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT p.ID 
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+				WHERE p.post_type = %s
+				AND pm.meta_key = 'wta_country_code'
+				AND pm.meta_value = %s
+				LIMIT 1",
+				WTA_POST_TYPE,
+				$country_id_or_code
+			) );
+		}
+		
 		if ( ! $parent_country_id ) {
 			return '';
 		}
 		
+		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
-		if ( ! $parent_continent_id ) {
-			return '';
-		}
 		
-		// Cache nearby countries list (24 hours)
-		$cache_key = 'wta_nearby_countries_' . $post_id . '_' . intval( $atts['count'] );
+		// Cache nearby countries list (24 hours) - v2 for global search
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_v2_' . intval( $atts['count'] );
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
 			return $cached_data['output'];
 		}
 		
-		// Find nearby countries
-		$nearby_countries = $this->find_nearby_countries( $parent_continent_id, $parent_country_id, intval( $atts['count'] ) );
+		// Find nearby countries - GLOBAL search (cross-continent)
+		$nearby_countries = $this->find_nearby_countries_global( $parent_country_id, intval( $atts['count'] ) );
+		
+		// Fallback: If too few found, fill up from same continent
+		if ( count( $nearby_countries ) < intval( $atts['count'] ) && $parent_continent_id ) {
+			$same_continent = $this->find_nearby_countries( $parent_continent_id, $parent_country_id, intval( $atts['count'] ) );
+			$nearby_countries = array_unique( array_merge( $nearby_countries, $same_continent ) );
+			$nearby_countries = array_slice( $nearby_countries, 0, intval( $atts['count'] ) );
+		}
 		
 		if ( empty( $nearby_countries ) ) {
 			return '<p class="wta-no-nearby">Der er ingen andre lande i databasen endnu.</p>';
@@ -1102,6 +1127,81 @@ class WTA_Shortcodes {
 			}
 			
 			$distance = $this->calculate_distance( $current_lat, $current_lon, $country_lat, $country_lon );
+			
+			$countries_with_distance[] = array(
+				'id'       => $country->ID,
+				'distance' => $distance,
+			);
+		}
+		
+		// Sort by distance (closest first)
+		usort( $countries_with_distance, function( $a, $b ) {
+			return $a['distance'] <=> $b['distance'];
+		} );
+		
+		// Extract IDs and return top N
+		$sorted_country_ids = array_map( function( $item ) {
+			return $item['id'];
+		}, $countries_with_distance );
+		
+		return array_slice( $sorted_country_ids, 0, $count );
+	}
+
+	/**
+	 * Find nearby countries GLOBALLY (cross-continent) by GPS distance.
+	 * Returns countries sorted by distance regardless of continent.
+	 *
+	 * @since    2.35.68
+	 * @param    int $current_country_id Current country ID to exclude.
+	 * @param    int $count              Number of countries to return.
+	 * @return   array                   Array of country IDs sorted by distance (closest first).
+	 */
+	private function find_nearby_countries_global( $current_country_id, $count = 24 ) {
+		global $wpdb;
+		
+		// Get current country's GPS coordinates
+		$current_lat = get_post_meta( $current_country_id, 'wta_latitude', true );
+		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
+		
+		// Fallback to continent-based if no coordinates
+		if ( empty( $current_lat ) || empty( $current_lon ) ) {
+			return array();
+		}
+		
+		// Get ALL countries worldwide (not filtered by continent)
+		$countries = $wpdb->get_results( $wpdb->prepare(
+			"SELECT p.ID,
+				MAX(CASE WHEN pm.meta_key = 'wta_latitude' THEN pm.meta_value END) as lat,
+				MAX(CASE WHEN pm.meta_key = 'wta_longitude' THEN pm.meta_value END) as lon
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id 
+				AND pm_type.meta_key = 'wta_type' 
+				AND pm_type.meta_value = 'country'
+			WHERE p.post_type = %s
+			AND p.post_status = 'publish'
+			AND p.ID != %d
+			AND pm.meta_key IN ('wta_latitude', 'wta_longitude')
+			GROUP BY p.ID
+			HAVING lat IS NOT NULL AND lon IS NOT NULL",
+			WTA_POST_TYPE,
+			$current_country_id
+		) );
+		
+		if ( empty( $countries ) ) {
+			return array();
+		}
+		
+		$countries_with_distance = array();
+		
+		foreach ( $countries as $country ) {
+			// Calculate distance from current country
+			$distance = $this->calculate_distance(
+				$current_lat,
+				$current_lon,
+				floatval( $country->lat ),
+				floatval( $country->lon )
+			);
 			
 			$countries_with_distance[] = array(
 				'id'       => $country->ID,

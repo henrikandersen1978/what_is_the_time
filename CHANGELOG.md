@@ -2,6 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [2.35.68] - 2025-12-16
+
+### Enhanced - Global Proximity for Nearby Countries
+- **Changed**: Nearby countries now uses GLOBAL proximity search (cross-continent)
+- **Algorithm**: Finds 24 closest countries worldwide, regardless of continent
+- **Sorting**: Countries displayed by distance (closest first)
+- **Fallback**: If < 24 found, fills up from same continent
+- **Count**: Increased from 18 → 24 countries for better link density
+- **Examples**:
+  - Argentina → Shows Uruguay, Chile, etc. (Sydamerika remains closest)
+  - Australia → Now shows Papua New Guinea, Indonesia (Asia) + Oceanien neighbors
+  - Denmark → Still shows only Europe (they ARE the closest)
+- **Benefits**:
+  - More geographically relevant (real neighbors, not artificial continent limits)
+  - Better UX (travel planning, regional context)
+  - Better SEO (topic clustering, natural link patterns)
+  - Maintains link density (24 countries per city = 3.6M total country links)
+- **Technical**: New `find_nearby_countries_global()` method with optimized SQL query
+- **Cache**: Updated cache key to 'v2' to force regeneration
+- **Robust**: Country ID lookup handles both post_parent and country code meta
+
 ## [2.35.67] - 2025-12-16
 
 ### Fixed - Regional Centres Schema Country Name (Robust Lookup)
