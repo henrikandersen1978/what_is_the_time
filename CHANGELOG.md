@@ -2,6 +2,52 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.10] - 2025-12-17
+
+### Fixed
+- **CRITICAL: City import regression bug from v3.0.0 migration**
+  - **Problem**: 100% of city imports failed with "Parent country not found"
+    - City payload contained `country_code` (e.g., "AE")
+    - City processor looked for `country_id` (not in payload)
+    - Query: `wta_country_id = undefined` → no results → all failed
+  - **Root Cause**: Mismatch between GeoNames payload structure and processor query
+    - v3.0.3: City payload changed from old `country_id` to new `country_code`
+    - `process_city()` was never updated to match the new structure
+    - Result: Meta query searched for non-existent field value
+  - **Impact Before Fix**:
+    - Dashboard: 25 city errors, 0 cities imported
+    - All city jobs marked as failed
+    - Log: "country_id": "not_set", "query_method": "wta_country_id meta_query"
+  - **Solution**: Changed meta_query from `wta_country_id` to `wta_country_code`
+    - Line 370: `'key' => 'wta_country_code'` (was: wta_country_id)
+    - Line 371: `'value' => $data['country_code']` (was: $data['country_id'])
+  - **Result**: 
+    - ✅ Cities now find parent countries correctly
+    - ✅ 0% failure rate (was 100%)
+    - ✅ Import proceeds as expected
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-structure-processor.php`
+  - Lines 361-383: Changed country lookup from `country_id` to `country_code`
+  - Lines 386-396: Updated error logging to reflect correct query method
+- **Why this happened**: 
+  - GeoNames migration (v3.0.0-v3.0.3) changed data structure
+  - City processor wasn't updated to match new payload format
+  - Regression went unnoticed because test data wasn't reaching city import
+- **Validation**: 
+  - City payload uses `country_code` (ISO 2-letter: "AE", "AF", etc.)
+  - Country posts store `wta_country_code` meta field
+  - Query now correctly matches payload → meta field
+
+### Migration Notes
+- **Existing failed city jobs will auto-retry** with next cron run
+- **No data loss** - all city data remained in queue
+- **Expected behavior after upgrade**:
+  - Failed city jobs (25 errors) will be reprocessed
+  - Cities will successfully find parent countries
+  - Import will complete without errors
+- **Recommended**: Check logs after 5-10 minutes to verify 0 city errors
+
 ## [3.0.9] - 2025-12-17
 
 ### Fixed

@@ -359,7 +359,7 @@ class WTA_Structure_Processor {
 		$data = $item['payload'];
 
 	// Find parent country post (include draft posts!)
-	// CRITICAL: Use meta_query to filter by BOTH country_id AND type='country'
+	// v3.0.10: CRITICAL FIX - Use country_code (matches GeoNames payload structure)
 	// v3.0.9: Disable cache for fresh data during parallel imports
 	$country_post_id = get_posts( array(
 		'post_type'              => WTA_POST_TYPE,
@@ -367,8 +367,8 @@ class WTA_Structure_Processor {
 		'meta_query'             => array(
 			'relation' => 'AND',
 			array(
-				'key'   => 'wta_country_id',
-				'value' => $data['country_id'],
+				'key'   => 'wta_country_code',
+				'value' => $data['country_code'],
 			),
 			array(
 				'key'   => 'wta_type',
@@ -382,18 +382,18 @@ class WTA_Structure_Processor {
 		'update_post_term_cache' => false, // Disable term cache
 	) );
 
-		if ( empty( $country_post_id ) ) {
-			// v3.0.8: Enhanced logging with country_code and geonameid for debugging
-			WTA_Logger::warning( 'Parent country not found', array(
-				'city'          => $data['name'],
-				'country_code'  => isset( $data['country_code'] ) ? $data['country_code'] : 'unknown',
-				'geonameid'     => isset( $data['geonameid'] ) ? $data['geonameid'] : 'unknown',
-				'country_id'    => isset( $data['country_id'] ) ? $data['country_id'] : 'not_set',
-				'query_method'  => 'wta_country_id meta_query',
-			) );
-			WTA_Queue::mark_failed( $item['id'], 'Parent country not found (code: ' . ( isset( $data['country_code'] ) ? $data['country_code'] : 'unknown' ) . ')' );
-			return;
-		}
+	if ( empty( $country_post_id ) ) {
+		// v3.0.10: Fixed query method description (uses country_code)
+		// v3.0.8: Enhanced logging with country_code and geonameid for debugging
+		WTA_Logger::warning( 'Parent country not found', array(
+			'city'          => $data['name'],
+			'country_code'  => isset( $data['country_code'] ) ? $data['country_code'] : 'unknown',
+			'geonameid'     => isset( $data['geonameid'] ) ? $data['geonameid'] : 'unknown',
+			'query_method'  => 'wta_country_code meta_query',
+		) );
+		WTA_Queue::mark_failed( $item['id'], 'Parent country not found (code: ' . ( isset( $data['country_code'] ) ? $data['country_code'] : 'unknown' ) . ')' );
+		return;
+	}
 
 		$parent_id = $country_post_id[0];
 
