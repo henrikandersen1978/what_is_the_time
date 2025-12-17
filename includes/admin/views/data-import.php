@@ -249,7 +249,8 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 										// Group by continent for better UX
 											$by_continent = array();
 											foreach ( $countries as $country ) {
-												$continent = isset( $country['region'] ) ? $country['region'] : 'Other';
+												// v3.0.15: Fixed - GeoNames returns 'continent' not 'region'
+												$continent = isset( $country['continent'] ) ? $country['continent'] : 'Other';
 												if ( ! isset( $by_continent[ $continent ] ) ) {
 													$by_continent[ $continent ] = array();
 												}

@@ -2,6 +2,91 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.15] - 2025-12-17
+
+### Fixed
+- **Country Selector Dropdown - Critical Bug (GeoNames Migration Regression)**
+  - **Problem**: "Quick Test: Select Specific Countries" import mode showed all countries under "Other" group
+    - Dropdown generation looked for `$country['region']` field
+    - But GeoNames parser returns `$country['continent']` field
+    - Result: All 244 countries appeared ungrouped in "Other" optgroup
+    - Poor UX - impossible to find specific countries
+  - **Impact Before Fix**:
+    - ❌ Countries not grouped by continent (Europe, Asia, etc.)
+    - ❌ All countries listed under "Other" in one giant list
+    - ❌ Denmark, USA, etc. hard to find in dropdown
+    - ❌ Country selector appeared broken/unusable
+  - **Root Cause**: Field name mismatch after GeoNames migration (v3.0.0)
+    - Old JSON data used `region` field
+    - New GeoNames data uses `continent` field
+    - Dropdown code never updated during migration
+  - **Solution**: Changed field reference in dropdown generation
+    - Line 252 in `includes/admin/views/data-import.php`
+    - Changed: `$country['region']` → `$country['continent']`
+  - **Result**:
+    - ✅ Countries now grouped correctly by continent
+    - ✅ Denmark appears under "Europe" group
+    - ✅ USA appears under "North America" group
+    - ✅ Easy to find and select specific countries
+    - ✅ Country selector now fully functional
+
+### Data Verification (Denmark Example)
+**GeoNames countryInfo.txt:**
+- ISO2: `DK`
+- Name: `Denmark`
+- Continent: `EU` → maps to `Europe`
+- Population: 5,797,446
+- GeoNames ID: 2623032
+
+**Danish cities over 50,000 in cities500.txt:**
+1. Copenhagen: 1,153,615
+2. Århus: 285,273
+3. Odense: 180,863
+4. Aalborg: 142,937
+5. Frederiksberg: 95,029
+6. Esbjerg: 71,698
+7. Randers: 62,802
+8. Kolding: 61,638
+9. Horsens: 61,074
+10. Vejle: 60,231
+11. Roskilde: 51,916
+12. Herning: 50,565
+13. Hvidovre: 53,527
+14. Klinteby Frihed: 53,443
+15. Avedøre: 53,443
+
+**Total: ~15 cities** (with population filter: 50,000)
+
+### Technical Details
+- **File**: `includes/admin/views/data-import.php`
+  - Line 252: Fixed field reference for continent grouping
+  - Changed from non-existent `region` to actual `continent` field
+  - Matches GeoNames parser output structure
+
+### Migration Guide
+**Do I need to update?**
+- **YES** - If you want to use "Select Specific Countries" import mode
+- **NO** - If you only use "Import by Continents" mode (this wasn't affected)
+
+**How to use Country Selector (after fix):**
+1. Go to **Data Import** tab
+2. Select **"🚀 Quick Test: Select Specific Countries"** radio button
+3. In dropdown, find your country (now grouped by continent!)
+   - Denmark is under **Europe** group
+   - USA is under **North America** group
+   - etc.
+4. Hold **Ctrl (Windows)** or **Cmd (Mac)** and click countries to select
+5. Set **Minimum Population** (e.g. 50000)
+6. Set **Max Cities per Country** (e.g. 30)
+7. Click **"Prepare Import Queue"**
+
+**Expected results (Denmark example):**
+- Continents: 1 (Europe)
+- Countries: 1 (Denmark)
+- Cities: 1 (batch job - processes to ~15 cities with 50k filter)
+
+---
+
 ## [3.0.14] - 2025-12-17
 
 ### Fixed
