@@ -22,11 +22,13 @@ class WTA_Timezone_Processor {
 	 */
 	public function process_batch() {
 		// Dynamic batch size based on cron interval
-		// Each item: ~1.5s (API call + 1.5s delay)
+		// v3.0.7: Reduced batch size + increased delay for FREE tier rate limit safety
+		// Each item: ~2.0s (API call + 2.0s delay)
 		$cron_interval = intval( get_option( 'wta_cron_interval', 60 ) );
 		
-		// 1-min: 8 items (~12s), 5-min: 20 items (~30s)
-		$batch_size = ( $cron_interval >= 300 ) ? 20 : 8;
+		// 1-min: 5 items (~10s), 5-min: 15 items (~30s)
+		// Conservative for TimeZoneDB FREE tier (1 req/s limit)
+		$batch_size = ( $cron_interval >= 300 ) ? 15 : 5;
 		
 		$items = WTA_Queue::get_pending( 'timezone', $batch_size );
 
@@ -52,8 +54,9 @@ class WTA_Timezone_Processor {
 			$processed++;
 
 			// Apply exponential backoff delay between requests
+			// v3.0.7: Increased from 1.5s to 2.0s for FREE tier rate limit safety
 			if ( $processed < count( $items ) ) {
-				$base_delay = 1500000; // 1.5 seconds in microseconds
+				$base_delay = 2000000; // 2.0 seconds in microseconds (0.5 req/s)
 				$multiplier = 1 + ( $retry_count * 0.5 ); // 1x, 1.5x, 2x, 2.5x
 				$actual_delay = intval( $base_delay * $multiplier );
 

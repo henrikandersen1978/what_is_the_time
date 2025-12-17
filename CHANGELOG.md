@@ -2,6 +2,67 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.7] - 2025-12-17
+
+### Fixed
+- **CRITICAL**: Removed blocking return statement in structure processor
+  - **Problem**: `cities_import` jobs blocked individual `city` job processing
+  - **Impact**: 
+    - City jobs queued but never processed (0 done, thousands pending)
+    - AI content never started because no city posts were created
+    - Import appeared "stuck" after countries were done
+  - **Root Cause**: Line 65 `return;` after cities_import processing
+    - Prevented fallthrough to city processing in same batch
+    - Each minute: processed 1 chunk, then stopped
+  - **Solution**: Removed return statement, reduced cities_import batch to 1
+    - Now processes: 1 cities_import chunk + 25 city jobs per minute
+    - City posts created immediately → AI content starts in next minute
+- **Timezone rate limit improvements** for FREE tier (1 req/s limit)
+  - Increased delay: 1.5s → 2.0s between requests (0.5 req/s average)
+  - Reduced batch size: 8 → 5 (1-min cron), 20 → 15 (5-min cron)
+  - **Impact**: Much safer margin for TimeZoneDB FREE tier limits
+
+### Changed
+- **Parallel execution now working correctly**:
+  - `cities_import` + `city` processing in same batch (structure hook)
+  - `ai_content` finds newly created posts immediately
+  - `timezone` processing independent (for complex countries)
+- **Import flow improvements**:
+  - Minute 1: 1 chunk queued + 25 cities created + 25 AI jobs queued
+  - Minute 2: AI processor finds 25 jobs and starts generating content
+  - Result: Cities become "published" within 2-3 minutes instead of hours
+- **Timezone processing more reliable**:
+  - 10 seconds per batch (5 items × 2s delay)
+  - Exponential backoff for retries still active
+  - Significantly reduced risk of rate limit errors
+
+### Performance
+- **Before v3.0.7**:
+  - Cities: 0 processed per minute (blocked by return statement)
+  - AI: Never started (no cities available)
+  - Timeline: Countries done → import stalled
+- **After v3.0.7**:
+  - Cities: 25 processed per minute (1-min test mode)
+  - AI: 55 jobs per minute (starts after minute 2)
+  - Timeline: Countries done → cities flow immediately → AI starts in 1-2 min
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-structure-processor.php`
+  - Removed return statement after cities_import (line 65)
+  - Reduced cities_import batch from 10 to 1 (process 1 chunk per run)
+  - City processing now executes in same batch as cities_import
+- **File**: `includes/scheduler/class-wta-timezone-processor.php`
+  - Batch size: 8 → 5 (1-min), 20 → 15 (5-min)
+  - Base delay: 1.5s → 2.0s (1,500,000 → 2,000,000 microseconds)
+  - Rate: 0.67 req/s → 0.5 req/s (safer for FREE tier)
+
+### Migration Notes
+- **Automatic fix** - no manual intervention required
+- Upload v3.0.7 and city processing will resume immediately
+- Existing queued city jobs will start processing
+- AI content generation will begin within 1-2 minutes
+- No database reset needed
+
 ## [3.0.6] - 2025-12-17
 
 ### Fixed

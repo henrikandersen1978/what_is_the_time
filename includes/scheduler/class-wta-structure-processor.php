@@ -54,16 +54,17 @@ class WTA_Structure_Processor {
 			return;
 		}
 
-		// 3. Process cities_import batch job (creates individual city jobs)
-		$cities_import = WTA_Queue::get_pending( 'cities_import', 10 );
-		if ( ! empty( $cities_import ) ) {
-			WTA_Logger::info( 'Processing cities_import batch', array( 'count' => count( $cities_import ) ) );
-			foreach ( $cities_import as $item ) {
-				$this->process_item( $item );
-			}
-			// Don't continue to individual cities until batch is done
-			return;
+	// 3. Process cities_import batch job (creates individual city jobs)
+	// v3.0.7: Process 1 chunk, then CONTINUE to city processing (parallel execution)
+	// This allows AI content to start immediately as soon as first cities are created
+	$cities_import = WTA_Queue::get_pending( 'cities_import', 1 );
+	if ( ! empty( $cities_import ) ) {
+		WTA_Logger::info( 'Processing cities_import batch', array( 'count' => count( $cities_import ) ) );
+		foreach ( $cities_import as $item ) {
+			$this->process_item( $item );
 		}
+		// Continue to city processing below (parallel execution - no return!)
+	}
 
 	// 4. Finally process individual cities (only after cities_import is done)
 	// Dynamic batch size based on cron interval and test mode
