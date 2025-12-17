@@ -20,7 +20,7 @@ class WTA_GeoNames_Parser {
 	 */
 	public static function get_data_directory() {
 		$upload_dir = wp_upload_dir();
-		return $upload_dir['basedir'] . '/world-time-ai';
+		return $upload_dir['basedir'] . '/world-time-ai-data';
 	}
 
 	/**

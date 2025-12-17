@@ -124,7 +124,7 @@ WTA_Queue::add(
 	// Queue cities batch job (ONE item) - v3.0.0: Using GeoNames cities500.txt
 	$cities_file = WTA_GeoNames_Parser::get_cities_file_path();
 	if ( false === $cities_file ) {
-		WTA_Logger::error( 'cities500.txt not found - please upload to wp-content/uploads/world-time-ai/' );
+		WTA_Logger::error( 'cities500.txt not found - please upload to wp-content/uploads/world-time-ai-data/' );
 		return $stats;
 	}
 

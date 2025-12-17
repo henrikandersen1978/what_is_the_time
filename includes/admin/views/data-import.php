@@ -24,12 +24,12 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 	<div class="wta-card wta-card-wide">
 		<h2><?php esc_html_e( 'GeoNames Data Files', WTA_TEXT_DOMAIN ); ?></h2>
 		<p class="description">
-			<?php esc_html_e( 'Upload GeoNames files to wp-content/uploads/world-time-ai/', WTA_TEXT_DOMAIN ); ?>
+			<?php esc_html_e( 'Upload GeoNames files to wp-content/uploads/world-time-ai-data/', WTA_TEXT_DOMAIN ); ?>
 		</p>
 		
 		<?php
 		$upload_dir = wp_upload_dir();
-		$data_dir = $upload_dir['basedir'] . '/world-time-ai/';
+		$data_dir = $upload_dir['basedir'] . '/world-time-ai-data/';
 		
 		$files = array(
 			'cities500.txt' => array('required' => true, 'expected_size' => '~37 MB', 'description' => 'Cities with population > 500'),

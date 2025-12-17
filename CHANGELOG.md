@@ -2,6 +2,25 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.2] - 2025-12-18
+
+### Fixed
+- **Critical Fix**: Corrected GeoNames data directory path
+  - **Problem**: Plugin looked for files in `wp-content/uploads/world-time-ai/` (wrong)
+  - **Solution**: Fixed to use correct path `wp-content/uploads/world-time-ai-data/`
+  - **Impact**: Plugin now correctly finds uploaded GeoNames files and can start import
+  - **Files Updated**:
+    - `class-wta-geonames-parser.php` - Data directory path
+    - `data-import.php` - Admin UI file status display
+    - `class-wta-importer.php` - Error message path
+
+### Technical Details
+- All GeoNames file lookups now use consistent `/world-time-ai-data/` directory
+- Matches existing log directory structure (`/world-time-ai-data/logs/`)
+- Prevents "files not found" errors when files are correctly uploaded
+
+---
+
 ## [3.0.1] - 2025-12-18
 
 ### Fixed
