@@ -1518,33 +1518,19 @@ class WTA_AI_Processor {
 	$content .= "<p>Dummy tekst om global tidssammenligning.</p>\n";
 	$content .= "[wta_global_time_comparison]\n</div>";
 	
-	// v3.0.12: ADD FAQ section for test mode (regression fix)
-	// Previously missing after GeoNames migration
-	$faq_data = array(
-		'intro' => "Her finder du svar på ofte stillede spørgsmål om tidszoner og rejser til {$name_local}. Dette er test mode FAQ uden AI.",
-		'faqs' => array(
-			array(
-				'question' => "Hvad er klokken i {$name_local}?",
-				'answer' => "Dummy svar: {$name_local} følger tidszonen {$timezone}. Test mode aktiveret."
-			),
-			array(
-				'question' => "Hvor mange tidszoner har {$country_name}?",
-				'answer' => "Dummy svar om tidszoner i {$country_name}. Test mode."
-			),
-			array(
-				'question' => "Hvornår er det bedst at rejse til {$name_local}?",
-				'answer' => "Dummy svar om bedste rejsetidspunkt. Test mode."
-			),
-		)
-	);
+	// v3.0.13: Use proper FAQ generator with test mode
+	// Generates 12 FAQ with icons, real data (GPS, time, sun/moon), and template-based answers
+	$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, true ); // true = test mode (no AI cost)
 	
-	// Save FAQ data for schema generation (used by WTA_Template_Loader::append_faq_schema)
-	update_post_meta( $post_id, 'wta_faq_data', $faq_data );
-	
-	// Render and append FAQ HTML (used by frontend template)
-	$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $name_local );
-	if ( ! empty( $faq_html ) ) {
-		$content .= "\n\n" . $faq_html;
+	if ( false !== $faq_data && ! empty( $faq_data ) ) {
+		// Save FAQ data for schema generation
+		update_post_meta( $post_id, 'wta_faq_data', $faq_data );
+		
+		// Render FAQ HTML and append to content
+		$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $name_local );
+		if ( ! empty( $faq_html ) ) {
+			$content .= "\n\n" . $faq_html;
+		}
 	}
 	
 	return array(

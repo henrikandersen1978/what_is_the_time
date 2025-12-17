@@ -2,6 +2,82 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.13] - 2025-12-17
+
+### Fixed
+- **FAQ Section Quality in Test Mode (v3.0.12 Regression Fix)**
+  - **Problem**: v3.0.12 restored FAQ section but with poor quality
+    - Only 3 FAQ questions instead of 12
+    - Missing emoji icons on all questions
+    - Generic dummy answers instead of real data
+    - No live time, sun/moon data, GPS coordinates, or calculated fields
+    - Inconsistent with previous version's FAQ quality
+  - **Impact Before Fix**:
+    - ❌ FAQ looked incomplete and unprofessional
+    - ❌ Missing visual hierarchy (no icons)
+    - ❌ No real data (timezone, coordinates, sun times, moon phase)
+    - ❌ Poor user experience compared to pre-GeoNames version
+  - **Root Cause**: Used hardcoded array instead of proper FAQ generator
+    - v3.0.12 manually created FAQ array with dummy data
+    - Ignored existing `WTA_FAQ_Generator` class that handles test mode
+    - Generator has 3-tier architecture with template fallbacks
+  - **Solution**: Use proper FAQ generator with test mode flag
+    - Replaced manual FAQ array with `WTA_FAQ_Generator::generate_city_faq( $post_id, true )`
+    - Generator already supports test mode with template-based answers
+    - Generates all 12 FAQ with icons, real data, and calculated fields
+  - **Result**:
+    - ✅ 12 FAQ questions with emoji icons (⏰🌍🌅🌙📍⏰🍂☀️📞🕐🌐✈️)
+    - ✅ Real data: Live time, timezone, UTC offset, sun/moon times, GPS coordinates
+    - ✅ Calculated fields: Time difference, season, DST, day length, moon phase
+    - ✅ Template-based answers (no AI cost in test mode)
+    - ✅ Matches pre-GeoNames FAQ quality and completeness
+
+### FAQ Generator Architecture (3-Tier System)
+**TIER 1: Template-based (5 items)** - Always data-driven, no AI
+- ⏰ Current time (live calculation from timezone)
+- 🌍 Timezone info (IANA name + UTC offset)
+- 🌅 Sun times (calculated from GPS coordinates)
+- 🌙 Moon phase (dynamically calculated)
+- 📍 Geography (GPS coordinates + hemisphere)
+
+**TIER 2: Light AI (3 items)** - Template in test mode, template + 1 AI sentence in normal mode
+- ⏰ Time difference to Denmark (calculated + example)
+- 🍂 Current season (calculated + weather context)
+- ☀️ Daylight saving time (detected + impact)
+
+**TIER 3: Full AI (4 items)** - Template in test mode, batched AI in normal mode
+- 📞 Calling hours from Denmark
+- 🕐 Time culture (work hours, meal times)
+- 🌐 Jetlag tips
+- ✈️ Best travel season
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-ai-processor.php`
+  - Lines 1521-1533: Replaced hardcoded FAQ array with generator call
+  - `WTA_FAQ_Generator::generate_city_faq( $post_id, true )` handles everything
+  - Generator reads post meta: timezone, latitude, longitude, parent country
+  - All calculations happen in generator (sun times, moon phase, time diff, etc.)
+  - Test mode flag ensures no AI calls (100% template-based)
+
+### Migration Guide
+**Do I need to reimport?**
+- **YES (RECOMMENDED)** - To get complete 12-FAQ with icons and real data on all pages
+- **NO** - Only if you want to force regenerate manually page-by-page
+
+**How to apply fix:**
+1. **Upload v3.0.13 to server**
+2. **Reset All Data** (Admin → World Time AI → Tools)
+3. **Start New Import** (Admin → Data Import)
+   - Enable test mode
+   - Select continents and population threshold
+4. **Verify**: Check any city page - should have 12 FAQ with icons at bottom
+
+**Example of improved FAQ:**
+- **Before (v3.0.12)**: "Dummy svar: København følger tidszonen Europe/Copenhagen. Test mode aktiveret."
+- **After (v3.0.13)**: "Klokken i København er **14:23:45**. Byen ligger i tidszonen Europe/Copenhagen (UTC+01:00). Tiden opdateres automatisk, så du altid ser den aktuelle tid."
+
+---
+
 ## [3.0.12] - 2025-12-17
 
 ### Fixed
