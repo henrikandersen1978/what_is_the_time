@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.3] - 2025-12-18
+
+### Fixed
+- **CRITICAL FIX**: Cities import now works with GeoNames format!
+  - **Problem**: v3.0.0-3.0.2 only updated importer/parser, not the processor
+  - **Impact**: Cities import completely failed with "cities.json not found" error
+  - **Solution**: Complete rewrite of `process_cities_import()` to use GeoNames streaming
+  
+### Changed
+- **Complete refactor of cities import processor** (`class-wta-structure-processor.php`):
+  - ✅ Streams cities500.txt (tab-separated) instead of loading JSON to memory
+  - ✅ Parses GeoNames format: geonameid, name, GPS, population, timezone
+  - ✅ Uses feature_class='P' filter (populated places only)
+  - ✅ Simplified GPS validation (GeoNames data is pre-validated)
+  - ✅ Removed unnecessary Wikidata GPS fallback (GeoNames has GPS)
+  - ✅ Lightweight administrative terms filtering
+  - ✅ Same chunking system (1000 cities per chunk)
+  - ✅ Same duplicate detection logic
+  - ✅ Same max cities per country logic
+
+### Technical Details
+- Reduced code complexity: ~610 lines → ~250 lines (60% reduction)
+- Memory efficient: Streams file line-by-line, processes in 1k chunks
+- Performance: Expected 30-45 min for 210k cities (vs 60+ min with old JSON system)
+- Safety limit: 250 chunks max (250k cities)
+- Better error handling: Marks failed jobs instead of throwing exceptions
+
+### Migration
+- **BREAKING**: This fix completes the v3.0.0 GeoNames migration
+- Previous v3.0.0-3.0.2 users: Delete failed import jobs and restart import
+- Import should now complete successfully with GeoNames data
+
+---
+
 ## [3.0.2] - 2025-12-18
 
 ### Fixed

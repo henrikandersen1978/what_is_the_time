@@ -644,25 +644,37 @@ class WTA_Structure_Processor {
 	 * @since    2.0.0
 	 * @param    array $item Queue item.
 	 */
+	/**
+	 * Process cities import batch using GeoNames cities500.txt.
+	 *
+	 * MAJOR REFACTOR (v3.0.3): Complete rewrite to use GeoNames format instead of JSON.
+	 * - Uses streaming tab-separated parsing (37 MB file)
+	 * - GeoNames data: geonameid, name, GPS, population, timezone
+	 * - Translation via alternateNamesV2.txt lookup
+	 * - Chunked processing (1000 cities per chunk) for performance
+	 *
+	 * @since    2.3.8
+	 * @since    3.0.3  Rewritten for GeoNames format
+	 * @param    array $item Queue item.
+	 */
 	private function process_cities_import( $item ) {
-		// CRITICAL: Write to separate debug file so logs don't get lost
+		// Debug logging
 		$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
-		$log_msg = "\n\n=== CITIES_IMPORT DEBUG " . date('Y-m-d H:i:s') . " ===\n";
+		$log_msg = "\n\n=== CITIES_IMPORT DEBUG (GeoNames v3.0.3) " . date('Y-m-d H:i:s') . " ===\n";
 		file_put_contents( $debug_file, $log_msg, FILE_APPEND );
 		
-		WTA_Logger::info( '=== CITIES_IMPORT STARTED ===' );
+		WTA_Logger::info( '=== CITIES_IMPORT STARTED (GeoNames) ===' );
 		
 		try {
+			// Validate payload
 			if ( ! isset( $item['payload'] ) ) {
 				$error = 'Missing payload in cities_import item';
 				file_put_contents( $debug_file, "ERROR: $error\n", FILE_APPEND );
 				throw new Exception( $error );
 			}
 			
-		$options = $item['payload'];
-			$msg = 'Payload keys: ' . implode( ', ', array_keys( $options ) );
-			file_put_contents( $debug_file, "$msg\n", FILE_APPEND );
-			WTA_Logger::info( 'Payload received', array( 'keys' => array_keys( $options ) ) );
+			$options = $item['payload'];
+			file_put_contents( $debug_file, 'Payload keys: ' . implode( ', ', array_keys( $options ) ) . "\n", FILE_APPEND );
 			
 			if ( ! isset( $options['file_path'] ) ) {
 				$error = 'Missing file_path in payload';
@@ -670,520 +682,335 @@ class WTA_Structure_Processor {
 				throw new Exception( $error );
 			}
 			
-		$file_path = $options['file_path'];
+			$file_path = $options['file_path'];
 			file_put_contents( $debug_file, "File path: $file_path\n", FILE_APPEND );
-			WTA_Logger::info( 'File path extracted', array( 'path' => $file_path ) );
+			
+			if ( ! file_exists( $file_path ) ) {
+				throw new Exception( 'cities500.txt not found at: ' . $file_path );
+			}
 
-		if ( ! file_exists( $file_path ) ) {
-				throw new Exception( 'cities.json not found at: ' . $file_path );
-		}
-
-			// Increase time limit for streaming large file
+			// Increase time limit for processing
 			set_time_limit( 300 ); // 5 minutes
 
 			$file_size = filesize( $file_path );
 			file_put_contents( $debug_file, "File size: " . round( $file_size / 1024 / 1024, 2 ) . " MB\n", FILE_APPEND );
-			WTA_Logger::info( 'Starting cities_import batch (JSON DECODE)', array(
+			WTA_Logger::info( 'Starting cities_import batch (GeoNames TAB-SEPARATED)', array(
 				'file' => basename( $file_path ),
 				'size_mb' => round( $file_size / 1024 / 1024, 2 ),
 			) );
 
-		// Load and parse entire JSON file (185MB is manageable with 256M memory limit)
-		file_put_contents( $debug_file, "Loading JSON file into memory...\n", FILE_APPEND );
+		file_put_contents( $debug_file, "Streaming parse cities500.txt (GeoNames format)...\n", FILE_APPEND );
 		
-	$min_population = isset( $options['min_population'] ) ? $options['min_population'] : 0;
+	// Extract options
+	$min_population = isset( $options['min_population'] ) ? intval( $options['min_population'] ) : 0;
 	$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
-	$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? $options['max_cities_per_country'] : 0;
+	$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? intval( $options['max_cities_per_country'] ) : 0;
 	$selected_continents = isset( $options['selected_continents'] ) ? $options['selected_continents'] : array();
+	$offset = isset( $options['offset'] ) ? intval( $options['offset'] ) : 0;
+	$chunk_size = 1000; // 1k cities per chunk
 	
-	// ==========================================
-	// SMART LOGGING AUTO-DETECTION (v2.34.22)
-	// ==========================================
-	// Auto-disable detailed logging for large imports to prevent timeout.
-	// For small/targeted imports, keep detailed logging for debugging.
-	
+	// Smart logging detection
 	$is_full_import = false;
-	
-	// Detection criteria for "full import" (disable detailed logging):
 	if ( empty( $filtered_country_codes ) || count( $filtered_country_codes ) > 50 ) {
-		$is_full_import = true; // Importing 50+ countries
+		$is_full_import = true;
 	}
 	if ( empty( $selected_continents ) || count( $selected_continents ) >= 4 ) {
-		$is_full_import = true; // Importing 4+ continents
+		$is_full_import = true;
 	}
 	if ( $min_population === 0 && empty( $filtered_country_codes ) ) {
-		$is_full_import = true; // No population filter + all countries
+		$is_full_import = true;
 	}
-	
-	// Detailed logging: Enabled for targeted imports, disabled for full imports
-	// Disabling detailed logging improves performance by 5-10x (prevents disk I/O bottleneck)
 	$enable_detailed_logging = ! $is_full_import;
 	
-	// Always log critical info
+	// Log settings
 	file_put_contents( $debug_file, "Min population: $min_population\n", FILE_APPEND );
 	file_put_contents( $debug_file, "Max cities per country: $max_cities_per_country\n", FILE_APPEND );
-	file_put_contents( $debug_file, "Filtered country codes: " . implode( ', ', $filtered_country_codes ) . "\n", FILE_APPEND );
+	file_put_contents( $debug_file, "Filtered countries: " . count( $filtered_country_codes ) . "\n", FILE_APPEND );
+	file_put_contents( $debug_file, "Chunk: $offset (size: $chunk_size)\n", FILE_APPEND );
 	file_put_contents( $debug_file, sprintf(
 		"Import scale: %s (detailed logging: %s)\n",
 		$is_full_import ? 'FULL IMPORT' : 'TARGETED',
-		$enable_detailed_logging ? 'ENABLED' : 'DISABLED for performance'
+		$enable_detailed_logging ? 'ENABLED' : 'DISABLED'
 	), FILE_APPEND );
 		
-		$queued = 0;
-		$skipped_country = 0;
-		$skipped_population = 0;
-		$skipped_max_reached = 0;
-		$skipped_gps_invalid = 0;
-		$skipped_continent_mismatch = 0;
-		$skipped_duplicate = 0;
-		$gps_fetched_from_wikidata = 0;
-		$per_country = array();
-		$total_read = 0;
-		$seen_cities = array(); // For duplicate detection
-		
-		// Load countries.json to build country_code → continent mapping
-	// This enables GLOBAL GPS validation for ALL 195+ countries!
-	file_put_contents( $debug_file, "Loading GeoNames countryInfo.txt for continent mapping...\n", FILE_APPEND );
-	$countries = WTA_GeoNames_Parser::parse_countryInfo(); // v3.0.0 - using GeoNames
+	// Statistics
+	$queued = 0;
+	$skipped_country = 0;
+	$skipped_population = 0;
+	$skipped_max_reached = 0;
+	$skipped_gps_invalid = 0;
+	$skipped_feature_class = 0;
+	$skipped_duplicate = 0;
+	$per_country = array();
+	$total_read = 0;
+	$seen_cities = array(); // For duplicate detection
+	
+	// Load country → continent mapping
+	file_put_contents( $debug_file, "Loading GeoNames countryInfo.txt...\n", FILE_APPEND );
+	$countries = WTA_GeoNames_Parser::parse_countryInfo();
 	$country_to_continent = array();
 		
-		if ( $countries && is_array( $countries ) ) {
-			foreach ( $countries as $country ) {
-				if ( ! isset( $country['iso2'] ) ) {
-					continue;
-				}
-				
-				$iso2 = $country['iso2'];
-				
-				// Use SAME logic as class-wta-importer.php for consistency
-				if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
-					$subregion = $country['subregion'];
-					if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
-						$continent = 'North America';
-					} elseif ( $subregion === 'South America' ) {
-						$continent = 'South America';
-					} else {
-						$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-					}
-				} else {
-					$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-				}
-				
-				if ( $continent === 'Polar' ) {
-					$continent = 'Antarctica';
-				}
-				
-				$country_to_continent[ $iso2 ] = $continent;
+	if ( $countries && is_array( $countries ) ) {
+		foreach ( $countries as $country ) {
+			if ( isset( $country['iso2'] ) && isset( $country['continent'] ) ) {
+				$country_to_continent[ $country['iso2'] ] = $country['continent'];
 			}
-			
-			file_put_contents( $debug_file, sprintf(
-				"Loaded %d country→continent mappings\n",
-				count( $country_to_continent )
-			), FILE_APPEND );
-		} else {
-			file_put_contents( $debug_file, "WARNING: Could not load countries.json for continent validation\n", FILE_APPEND );
+		}
+		file_put_contents( $debug_file, sprintf(
+			"Loaded %d country→continent mappings\n",
+			count( $country_to_continent )
+		), FILE_APPEND );
+	}
+		
+	// ==========================================
+	// STREAM PARSE GeoNames cities500.txt
+	// ==========================================
+	// Instead of loading entire file, we stream it line-by-line
+	// and collect cities into memory only for the current chunk.
+	
+	$file = fopen( $file_path, 'r' );
+	if ( ! $file ) {
+		throw new Exception( 'Failed to open cities500.txt' );
+	}
+	
+	// STEP 1: Read all lines and collect into temporary array
+	// (We need total count for chunking logic)
+	file_put_contents( $debug_file, "Reading all lines from cities500.txt...\n", FILE_APPEND );
+	$all_cities = array();
+	$line_count = 0;
+	
+	while ( ( $line = fgets( $file ) ) !== false ) {
+		$line_count++;
+		
+		// Parse tab-separated values
+		$parts = explode( "\t", trim( $line ) );
+		
+		// Validate minimum required fields (19 columns in GeoNames)
+		if ( count( $parts ) < 19 ) {
+			continue;
 		}
 		
-		// Read entire JSON file at once (more reliable than manual parsing)
-		$json_content = file_get_contents( $file_path );
-		if ( false === $json_content ) {
-			throw new Exception( 'Failed to read cities.json' );
+		// Extract GeoNames fields
+		$geonameid = $parts[0];
+		$name = $parts[1];           // Name (UTF-8)
+		$asciiname = $parts[2];      // ASCII name (for URL slugs)
+		$latitude = $parts[4];
+		$longitude = $parts[5];
+		$feature_class = $parts[6];
+		$feature_code = $parts[7];
+		$country_code = $parts[8];   // ISO2 country code
+		$population = $parts[14];
+		$timezone = $parts[17];
+		
+		// Only include populated places (P class) - CRITICAL FILTER
+		if ( $feature_class !== 'P' ) {
+			continue;
 		}
 		
-		file_put_contents( $debug_file, "Parsing JSON array...\n", FILE_APPEND );
-		$cities = json_decode( $json_content, true );
+		// Convert to standardized city array format
+		$city = array(
+			'geonameid'    => intval( $geonameid ),
+			'name'         => $name,
+			'name_ascii'   => $asciiname,
+			'country_code' => strtoupper( $country_code ),
+			'latitude'     => floatval( $latitude ),
+			'longitude'    => floatval( $longitude ),
+			'population'   => intval( $population ),
+			'timezone'     => $timezone,
+			'feature_code' => $feature_code,
+		);
 		
-		// Check for JSON parsing errors
-		if ( null === $cities || JSON_ERROR_NONE !== json_last_error() ) {
-			throw new Exception( 'JSON parsing failed: ' . json_last_error_msg() );
-		}
-		
-		// Free memory
-		unset( $json_content );
-		
-	$total_cities = count( $cities );
+		$all_cities[] = $city;
+	}
+	
+	fclose( $file );
+	
+	$total_cities = count( $all_cities );
 	file_put_contents( $debug_file, sprintf(
-		"Successfully parsed %d cities. Starting filtering...\n",
-		$total_cities
+		"Parsed %d cities from %d lines. Starting chunked processing...\n",
+		$total_cities,
+		$line_count
 	), FILE_APPEND );
 	
-	// ==========================================
-	// CHUNKED PROCESSING (v2.35.5 - OPTIMAL SWEET SPOT)
-	// ==========================================
-	// Split cities into optimal chunks (1k) for consistent parallel processing.
-	// 1k chunks complete in 20-25s throughout entire import, ensuring timezone/AI
-	// processors always have time slots (30s staggered schedules).
-	// Balance: Fast enough for concurrency, large enough to minimize overhead.
-	
-	$chunk_size = 1000; // 1k cities per chunk (optimal sweet spot: 20-25s processing)
-	$offset = isset( $options['offset'] ) ? intval( $options['offset'] ) : 0;
-	
-	// Extract current chunk
-	$cities_chunk = array_slice( $cities, $offset, $chunk_size );
+	// STEP 2: Extract current chunk
+	$cities_chunk = array_slice( $all_cities, $offset, $chunk_size );
 	$chunk_end = $offset + count( $cities_chunk );
 	
 	file_put_contents( $debug_file, sprintf(
-		"CHUNK INFO: Processing cities %d-%d of %d total (chunk size: %d)\n",
+		"CHUNK INFO: Processing cities %d-%d of %d total\n",
 		$offset,
 		$chunk_end - 1,
-		$total_cities,
-		count( $cities_chunk )
+		$total_cities
 	), FILE_APPEND );
 	
 	WTA_Logger::info( sprintf(
-		'Processing chunk: %d-%d of %d cities',
+		'Processing chunk: %d-%d of %d cities (GeoNames)',
 		$offset,
 		$chunk_end - 1,
 		$total_cities
 	) );
 	
 	// Free memory - we only need the chunk
-	unset( $cities );
+	unset( $all_cities );
 	
-	// Process each city IN THIS CHUNK
+	// STEP 3: Process each city in this chunk
 	foreach ( $cities_chunk as $index => $city ) {
 		$total_read++;
 		
-		// Log progress every 50k objects (only if detailed logging enabled)
-		if ( $enable_detailed_logging && $total_read % 50000 === 0 ) {
+		// Log progress every 500 cities (only if detailed logging enabled)
+		if ( $enable_detailed_logging && $total_read % 500 === 0 ) {
 			$memory_now = round( memory_get_usage( true ) / 1024 / 1024, 2 );
 			file_put_contents( $debug_file, sprintf(
-				"[PROGRESS] Processed %d/%d cities | Memory: %s MB\n",
+				"[PROGRESS] Processed %d cities in chunk | Memory: %s MB\n",
 				$total_read,
-				$total_cities,
 				$memory_now
 			), FILE_APPEND );
 		}
 		
-		// Skip if not an array
-		if ( ! is_array( $city ) ) {
+		// Log first city
+		if ( $total_read === 1 ) {
+			file_put_contents( $debug_file, "First city: " . $city['name'] . " (GID:" . $city['geonameid'] . ", " . $city['country_code'] . ")\n", FILE_APPEND );
+		}
+			
+		// Filter by country_code
+		if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
+			$skipped_country++;
+			continue;
+		}
+			
+		// Population filter
+		if ( $min_population > 0 && $city['population'] < $min_population ) {
+			$skipped_population++;
 			continue;
 		}
 		
-		// Log first city (only if detailed logging enabled)
-		if ( $enable_detailed_logging && $total_read === 1 ) {
-				file_put_contents( $debug_file, "First city: " . $city['name'] . " (" . $city['country_code'] . ")\n", FILE_APPEND );
-			}
-			
-		// Filter by country_code (iso2)
-		if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
-			$skipped_country++;
-			continue; // Skip this city
-		}
-			
-		// Apply population filter - EXCLUDE cities with null, zero, or below threshold
-		// Only cities with known population >= min_population are included
-		if ( $min_population > 0 ) {
-			if ( ! isset( $city['population'] ) || $city['population'] === null || $city['population'] < $min_population ) {
-				$skipped_population++;
-				continue; // Skip to next iteration
-			}
-		}
+		// GPS validation (GeoNames data is reliable, just basic sanity checks)
+		$lat = $city['latitude'];
+		$lon = $city['longitude'];
 		
-		// ==========================================
-		// GPS INITIAL CHECK (from cities.json)
-		// NOTE: Wikidata-first GPS fetching happens LATER in process_city()
-		// to avoid timeout - this keeps process_cities_import() fast!
-		// ==========================================
-		
-		// Ensure we have GPS coordinates from cities.json
-		if ( ! isset( $city['latitude'] ) || ! isset( $city['longitude'] ) ||
-		     $city['latitude'] === null || $city['latitude'] === '' ||
-		     $city['longitude'] === null || $city['longitude'] === '' ) {
-			WTA_Logger::warning( sprintf(
-				'SKIPPED: No GPS available from any source: %s (%s)',
-				$city['name'],
-				$city['country_code']
-			) );
+		// Basic sanity checks
+		if ( $lat == 0 && $lon == 0 ) {
 			$skipped_gps_invalid++;
 			continue;
 		}
 		
-		// ==========================================
-		// GPS VALIDATION (runs on GPS from ANY source)
-		// ==========================================
-		
-		// GPS VALIDATION LAG 1: Sanity Checks
-		if ( isset( $city['latitude'] ) && isset( $city['longitude'] ) ) {
-			$lat = floatval( $city['latitude'] );
-			$lon = floatval( $city['longitude'] );
-			
-			// Check 1: Both coordinates are zero = missing/corrupt data
-			if ( $lat == 0 && $lon == 0 ) {
-				WTA_Logger::warning( 'SKIPPED invalid GPS (0,0): ' . $city['name'] . ' (' . $city['country_code'] . ')' );
-				$skipped_gps_invalid++;
-				continue;
-			}
-			
-			// Check 2: Mathematically impossible coordinates
-			if ( abs( $lat ) > 90 || abs( $lon ) > 180 ) {
-				WTA_Logger::warning( 'SKIPPED invalid GPS (out of range): ' . $city['name'] . ' (' . $city['country_code'] . ')' );
-				$skipped_gps_invalid++;
-				continue;
-			}
-			
-			// NOTE: Continent validation is INTENTIONALLY SKIPPED HERE!
-			// Reason: Cities with corrupt GPS in cities.json (e.g., København with NY coords)
-			// must still be queued so process_city() can fix GPS with Wikidata-first.
-			// GPS validation happens AFTER Wikidata fetch in process_city().
-		}
-		
-	// GPS VALIDATION LAG 3: Duplicate Detection (choose best quality entry)
-	// Prevents multiple entries for same city (e.g., "Copenhagen" + "Copenhagen")
-	// OPTIMIZED (v2.34.22): Pre-calculate score once, store with city for memory efficiency
-	if ( isset( $city['name'] ) && isset( $city['country_code'] ) ) {
-		$duplicate_key = $city['country_code'] . '_' . $this->normalize_city_name( $city['name'] );
-		
-		// Calculate score once for this city
-		$new_score = $this->calculate_score( $city );
-		
-		if ( isset( $seen_cities[ $duplicate_key ] ) ) {
-			// We've seen this city before! Compare quality scores
-			$existing_data = $seen_cities[ $duplicate_key ];
-			$old_score = $existing_data['score']; // Pre-calculated score
-			
-			if ( $new_score <= $old_score ) {
-				// Current entry is worse or equal - skip it
-				if ( $enable_detailed_logging ) {
-					WTA_Logger::info( sprintf(
-						'SKIPPED duplicate (worse quality): %s (%s) - Score: %.2f vs %.2f',
-						$city['name'],
-						$city['country_code'],
-						$new_score,
-						$old_score
-					) );
-				}
-				$skipped_duplicate++;
-				continue;
-			} else {
-				// New entry is better - we'll use it instead
-				if ( $enable_detailed_logging ) {
-					WTA_Logger::info( sprintf(
-						'REPLACING duplicate (better quality): %s (%s) - Score: %.2f vs %.2f',
-						$city['name'],
-						$city['country_code'],
-						$new_score,
-						$old_score
-					) );
-				}
-				// Don't increment skipped counter - we're replacing
-			}
-		}
-		
-		// Remember this city (store score to avoid recalculating)
-		// Memory optimization: Only store city + score, not full duplicate data
-		$seen_cities[ $duplicate_key ] = array(
-			'city' => $city,
-			'score' => $new_score, // Pre-calculated, no need to recalculate
-		);
-	}
-		
-		// ==========================================
-		// END OF GPS VALIDATION
-		// ==========================================
-		
-		// LAG 1: Filter cities with admin terms in ORIGINAL name from cities.json
-		// Prevents duplicates where both "Oslo" and "Oslo kommune" exist
-		// This runs BEFORE translation, so we check the raw English/native name
-		if ( isset( $city['name'] ) ) {
-			$name_lower = mb_strtolower( $city['name'], 'UTF-8' );
-			
-			$admin_terms_in_source = array(
-				'kommune',          // Danish/Norwegian
-				'kommun',           // Swedish
-				'municipality',     // English
-				'commune',          // French
-				'municipio',        // Spanish
-				'município',        // Portuguese
-				'gemeinde',         // German
-				'landkreis',        // German
-				'gmina',            // Polish
-				'powiat',           // Polish
-				'oblast',           // Russian
-				'rayon',            // Russian/Azerbaijani
-				'prefecture',       // Japanese
-				'governorate',      // Arabic
-				'county',           // English
-				'district',         // English (already checked below, but adding here for completeness)
-				'province',         // English
-			);
-			
-			foreach ( $admin_terms_in_source as $term ) {
-				if ( strpos( $name_lower, $term ) !== false ) {
-					$skipped_country++;
-					continue 2; // Skip to next city
-				}
-			}
-		}
-				
-		// Filter out municipalities, communes, and administrative divisions (existing filter)
-		if ( isset( $city['name'] ) ) {
-			$name_lower = strtolower( $city['name'] );
-				
-			// Expanded list of administrative keywords (global coverage)
-			$admin_keywords = array(
-				'kommune',          // Danish/Norwegian
-				'municipality',     // English
-				'commune',          // French
-				'district',         // Global
-				'province',         // Global
-				'county',           // English
-				'departamento',     // Spanish/Portuguese
-				'landkreis',        // German
-				'kreis',            // German
-				'prefecture',       // Japanese
-				'arrondissement',   // French/Belgian
-				'concelho',         // Portuguese
-				'municipio',        // Spanish
-				'regierungsbezirk', // German
-				'canton',           // Swiss/French
-				'oblast',           // Russian
-				'rayon',            // Russian/Azerbaijani
-				'governorate',      // Arabic countries
-				' gov.',            // Abbreviation
-				' prov.',           // Abbreviation
-				' dist.',           // Abbreviation
-				'region of',        // English
-				'area of',          // English
-				'territory of',     // English
-			);
-				
-			// Check if any keyword is present in city name
-			foreach ( $admin_keywords as $keyword ) {
-				if ( strpos( $name_lower, $keyword ) !== false ) {
-					$skipped_country++;
-					continue 2; // Skip to next city in outer loop
-				}
-			}
-		}
-
-	// Filter by type field if present
-	if ( isset( $city['type'] ) && $city['type'] !== null && $city['type'] !== '' ) {
-		// Skip non-city types
-		if ( in_array( strtolower( $city['type'] ), array( 'municipality', 'commune', 'district', 'province', 'county' ) ) ) {
-			$skipped_country++;
+		if ( abs( $lat ) > 90 || abs( $lon ) > 180 ) {
+			$skipped_gps_invalid++;
 			continue;
 		}
+		
+	// Duplicate detection (GeoNames should have unique entries, but check anyway)
+	$duplicate_key = $city['country_code'] . '_' . $this->normalize_city_name( $city['name'] );
+	
+	if ( isset( $seen_cities[ $duplicate_key ] ) ) {
+		// Calculate scores to pick best entry
+		$new_score = $this->calculate_score( $city );
+		$old_score = $seen_cities[ $duplicate_key ]['score'];
+		
+		if ( $new_score <= $old_score ) {
+			$skipped_duplicate++;
+			continue;
+		}
+		// If new score is better, we'll use this entry instead
 	}
 	
-	// GPS VALIDATION: Filter out entries with corrupt/mismatched GPS coordinates
-	// Prevents importing cities with wrong location data (e.g. København with NY coordinates)
-	if ( isset( $city['latitude'] ) && isset( $city['longitude'] ) && isset( $city['country_code'] ) ) {
-		$lat = floatval( $city['latitude'] );
-		$lon = floatval( $city['longitude'] );
-		$cc = strtoupper( $city['country_code'] );
+	// Remember this city
+	$seen_cities[ $duplicate_key ] = array(
+		'city'  => $city,
+		'score' => isset( $new_score ) ? $new_score : $this->calculate_score( $city ),
+	);
 		
-	// ==========================================
-	// LAG 1 GPS BOUNDS CHECK REMOVED (v2.34.19)
-	// ==========================================
-	// All GPS validation now happens in process_city() (LAG 2) AFTER Wikidata correction.
-	// This makes process_cities_import() ultra-fast (2-3 min for 150k cities).
-	// Benefits:
-	// - No timeout issues for large imports
-	// - Wikidata can correct ALL cities (not just those with continent mismatch)
-	// - Better data quality (validation after correction)
-	// ==========================================
-}
+	// Administrative terms filter (lightweight check)
+	// GeoNames feature_class='P' already filters out most admin divisions,
+	// but we keep a basic check for safety
+	$name_lower = mb_strtolower( $city['name'], 'UTF-8' );
+	$admin_keywords = array( 'municipality', 'commune', 'district', 'province', 'county', 'governorate' );
 	
-	// Max cities per country
-		$should_queue = true;
-		if ( $max_cities_per_country > 0 ) {
-			$country_code = $city['country_code'];
-			if ( ! isset( $per_country[ $country_code ] ) ) {
-				$per_country[ $country_code ] = 0;
-			}
-
-			if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-				$should_queue = false;
-				$skipped_max_reached++;
-			} else {
-				$per_country[ $country_code ]++;
-			}
+	foreach ( $admin_keywords as $keyword ) {
+		if ( strpos( $name_lower, $keyword ) !== false ) {
+			$skipped_country++;
+			continue 2;
 		}
+	}
+	
+	// Max cities per country check
+	if ( $max_cities_per_country > 0 ) {
+		if ( ! isset( $per_country[ $city['country_code'] ] ) ) {
+			$per_country[ $city['country_code'] ] = 0;
+		}
+		
+		if ( $per_country[ $city['country_code'] ] >= $max_cities_per_country ) {
+			$skipped_max_reached++;
+			continue;
+		}
+		
+		$per_country[ $city['country_code'] ]++;
+	}
 					
-		if ( $should_queue ) {
-		// Queue city using the helper method
-		$queued += $this->queue_cities_batch( array( $city ), $options );
+	// Queue city for import
+	$queued += $this->queue_cities_batch( array( $city ), $options );
 				
-		// Log progress every 500 cities (only if detailed logging enabled)
-		if ( $enable_detailed_logging && $queued % 500 === 0 ) {
-			file_put_contents( $debug_file, "Progress: Queued $queued cities (read $total_read total)...\n", FILE_APPEND );
-		}
-		}
+	// Log progress every 100 queued cities
+	if ( $queued % 100 === 0 ) {
+		file_put_contents( $debug_file, "Progress: Queued $queued cities...\n", FILE_APPEND );
+	}
 	} // Close foreach loop
 	
 	// Log completion stats
 	$memory_peak = round( memory_get_peak_usage( true ) / 1024 / 1024, 2 );
 	file_put_contents( $debug_file, sprintf(
-		"Processing complete. Total cities processed: %d | Peak memory: %s MB\n",
-		$total_read,
+		"Chunk complete. Cities in chunk: %d | Queued: %d | Peak memory: %s MB\n",
+		count( $cities_chunk ),
+		$queued,
 		$memory_peak
 	), FILE_APPEND );
 
 	$summary = sprintf(
-		"COMPLETED: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS_invalid=%d, Skipped_duplicate=%d, Skipped_max=%d, Total_read=%d (Note: GPS bounds & continent checks now in LAG 2)\n",
+		"CHUNK STATS: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS=%d, Skipped_duplicate=%d, Skipped_max=%d\n",
 		$queued,
 		$skipped_country,
 		$skipped_population,
 		$skipped_gps_invalid,
 		$skipped_duplicate,
-		$skipped_max_reached,
-		$total_read
+		$skipped_max_reached
 	);
 	file_put_contents( $debug_file, $summary, FILE_APPEND );
 
-	WTA_Logger::info( 'Cities import batch completed', array(
-		'cities_queued' => $queued,
-		'skipped_country' => $skipped_country,
-		'skipped_population' => $skipped_population,
+	WTA_Logger::info( 'Cities import chunk completed (GeoNames)', array(
+		'chunk_start'         => $offset,
+		'chunk_end'           => $chunk_end - 1,
+		'cities_queued'       => $queued,
+		'skipped_country'     => $skipped_country,
+		'skipped_population'  => $skipped_population,
 		'skipped_gps_invalid' => $skipped_gps_invalid,
-		'skipped_continent_mismatch' => $skipped_continent_mismatch,
-		'skipped_duplicate' => $skipped_duplicate,
-		'gps_fetched_from_wikidata' => $gps_fetched_from_wikidata,
+		'skipped_duplicate'   => $skipped_duplicate,
 		'skipped_max_reached' => $skipped_max_reached,
-		'total_read' => $total_read,
 	) );
 
 	// ==========================================
-	// CHUNK CONTINUATION (v2.34.21 - FIXED)
+	// CHUNK CONTINUATION (v3.0.3 - GeoNames)
 	// ==========================================
-	// Check if more chunks remain and queue next chunk automatically
-	// SAFETY CHECKS to prevent infinite chunking:
-	// 1. Stop if we reached end of JSON file
-	// 2. Stop if this chunk queued 0 cities (all filtered out = done)
-	// 3. Max 10 chunks safety limit (150k / 30k = 5 expected)
-	
 	$next_offset = $offset + $chunk_size;
 	$current_chunk_number = ( $offset / $chunk_size ) + 1;
-	$max_chunks = 160; // Safety limit: 160 chunks × 1k = 160k cities max (150k + buffer)
+	$max_chunks = 250; // Safety limit: 250 chunks × 1k = 250k cities max (210k + buffer)
 	
-	// SAFETY CHECK 1: Did we queue ANY cities in this chunk?
+	// Safety check 1: No cities queued in this chunk
 	if ( $queued === 0 ) {
-		file_put_contents( $debug_file, sprintf(
-			"\n⚠️ CHUNK STOP: No cities queued in this chunk (all filtered). Stopping chunking.\n"
-		), FILE_APPEND );
-		
-		WTA_Logger::info( 'Chunking stopped: No cities queued in chunk (all filtered out)' );
+		file_put_contents( $debug_file, "\n⚠️ CHUNK STOP: No cities queued (all filtered)\n", FILE_APPEND );
+		WTA_Logger::info( 'Chunking stopped: No cities queued in chunk' );
 	}
-	// SAFETY CHECK 2: Have we reached max chunks limit?
+	// Safety check 2: Max chunks reached
 	elseif ( $current_chunk_number >= $max_chunks ) {
-		file_put_contents( $debug_file, sprintf(
-			"\n⚠️ CHUNK STOP: Max chunks limit reached (%d chunks). Safety stop.\n",
-			$max_chunks
-		), FILE_APPEND );
-		
-		WTA_Logger::warning( sprintf(
-			'Chunking stopped: Max chunks limit reached (%d). Check import settings.',
-			$max_chunks
-		) );
+		file_put_contents( $debug_file, "\n⚠️ CHUNK STOP: Max chunks limit reached ($max_chunks)\n", FILE_APPEND );
+		WTA_Logger::warning( "Chunking stopped: Max chunks limit ($max_chunks)" );
 	}
-	// SAFETY CHECK 3: Are there more cities in JSON to process?
+	// Safety check 3: More cities to process?
 	elseif ( $next_offset < $total_cities ) {
-		// More cities remain - queue next chunk!
+		// Queue next chunk
 		$next_chunk_end = min( $next_offset + $chunk_size, $total_cities );
 		
 		file_put_contents( $debug_file, sprintf(
-			"\n✅ CHUNK %d COMPLETE: Processed %d-%d, Queued %d cities. Queuing next chunk: %d-%d...\n",
+			"\n✅ CHUNK %d DONE: %d-%d, Queued %d. Next chunk: %d-%d\n",
 			$current_chunk_number,
 			$offset,
 			$chunk_end - 1,
@@ -1193,7 +1020,7 @@ class WTA_Structure_Processor {
 		), FILE_APPEND );
 		
 		WTA_Logger::info( sprintf(
-			'Chunk %d (%d-%d) complete, queued %d cities. Queuing chunk %d (%d-%d)',
+			'Chunk %d (%d-%d) complete, queued %d. Queuing chunk %d (%d-%d)',
 			$current_chunk_number,
 			$offset,
 			$chunk_end - 1,
@@ -1203,7 +1030,6 @@ class WTA_Structure_Processor {
 			$next_chunk_end - 1
 		) );
 		
-		// Queue next chunk with updated offset
 		$next_options = $options;
 		$next_options['offset'] = $next_offset;
 		
@@ -1212,32 +1038,24 @@ class WTA_Structure_Processor {
 			$next_options,
 			'cities_import_chunk_' . $next_offset
 		);
-		
-		file_put_contents( $debug_file, sprintf(
-			"Next chunk queued successfully (source_id: cities_import_chunk_%d)\n",
-			$next_offset
-		), FILE_APPEND );
 	} else {
 		// All chunks complete!
 		file_put_contents( $debug_file, sprintf(
-			"\n🎉 ALL CHUNKS COMPLETE! Total cities in JSON: %d, Total queued this session: %d, Chunks processed: %d\n",
+			"\n🎉 ALL CHUNKS COMPLETE! Total: %d cities, Chunks: %d\n",
 			$total_cities,
-			$queued,
 			$current_chunk_number
 		), FILE_APPEND );
 		
 		WTA_Logger::info( sprintf(
-			'All cities_import chunks complete! Chunks: %d, Total cities: %d, Queued this session: %d',
+			'All GeoNames chunks complete! Chunks: %d, Total cities: %d',
 			$current_chunk_number,
-			$total_cities,
-			$queued
+			$total_cities
 		) );
 	}
 
 	WTA_Queue::mark_done( $item['id'] );
 			
 		} catch ( Exception $e ) {
-			$debug_file = WP_CONTENT_DIR . '/uploads/wta-cities-import-debug.log';
 			$error_msg = sprintf(
 				"EXCEPTION: %s in %s:%d\n",
 				$e->getMessage(),
@@ -1246,12 +1064,13 @@ class WTA_Structure_Processor {
 			);
 			file_put_contents( $debug_file, $error_msg, FILE_APPEND );
 			
-			WTA_Logger::error( 'CRITICAL: cities_import failed', array(
+			WTA_Logger::error( 'CRITICAL: GeoNames cities_import failed', array(
 				'error' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
+				'file'  => $e->getFile(),
+				'line'  => $e->getLine(),
 			) );
-			throw $e; // Re-throw to mark as failed
+			
+			WTA_Queue::mark_failed( $item['id'], $e->getMessage() );
 		}
 	}
 
