@@ -1513,17 +1513,46 @@ class WTA_AI_Processor {
 		$content .= "<p>Dummy intro tekst om nærliggende lande.</p>\n";
 		$content .= "[wta_nearby_countries]\n</div>\n\n";  // Uses default count=18
 		
-		// Global time comparison
-		$content .= "<div id=\"global-time\"><h2>Sammenlign med storbyer rundt om i verden</h2>\n";
-		$content .= "<p>Dummy tekst om global tidssammenligning.</p>\n";
-		$content .= "[wta_global_time_comparison]\n</div>";
-		
-		return array(
-			'content' => $content,
-			'yoast_title' => "Hvad er klokken i {$name_local}? Test mode",
-			'yoast_desc' => "Test mode indhold for {$name_local}, {$country_name}. Tidszone {$timezone}."
-		);
+	// Global time comparison
+	$content .= "<div id=\"global-time\"><h2>Sammenlign med storbyer rundt om i verden</h2>\n";
+	$content .= "<p>Dummy tekst om global tidssammenligning.</p>\n";
+	$content .= "[wta_global_time_comparison]\n</div>";
+	
+	// v3.0.12: ADD FAQ section for test mode (regression fix)
+	// Previously missing after GeoNames migration
+	$faq_data = array(
+		'intro' => "Her finder du svar på ofte stillede spørgsmål om tidszoner og rejser til {$name_local}. Dette er test mode FAQ uden AI.",
+		'faqs' => array(
+			array(
+				'question' => "Hvad er klokken i {$name_local}?",
+				'answer' => "Dummy svar: {$name_local} følger tidszonen {$timezone}. Test mode aktiveret."
+			),
+			array(
+				'question' => "Hvor mange tidszoner har {$country_name}?",
+				'answer' => "Dummy svar om tidszoner i {$country_name}. Test mode."
+			),
+			array(
+				'question' => "Hvornår er det bedst at rejse til {$name_local}?",
+				'answer' => "Dummy svar om bedste rejsetidspunkt. Test mode."
+			),
+		)
+	);
+	
+	// Save FAQ data for schema generation (used by WTA_Template_Loader::append_faq_schema)
+	update_post_meta( $post_id, 'wta_faq_data', $faq_data );
+	
+	// Render and append FAQ HTML (used by frontend template)
+	$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $name_local );
+	if ( ! empty( $faq_html ) ) {
+		$content .= "\n\n" . $faq_html;
 	}
+	
+	return array(
+		'content' => $content,
+		'yoast_title' => "Hvad er klokken i {$name_local}? Test mode",
+		'yoast_desc' => "Test mode indhold for {$name_local}, {$country_name}. Tidszone {$timezone}."
+	);
+}
 
 	/**
 	 * Generate template-based content for countries (test mode, no AI costs).

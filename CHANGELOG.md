@@ -2,6 +2,61 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.12] - 2025-12-17
+
+### Fixed
+- **FAQ Section Missing in Test Mode (Regression Fix)**
+  - **Problem**: After GeoNames migration (v3.0.0), FAQ section was removed from test mode city pages
+    - `generate_template_city_content()` method missing FAQ generation logic
+    - No `wta_faq_data` post meta saved for test mode pages
+    - FAQ HTML not appended to content
+    - FAQ Schema.org JSON-LD not generated
+  - **Impact Before Fix**:
+    - ❌ Test mode pages showed no FAQ section at bottom
+    - ❌ Missing FAQ Schema for SEO (Google Rich Results)
+    - ❌ Inconsistent with production AI-generated pages
+    - ❌ Made test mode unrealistic for content preview
+  - **Solution**: Restored FAQ generation in `generate_template_city_content()`
+    - Added dummy FAQ data with 3 questions/answers
+    - Saved `wta_faq_data` post meta for schema generation
+    - Rendered FAQ HTML with `WTA_FAQ_Renderer::render_faq_section()`
+    - Appended FAQ HTML to content before return
+  - **Result**:
+    - ✅ Test mode pages now include FAQ section (HTML + Schema)
+    - ✅ FAQ appears at bottom of content (same as AI mode)
+    - ✅ Schema.org JSON-LD generated correctly
+    - ✅ Consistent user experience across test/production modes
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-ai-processor.php`
+  - Lines 1521-1544: Added FAQ generation block in `generate_template_city_content()`
+  - FAQ data structure matches AI-generated format
+  - Uses same rendering pipeline as production mode
+  - No action required: Existing test mode pages will regenerate automatically if forced
+
+### Migration Guide
+**Do I need to reimport?**
+- **NO** - If you're happy to force regenerate existing test mode pages manually
+- **YES** - If you want all test mode pages to automatically include FAQ (recommended)
+
+**How to fix existing test mode pages:**
+1. **Option A: Force Regenerate (Manual)**
+   - Go to each city page
+   - Click "Force Regenerate Content" button
+   - FAQ will be added to that specific page
+
+2. **Option B: Reset & Reimport (Automatic)**
+   - **Admin** → **World Time AI** → **Tools**
+   - Click **"Reset All Data"**
+   - **Admin** → **World Time AI** → **Data Import**
+   - Enable test mode
+   - Start import
+   - All new pages will include FAQ automatically
+
+**Recommended**: Option B (reset + reimport) for consistency across all pages.
+
+---
+
 ## [3.0.11] - 2025-12-17
 
 ### Fixed
