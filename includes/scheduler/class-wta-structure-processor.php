@@ -165,11 +165,11 @@ class WTA_Structure_Processor {
 		}
 
 		// Save meta
-		update_post_meta( $post_id, 'wta_type', 'continent' );
-		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-		update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['name'] ) );
-		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	update_post_meta( $post_id, 'wta_type', 'continent' );
+	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+	update_post_meta( $post_id, 'wta_name_local', $data['name_local'] ); // v3.0.0 - renamed from wta_name_danish
+	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['name'] ) );
+	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
 	// Save SEO-friendly H1 title for theme to display
 	$seo_h1 = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
@@ -253,11 +253,11 @@ class WTA_Structure_Processor {
 		}
 
 		// Save meta
-		update_post_meta( $post_id, 'wta_type', 'country' );
-		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-		update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
-		update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
+	update_post_meta( $post_id, 'wta_type', 'country' );
+	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+	update_post_meta( $post_id, 'wta_name_local', $data['name_local'] ); // v3.0.0 - renamed from wta_name_danish
+	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
+	update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
 		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
 		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 	
@@ -404,71 +404,62 @@ class WTA_Structure_Processor {
 		$country_code = get_post_meta( $parent_id, 'wta_country_code', true );
 		$continent_code = get_post_meta( $parent_id, 'wta_continent_code', true );
 
-		// Save meta
-		update_post_meta( $post_id, 'wta_type', 'city' );
-		update_post_meta( $post_id, 'wta_name_original', $data['name'] );
-		update_post_meta( $post_id, 'wta_name_danish', $data['name_local'] );
-		update_post_meta( $post_id, 'wta_continent_code', $continent_code );
-		update_post_meta( $post_id, 'wta_country_code', $country_code );
-		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
-		update_post_meta( $post_id, 'wta_city_id', $data['city_id'] );
-		update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	// Save meta (v3.0.0 - using wta_name_local and GeoNames)
+	update_post_meta( $post_id, 'wta_type', 'city' );
+	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
+	update_post_meta( $post_id, 'wta_name_local', $data['name_local'] ); // v3.0.0 - renamed from wta_name_danish
+	update_post_meta( $post_id, 'wta_continent_code', $continent_code );
+	update_post_meta( $post_id, 'wta_country_code', $country_code );
+	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
+	
+	// Save GeoNames ID (v3.0.0 - primary identifier)
+	if ( isset( $data['geonameid'] ) && ! empty( $data['geonameid'] ) ) {
+		update_post_meta( $post_id, 'wta_geonames_id', intval( $data['geonameid'] ) );
+	}
 	
 	// Save population (CRITICAL for major cities shortcode!)
 	if ( isset( $data['population'] ) && $data['population'] > 0 ) {
 		update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
 	}
 	
-	// Save Wikidata ID if available
+	// Save Wikidata ID if available (kept for backward compatibility)
 	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
 		update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );
 	}
 
 	// ==========================================
-	// WIKIDATA-FIRST GPS STRATEGY
-	// Prefer authoritative Wikidata GPS over cities.json
-	// Fallback to cities.json if Wikidata unavailable
+	// GEONAMES-FIRST GPS STRATEGY (v3.0.0)
+	// Priority: GeoNames → Wikidata fallback
+	// GeoNames provides accurate GPS for 99%+ of cities
 	// ==========================================
 	
 	$final_lat = null;
 	$final_lon = null;
 	$gps_source = 'unknown';
 	
-	// STEP 1: Try Wikidata GPS (if available)
-	if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
-		$wikidata_coords = $this->fetch_coordinates_from_wikidata( $data['wikidata_id'] );
-		
-		if ( $wikidata_coords !== false ) {
-			// SUCCESS! Use authoritative Wikidata GPS
-			$final_lat = $wikidata_coords['lat'];
-			$final_lon = $wikidata_coords['lon'];
-			$gps_source = 'wikidata';
-			
-			// Log if we replaced cities.json GPS
-			if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
-				$old_lat = $data['latitude'];
-				$old_lon = $data['longitude'];
-				
-				if ( (string)$old_lat !== (string)$final_lat || (string)$old_lon !== (string)$final_lon ) {
-					WTA_Logger::info( sprintf(
-						'🔄 GPS replaced with Wikidata: %s (%s) - cities.json: %s,%s → Wikidata: %s,%s',
-						$data['name'],
-						$data['wikidata_id'],
-						$old_lat,
-						$old_lon,
-						$final_lat,
-						$final_lon
-					) );
-				}
-			}
-		} else {
-			// Wikidata fetch failed - fallback to cities.json GPS
-			$final_lat = isset( $data['latitude'] ) ? $data['latitude'] : null;
-			$final_lon = isset( $data['longitude'] ) ? $data['longitude'] : null;
-			$gps_source = 'cities_json_fallback';
-		}
+	// STEP 1: Use GeoNames GPS (primary source, most accurate)
+	if ( isset( $data['latitude'] ) && isset( $data['longitude'] ) ) {
+		$final_lat = floatval( $data['latitude'] );
+		$final_lon = floatval( $data['longitude'] );
+		$gps_source = 'geonames';
 	} else {
-		// No Wikidata ID - use cities.json GPS
+		// STEP 2: Fallback to Wikidata GPS (rare case where GeoNames is missing)
+		if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
+			$wikidata_coords = $this->fetch_coordinates_from_wikidata( $data['wikidata_id'] );
+			
+			if ( $wikidata_coords !== false ) {
+				$final_lat = $wikidata_coords['lat'];
+				$final_lon = $wikidata_coords['lon'];
+				$gps_source = 'wikidata';
+				
+				WTA_Logger::info( 'Wikidata GPS fallback used', array(
+					'city'         => $data['name'],
+					'wikidata_gps' => "$final_lat, $final_lon",
+				) );
+			}
+		}
+		
+		// No GPS found from either source
 		$final_lat = isset( $data['latitude'] ) ? $data['latitude'] : null;
 		$final_lon = isset( $data['longitude'] ) ? $data['longitude'] : null;
 		$gps_source = 'cities_json';
@@ -751,10 +742,10 @@ class WTA_Structure_Processor {
 		$seen_cities = array(); // For duplicate detection
 		
 		// Load countries.json to build country_code → continent mapping
-		// This enables GLOBAL GPS validation for ALL 195+ countries!
-		file_put_contents( $debug_file, "Loading countries.json for continent mapping...\n", FILE_APPEND );
-		$countries = WTA_Github_Fetcher::fetch_countries();
-		$country_to_continent = array();
+	// This enables GLOBAL GPS validation for ALL 195+ countries!
+	file_put_contents( $debug_file, "Loading GeoNames countryInfo.txt for continent mapping...\n", FILE_APPEND );
+	$countries = WTA_GeoNames_Parser::parse_countryInfo(); // v3.0.0 - using GeoNames
+	$country_to_continent = array();
 		
 		if ( $countries && is_array( $countries ) ) {
 			foreach ( $countries as $country ) {

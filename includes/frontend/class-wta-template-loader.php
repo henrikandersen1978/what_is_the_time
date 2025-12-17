@@ -453,18 +453,18 @@ class WTA_Template_Loader {
 			$name_local
 		);
 		if ( 'city' === $type && ! empty( $country_code ) ) {
-			// Add country name for cities
-			$parent_id = wp_get_post_parent_id( $post_id );
-			if ( $parent_id ) {
-				$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
-				if ( ! empty( $parent_name ) ) {
-					$description = sprintf( 
-						'Aktuel tid og tidszone for %s, %s',
-						$name_local,
-						$parent_name
-					);
-				}
+		// Add country name for cities
+		$parent_id = wp_get_post_parent_id( $post_id );
+		if ( $parent_id ) {
+			$parent_name = get_post_meta( $parent_id, 'wta_name_local', true ); // v3.0.0 - renamed
+			if ( ! empty( $parent_name ) ) {
+				$description = sprintf( 
+					'Aktuel tid og tidszone for %s, %s',
+					$name_local,
+					$parent_name
+				);
 			}
+		}
 		} elseif ( 'continent' === $type ) {
 			$description = sprintf( 
 				'Tidszoner og aktuel tid i %s',
@@ -473,10 +473,15 @@ class WTA_Template_Loader {
 		}
 		$place_schema['description'] = $description;
 		
-		// Add Wikidata link if available
-		if ( ! empty( $wikidata_id ) ) {
-			$place_schema['sameAs'] = 'https://www.wikidata.org/wiki/' . $wikidata_id;
-		}
+	// Add sameAs link for schema (v3.0.0 - prioritize GeoNames over Wikidata)
+	$geonames_id = get_post_meta( $post_id, 'wta_geonames_id', true );
+	
+	if ( ! empty( $geonames_id ) ) {
+		$place_schema['sameAs'] = 'https://www.geonames.org/' . $geonames_id;
+	} elseif ( ! empty( $wikidata_id ) ) {
+		// Fallback to Wikidata (for old data or special cases)
+		$place_schema['sameAs'] = 'https://www.wikidata.org/wiki/' . $wikidata_id;
+	}
 		
 		// Note: timeZone is not a valid property for Place schema according to schema.org
 		// Timezone info is displayed in the UI instead
@@ -489,11 +494,11 @@ class WTA_Template_Loader {
 			);
 		}
 		
-		// Add containedInPlace for hierarchical structure
-		$parent_id = wp_get_post_parent_id( $post_id );
-		if ( $parent_id ) {
-			$parent_type = get_post_meta( $parent_id, 'wta_type', true );
-			$parent_name = get_post_meta( $parent_id, 'wta_name_danish', true );
+	// Add containedInPlace for hierarchical structure
+	$parent_id = wp_get_post_parent_id( $post_id );
+	if ( $parent_id ) {
+		$parent_type = get_post_meta( $parent_id, 'wta_type', true );
+		$parent_name = get_post_meta( $parent_id, 'wta_name_local', true ); // v3.0.0 - renamed
 			
 			// Determine parent schema type
 			$parent_schema_type = 'Place';

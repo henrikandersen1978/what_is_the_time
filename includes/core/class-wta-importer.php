@@ -42,40 +42,20 @@ class WTA_Importer {
 			'cities'     => 0,
 		);
 
-		// Fetch countries data
-		$countries = WTA_Github_Fetcher::fetch_countries();
-		if ( false === $countries ) {
-			WTA_Logger::error( 'Failed to fetch countries data' );
-			return $stats;
-		}
+	// Fetch countries data from GeoNames countryInfo.txt (v3.0.0)
+	$countries = WTA_GeoNames_Parser::parse_countryInfo();
+	if ( false === $countries ) {
+		WTA_Logger::error( 'Failed to parse countryInfo.txt' );
+		return $stats;
+	}
 
 		// Queue continents and filter countries
 		$continents_queued = array();
 		$filtered_countries = array();
 
 		foreach ( $countries as $country ) {
-			// Determine continent from subregion (for Americas) or region (for others)
-			if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
-				$subregion = $country['subregion'];
-				
-				// Map Americas subregions to North/South America
-				if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
-					$continent = 'North America';
-				} elseif ( $subregion === 'South America' ) {
-					$continent = 'South America';
-				} else {
-					// For other continents (Europe, Asia, Africa, Oceania), use main region
-					$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-				}
-			} else {
-				$continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-			}
-			
-			// Handle special case: Polar -> Antarctica
-			if ( $continent === 'Polar' ) {
-				$continent = 'Antarctica';
-			}
-			
+			// GeoNames already provides continent name (v3.0.0)
+			$continent = $country['continent'];
 			$continent_code = WTA_Utils::get_continent_code( $continent );
 
 			// Filter based on import mode
@@ -111,34 +91,16 @@ WTA_Queue::add(
 
 		WTA_Logger::info( 'Continents queued', array( 'count' => $stats['continents'] ) );
 
-		// Queue countries
+		// Queue countries (v3.0.0 - using GeoNames)
 		foreach ( $filtered_countries as $country ) {
-			// Use Wikidata for translation if available
-			$wikidata_id = isset( $country['wikiDataId'] ) ? $country['wikiDataId'] : null;
+			// Use GeoNames ID for translation
+			$geonameid = $country['geonameid'];
 			$name_local = WTA_AI_Translator::translate( 
 				$country['name'], 
 				'country', 
 				null, 
-				$wikidata_id 
+				$geonameid 
 			);
-			
-			// Calculate continent for this country (reuse logic from above)
-			if ( isset( $country['subregion'] ) && ! empty( $country['subregion'] ) ) {
-				$subregion = $country['subregion'];
-				if ( in_array( $subregion, array( 'Northern America', 'Central America', 'Caribbean' ), true ) ) {
-					$country_continent = 'North America';
-				} elseif ( $subregion === 'South America' ) {
-					$country_continent = 'South America';
-				} else {
-					$country_continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-				}
-			} else {
-				$country_continent = isset( $country['region'] ) ? $country['region'] : 'Unknown';
-			}
-			
-			if ( $country_continent === 'Polar' ) {
-				$country_continent = 'Antarctica';
-			}
 			
 			WTA_Queue::add(
 				'country',
@@ -146,29 +108,28 @@ WTA_Queue::add(
 					'name'         => $country['name'],
 					'name_local'   => $name_local,
 					'country_code' => $country['iso2'],
-					'country_id'   => $country['id'],
-					'continent'    => $country_continent,
-					'latitude'     => isset( $country['latitude'] ) ? $country['latitude'] : null,
-					'longitude'    => isset( $country['longitude'] ) ? $country['longitude'] : null,
-					'wikidata_id'  => $wikidata_id,
+					'country_id'   => $country['iso2'], // Use ISO2 as ID (simpler than old system)
+					'continent'    => $country['continent'],
+					'latitude'     => null, // Will be calculated from largest city later
+					'longitude'    => null,
+					'geonameid'    => $geonameid,
 				),
-				'country_' . $country['id']
+				'country_' . $country['iso2']
 			);
 			$stats['countries']++;
 		}
 
 		WTA_Logger::info( 'Countries queued', array( 'count' => $stats['countries'] ) );
 
-		// Queue cities batch job (ONE item)
-		// This will be processed by Action Scheduler which will stream-parse cities.json
-		$cities_file = WTA_Github_Fetcher::get_cities_file_path();
-		if ( false === $cities_file ) {
-			WTA_Logger::error( 'cities.json not found' );
-			return $stats;
-		}
+	// Queue cities batch job (ONE item) - v3.0.0: Using GeoNames cities500.txt
+	$cities_file = WTA_GeoNames_Parser::get_cities_file_path();
+	if ( false === $cities_file ) {
+		WTA_Logger::error( 'cities500.txt not found - please upload to wp-content/uploads/world-time-ai/' );
+		return $stats;
+	}
 
-		// CRITICAL: Use country_code (iso2) instead of id for matching cities
-		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
+	// Use country_code (iso2) for matching cities
+	$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
 		WTA_Queue::add(
 			'cities_import',
@@ -243,29 +204,29 @@ WTA_Queue::add(
 				$per_country[ $country_id ]++;
 			}
 
-		// Queue city with Wikidata support
-		$wikidata_id = isset( $city['wikiDataId'] ) ? $city['wikiDataId'] : null;
+		// Queue city with GeoNames support (v3.0.0)
+		$geonameid = $city['geonameid'];
 		$name_local = WTA_AI_Translator::translate( 
 			$city['name'], 
 			'city', 
 			null, 
-			$wikidata_id 
+			$geonameid 
 		);
 		
-			$city_payload = array(
-				'name'         => $city['name'],
+		$city_payload = array(
+			'name'         => $city['name'],
+			'name_ascii'   => isset( $city['name_ascii'] ) ? $city['name_ascii'] : $city['name'],
 			'name_local'   => $name_local,
-				'city_id'      => $city['id'],
-				'country_id'   => $city['country_id'],
-				'state_id'     => isset( $city['state_id'] ) ? $city['state_id'] : null,
-				'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
-				'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
-				'population'   => isset( $city['population'] ) ? $city['population'] : null,
-			'wikidata_id'  => $wikidata_id,
-			);
+			'geonameid'    => $geonameid,
+			'country_code' => $city['country_code'],
+			'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
+			'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
+			'population'   => isset( $city['population'] ) ? $city['population'] : null,
+			'timezone'     => isset( $city['timezone'] ) ? $city['timezone'] : null,
+		);
 
-			WTA_Queue::add( 'city', $city_payload, 'city_' . $city['id'] );
-			$queued++;
+		WTA_Queue::add( 'city', $city_payload, 'city_' . $geonameid );
+		$queued++;
 
 			// Prevent timeout
 			if ( $queued % 100 === 0 ) {

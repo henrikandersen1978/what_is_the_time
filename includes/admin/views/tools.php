@@ -154,26 +154,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div id="wta-reset-result"></div>
 		</div>
 
-		<!-- Data Files -->
-		<div class="wta-card">
-			<h2><?php esc_html_e( 'Data Files', WTA_TEXT_DOMAIN ); ?></h2>
-			<p><?php esc_html_e( 'JSON data files location:', WTA_TEXT_DOMAIN ); ?> <code><?php echo esc_html( WTA_Github_Fetcher::get_data_directory() ); ?></code></p>
-			<p class="description"><?php esc_html_e( 'Files in this directory persist across plugin updates.', WTA_TEXT_DOMAIN ); ?></p>
-			<?php
-			$countries_info = WTA_Github_Fetcher::get_file_info( 'countries.json' );
-			$cities_info = WTA_Github_Fetcher::get_file_info( 'cities.json' );
-			?>
-			<ul>
-				<li>
-					<strong>countries.json:</strong>
-					<?php echo $countries_info ? '✅ ' . esc_html( $countries_info['size_formatted'] ) : '❌ Not found'; ?>
-				</li>
-				<li>
-					<strong>cities.json:</strong>
-					<?php echo $cities_info ? '✅ ' . esc_html( $cities_info['size_formatted'] ) : '❌ Not found'; ?>
-				</li>
-			</ul>
-		</div>
+	<!-- Data Files (v3.0.0 - GeoNames) -->
+	<div class="wta-card">
+		<h2><?php esc_html_e( 'GeoNames Data Files', WTA_TEXT_DOMAIN ); ?></h2>
+		<p><?php esc_html_e( 'Data files location:', WTA_TEXT_DOMAIN ); ?> <code><?php echo esc_html( WTA_GeoNames_Parser::get_data_directory() ); ?></code></p>
+		<p class="description"><?php esc_html_e( 'Files in this directory persist across plugin updates.', WTA_TEXT_DOMAIN ); ?></p>
+		<?php
+		$data_dir = WTA_GeoNames_Parser::get_data_directory();
+		$cities_file = $data_dir . '/cities500.txt';
+		$countries_file = $data_dir . '/countryInfo.txt';
+		$alt_names_file = $data_dir . '/alternateNamesV2.txt';
+		?>
+		<ul>
+			<li>
+				<strong>cities500.txt:</strong>
+				<?php echo file_exists( $cities_file ) ? '✅ ' . size_format( filesize( $cities_file ) ) : '❌ Not found'; ?>
+			</li>
+			<li>
+				<strong>countryInfo.txt:</strong>
+				<?php echo file_exists( $countries_file ) ? '✅ ' . size_format( filesize( $countries_file ) ) : '❌ Not found'; ?>
+			</li>
+			<li>
+				<strong>alternateNamesV2.txt:</strong>
+				<?php echo file_exists( $alt_names_file ) ? '✅ ' . size_format( filesize( $alt_names_file ) ) : '❌ Not found'; ?>
+			</li>
+		</ul>
+	</div>
 
 		<!-- System Info -->
 		<div class="wta-card">

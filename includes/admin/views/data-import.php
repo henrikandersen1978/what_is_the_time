@@ -20,93 +20,78 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 	<h1><?php esc_html_e( 'Data & Import', WTA_TEXT_DOMAIN ); ?></h1>
 
 	<div class="wta-admin-grid">
-		<!-- Data Sources -->
-		<div class="wta-card wta-card-wide">
-			<h2><?php esc_html_e( 'Data Sources', WTA_TEXT_DOMAIN ); ?></h2>
-			<p class="description">
-				<?php esc_html_e( 'Configure GitHub URLs for JSON data files, or leave empty if using local files.', WTA_TEXT_DOMAIN ); ?>
-			</p>
-			<form method="post" action="options.php">
-				<?php settings_fields( 'wta_data_import_settings_group' ); ?>
-				
-				<table class="form-table">
+	<!-- GeoNames Data Files (v3.0.0) -->
+	<div class="wta-card wta-card-wide">
+		<h2><?php esc_html_e( 'GeoNames Data Files', WTA_TEXT_DOMAIN ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Upload GeoNames files to wp-content/uploads/world-time-ai/', WTA_TEXT_DOMAIN ); ?>
+		</p>
+		
+		<?php
+		$upload_dir = wp_upload_dir();
+		$data_dir = $upload_dir['basedir'] . '/world-time-ai/';
+		
+		$files = array(
+			'cities500.txt' => array('required' => true, 'expected_size' => '~37 MB', 'description' => 'Cities with population > 500'),
+			'countryInfo.txt' => array('required' => true, 'expected_size' => '~31 KB', 'description' => 'Country information'),
+			'alternateNamesV2.txt' => array('required' => true, 'expected_size' => '~745 MB', 'description' => 'Multi-language city names'),
+			'iso-languagecodes.txt' => array('required' => false, 'expected_size' => '~135 KB', 'description' => 'Language codes (optional)'),
+		);
+		?>
+		
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'File', WTA_TEXT_DOMAIN ); ?></th>
+					<th><?php esc_html_e( 'Status', WTA_TEXT_DOMAIN ); ?></th>
+					<th><?php esc_html_e( 'Size', WTA_TEXT_DOMAIN ); ?></th>
+					<th><?php esc_html_e( 'Last Modified', WTA_TEXT_DOMAIN ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($files as $filename => $info): ?>
+					<?php
+					$filepath = $data_dir . $filename;
+					$exists = file_exists($filepath);
+					$size = $exists ? size_format(filesize($filepath), 2) : '-';
+					$modified = $exists ? date_i18n('Y-m-d H:i', filemtime($filepath)) : '-';
+					$required = $info['required'] ? '(Required)' : '(Optional)';
+					?>
 					<tr>
-						<th scope="row">
-							<label for="wta_github_countries_url">
-								<?php esc_html_e( 'Countries URL', WTA_TEXT_DOMAIN ); ?>
-							</label>
-						</th>
 						<td>
-							<input type="url" id="wta_github_countries_url" name="wta_github_countries_url" 
-								value="<?php echo esc_attr( get_option( 'wta_github_countries_url' ) ); ?>" 
-								class="large-text" />
-			<p class="description">
-				<?php 
-				$upload_dir = wp_upload_dir();
-				$countries_file = $upload_dir['basedir'] . '/world-time-ai-data/countries.json';
-				if ( file_exists( $countries_file ) ) {
-					$size = size_format( filesize( $countries_file ) );
-					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-				} else {
-					esc_html_e( 'URL to countries.json file (optional if local file exists in wp-content/uploads/world-time-ai-data/)', WTA_TEXT_DOMAIN );
-				}
-				?>
-			</p>
+							<strong><?php echo esc_html($filename); ?></strong>
+							<br><span class="description"><?php echo esc_html($info['description'] . ' ' . $required); ?></span>
 						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="wta_github_states_url">
-								<?php esc_html_e( 'States URL', WTA_TEXT_DOMAIN ); ?>
-							</label>
-						</th>
 						<td>
-							<input type="url" id="wta_github_states_url" name="wta_github_states_url" 
-								value="<?php echo esc_attr( get_option( 'wta_github_states_url' ) ); ?>" 
-								class="large-text" />
-			<p class="description">
-				<?php 
-				$upload_dir = wp_upload_dir();
-				$states_file = $upload_dir['basedir'] . '/world-time-ai-data/states.json';
-				if ( file_exists( $states_file ) ) {
-					$size = size_format( filesize( $states_file ) );
-					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-				} else {
-					esc_html_e( 'URL to states.json file (optional if local file exists in wp-content/uploads/world-time-ai-data/)', WTA_TEXT_DOMAIN );
-				}
-				?>
-			</p>
+							<?php if ($exists): ?>
+								<span style="color: #46b450; font-weight: bold;">✅ Found</span>
+							<?php else: ?>
+								<span style="color: #dc3232; font-weight: bold;">❌ Missing</span>
+							<?php endif; ?>
 						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="wta_github_cities_url">
-								<?php esc_html_e( 'Cities URL', WTA_TEXT_DOMAIN ); ?>
-							</label>
-						</th>
 						<td>
-							<input type="url" id="wta_github_cities_url" name="wta_github_cities_url" 
-								value="<?php echo esc_attr( get_option( 'wta_github_cities_url' ) ); ?>" 
-								class="large-text" />
-			<p class="description">
-				<?php 
-				$upload_dir = wp_upload_dir();
-				$cities_file = $upload_dir['basedir'] . '/world-time-ai-data/cities.json';
-				if ( file_exists( $cities_file ) ) {
-					$size = size_format( filesize( $cities_file ) );
-					echo '✅ ' . sprintf( esc_html__( 'Local file exists (%s) - URL not needed', WTA_TEXT_DOMAIN ), $size );
-				} else {
-					esc_html_e( 'URL to cities.json file (Note: cities.json is 185MB, local placement in wp-content/uploads/world-time-ai-data/ recommended)', WTA_TEXT_DOMAIN );
-				}
-				?>
-			</p>
+							<?php echo esc_html($size); ?>
+							<br><span class="description">Expected: <?php echo esc_html($info['expected_size']); ?></span>
 						</td>
+						<td><?php echo esc_html($modified); ?></td>
 					</tr>
-				</table>
-
-				<?php submit_button( __( 'Save Data Sources', WTA_TEXT_DOMAIN ) ); ?>
-			</form>
-		</div>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		
+		<p class="description" style="margin-top: 15px;">
+			<strong><?php esc_html_e( 'Download from GeoNames:', WTA_TEXT_DOMAIN ); ?></strong><br>
+			• <a href="https://download.geonames.org/export/dump/cities500.zip" target="_blank">cities500.zip</a> (unzip to get cities500.txt)<br>
+			• <a href="https://download.geonames.org/export/dump/countryInfo.txt" target="_blank">countryInfo.txt</a><br>
+			• <a href="https://download.geonames.org/export/dump/alternateNamesV2.zip" target="_blank">alternateNamesV2.zip</a> (unzip to get alternateNamesV2.txt)<br>
+			• <a href="https://download.geonames.org/export/dump/iso-languagecodes.txt" target="_blank">iso-languagecodes.txt</a> (optional)
+		</p>
+		
+		<p class="description" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-left: 4px solid #0073aa;">
+			<strong><?php esc_html_e( 'Note:', WTA_TEXT_DOMAIN ); ?></strong>
+			<?php esc_html_e( 'After uploading files, the translation cache will be built automatically when you click "Prepare Import Queue". This takes 2-5 minutes for alternateNamesV2.txt.', WTA_TEXT_DOMAIN ); ?>
+		</p>
+	</div>
 
 		<!-- Background Processing Settings -->
 		<div class="wta-card wta-card-wide">
@@ -257,11 +242,11 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 									<p class="description" style="margin-bottom: 10px;">
 										<?php esc_html_e( 'Perfect for testing! Select only specific countries (e.g., Denmark).', WTA_TEXT_DOMAIN ); ?>
 									</p>
-									<select id="country_select" name="countries[]" multiple style="width: 100%; height: 150px;">
-										<?php
-										$countries = WTA_Github_Fetcher::fetch_countries();
-										if ( $countries ) {
-											// Group by continent for better UX
+								<select id="country_select" name="countries[]" multiple style="width: 100%; height: 150px;">
+									<?php
+									$countries = WTA_GeoNames_Parser::parse_countryInfo(); // v3.0.0 - using GeoNames
+									if ( $countries ) {
+										// Group by continent for better UX
 											$by_continent = array();
 											foreach ( $countries as $country ) {
 												$continent = isset( $country['region'] ) ? $country['region'] : 'Other';

@@ -55,19 +55,20 @@ class WTA_Core {
 		// Loader
 		require_once WTA_PLUGIN_DIR . 'includes/class-wta-loader.php';
 
-		// Core
-		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-post-type.php';
-		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-queue.php';
-		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-github-fetcher.php';
-		require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-importer.php';
+	// Core
+	require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-post-type.php';
+	require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-queue.php';
+	require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-geonames-parser.php'; // v3.0.0
+	require_once WTA_PLUGIN_DIR . 'includes/core/class-wta-importer.php';
 
-		// Helpers
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
-	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-wikidata-translator.php';
-		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
+	// Helpers
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-logger.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-utils.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-timezone-helper.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-quick-translate.php';
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-geonames-translator.php'; // v3.0.0
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-wikidata-translator.php'; // v3.0.0 - kept as fallback
+	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-ai-translator.php';
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-log-cleaner.php'; // v2.35.7
