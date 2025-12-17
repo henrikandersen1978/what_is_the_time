@@ -72,9 +72,9 @@ class WTA_Structure_Processor {
 	$test_mode = get_option( 'wta_test_mode', 0 );
 	
 	if ( $test_mode ) {
-		// Test mode: Faster processing
-		// 1-min: 40 cities (~20s), 5-min: 200 cities (~100s)
-		$batch_size = ( $cron_interval >= 300 ) ? 200 : 40;
+		// Test mode: Faster processing (v3.0.6 - reduced for better AI parallelization)
+		// 1-min: 25 cities (~13s) + 55 AI = 80 jobs/min, 5-min: 200 cities (~100s)
+		$batch_size = ( $cron_interval >= 300 ) ? 200 : 25;
 	} else {
 		// Normal mode: Conservative for API limits
 		// 1-min: 10 cities (~5s), 5-min: 50 cities (~25s)
@@ -742,10 +742,8 @@ class WTA_Structure_Processor {
 	$skipped_max_reached = 0;
 	$skipped_gps_invalid = 0;
 	$skipped_feature_class = 0;
-	$skipped_duplicate = 0;
 	$per_country = array();
 	$total_read = 0;
-	$seen_cities = array(); // For duplicate detection
 	
 	// Load country → continent mapping
 	file_put_contents( $debug_file, "Loading GeoNames countryInfo.txt...\n", FILE_APPEND );
@@ -901,38 +899,59 @@ class WTA_Structure_Processor {
 			continue;
 		}
 		
-	// Duplicate detection (GeoNames should have unique entries, but check anyway)
-	$duplicate_key = $city['country_code'] . '_' . $this->normalize_city_name( $city['name'] );
+	// ==========================================
+	// PPLX Filter (v3.0.6 - Smart Subdivision Filter)
+	// ==========================================
+	// PPLX = Section of populated place (city subdivisions, neighborhoods, boroughs)
+	// 
+	// Strategy: Keep PPLX with "real" neighborhood names (Valby, Jumeirah, Brooklyn)
+	//           Skip PPLX with administrative/generic names (Central Business District, Downtown)
+	//
+	// GeoNames has unique IDs, so no duplicate detection needed!
+	// ==========================================
 	
-	if ( isset( $seen_cities[ $duplicate_key ] ) ) {
-		// Calculate scores to pick best entry
-		$new_score = $this->calculate_score( $city );
-		$old_score = $seen_cities[ $duplicate_key ]['score'];
+	if ( $city['feature_code'] === 'PPLX' ) {
+		$name_lower = mb_strtolower( $city['name'], 'UTF-8' );
 		
-		if ( $new_score <= $old_score ) {
-			$skipped_duplicate++;
+		// Filter terms for administrative/generic PPLX names
+		$pplx_administrative_terms = array(
+			'business district',
+			'city centre',
+			'city center',
+			'central business',
+			'downtown',
+			'financial centre',
+			'financial center',
+			'financial district',
+			'sports city',
+			'internet city',
+			'media city',
+			'festival city',
+			'silicon oasis',
+			'silicon valley',
+			'knowledge village',
+			'administrative district',
+			'industrial area',
+			'industrial zone',
+			'free zone',
+			'economic zone',
+		);
+		
+		$is_administrative = false;
+		foreach ( $pplx_administrative_terms as $term ) {
+			if ( strpos( $name_lower, $term ) !== false ) {
+				$is_administrative = true;
+				break;
+			}
+		}
+		
+		if ( $is_administrative ) {
+			$skipped_feature_class++;
 			continue;
 		}
-		// If new score is better, we'll use this entry instead
-	}
-	
-	// Remember this city
-	$seen_cities[ $duplicate_key ] = array(
-		'city'  => $city,
-		'score' => isset( $new_score ) ? $new_score : $this->calculate_score( $city ),
-	);
 		
-	// Administrative terms filter (lightweight check)
-	// GeoNames feature_class='P' already filters out most admin divisions,
-	// but we keep a basic check for safety
-	$name_lower = mb_strtolower( $city['name'], 'UTF-8' );
-	$admin_keywords = array( 'municipality', 'commune', 'district', 'province', 'county', 'governorate' );
-	
-	foreach ( $admin_keywords as $keyword ) {
-		if ( strpos( $name_lower, $keyword ) !== false ) {
-			$skipped_country++;
-			continue 2;
-		}
+		// If we reach here: PPLX has a "real" neighborhood name → Keep it!
+		// Examples: Valby, Vanløse, Jumeirah, Mirdif, Brooklyn, Harlem
 	}
 	
 	// Max cities per country check
@@ -968,12 +987,12 @@ class WTA_Structure_Processor {
 	), FILE_APPEND );
 
 	$summary = sprintf(
-		"CHUNK STATS: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS=%d, Skipped_duplicate=%d, Skipped_max=%d\n",
+		"CHUNK STATS: Queued=%d, Skipped_country=%d, Skipped_population=%d, Skipped_GPS=%d, Skipped_PPLX=%d, Skipped_max=%d\n",
 		$queued,
 		$skipped_country,
 		$skipped_population,
 		$skipped_gps_invalid,
-		$skipped_duplicate,
+		$skipped_feature_class,
 		$skipped_max_reached
 	);
 	file_put_contents( $debug_file, $summary, FILE_APPEND );
@@ -985,7 +1004,7 @@ class WTA_Structure_Processor {
 		'skipped_country'     => $skipped_country,
 		'skipped_population'  => $skipped_population,
 		'skipped_gps_invalid' => $skipped_gps_invalid,
-		'skipped_duplicate'   => $skipped_duplicate,
+		'skipped_pplx'        => $skipped_feature_class,
 		'skipped_max_reached' => $skipped_max_reached,
 	) );
 

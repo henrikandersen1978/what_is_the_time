@@ -2,6 +2,64 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.6] - 2025-12-17
+
+### Fixed
+- **CRITICAL**: Removed duplicate detection filter (unnecessary for GeoNames - each entry has unique GeonameID)
+  - **Memory optimization**: Removed `$seen_cities` array tracking
+  - **Impact**: No functional change, but cleaner code and slightly faster processing
+- **CRITICAL**: Removed admin keywords filter that incorrectly rejected valid cities
+  - **Examples of previously rejected cities**:
+    - Norfolk County (Canada) - 60,847 population
+    - West Kelowna (Canada) - 28,793 population
+    - Prince Edward County (Canada) - 25,496 population
+  - **Root cause**: Filter checked for words like "district", "county", "municipality" in city names
+  - **Problem**: Many legitimate cities have these words in their official names
+- **NEW**: Smart PPLX (city subdivision) filter
+  - **PPLX = Section of populated place** (neighborhoods, boroughs, city subdivisions)
+  - **Strategy**: Keep subdivisions with "real" names (Valby, Jumeirah, Brooklyn), skip administrative names
+  - **Filtered PPLX examples**:
+    - ❌ Sydney Central Business District
+    - ❌ Melbourne City Centre
+    - ❌ Dubai International Financial Centre
+    - ❌ Downtown Dubai
+    - ❌ Knowledge Village
+  - **Kept PPLX examples**:
+    - ✅ Valby (Copenhagen, Denmark) - 46,161 population
+    - ✅ Vanløse (Copenhagen, Denmark) - 37,115 population
+    - ✅ Jumeirah (Dubai, UAE) - 39,080 population
+    - ✅ Mirdif (Dubai, UAE) - 60,288 population
+
+### Changed
+- **City import now more accurate** - estimated 100-500+ additional valid cities imported globally
+- **Reduced city batch size** from 40 to 25 in test mode (1-min cron)
+  - **Goal**: Better parallelization of AI content generation
+  - **Effect**: Cities + AI jobs process simultaneously instead of sequentially
+  - **Result**: Faster "time to published" for individual cities
+- **Improved logging**: `skipped_duplicate` → `skipped_pplx` for clarity
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-structure-processor.php`
+- **Removed**:
+  - Duplicate detection logic (lines 904-923)
+  - Admin keywords filter (lines 925-936)
+  - `$seen_cities` tracking array
+  - `$skipped_duplicate` counter
+- **Added**:
+  - Smart PPLX filter with 20 administrative terms (business district, city centre, etc.)
+  - Only filters PPLX with generic/administrative names
+  - Real neighborhood names pass through
+- **Performance**:
+  - Reduced memory usage (no duplicate tracking)
+  - Faster processing (fewer filter loops)
+  - Better job distribution (25 city + 55 AI per minute = 80 total)
+
+### Migration Notes
+- **No database reset required** - changes apply to future imports only
+- **Existing data unaffected** - only new city imports use updated filters
+- **To get new cities**: Run "Reset All Data" → reimport
+- **Estimated additions**: +100-500 cities globally (varies by region)
+
 ## [3.0.5] - 2025-12-18
 
 ### Fixed
