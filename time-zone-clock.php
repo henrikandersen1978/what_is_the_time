@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '3.0.5' );
+define( 'WTA_VERSION', '3.0.7' );
 
 /**
  * Plugin directory path.
