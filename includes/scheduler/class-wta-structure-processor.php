@@ -213,15 +213,18 @@ class WTA_Structure_Processor {
 			'numberposts' => 1,
 		) );
 
-		if ( empty( $parent_posts ) ) {
-			WTA_Logger::warning( 'Parent continent not found', array(
-				'continent' => $data['continent'],
-				'country'   => $data['name'],
-			) );
-			// Requeue for later
-			WTA_Queue::mark_failed( $item['id'], 'Parent continent not found' );
-			return;
-		}
+	if ( empty( $parent_posts ) ) {
+		// v3.0.8: Enhanced logging with country_code and geonameid
+		WTA_Logger::warning( 'Parent continent not found', array(
+			'continent'     => $data['continent'],
+			'country'       => $data['name'],
+			'country_code'  => isset( $data['country_code'] ) ? $data['country_code'] : 'unknown',
+			'geonameid'     => isset( $data['geonameid'] ) ? $data['geonameid'] : 'unknown',
+		) );
+		// Requeue for later
+		WTA_Queue::mark_failed( $item['id'], 'Parent continent not found: ' . $data['continent'] );
+		return;
+	}
 
 		$parent = $parent_posts[0];
 
@@ -364,11 +367,15 @@ class WTA_Structure_Processor {
 		) );
 
 		if ( empty( $country_post_id ) ) {
+			// v3.0.8: Enhanced logging with country_code and geonameid for debugging
 			WTA_Logger::warning( 'Parent country not found', array(
-				'country_id' => $data['country_id'],
-				'city'       => $data['name'],
+				'city'          => $data['name'],
+				'country_code'  => isset( $data['country_code'] ) ? $data['country_code'] : 'unknown',
+				'geonameid'     => isset( $data['geonameid'] ) ? $data['geonameid'] : 'unknown',
+				'country_id'    => isset( $data['country_id'] ) ? $data['country_id'] : 'not_set',
+				'query_method'  => 'wta_country_id meta_query',
 			) );
-			WTA_Queue::mark_failed( $item['id'], 'Parent country not found' );
+			WTA_Queue::mark_failed( $item['id'], 'Parent country not found (code: ' . ( isset( $data['country_code'] ) ? $data['country_code'] : 'unknown' ) . ')' );
 			return;
 		}
 
@@ -473,14 +480,16 @@ class WTA_Structure_Processor {
 	if ( $final_lat !== null && $final_lon !== null ) {
 		// Sanity check: Mathematically impossible coordinates
 		if ( abs( $final_lat ) > 90 || abs( $final_lon ) > 180 ) {
-			WTA_Logger::error( sprintf(
-				'City creation ABORTED - invalid GPS range: %s (%s) - GPS: %s,%s',
-				$data['name'],
-				$data['country_code'],
-				$final_lat,
-				$final_lon
+			// v3.0.8: Enhanced GPS error logging
+			WTA_Logger::error( 'City creation ABORTED - invalid GPS range', array(
+				'city'          => $data['name'],
+				'country_code'  => isset( $data['country_code'] ) ? $data['country_code'] : 'unknown',
+				'geonameid'     => isset( $data['geonameid'] ) ? $data['geonameid'] : 'unknown',
+				'latitude'      => $final_lat,
+				'longitude'     => $final_lon,
+				'gps_source'    => $gps_source,
 			) );
-			WTA_Queue::mark_failed( $item['id'], 'Invalid GPS coordinates (out of range)' );
+			WTA_Queue::mark_failed( $item['id'], sprintf( 'Invalid GPS coordinates (lat: %s, lon: %s)', $final_lat, $final_lon ) );
 			return;
 		}
 		

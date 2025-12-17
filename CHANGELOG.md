@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.8] - 2025-12-17
+
+### Improved
+- **Enhanced error logging for debugging** across Structure Processor
+  - **"Parent country not found" errors** now include:
+    - City name
+    - Country code (e.g., "AF" for Afghanistan)
+    - GeoNames ID for cross-referencing with source files
+    - Query method used (meta_query)
+  - **"Parent continent not found" errors** now include:
+    - Continent name
+    - Country name
+    - Country code
+    - GeoNames ID
+  - **"Invalid GPS coordinates" errors** now structured with:
+    - City name
+    - Country code
+    - GeoNames ID
+    - Actual latitude/longitude values
+    - GPS source (GeoNames vs. Wikidata)
+  - **Impact**: Faster debugging of import failures and data inconsistencies
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-structure-processor.php`
+  - Lines ~421-432: Enhanced city country lookup error logging
+  - Lines ~466-477: Enhanced GPS validation error logging
+  - Lines ~217-225: Enhanced country continent lookup error logging
+- **Purpose**: Help identify data mismatches between queued jobs and database state
+- **Use Case**: When old city jobs reference countries that don't exist (after v3.0.5 country import fix)
+
+### Migration Notes
+- **If seeing "Parent country not found" errors**: 
+  - Likely cause: Old city jobs from pre-v3.0.5 import attempt
+  - Solution: "Reset All Data" + Reimport with v3.0.8 for clean state
+  - Check logs at: `wp-content/uploads/world-time-ai-data/logs/`
+
 ## [3.0.7] - 2025-12-17
 
 ### Fixed
