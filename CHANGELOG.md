@@ -2,6 +2,76 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.14] - 2025-12-17
+
+### Fixed
+- **FAQ Duplication on City Pages (v3.0.13 Regression)**
+  - **Problem**: FAQ section appeared twice on city pages
+    - FAQ was generated in `generate_template_city_content()` (line 1521-1533)
+    - FAQ was ALSO generated in `process_item()` (line 223-248)
+    - Result: FAQ HTML appended twice to post content
+  - **Impact Before Fix**:
+    - ❌ FAQ section duplicated at bottom of city pages
+    - ❌ Poor user experience (same questions/answers repeated)
+    - ❌ Increased page size unnecessarily
+  - **Root Cause**: v3.0.13 added FAQ to template method, forgetting it was already in process_item()
+  - **Solution**: Removed FAQ generation from template method
+    - FAQ now ONLY generated in `process_item()` (centralized location)
+    - Template method just returns content structure
+    - FAQ appended after template content is processed
+  - **Result**:
+    - ✅ FAQ appears exactly once at bottom of page
+    - ✅ Clean content structure
+    - ✅ Consistent with AI mode behavior
+
+- **Continent/Country Template Content Structure**
+  - **Problem**: Child locations (countries/cities grid) appeared at END of page
+    - In AI mode: Countries grid appears after intro (top of page)
+    - In test mode: Countries grid appeared at bottom (bad UX)
+    - Inconsistent structure between test and AI modes
+  - **Impact Before Fix**:
+    - ❌ Users had to scroll past all content to see countries list
+    - ❌ Poor navigation experience on continent/country pages
+    - ❌ Test mode didn't match AI mode structure
+  - **Solution**: Moved `[wta_child_locations]` shortcode to top
+    - **Continent template**: Countries grid now after intro, before timezone section
+    - **Country template**: Cities grid now after intro, before timezone section
+    - Matches AI mode content structure exactly
+  - **Result**:
+    - ✅ Countries/cities grid visible immediately after intro
+    - ✅ Better navigation and UX
+    - ✅ Consistent structure between test and AI modes
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-ai-processor.php`
+  - **Lines 1519-1533**: Removed FAQ generation from `generate_template_city_content()`
+    - Added comment explaining FAQ is handled in `process_item()`
+  - **Lines 1607-1628**: Moved `[wta_child_locations]` to top in `generate_template_continent_content()`
+    - Now appears after intro, before timezone section
+  - **Lines 1550-1581**: Moved `[wta_child_locations]` to top in `generate_template_country_content()`
+    - Now appears after intro, before timezone section
+
+### Migration Guide
+**Do I need to reimport?**
+- **YES (RECOMMENDED)** - To get correct content structure on all continent/country pages
+- **Partial** - City pages will auto-fix on next content regeneration (FAQ duplication removed)
+
+**How to apply fix:**
+1. **Upload v3.0.14 to server**
+2. **For existing city pages** (FAQ duplication):
+   - No action needed - FAQ duplication is gone
+   - Or force regenerate individual pages for clean content
+3. **For continent/country pages** (content order):
+   - Reset All Data and reimport (gets correct structure immediately)
+   - Or force regenerate each continent/country page individually
+
+**Note on Country Selector:**
+- "Quick Test: Select Specific Countries" import mode WORKS correctly
+- Must hold Ctrl (Windows) or Cmd (Mac) while clicking countries
+- Selected countries should be highlighted before clicking "Prepare Import Queue"
+
+---
+
 ## [3.0.13] - 2025-12-17
 
 ### Fixed

@@ -1518,20 +1518,9 @@ class WTA_AI_Processor {
 	$content .= "<p>Dummy tekst om global tidssammenligning.</p>\n";
 	$content .= "[wta_global_time_comparison]\n</div>";
 	
-	// v3.0.13: Use proper FAQ generator with test mode
-	// Generates 12 FAQ with icons, real data (GPS, time, sun/moon), and template-based answers
-	$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, true ); // true = test mode (no AI cost)
-	
-	if ( false !== $faq_data && ! empty( $faq_data ) ) {
-		// Save FAQ data for schema generation
-		update_post_meta( $post_id, 'wta_faq_data', $faq_data );
-		
-		// Render FAQ HTML and append to content
-		$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $name_local );
-		if ( ! empty( $faq_html ) ) {
-			$content .= "\n\n" . $faq_html;
-		}
-	}
+	// v3.0.14: FAQ removed from template - it's now generated in process_item()
+	// This prevents FAQ duplication (was appearing twice on frontend)
+	// FAQ generation happens in process_item() after generate_city_content() returns
 	
 	return array(
 		'content' => $content,
@@ -1555,37 +1544,36 @@ class WTA_AI_Processor {
 		$parent_id = wp_get_post_parent_id( $post_id );
 		$continent_name = $parent_id ? get_the_title( $parent_id ) : 'kontinentet';
 		
-		// Build simple template content (test mode - no AI)
-		$content = '';
-		
-		// Intro
-		$content .= "<p>Dette er testindhold for {$name_local}. Landet ligger i {$continent_name}. Tidszonen er {$timezone}. Dette indhold genereres uden brug af AI for at spare omkostninger under test.</p>\n\n";
-		
-		// Timezone section
-		$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om tidszoner i {$name_local}. Test mode aktiveret.</p>\n\n";
-		
-		// Major cities section
-		$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
-		$content .= "<p>Dummy tekst om største byer.</p>\n";
-		$content .= "[wta_major_cities]\n\n";
-		
-		// Weather section
-		$content .= "<h2>Vejr og klima i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om vejr og klima. Test mode.</p>\n\n";
-		
-		// Culture section
-		$content .= "<h2>Tidskultur og dagligdag i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om kultur. Test mode.</p>\n\n";
-		
-		// Travel section
-		$content .= "<h2>Hvad du skal vide om tid når du rejser til {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om rejseinformation. Test mode.</p>\n\n";
-		
-		// Child locations section
-		$content .= "<div id=\"child-locations\"><h2>Udforsk byer i {$name_local}</h2>\n";
-		$content .= "<p>Dummy intro tekst om byer.</p>\n";
-		$content .= "[wta_child_locations]\n</div>";
+	// Build simple template content (test mode - no AI)
+	$content = '';
+	
+	// Intro
+	$content .= "<p>Dette er testindhold for {$name_local}. Landet ligger i {$continent_name}. Tidszonen er {$timezone}. Dette indhold genereres uden brug af AI for at spare omkostninger under test.</p>\n\n";
+	
+	// v3.0.14: Child locations FIRST (matches AI mode structure)
+	// Shows cities grid immediately after intro, not at the end
+	$content .= "[wta_child_locations]\n\n";
+	
+	// Timezone section
+	$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst om tidszoner i {$name_local}. Test mode aktiveret.</p>\n\n";
+	
+	// Major cities section
+	$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
+	$content .= "<p>Dummy tekst om største byer.</p>\n";
+	$content .= "[wta_major_cities]\n\n";
+	
+	// Weather section
+	$content .= "<h2>Vejr og klima i {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst om vejr og klima. Test mode.</p>\n\n";
+	
+	// Culture section
+	$content .= "<h2>Tidskultur og dagligdag i {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst om kultur. Test mode.</p>\n\n";
+	
+	// Travel section
+	$content .= "<h2>Hvad du skal vide om tid når du rejser til {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst om rejseinformation. Test mode.</p>\n\n";
 		
 		return array(
 			'content' => $content,
@@ -1604,33 +1592,32 @@ class WTA_AI_Processor {
 	private function generate_template_continent_content( $post_id ) {
 		$name_local = get_the_title( $post_id );
 		
-		// Build simple template content (test mode - no AI)
-		$content = '';
-		
-		// Intro
-		$content .= "<p>Dette er testindhold for {$name_local}. Dette indhold genereres uden brug af AI for at spare omkostninger under test.</p>\n\n";
-		
-		// Timezone overview
-		$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om tidszoner på kontinentet. Test mode aktiveret.</p>\n\n";
-		
-		// Major cities section
-		$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
-		$content .= "<p>Dummy tekst om største byer.</p>\n";
-		$content .= "[wta_major_cities]\n\n";
-		
-		// Geography section
-		$content .= "<h2>Geografi og beliggenhed</h2>\n";
-		$content .= "<p>Dummy tekst om geografi. Test mode.</p>\n\n";
-		
-		// Facts section
-		$content .= "<h2>Interessante fakta om {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst med fakta. Test mode.</p>\n\n";
-		
-		// Child locations section
-		$content .= "<div id=\"child-locations\"><h2>Lande i {$name_local}</h2>\n";
-		$content .= "<p>Dummy intro tekst om lande.</p>\n";
-		$content .= "[wta_child_locations]\n</div>";
+	// Build simple template content (test mode - no AI)
+	$content = '';
+	
+	// Intro
+	$content .= "<p>Dette er testindhold for {$name_local}. Dette indhold genereres uden brug af AI for at spare omkostninger under test.</p>\n\n";
+	
+	// v3.0.14: Child locations FIRST (matches AI mode structure)
+	// Shows countries grid immediately after intro, not at the end
+	$content .= "[wta_child_locations]\n\n";
+	
+	// Timezone overview
+	$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst om tidszoner på kontinentet. Test mode aktiveret.</p>\n\n";
+	
+	// Major cities section
+	$content .= "<h2>Hvad er klokken i de største byer i {$name_local}?</h2>\n";
+	$content .= "<p>Dummy tekst om største byer.</p>\n";
+	$content .= "[wta_major_cities]\n\n";
+	
+	// Geography section
+	$content .= "<h2>Geografi og beliggenhed</h2>\n";
+	$content .= "<p>Dummy tekst om geografi. Test mode.</p>\n\n";
+	
+	// Facts section
+	$content .= "<h2>Interessante fakta om {$name_local}</h2>\n";
+	$content .= "<p>Dummy tekst med fakta. Test mode.</p>\n\n";
 		
 		return array(
 			'content' => $content,
