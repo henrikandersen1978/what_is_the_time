@@ -2,6 +2,64 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.5] - 2025-12-18
+
+### Fixed
+- **CRITICAL BUG FIX**: Parser now imports ALL countries (~250) instead of only 166!
+  - **Problem**: `countryInfo.txt` parser required 18+ columns, but most countries only have 17
+  - **Impact**: 
+    - Missing ~85 countries globally, including Australia, New Zealand, Fiji, and most Pacific islands
+    - Oceania showed only 2 countries (Papua New Guinea, Timor Leste) instead of 26-28
+    - All other continents also missing many countries
+  - **Root Cause**: GeoNames file has 19 columns, but last 2 (`neighbours`, `EquivalentFipsCode`) are often empty
+    - PHP's `explode("\t", trim($line))` removes trailing empty columns
+    - Countries without neighbours: 17 columns ❌ (rejected by parser)
+    - Countries with neighbours: 18 columns ✅ (accepted by parser)
+  - **Solution**: Changed validation from `count($parts) < 18` to `count($parts) < 17`
+    - Column 16 (geonameid) is the last required field
+    - Columns 17-18 are optional metadata not used by plugin
+
+### Technical Details
+- **File**: `includes/core/class-wta-geonames-parser.php`
+- **Change**: Line ~81
+  ```php
+  // BEFORE (rejected most countries):
+  if ( count( $parts ) < 18 ) {
+      WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt' );
+      continue;
+  }
+  
+  // AFTER (accepts all valid countries):
+  if ( count( $parts ) < 17 ) {
+      WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt', array( 'columns' => count( $parts ) ) );
+      continue;
+  }
+  ```
+
+### Impact
+- **Before v3.0.5**: 166 countries imported
+- **After v3.0.5**: ~250 countries imported (full GeoNames coverage)
+- **Oceania**: From 2 countries → 26-28 countries
+- **All continents**: Now show complete country lists
+
+### Migration
+- **ACTION REQUIRED**: Delete existing data and reimport with v3.0.5
+- After reimport:
+  - ✅ Australia, New Zealand, Fiji appear in Oceania
+  - ✅ All continents show full country counts
+  - ✅ ~85 previously missing countries now imported
+
+### Why Only 2 Oceanian Countries Before?
+Papua New Guinea and Timor Leste were the only Oceanian countries with data in the `neighbours` column:
+```
+PG  ...  2088628  ID      ← 18 columns (has neighbour: Indonesia)
+TL  ...  1966436  ID      ← 18 columns (has neighbour: Indonesia)
+AU  ...  2077456          ← 17 columns (no neighbours field) ❌ REJECTED
+NZ  ...  2186224          ← 17 columns (no neighbours field) ❌ REJECTED
+```
+
+---
+
 ## [3.0.4] - 2025-12-18
 
 ### Fixed

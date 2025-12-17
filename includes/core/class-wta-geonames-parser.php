@@ -77,9 +77,10 @@ class WTA_GeoNames_Parser {
 			// Parse tab-separated values
 			$parts = explode( "\t", trim( $line ) );
 
-			// Validate minimum required fields
-			if ( count( $parts ) < 18 ) {
-				WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt', array( 'line' => $line_count ) );
+			// Validate minimum required fields (geonameid is column 16, 0-indexed)
+			// Note: Many countries have empty neighbours/EquivalentFipsCode columns at the end
+			if ( count( $parts ) < 17 ) {
+				WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt', array( 'line' => $line_count, 'columns' => count( $parts ) ) );
 				continue;
 			}
 
