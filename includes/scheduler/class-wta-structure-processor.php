@@ -137,13 +137,17 @@ class WTA_Structure_Processor {
 	private function process_continent( $item ) {
 		$data = $item['payload'];
 
-		// Check if post already exists (check both draft and published)
-		$existing = get_posts( array(
-			'name'        => sanitize_title( $data['name_local'] ),
-			'post_type'   => WTA_POST_TYPE,
-			'post_status' => array( 'publish', 'draft' ),
-			'numberposts' => 1,
-		) );
+	// Check if post already exists (check both draft and published)
+	// v3.0.9: Disable cache for fresh data during parallel imports
+	$existing = get_posts( array(
+		'name'                   => sanitize_title( $data['name_local'] ),
+		'post_type'              => WTA_POST_TYPE,
+		'post_status'            => array( 'publish', 'draft' ),
+		'numberposts'            => 1,
+		'cache_results'          => false, // Disable query cache
+		'update_post_meta_cache' => false, // Disable meta cache
+		'update_post_term_cache' => false, // Disable term cache
+	) );
 		
 		if ( ! empty( $existing ) ) {
 			WTA_Logger::info( 'Continent post already exists', array( 'name' => $data['name_local'] ) );
@@ -203,15 +207,19 @@ class WTA_Structure_Processor {
 	private function process_country( $item ) {
 		$data = $item['payload'];
 
-		// Find parent continent post (include draft posts!)
-		$continent_name_local = WTA_AI_Translator::translate( $data['continent'], 'continent' );
-		
-		$parent_posts = get_posts( array(
-			'name'        => sanitize_title( $continent_name_local ),
-			'post_type'   => WTA_POST_TYPE,
-			'post_status' => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
-			'numberposts' => 1,
-		) );
+	// Find parent continent post (include draft posts!)
+	$continent_name_local = WTA_AI_Translator::translate( $data['continent'], 'continent' );
+	
+	// v3.0.9: Disable cache for fresh data during parallel imports
+	$parent_posts = get_posts( array(
+		'name'                   => sanitize_title( $continent_name_local ),
+		'post_type'              => WTA_POST_TYPE,
+		'post_status'            => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
+		'numberposts'            => 1,
+		'cache_results'          => false, // Disable query cache
+		'update_post_meta_cache' => false, // Disable meta cache
+		'update_post_term_cache' => false, // Disable term cache
+	) );
 
 	if ( empty( $parent_posts ) ) {
 		// v3.0.8: Enhanced logging with country_code and geonameid
@@ -228,20 +236,24 @@ class WTA_Structure_Processor {
 
 		$parent = $parent_posts[0];
 
-		// Check if post already exists (check both draft and published)
-		$existing = get_posts( array(
-			'name'        => sanitize_title( $data['name_local'] ),
-			'post_type'   => WTA_POST_TYPE,
-			'post_parent' => $parent->ID,
-			'post_status' => array( 'publish', 'draft' ),
-			'numberposts' => 1,
-		) );
+	// Check if post already exists (check both draft and published)
+	// v3.0.9: Disable cache for fresh data during parallel imports
+	$existing = get_posts( array(
+		'name'                   => sanitize_title( $data['name_local'] ),
+		'post_type'              => WTA_POST_TYPE,
+		'post_parent'            => $parent->ID,
+		'post_status'            => array( 'publish', 'draft' ),
+		'numberposts'            => 1,
+		'cache_results'          => false, // Disable query cache
+		'update_post_meta_cache' => false, // Disable meta cache
+		'update_post_term_cache' => false, // Disable term cache
+	) );
 
-		if ( ! empty( $existing ) ) {
-			WTA_Logger::info( 'Country post already exists', array( 'name' => $data['name_local'] ) );
-			WTA_Queue::mark_done( $item['id'] );
-			return;
-		}
+	if ( ! empty( $existing ) ) {
+		WTA_Logger::info( 'Country post already exists', array( 'name' => $data['name_local'] ) );
+		WTA_Queue::mark_done( $item['id'] );
+		return;
+	}
 
 		// Create post with Danish name and slug
 		$post_id = wp_insert_post( array(
@@ -346,25 +358,29 @@ class WTA_Structure_Processor {
 	private function process_city( $item ) {
 		$data = $item['payload'];
 
-		// Find parent country post (include draft posts!)
-		// CRITICAL: Use meta_query to filter by BOTH country_id AND type='country'
-		$country_post_id = get_posts( array(
-			'post_type'   => WTA_POST_TYPE,
-			'post_status' => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
-			'meta_query'  => array(
-				'relation' => 'AND',
-				array(
-					'key'   => 'wta_country_id',
-					'value' => $data['country_id'],
-				),
-				array(
-					'key'   => 'wta_type',
-					'value' => 'country',
-				),
+	// Find parent country post (include draft posts!)
+	// CRITICAL: Use meta_query to filter by BOTH country_id AND type='country'
+	// v3.0.9: Disable cache for fresh data during parallel imports
+	$country_post_id = get_posts( array(
+		'post_type'              => WTA_POST_TYPE,
+		'post_status'            => array( 'publish', 'draft' ), // IMPORTANT: Include draft!
+		'meta_query'             => array(
+			'relation' => 'AND',
+			array(
+				'key'   => 'wta_country_id',
+				'value' => $data['country_id'],
 			),
-			'numberposts' => 1,
-			'fields'      => 'ids',
-		) );
+			array(
+				'key'   => 'wta_type',
+				'value' => 'country',
+			),
+		),
+		'numberposts'            => 1,
+		'fields'                 => 'ids',
+		'cache_results'          => false, // Disable query cache
+		'update_post_meta_cache' => false, // Disable meta cache
+		'update_post_term_cache' => false, // Disable term cache
+	) );
 
 		if ( empty( $country_post_id ) ) {
 			// v3.0.8: Enhanced logging with country_code and geonameid for debugging
@@ -381,20 +397,24 @@ class WTA_Structure_Processor {
 
 		$parent_id = $country_post_id[0];
 
-		// Check if post already exists (check both draft and published)
-		$existing = get_posts( array(
-			'name'        => sanitize_title( $data['name_local'] ),
-			'post_type'   => WTA_POST_TYPE,
-			'post_parent' => $parent_id,
-			'post_status' => array( 'publish', 'draft' ),
-			'numberposts' => 1,
-		) );
+	// Check if post already exists (check both draft and published)
+	// v3.0.9: Disable cache for fresh data during parallel imports
+	$existing = get_posts( array(
+		'name'                   => sanitize_title( $data['name_local'] ),
+		'post_type'              => WTA_POST_TYPE,
+		'post_parent'            => $parent_id,
+		'post_status'            => array( 'publish', 'draft' ),
+		'numberposts'            => 1,
+		'cache_results'          => false, // Disable query cache
+		'update_post_meta_cache' => false, // Disable meta cache
+		'update_post_term_cache' => false, // Disable term cache
+	) );
 
-		if ( ! empty( $existing ) ) {
-			WTA_Logger::info( 'City post already exists', array( 'name' => $data['name_local'] ) );
-			WTA_Queue::mark_done( $item['id'] );
-			return;
-		}
+	if ( ! empty( $existing ) ) {
+		WTA_Logger::info( 'City post already exists', array( 'name' => $data['name_local'] ) );
+		WTA_Queue::mark_done( $item['id'] );
+		return;
+	}
 
 		// Create post with Danish name and slug
 		$post_id = wp_insert_post( array(
