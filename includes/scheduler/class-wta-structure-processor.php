@@ -758,6 +758,10 @@ class WTA_Structure_Processor {
 	file_put_contents( $debug_file, "Min population: $min_population\n", FILE_APPEND );
 	file_put_contents( $debug_file, "Max cities per country: $max_cities_per_country\n", FILE_APPEND );
 	file_put_contents( $debug_file, "Filtered countries: " . count( $filtered_country_codes ) . "\n", FILE_APPEND );
+	// v3.0.16: Show actual country codes for debugging
+	if ( ! empty( $filtered_country_codes ) ) {
+		file_put_contents( $debug_file, "Country codes: " . implode( ', ', $filtered_country_codes ) . "\n", FILE_APPEND );
+	}
 	file_put_contents( $debug_file, "Chunk: $offset (size: $chunk_size)\n", FILE_APPEND );
 	file_put_contents( $debug_file, sprintf(
 		"Import scale: %s (detailed logging: %s)\n",
@@ -1045,17 +1049,22 @@ class WTA_Structure_Processor {
 	$current_chunk_number = ( $offset / $chunk_size ) + 1;
 	$max_chunks = 250; // Safety limit: 250 chunks × 1k = 250k cities max (210k + buffer)
 	
+	// v3.0.16: DISABLED early stop - country-specific imports need to scan entire file
+	// (e.g., Danish cities may be at line 50k+, can't stop after first empty chunk)
+	/*
 	// Safety check 1: No cities queued in this chunk
 	if ( $queued === 0 ) {
 		file_put_contents( $debug_file, "\n⚠️ CHUNK STOP: No cities queued (all filtered)\n", FILE_APPEND );
 		WTA_Logger::info( 'Chunking stopped: No cities queued in chunk' );
 	}
-	// Safety check 2: Max chunks reached
-	elseif ( $current_chunk_number >= $max_chunks ) {
+	*/
+	
+	// Safety check 1: Max chunks reached
+	if ( $current_chunk_number >= $max_chunks ) {
 		file_put_contents( $debug_file, "\n⚠️ CHUNK STOP: Max chunks limit reached ($max_chunks)\n", FILE_APPEND );
 		WTA_Logger::warning( "Chunking stopped: Max chunks limit ($max_chunks)" );
 	}
-	// Safety check 3: More cities to process?
+	// Safety check 2: More cities to process?
 	elseif ( $next_offset < $total_cities ) {
 		// Queue next chunk
 		$next_chunk_end = min( $next_offset + $chunk_size, $total_cities );

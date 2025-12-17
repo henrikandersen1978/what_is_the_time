@@ -131,21 +131,25 @@ WTA_Queue::add(
 	// Use country_code (iso2) for matching cities
 	$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
-		WTA_Queue::add(
-			'cities_import',
-			array(
-				'file_path'       => $cities_file,
-				'min_population'  => $options['min_population'],
-				'max_cities_per_country' => $options['max_cities_per_country'],
-				'selected_continents' => $options['selected_continents'],
-				'filtered_country_codes' => $filtered_country_codes,
-			),
-			'cities_import_' . time()
-		);
+	WTA_Queue::add(
+		'cities_import',
+		array(
+			'file_path'       => $cities_file,
+			'min_population'  => $options['min_population'],
+			'max_cities_per_country' => $options['max_cities_per_country'],
+			'selected_continents' => $options['selected_continents'],
+			'filtered_country_codes' => $filtered_country_codes,
+		),
+		'cities_import_' . time()
+	);
 
-		$stats['cities'] = 1; // This is the batch job count, not actual cities
+	$stats['cities'] = 1; // This is the batch job count, not actual cities
 
-		WTA_Logger::info( 'Cities import batch job queued', $options );
+	WTA_Logger::info( 'Cities import batch job queued', $options );
+	// v3.0.16: Debug logging for country-specific imports
+	if ( ! empty( $filtered_country_codes ) ) {
+		WTA_Logger::debug( 'Filtered country codes for cities_import', array( 'codes' => $filtered_country_codes ) );
+	}
 
 		return $stats;
 	}
