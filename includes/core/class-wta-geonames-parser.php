@@ -77,15 +77,32 @@ class WTA_GeoNames_Parser {
 			// Parse tab-separated values
 			$parts = explode( "\t", trim( $line ) );
 
-			// Validate minimum required fields (geonameid is column 16, 0-indexed)
-			// Note: Many countries have empty neighbours/EquivalentFipsCode columns at the end
-			if ( count( $parts ) < 17 ) {
-				WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt', array( 'line' => $line_count, 'columns' => count( $parts ) ) );
-				continue;
-			}
+		// Validate minimum required fields (geonameid is column 16, 0-indexed)
+		// Note: Many countries have empty neighbours/EquivalentFipsCode columns at the end
+		if ( count( $parts ) < 17 ) {
+			WTA_Logger::debug( 'Skipping invalid line in countryInfo.txt', array( 'line' => $line_count, 'columns' => count( $parts ) ) );
+			continue;
+		}
 
-			// Extract fields
-			$iso2 = $parts[0];           // ISO 2-letter code
+		// v3.0.11: Filter obsolete/dissolved countries
+		// These countries no longer exist or are uninhabited territories
+		$obsolete_countries = array(
+			'CS', // Serbia and Montenegro (dissolved 2006 → RS + ME)
+			'AN', // Netherlands Antilles (dissolved 2010 → CW + BQ + SX)
+			'UM', // US Minor Outlying Islands (uninhabited, population 0)
+		);
+		
+		$iso2 = $parts[0]; // Extract ISO2 for checking
+		
+		if ( in_array( $iso2, $obsolete_countries ) ) {
+			WTA_Logger::debug( 'Skipping obsolete country', array( 
+				'iso2' => $iso2,
+				'name' => isset( $parts[4] ) ? $parts[4] : 'unknown',
+			) );
+			continue;
+		}
+
+		// Extract fields
 			$iso3 = $parts[1];           // ISO 3-letter code
 			$name = $parts[4];           // Country name (English)
 			$capital = $parts[5];        // Capital city

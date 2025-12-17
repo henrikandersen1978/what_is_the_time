@@ -2,6 +2,70 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.11] - 2025-12-17
+
+### Fixed
+- **Filter obsolete/dissolved countries from import**
+  - **Problem**: GeoNames countryInfo.txt contains countries that no longer exist
+    - CS (Serbia and Montenegro) - dissolved 2006, split into RS + ME
+    - AN (Netherlands Antilles) - dissolved 2010, split into CW + BQ + SX
+    - UM (US Minor Outlying Islands) - uninhabited territory, population 0
+  - **Impact Before Fix**:
+    - These 3 countries were imported as empty entries (0 cities)
+    - Appeared on frontend continent pages but had no content
+    - Looked unprofessional and confusing to users
+    - "Serbia and Montenegro" shown despite not existing since 2006
+  - **Solution**: Added blacklist in `WTA_GeoNames_Parser::parse_countryInfo()`
+    - Countries filtered before queuing for import
+    - Debug log entry created for each skipped country
+    - Their cities already use correct successor country codes
+  - **Result**:
+    - ✅ Only 244 valid countries imported (was 247)
+    - ✅ No empty country pages on frontend
+    - ✅ Serbia (RS) and Montenegro (ME) correctly shown as separate countries
+    - ✅ No confusion about dissolved territories
+
+### Technical Details
+- **File**: `includes/core/class-wta-geonames-parser.php`
+  - Lines 87-106: Added obsolete country blacklist with explanatory comments
+  - Checks ISO2 code before processing country data
+  - Continues to next line if country is obsolete
+- **Cities unaffected**: 
+  - No cities use CS, AN, or UM as country code in cities500.txt
+  - All Serbian cities use RS (487 cities)
+  - All Montenegrin cities use ME (600 cities)
+  - Netherlands Antilles cities use CW/BQ/SX (successor countries)
+- **Why these codes appear elsewhere**:
+  - CS, AN, UM are used as administrative subdivision codes in other countries
+  - Example: "CS" = Castellón province in Spain (admin2 code)
+  - Our filter only affects country-level import, not admin codes
+
+### Migration Notes
+- **Existing imports with CS/AN/UM**: 
+  - These are empty countries with 0 cities (harmless but unprofessional)
+  - Recommended: "Reset All Data" + Reimport with v3.0.11 for clean state
+- **Fresh imports**: 
+  - Will automatically exclude CS, AN, UM
+  - Only 244 legitimate countries imported
+  - Cleaner, more professional frontend
+
+### Historical Context
+- **Serbia and Montenegro (CS)**:
+  - Existed 1992-2006 as federation
+  - Peacefully dissolved June 2006
+  - Became: Serbia (RS) + Montenegro (ME)
+  - GeoNames updated all city codes to RS/ME
+- **Netherlands Antilles (AN)**:
+  - Existed as Dutch colony until 2010
+  - Dissolved October 10, 2010
+  - Became: Curaçao (CW), Bonaire (BQ), Sint Maarten (SX)
+  - All cities reassigned to successor countries
+- **US Minor Outlying Islands (UM)**:
+  - Collection of uninhabited Pacific islands
+  - Population: 0 (no permanent residents)
+  - Includes: Baker Island, Howland Island, Jarvis Island, etc.
+  - No cities or settlements to display
+
 ## [3.0.10] - 2025-12-17
 
 ### Fixed
