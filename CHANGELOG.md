@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.4] - 2025-12-18
+
+### Fixed
+- **CRITICAL BUG FIX**: Countries and continents now display correctly on homepage!
+  - **Problem**: `wta_continent` meta field was never saved for countries or continents
+  - **Impact**: 
+    - Homepage showed 0 countries for all continents (even though 166 countries were imported)
+    - Oceania was missing Australia, New Zealand, Fiji, etc.
+    - Frontend queries failed because they look for `wta_continent` meta
+  - **Root Cause**: v3.0.0-3.0.3 only saved `wta_continent_code` (AF, AS, EU, etc.) but not `wta_continent` (Africa, Asia, Europe, etc.)
+  - **Solution**: Added missing `update_post_meta( $post_id, 'wta_continent', $data['continent'] );` to both country and continent processing
+
+### Technical Details
+- **File**: `includes/scheduler/class-wta-structure-processor.php`
+- **Changes**:
+  - Line ~259: Added `wta_continent` to country meta (e.g., "Africa", "Oceania")
+  - Line ~171: Added `wta_continent` to continent meta (for consistency)
+- **Database Impact**: All countries now have both:
+  - `wta_continent_code` = 'OC' (for programmatic use)
+  - `wta_continent` = 'Oceania' (for frontend queries)
+
+### Migration
+- **ACTION REQUIRED**: Delete existing 166 countries and reimport with v3.0.4
+- After reimport:
+  - ✅ All continents will show correct country count
+  - ✅ Oceania will show Australia, New Zealand, Papua New Guinea, Fiji, etc.
+  - ✅ Homepage continent lists will work correctly
+  - ✅ 166+ countries will be properly grouped by continent
+
+### Why This Bug Existed
+- v3.0.0 refactored from JSON to GeoNames but missed updating the meta save logic
+- The parent-child relationship (via `post_parent`) worked fine
+- But frontend uses meta queries (`wta_continent`) to list countries, not parent relationships
+- This is a common pattern in WordPress for better query performance
+
+---
+
 ## [3.0.3] - 2025-12-18
 
 ### Fixed

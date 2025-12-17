@@ -168,6 +168,7 @@ class WTA_Structure_Processor {
 	update_post_meta( $post_id, 'wta_type', 'continent' );
 	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
 	update_post_meta( $post_id, 'wta_name_local', $data['name_local'] ); // v3.0.0 - renamed from wta_name_danish
+	update_post_meta( $post_id, 'wta_continent', $data['name'] ); // v3.0.4 - Store continent name for consistency
 	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['name'] ) );
 	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
@@ -256,6 +257,7 @@ class WTA_Structure_Processor {
 	update_post_meta( $post_id, 'wta_type', 'country' );
 	update_post_meta( $post_id, 'wta_name_original', $data['name'] );
 	update_post_meta( $post_id, 'wta_name_local', $data['name_local'] ); // v3.0.0 - renamed from wta_name_danish
+	update_post_meta( $post_id, 'wta_continent', $data['continent'] ); // v3.0.4 - CRITICAL FIX: Store continent name
 	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['continent'] ) );
 	update_post_meta( $post_id, 'wta_country_code', $data['country_code'] );
 		update_post_meta( $post_id, 'wta_country_id', $data['country_id'] );
