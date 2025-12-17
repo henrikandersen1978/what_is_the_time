@@ -413,6 +413,7 @@ class WTA_Admin {
 	 * AJAX: Reset all data.
 	 *
 	 * @since    2.0.0
+	 * @since    3.0.1  Optimized for large datasets (150k+ posts) with direct SQL queries
 	 */
 	public function ajax_reset_all_data() {
 		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
@@ -421,27 +422,71 @@ class WTA_Admin {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
-		// Delete all location posts
-		$posts = get_posts( array(
-			'post_type'   => WTA_POST_TYPE,
-			'numberposts' => -1,
-			'post_status' => 'any',
-		) );
-
-		foreach ( $posts as $post ) {
-			wp_delete_post( $post->ID, true );
+		global $wpdb;
+		
+		// Increase timeout for large datasets
+		set_time_limit( 300 ); // 5 minutes
+		
+		$start_time = microtime( true );
+		
+		// Count posts before deletion
+		$count_query = $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s",
+			WTA_POST_TYPE
+		);
+		$total_posts = intval( $wpdb->get_var( $count_query ) );
+		
+		if ( $total_posts > 0 ) {
+			// Get all post IDs (lightweight query)
+			$ids_query = $wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
+				WTA_POST_TYPE
+			);
+			$post_ids = $wpdb->get_col( $ids_query );
+			
+			if ( ! empty( $post_ids ) ) {
+				$ids_string = implode( ',', array_map( 'intval', $post_ids ) );
+				
+				// Delete post meta (faster than wp_delete_post loop)
+				$wpdb->query(
+					"DELETE FROM {$wpdb->postmeta} WHERE post_id IN ($ids_string)"
+				);
+				
+				// Delete posts
+				$wpdb->query( $wpdb->prepare(
+					"DELETE FROM {$wpdb->posts} WHERE post_type = %s",
+					WTA_POST_TYPE
+				) );
+				
+				// Clean up relationships
+				$wpdb->query(
+					"DELETE FROM {$wpdb->term_relationships} WHERE object_id IN ($ids_string)"
+				);
+			}
 		}
-
+		
 		// Clear queue
 		WTA_Queue::clear();
-
-		WTA_Logger::info( 'All data reset by user', array(
-			'posts_deleted' => count( $posts ),
+		
+		// Clear WordPress caches
+		wp_cache_flush();
+		
+		$execution_time = round( microtime( true ) - $start_time, 2 );
+		
+		WTA_Logger::info( 'All data reset by user (SQL optimized)', array(
+			'posts_deleted'   => $total_posts,
+			'execution_time'  => $execution_time . 's',
+			'method'          => 'direct_sql',
 		) );
 
 		wp_send_json_success( array(
-			'message' => 'All data has been reset',
-			'deleted' => count( $posts ),
+			'message' => sprintf( 
+				'All data has been reset successfully (%d posts deleted in %s seconds)', 
+				$total_posts, 
+				$execution_time 
+			),
+			'deleted' => $total_posts,
+			'time'    => $execution_time,
 		) );
 	}
 
