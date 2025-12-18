@@ -202,15 +202,59 @@ class WTA_AI_Processor {
 				return;
 			}
 
-			// Check if already processed (skip check if force_ai is true)
-			if ( ! $force_ai ) {
-				$ai_status = get_post_meta( $post_id, 'wta_ai_status', true );
-				if ( 'done' === $ai_status ) {
+		// Check if already processed (skip check if force_ai is true)
+		if ( ! $force_ai ) {
+			$ai_status = get_post_meta( $post_id, 'wta_ai_status', true );
+			if ( 'done' === $ai_status ) {
+				// v3.0.28: For cities, check if FAQ exists - if not, add FAQ without regenerating content
+				// This handles case where city content was generated before timezone was resolved
+				if ( 'city' === $type ) {
+					$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
+					if ( empty( $faq_data ) ) {
+						// Try to generate FAQ and append to existing content
+						$test_mode = get_option( 'wta_test_mode', 0 );
+						$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $test_mode );
+						
+						if ( false !== $faq_data && ! empty( $faq_data ) ) {
+							// Save FAQ data for schema
+							update_post_meta( $post_id, 'wta_faq_data', $faq_data );
+							
+							// Render FAQ HTML and append to existing post content
+							$city_name = get_the_title( $post_id );
+							$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+							
+							if ( ! empty( $faq_html ) ) {
+								$existing_content = get_post_field( 'post_content', $post_id );
+								wp_update_post( array(
+									'ID'           => $post_id,
+									'post_content' => $existing_content . "\n\n" . $faq_html,
+								) );
+								
+								WTA_Logger::info( 'FAQ generated and appended to existing content', array( 
+									'post_id' => $post_id,
+									'faq_count' => count( $faq_data['faqs'] )
+								) );
+							}
+							
+							WTA_Queue::mark_done( $item['id'] );
+							return;
+						} else {
+							WTA_Logger::warning( 'Failed to generate FAQ for existing content', array( 'post_id' => $post_id ) );
+							WTA_Queue::mark_done( $item['id'] );
+							return;
+						}
+					} else {
+						WTA_Logger::info( 'AI content already generated', array( 'post_id' => $post_id ) );
+						WTA_Queue::mark_done( $item['id'] );
+						return;
+					}
+				} else {
 					WTA_Logger::info( 'AI content already generated', array( 'post_id' => $post_id ) );
 					WTA_Queue::mark_done( $item['id'] );
 					return;
 				}
 			}
+		}
 
 		// Generate content
 		$result = $this->generate_ai_content( $post_id, $type, $force_ai );

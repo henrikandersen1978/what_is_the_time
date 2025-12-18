@@ -2,6 +2,58 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.28] - 2025-12-18
+
+### Fixed
+- **CRITICAL: FAQ Missing When Timezone Resolved After Content Generation**
+  - **Problem**: Cities imported without timezone showed content but no FAQ
+    - Example: Kandahār (post 177048) had test mode content but FAQ completely missing
+    - Both FAQ HTML and schema were absent
+    - User: "FAQ mangler" after checking https://testsite2.pilanto.dk/asien/afghanistan/kandahar/
+  - **ROOT CAUSE**: Workflow timing issue between processors
+    - **Step 1**: Structure processor creates city → queues AI content immediately ✅
+    - **Step 2**: AI processor generates content → timezone is empty → FAQ generation fails (FAQ requires timezone) ❌
+    - **Step 3**: Timezone processor resolves timezone → re-queues AI content ✅
+    - **Step 4**: AI processor sees `wta_ai_status = 'done'` → **SKIPS** generation ❌
+    - Result: Content exists but FAQ never generated!
+  - **Why FAQ Failed**: FAQ Generator checks timezone (line 38-41 in `class-wta-faq-generator.php`):
+    ```php
+    if ( empty( $city_name ) || empty( $timezone ) ) {
+        WTA_Logger::warning( 'Missing required data for FAQ generation' );
+        return false; // Can't generate FAQ without timezone!
+    }
+    ```
+  - **Fix**: Smart FAQ backfill in AI processor (lines 205-247):
+    - When AI content already 'done', check if FAQ data exists for cities
+    - If FAQ missing: Generate FAQ using current timezone and append to existing content
+    - No need to regenerate entire content (efficient!) ✅
+    - Logs: "FAQ generated and appended to existing content"
+    ```php
+    // v3.0.28: Add FAQ without regenerating content
+    if ( 'city' === $type && 'done' === $ai_status && empty( $faq_data ) ) {
+        $faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $test_mode );
+        // Append to existing content instead of regenerating everything
+        $existing_content = get_post_field( 'post_content', $post_id );
+        wp_update_post( array(
+            'ID' => $post_id,
+            'post_content' => $existing_content . "\n\n" . $faq_html,
+        ) );
+    }
+    ```
+  - **Impact**: 
+    - All cities waiting for timezone will now get FAQ when timezone resolves ✅
+    - Existing cities missing FAQ (like Kandahār) will get FAQ on next AI queue run ✅
+    - No duplicate content generation (performance optimized) ✅
+
+### Technical Details
+- **File Modified**: `includes/scheduler/class-wta-ai-processor.php`
+  - Enhanced `process_item()` to detect FAQ-missing cities and backfill efficiently
+  - Only appends FAQ to existing content (doesn't regenerate everything)
+  - Maintains proper `wta_faq_data` meta for schema generation
+- **Workflow Now**: Structure → AI (no timezone, no FAQ) → Timezone → AI (append FAQ only)
+- **Before**: Cities imported without timezone had content forever without FAQ ❌
+- **After**: FAQ automatically added when timezone resolves ✅
+
 ## [3.0.27] - 2025-12-18
 
 ### Fixed
