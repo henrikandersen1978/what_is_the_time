@@ -71,6 +71,15 @@ class WTA_Admin {
 
 		add_submenu_page(
 			'world-time-ai',
+			__( 'Shortcode Settings', WTA_TEXT_DOMAIN ),
+			__( 'Shortcode Settings', WTA_TEXT_DOMAIN ),
+			'manage_options',
+			'wta-shortcode-settings',
+			array( $this, 'display_shortcode_settings_page' )
+		);
+
+		add_submenu_page(
+			'world-time-ai',
 			__( 'Tools', WTA_TEXT_DOMAIN ),
 			__( 'Tools', WTA_TEXT_DOMAIN ),
 			'manage_options',
@@ -252,6 +261,15 @@ class WTA_Admin {
 	 */
 	public function display_timezone_language_page() {
 		include WTA_PLUGIN_DIR . 'includes/admin/views/timezone-language.php';
+	}
+
+	/**
+	 * Display shortcode settings page.
+	 *
+	 * @since    3.0.23
+	 */
+	public function display_shortcode_settings_page() {
+		include WTA_PLUGIN_DIR . 'includes/admin/views/shortcode-settings.php';
 	}
 
 	/**

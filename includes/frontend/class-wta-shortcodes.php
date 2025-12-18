@@ -36,22 +36,10 @@ class WTA_Shortcodes {
 	 * @return   string      HTML output.
 	 */
 	public function major_cities_shortcode( $atts ) {
-		$atts = shortcode_atts( array(
-			'count' => 12,  // Show top 12 cities for optimal UX
-		), $atts );
-		
-		// Get current post ID
+		// Get current post ID and type first to set appropriate default
 		$post_id = get_the_ID();
 		if ( ! $post_id ) {
 			return '<!-- Major Cities: No post ID -->';
-		}
-		
-		// Check cache first (24 hours)
-		$cache_key = 'wta_major_cities_' . $post_id . '_' . intval( $atts['count'] );
-		$cached = get_transient( $cache_key );
-		
-		if ( false !== $cached ) {
-			return $cached;
 		}
 		
 		// Get location type
@@ -59,6 +47,23 @@ class WTA_Shortcodes {
 		
 		if ( empty( $type ) || ! in_array( $type, array( 'continent', 'country' ) ) ) {
 			return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
+		}
+		
+		// v3.0.23: Dynamic defaults based on location type
+		// Continents = broader scope → show 30 cities
+		// Countries = focused scope → show 50 cities (more detail)
+		$default_count = ( 'continent' === $type ) ? 30 : 50;
+		
+		$atts = shortcode_atts( array(
+			'count' => $default_count,
+		), $atts );
+		
+		// Check cache first (24 hours)
+		$cache_key = 'wta_major_cities_' . $post_id . '_' . intval( $atts['count'] );
+		$cached = get_transient( $cache_key );
+		
+		if ( false !== $cached ) {
+			return $cached;
 		}
 		
 		// Get major cities using optimized SQL query
@@ -316,7 +321,8 @@ class WTA_Shortcodes {
 			$default_orderby = 'meta_value_num';
 			$default_meta_key = 'wta_population';
 			$default_order = 'DESC';
-			$default_limit = 300;  // Top 300 cities by population
+			// v3.0.23: Configurable limit from settings (fallback: 300)
+			$default_limit = get_option( 'wta_child_locations_limit', 300 );
 		}
 		
 		$atts = shortcode_atts( array(
@@ -511,8 +517,11 @@ class WTA_Shortcodes {
 	 * @return   string      HTML output.
 	 */
 	public function nearby_cities_shortcode( $atts ) {
+		// v3.0.23: Configurable count from settings (fallback: 120)
+		$default_count = get_option( 'wta_nearby_cities_count', 120 );
+		
 		$atts = shortcode_atts( array(
-			'count' => 120,  // Optimized for internal linking density and page performance
+			'count' => $default_count,
 		), $atts );
 		
 		$post_id = get_the_ID();
@@ -649,8 +658,11 @@ class WTA_Shortcodes {
 	 * @return   string      HTML output.
 	 */
 	public function nearby_countries_shortcode( $atts ) {
+		// v3.0.23: Configurable count from settings (fallback: 24)
+		$default_count = get_option( 'wta_nearby_countries_count', 24 );
+		
 		$atts = shortcode_atts( array(
-			'count' => 24,  // Increased for better global coverage
+			'count' => $default_count,
 		), $atts );
 		
 		$post_id = get_the_ID();
@@ -1163,8 +1175,18 @@ class WTA_Shortcodes {
 		$current_lat = get_post_meta( $current_country_id, 'wta_latitude', true );
 		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
 		
+		// v3.0.23: Auto-calculate country GPS if missing (countries don't have GPS in GeoNames)
 		if ( empty( $current_lat ) || empty( $current_lon ) ) {
-			return array(); // Country GPS not calculated yet - run migration
+			$calculated_gps = $this->calculate_country_center( $current_country_id );
+			if ( ! empty( $calculated_gps ) ) {
+				$current_lat = $calculated_gps['lat'];
+				$current_lon = $calculated_gps['lon'];
+				// Cache it for future use
+				update_post_meta( $current_country_id, 'wta_latitude', $current_lat );
+				update_post_meta( $current_country_id, 'wta_longitude', $current_lon );
+			} else {
+				return array(); // No cities in country yet
+			}
 		}
 		
 		// Get ALL countries with pre-calculated GPS coordinates (ONE fast query!)
@@ -1245,6 +1267,56 @@ class WTA_Shortcodes {
 		$c = 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
 		
 		return $earth_radius * $c;
+	}
+
+	/**
+	 * Calculate country's geographic center point based on its cities.
+	 * 
+	 * v3.0.23: Auto-calculate country GPS on-the-fly (GeoNames doesn't provide country coordinates)
+	 * Uses geographic center (average of all city coordinates) - simple and fast.
+	 *
+	 * @since    3.0.23
+	 * @param    int $country_id Country post ID.
+	 * @return   array|false     Array with 'lat' and 'lon' keys, or false if no cities.
+	 */
+	private function calculate_country_center( $country_id ) {
+		global $wpdb;
+		
+		// Get all published cities in this country with GPS coordinates
+		$cities = $wpdb->get_results( $wpdb->prepare(
+			"SELECT 
+				pm_lat.meta_value as lat,
+				pm_lon.meta_value as lon
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
+				AND pm_lat.meta_key = 'wta_latitude'
+			INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
+				AND pm_lon.meta_key = 'wta_longitude'
+			WHERE p.post_parent = %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'",
+			$country_id,
+			WTA_POST_TYPE
+		) );
+		
+		if ( empty( $cities ) ) {
+			return false; // No cities yet
+		}
+		
+		// Calculate geographic center (simple average)
+		$total_lat = 0;
+		$total_lon = 0;
+		$count = count( $cities );
+		
+		foreach ( $cities as $city ) {
+			$total_lat += floatval( $city->lat );
+			$total_lon += floatval( $city->lon );
+		}
+		
+		return array(
+			'lat' => $total_lat / $count,
+			'lon' => $total_lon / $count,
+		);
 	}
 
 	/**

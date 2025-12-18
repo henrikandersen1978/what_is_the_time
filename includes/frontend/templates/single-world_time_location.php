@@ -102,16 +102,20 @@ while ( have_posts() ) :
 		</header>
 		
 		<?php
-		// v3.0.17: Extract intro paragraph for continents/countries to show before navigation buttons
+		// v3.0.23: Extract intro paragraph for continents/countries to show before navigation buttons
+		// CRITICAL FIX: Apply content filters BEFORE extraction (get_the_content() doesn't have <p> tags!)
 		$intro_paragraph = '';
 		$remaining_content = get_the_content();
 		
 		if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
-			// Extract first <p> tag from content (intro text)
-			if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $remaining_content, $matches ) ) {
+			// Apply content filters first to generate <p> tags (wpautop, shortcodes, etc.)
+			$filtered_content = apply_filters( 'the_content', $remaining_content );
+			
+			// Extract first <p> tag from filtered content
+			if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $filtered_content, $matches ) ) {
 				$intro_paragraph = '<p>' . $matches[1] . '</p>';
 				// Remove first paragraph from content to avoid duplication
-				$remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $remaining_content, 1 );
+				$remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $filtered_content, 1 );
 			}
 		}
 		
@@ -154,10 +158,10 @@ while ( have_posts() ) :
 
 		<div class="wta-location-content">
 			<?php 
-			// v3.0.17: For continents/countries, show remaining content (intro already shown above)
+			// v3.0.23: For continents/countries, show remaining content (intro already shown above)
 			if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
-				// Apply content filters manually since we're not using the_content()
-				echo apply_filters( 'the_content', $remaining_content );
+				// Content is already filtered above (v3.0.23), just echo it
+				echo $remaining_content;
 			} else {
 				// For cities, show all content normally
 				the_content();

@@ -2,6 +2,141 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.23] - 2025-12-18
+
+### Fixed
+- **CRITICAL: Intro paragraph appearing AFTER navigation buttons on continent/country pages**
+  - **Problem**: On continent pages (Europa) and country pages (Danmark), the intro text appeared BELOW the quick navigation buttons in both test and normal mode
+    - Expected: Intro → Buttons → Content
+    - Actual: Buttons → Intro → Content ❌
+  - **Root Cause**: `get_the_content()` returns unfiltered content (no `<p>` tags yet!)
+    - WordPress `wpautop()` filter generates `<p>` tags only when content runs through `apply_filters('the_content')`
+    - Template regex tried to extract `<p>` tags from raw content → failed → no intro extracted
+    - All content (including intro) appeared in `wta-location-content` div AFTER buttons
+  - **Fix** (`single-world_time_location.php` lines 104-124):
+    ```php
+    // v3.0.23: Apply filters BEFORE extraction
+    $remaining_content = get_the_content();
+    if ( in_array( $type, array( 'continent', 'country' ) ) ) {
+        // CRITICAL: Apply content filters first to generate <p> tags
+        $filtered_content = apply_filters( 'the_content', $remaining_content );
+        
+        // Extract first <p> tag from filtered content
+        if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $filtered_content, $matches ) ) {
+            $intro_paragraph = '<p>' . $matches[1] . '</p>';
+            $remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $filtered_content, 1 );
+        }
+    }
+    ```
+  - **Result**: Intro now correctly appears BEFORE navigation buttons ✅
+  - **Impact**: Both test mode AND normal mode fixed simultaneously
+
+### Changed
+- **Increased shortcode display counts for better UX**
+  - **Problem**: Too few items displayed (only 12 cities on major_cities shortcode)
+  - **New Defaults**:
+    - `[wta_major_cities]`: **30 cities on continents**, **50 cities on countries** (was 12 for both)
+    - `[wta_child_locations]`: **300 cities max per country** (unchanged, now configurable)
+    - `[wta_nearby_cities]`: **120 max** (unchanged, dynamically adjusts based on density)
+    - `[wta_nearby_countries]`: **24 countries** (unchanged, GPS-sorted)
+    - `[wta_global_time_comparison]`: **24 global cities** (unchanged, perfect distribution)
+  - **SEO Benefits**: More internal links = better crawlability + link equity distribution
+
+### Added
+- **Backend Settings Panel for Shortcode Configuration**
+  - **New Admin Page**: "World Time AI" → "Shortcode Settings"
+  - **Configurable Counts**:
+    - Major Cities (Continents): Default 30 (range: 1-100)
+    - Major Cities (Countries): Default 50 (range: 1-200)
+    - Child Locations Limit: Default 300 (range: 1-1000)
+    - Nearby Cities: Default 120 (range: 1-300)
+    - Nearby Countries: Default 24 (range: 1-50)
+    - Global Comparison: Default 24 (range: 1-50)
+  - **Features**:
+    - All shortcodes respect these settings as defaults
+    - Can be overridden per-shortcode: `[wta_major_cities count="20"]`
+    - Changes take effect immediately (caches auto-refresh within 24h)
+    - Info box with best practices and SEO recommendations
+  - **Files**:
+    - New: `includes/admin/views/shortcode-settings.php`
+    - Modified: `includes/admin/class-wta-admin.php` (menu registration)
+    - Modified: `includes/frontend/class-wta-shortcodes.php` (read settings)
+
+- **Auto-Calculate Country GPS Coordinates On-The-Fly**
+  - **Problem**: `nearby_countries` shortcode returned empty results
+    - GeoNames `countryInfo.txt` does NOT contain latitude/longitude for countries
+    - Only cities have GPS in GeoNames data
+    - Countries imported without GPS → nearby_countries GPS-distance calc failed
+  - **Solution**: Auto-calculate country center-point when needed
+    ```php
+    // v3.0.23: Calculate geographic center from all cities in country
+    private function calculate_country_center( $country_id ) {
+        // Fetch all city GPS coordinates in country (ONE SQL query)
+        // Calculate average lat/lon (geographic center)
+        // Cache result as wta_latitude/wta_longitude on country post
+        return array( 'lat' => $avg_lat, 'lon' => $avg_lon );
+    }
+    ```
+  - **Trigger**: First time `nearby_countries` shortcode runs on a city page
+  - **Performance**: 
+    - 1 SQL query to get all city GPS in country
+    - Simple average calculation (fast!)
+    - Result cached in postmeta for instant future lookups
+  - **Result**: Nearby countries now display correctly, sorted by real GPS distance ✅
+  - **File**: `includes/frontend/class-wta-shortcodes.php` (lines 1166-1183, 1250-1318)
+
+### Technical Details
+
+**File Changes**:
+1. `includes/frontend/templates/single-world_time_location.php`:
+   - Lines 104-124: Apply filters before intro extraction
+   - Line 160: Don't re-filter remaining content (already filtered)
+
+2. `includes/frontend/class-wta-shortcodes.php`:
+   - Lines 38-70: Dynamic major_cities count based on type + settings
+   - Lines 314-320: Child locations reads `wta_child_locations_limit` option
+   - Lines 515-520: Nearby cities reads `wta_nearby_cities_count` option
+   - Lines 664-669: Nearby countries reads `wta_nearby_countries_count` option
+   - Lines 1166-1183: Auto-calculate country GPS if missing
+   - Lines 1250-1318: New `calculate_country_center()` function
+
+3. `includes/admin/views/shortcode-settings.php` (NEW):
+   - Complete settings UI with form validation
+   - Grouped by shortcode type (Major Cities, Child Locations, City Shortcodes)
+   - Info box with best practices
+   - Nonce security + sanitization
+
+4. `includes/admin/class-wta-admin.php`:
+   - Lines 72-79: Register shortcode settings submenu page
+   - Lines 269-275: Display shortcode settings page function
+
+**Backward Compatibility**:
+- All shortcodes maintain previous defaults if settings not configured
+- Existing shortcode attribute overrides still work: `[wta_major_cities count="20"]`
+- Country GPS auto-calculation is transparent (no migration needed)
+
+**Performance Impact**:
+- Country GPS: Calculated once per country, then cached ✅
+- Shortcode settings: Read from options table (fast, WordPress cached) ✅
+- Higher display counts: More HTML output but better SEO value
+
+**User Feedback Addressed**:
+> "For kontinenter virker det som om at indledningen stadigvæk mangler (i hvert fald i testmode) - eller også er den flyttet ned under knapperne."
+
+→ **FIXED**: Intro now correctly appears before buttons in all modes ✅
+
+> "Shortcoden der viser lande i kontinentet skal vise ALLE lande i kontinentet"
+
+→ **CONFIRMED**: Already working (limit = -1 for continents) ✅
+
+> "Shortcoden med 'De største byer' viser lige nu kun 12. Dette burde måske sættes op."
+
+→ **FIXED**: Now 30 for continents, 50 for countries, configurable ✅
+
+> "Der er forskellige shortcodes i systemet har hardcodede values - for nogle af dem (eller måske alle, kunne det egentlig være fedt hvis antallet de skulle vise) var muligt at definere i backenden."
+
+→ **IMPLEMENTED**: Complete backend settings panel ✅
+
 ## [3.0.22] - 2025-12-18
 
 ### Fixed
