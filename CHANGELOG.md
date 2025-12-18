@@ -2,6 +2,106 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.21] - 2025-12-18
+
+### Changed
+- **SEO Strategy: Answer-Based H1 + Question-Based Title**
+  - **Problem**: Previous H1 strategy used question format which may dilute keyword focus
+    - H1: `"Hvad er klokken i København, Danmark?"` (repeats search query)
+    - This matches search intent but doesn't provide immediate value
+    - Modern SEO prefers H1 that **answers** the query, not repeats it
+  - **User Insight**: "Giver det mening at h1 er det samme (eller delvist det samme) eller giver det mere mening at der i h1'eren svares på spørgsmålet i stedet?"
+  - **SEO Research**: Modern best practice is H1 answers + Title asks
+    - **Title tag**: Matches search query (high CTR in SERP)
+    - **H1**: Answers the question (better UX + featured snippets)
+    - Google's algorithms understand semantic relationship perfectly
+  - **New Structure for Cities**:
+    ```
+    Title: "Hvad er klokken i København, Danmark? [2024]"
+    H1:    "Aktuel tid i København, Danmark"
+    Intro: Content starts immediately with value (live clock)
+    ```
+  - **Implementation**:
+    - **Import** (`class-wta-structure-processor.php` line 635-641):
+      - H1: `"Aktuel tid i {city}, {country}"` (answer-based)
+      - Title: `"Hvad er klokken i {city}, {country}? [{year}]"` (question-based with freshness)
+    - **AI Regeneration** (`class-wta-ai-processor.php` line 1125-1148):
+      - Same pattern for consistency
+      - Removed AI generation for city titles (now template-based)
+  - **SEO Benefits**:
+    - ✅ H1 immediately provides value (answers the question)
+    - ✅ Title matches search query (better CTR)
+    - ✅ Year in title = freshness signal for Google
+    - ✅ Better for featured snippets (answer format)
+    - ✅ Semantic relationship clear to search engines
+    - ✅ No keyword dilution (answer is different from query)
+
+### Technical Details
+**Before (v3.0.20):**
+```
+Title: "Hvad er klokken i København, Danmark?"
+H1:    "Hvad er klokken i København, Danmark?"
+Issue: Repetition, no immediate value in H1
+```
+
+**After (v3.0.21):**
+```
+Title: "Hvad er klokken i København, Danmark? [2024]"
+H1:    "Aktuel tid i København, Danmark"
+Benefit: Clear distinction, H1 answers query
+```
+
+**Code Changes:**
+
+**1. Import Process** (class-wta-structure-processor.php):
+```php
+// H1: Answer-based
+$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
+update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+
+// Title: Question-based with year
+$current_year = date( 'Y' );
+$seo_title = sprintf( 'Hvad er klokken i %s, %s? [%s]', 
+    $city_name, $country_name, $current_year );
+update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
+```
+
+**2. AI Content Generation** (class-wta-ai-processor.php):
+```php
+// Cities now use template instead of AI for title generation
+if ( 'city' === $type ) {
+    $current_year = date( 'Y' );
+    return sprintf( 'Hvad er klokken i %s, %s? [%s]', 
+        $name, $country_name, $current_year );
+}
+```
+
+**Page Structure (Existing Template - No Changes Needed):**
+```
+1. H1: "Aktuel tid i København, Danmark" (from _pilanto_page_h1)
+2. Intro paragraph (from AI/template content)
+3. Quick navigation buttons
+4. Live clock display (existing feature)
+5. FAQ and other sections
+```
+
+**SEO Strategy Rationale:**
+- **Question in title** = Matches user's mental model when searching
+- **Answer in H1** = Provides immediate value on page
+- **Year in title** = Freshness signal (especially important for time-based content)
+- **Semantic clarity** = Search engines understand "aktuel tid" answers "hvad er klokken"
+
+**Content Hierarchy:**
+```
+<title>Hvad er klokken i København, Danmark? [2024]</title>
+<h1>Aktuel tid i København, Danmark</h1>
+<p>Klokken i København er lige nu [LIVE CLOCK]...</p>
+```
+
+This structure maximizes both:
+- **SERP performance** (title matches search)
+- **On-page value** (H1 delivers answer)
+
 ## [3.0.20] - 2025-12-18
 
 ### Fixed

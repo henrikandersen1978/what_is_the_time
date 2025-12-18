@@ -1128,7 +1128,21 @@ class WTA_AI_Processor {
 			return sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name );
 		}
 		
-		// For other types, use AI generation
+		// v3.0.21: For cities, use question-based template with year (no AI needed)
+		// Matches search intent + includes freshness signal
+		if ( 'city' === $type ) {
+			$parent_id = wp_get_post_parent_id( $post_id );
+			if ( $parent_id ) {
+				$country_name = get_post_field( 'post_title', $parent_id );
+				$current_year = date( 'Y' );
+				return sprintf( 'Hvad er klokken i %s, %s? [%s]', $name, $country_name, $current_year );
+			} else {
+				$current_year = date( 'Y' );
+				return sprintf( 'Hvad er klokken i %s? [%s]', $name, $current_year );
+			}
+		}
+		
+		// For countries, use AI generation
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
 			return false;
@@ -1136,31 +1150,10 @@ class WTA_AI_Processor {
 
 		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
 		$system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
-		
-		// For cities, include country name in prompt
-		if ( 'city' === $type ) {
-			$parent_id = wp_get_post_parent_id( $post_id );
-			if ( $parent_id ) {
-				$country_name = get_post_field( 'post_title', $parent_id );
-				$user = sprintf(
-					'Skriv en SEO meta title (max 60 tegn) der SKAL starte med "Hvad er klokken i %s, %s" og fortsæt med relevant SEO tekst der passer inden for 60 tegn. KUN titlen.',
-					$name,
-					$country_name
-				);
-			} else {
-				$user = sprintf(
-					'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Start med "Hvad er klokken i %s". KUN titlen.',
-					$name,
-					$name
-				);
-			}
-		} else {
-			// For countries
-			$user = sprintf(
-				'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
-				$name
-			);
-		}
+		$user = sprintf(
+			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
+			$name
+		);
 		
 		return $this->call_openai_api( $api_key, $model, 0.7, 100, $system, $user );
 	}

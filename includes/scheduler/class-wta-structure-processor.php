@@ -628,15 +628,19 @@ class WTA_Structure_Processor {
 			}
 		}
 
-	// Get parent country name for SEO H1
+	// Get parent country name for SEO titles
 	$parent_country_name = get_post_field( 'post_title', $parent_id );
 	
-	// Save SEO-friendly H1 title matching search intent
-	$seo_h1 = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+	// v3.0.21: Answer-based H1 (better UX + featured snippets)
+	// H1 answers the question directly: "Current time in..."
+	$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// Update Yoast SEO title for proper schema integration
-	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_h1 );
+	// v3.0.21: Question-based title tag (better CTR in SERP)
+	// Title matches search query + includes year for freshness
+	$current_year = date( 'Y' );
+	$seo_title = sprintf( 'Hvad er klokken i %s, %s? [%s]', $data['name_local'], $parent_country_name, $current_year );
+	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 
 	// ==========================================
 	// SMART AI QUEUEING STRATEGY (v2.35.8)
