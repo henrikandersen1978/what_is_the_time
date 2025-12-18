@@ -587,8 +587,26 @@ class WTA_Template_Loader {
 			$has_nearby_sections = true;
 		}
 		
-		// Output quick navigation
+		// v3.0.26: For continents/countries, extract intro to show BEFORE quick nav buttons
+		$intro_html = '';
+		$remaining_content = $content;
+		
+		if ( in_array( $type, array( 'continent', 'country' ) ) ) {
+			// Content structure: "<p>Intro...</p>\n\n[shortcode]..."
+			// Extract intro (first paragraph) to show before navigation buttons
+			$pos = strpos( $content, '</p>' );
+			
+			if ( false !== $pos ) {
+				// Extract intro paragraph (including </p> tag)
+				$intro_html = '<div class="wta-intro-section">' . substr( $content, 0, $pos + 4 ) . '</div>';
+				// Remaining content (after intro)
+				$remaining_content = substr( $content, $pos + 4 );
+			}
+		}
+		
+		// Output quick navigation (after intro for continents/countries)
 		if ( $has_children || $has_major_cities || $has_nearby_sections ) {
+			$navigation_html .= $intro_html; // Add intro before buttons
 			$navigation_html .= '<div class="wta-quick-nav">';
 			
 			if ( $has_children ) {
@@ -616,8 +634,8 @@ class WTA_Template_Loader {
 			$navigation_html .= '</div>';
 		}
 		
-		// Prepend navigation to content
-		return $navigation_html . $content;
+		// Build final output: breadcrumb + intro + buttons + remaining content
+		return $navigation_html . $remaining_content;
 	}
 
 	/**
