@@ -2,6 +2,84 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.25] - 2025-12-18
+
+### Fixed
+- **CRITICAL: Intro STILL appearing after buttons (v3.0.24 regression)**
+  - **Problem**: v3.0.24 fix didn't work - intro still showed after navigation buttons
+  - **Root Cause**: Test mode content ALREADY contains HTML tags!
+    ```php
+    // Test mode generates:
+    $content = "<p>Dette er testindhold...</p>\n\n[wta_child_locations]...";
+    ```
+    - v3.0.24 tried to split by `\n\s*\n` (newlines)
+    - BUT content has `<p>` tags, not just text!
+    - `preg_split('/\n\s*\n/')` doesn't split correctly when HTML tags are present
+    - Result: Split failed, intro not extracted ❌
+  - **Fix** (`single-world_time_location.php` lines 104-130):
+    ```php
+    // v3.0.25: Split by </p> tag instead of newlines
+    $pos = strpos( $remaining_content, '</p>' );
+    
+    if ( false !== $pos ) {
+        // Extract intro (including </p> tag)
+        $intro_raw = substr( $remaining_content, 0, $pos + 4 );
+        // Remaining content (after </p> and whitespace)
+        $remaining_raw = trim( substr( $remaining_content, $pos + 4 ) );
+        
+        $intro_paragraph = apply_filters( 'the_content', $intro_raw );
+        $remaining_content = $remaining_raw;
+    }
+    ```
+  - **Why This Works**: 
+    - Test mode: `<p>Intro</p>\n\n[shortcode]` → Split at `</p>` ✅
+    - Normal mode: Same HTML structure from AI generation ✅
+    - Reliable splitting regardless of whitespace variations ✅
+  - **Result**: Intro now correctly displays BEFORE navigation buttons! ✅
+
+### Technical Details
+
+**Content Structure (Test Mode)**:
+```php
+// Generated in class-wta-ai-processor.php line 1603:
+$content .= "<p>Dette er testindhold for {$name_local}...</p>\n\n";
+$content .= "[wta_child_locations]\n\n";
+$content .= "<h2>Tidszoner i {$name_local}</h2>\n";
+```
+
+**v3.0.24 Approach (FAILED)**:
+```php
+// Tried to split by newlines
+$paragraphs = preg_split('/\n\s*\n/', trim($remaining_content), 2);
+// Problem: HTML tags interfere with newline matching
+```
+
+**v3.0.25 Approach (WORKS)**:
+```php
+// Split by </p> tag (reliable HTML marker)
+$pos = strpos( $remaining_content, '</p>' );
+$intro_raw = substr( $remaining_content, 0, $pos + 4 );  // "<p>Intro</p>"
+$remaining_raw = trim( substr( $remaining_content, $pos + 4 ) );  // "[shortcode]..."
+```
+
+**Display Flow**:
+```
+Content: "<p>Intro</p>\n\n[wta_child_locations]\n\n<h2>..."
+         ↓ Split at </p>
+Intro:   "<p>Intro</p>"
+Remain:  "[wta_child_locations]\n\n<h2>..."
+         ↓ Template displays
+Output:  Intro → Buttons → [shortcode expands] → Rest ✅
+```
+
+**File Changed**:
+- `includes/frontend/templates/single-world_time_location.php` (lines 104-130)
+
+**Why Previous Fixes Failed**:
+- v3.0.23: Applied filters too early (mixed shortcode output with intro)
+- v3.0.24: Used newline split (HTML tags broke the regex pattern)
+- v3.0.25: Split by HTML tag (robust and reliable) ✅
+
 ## [3.0.24] - 2025-12-18
 
 ### Fixed

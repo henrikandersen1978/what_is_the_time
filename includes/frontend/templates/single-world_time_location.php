@@ -102,23 +102,28 @@ while ( have_posts() ) :
 		</header>
 		
 		<?php
-		// v3.0.24: Extract intro paragraph for continents/countries to show before navigation buttons
-		// CRITICAL FIX: Split RAW content BEFORE shortcode expansion to avoid mixing intro with shortcode output
+		// v3.0.25: Extract intro paragraph for continents/countries to show before navigation buttons
+		// CRITICAL FIX: Content from test mode already contains <p> tags, so split by </p> tag
 		$intro_paragraph = '';
 		$remaining_content = get_the_content();
 		
 		if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
-			// Split by double newline (paragraph break in raw content)
-			// This separates intro from shortcodes BEFORE they are expanded
-			$paragraphs = preg_split('/\n\s*\n/', trim($remaining_content), 2);
+			// Content already has HTML tags: "<p>Intro...</p>\n\n[shortcode]..."
+			// Split at first </p> tag to extract intro
+			$pos = strpos( $remaining_content, '</p>' );
 			
-			if ( count($paragraphs) >= 2 && !empty($paragraphs[0]) ) {
-				// First paragraph is intro - apply filters separately (wpautop, etc.)
-				$intro_paragraph = apply_filters('the_content', $paragraphs[0]);
-				// Remaining content will be filtered later via the_content()
-				$remaining_content = $paragraphs[1];
+			if ( false !== $pos ) {
+				// Extract intro (including </p> tag)
+				$intro_raw = substr( $remaining_content, 0, $pos + 4 );
+				// Get remaining content (after </p> and whitespace)
+				$remaining_raw = trim( substr( $remaining_content, $pos + 4 ) );
+				
+				// Apply filters to intro (for consistency, though already has <p> tags)
+				$intro_paragraph = apply_filters( 'the_content', $intro_raw );
+				// Remaining content will be filtered later
+				$remaining_content = $remaining_raw;
 			} else {
-				// Fallback: Only one paragraph, show it all normally
+				// Fallback: No </p> tag found, show all normally
 				$remaining_content = get_the_content();
 			}
 		}
