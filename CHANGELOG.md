@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.22] - 2025-12-18
+
+### Fixed
+- **CRITICAL: H1 not updating for existing cities in AI queue**
+  - **Problem**: Cities imported before v3.0.21 kept old question-based H1 even when AI queue ran
+    - Old H1: `"Hvad er klokken i Nancun, Kina?"` ❌
+    - Expected: `"Aktuel tid i Nancun, Kina"` ✅
+  - **Root Cause**: AI processor had logic that prevented H1 updates for cities (line 261-266)
+    ```php
+    // OLD CODE (v3.0.21):
+    if ( 'city' !== $type ) {
+        update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
+    }
+    // This meant: "Don't update H1 for cities" → Old cities kept old format!
+    ```
+  - **User Report**: "Seneste importerede by (allerede i køen) men viser stadig efter update forkert h1"
+  - **Fix**: AI processor now regenerates H1 for cities with correct answer-based format
+    ```php
+    // NEW CODE (v3.0.22):
+    if ( 'city' === $type ) {
+        // Generate answer-based H1 (ensures old cities get new format when AI runs)
+        $parent_id = wp_get_post_parent_id( $post_id );
+        if ( $parent_id ) {
+            $country_name = get_post_field( 'post_title', $parent_id );
+            $city_name = get_the_title( $post_id );
+            $seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
+            update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+        }
+    }
+    ```
+  - **Impact**: All existing cities will get correct H1 when their AI job runs ✅
+  - **Consistency**: Updated test mode templates for all types (city, country, continent) to include year in title
+
+### Changed
+- **Test Mode Title Format Consistency**
+  - **Cities**: Now use `"Hvad er klokken i {city}, {country}? [2024]"` format
+  - **Countries**: Now use `"Hvad er klokken i {country}? [2024]"` format
+  - **Continents**: Now use `"Hvad er klokken i {continent}? Tidszoner og aktuel tid [2024]"` format
+  - All test mode titles now match production title format with freshness signal (year)
+
+### Technical Details
+**File**: `includes/scheduler/class-wta-ai-processor.php`
+
+**Changes**:
+1. **Lines 258-276**: H1 regeneration logic in `process_item()`
+   - Now explicitly handles cities with answer-based format
+   - Ensures backward compatibility for pre-v3.0.21 cities
+2. **Lines 1529-1536**: Test mode city title (with year)
+3. **Lines 1585-1592**: Test mode country title (with year)
+4. **Lines 1632-1639**: Test mode continent title (with year)
+
+**Migration Path for Existing Cities**:
+- **New imports** (v3.0.21+): Get correct H1 immediately at import ✅
+- **Old imports** (pre-v3.0.21): Get correct H1 when AI queue processes them ✅
+- **Manual fix**: Bulk regenerate AI for existing cities in admin panel
+
+**Verification**:
+```
+Before update: "Hvad er klokken i Nancun, Kina?" (old H1)
+After AI runs:  "Aktuel tid i Nancun, Kina" (new H1) ✅
+Title tag:      "Hvad er klokken i Nancun, Kina? [2024]" ✅
+```
+
 ## [3.0.21] - 2025-12-18
 
 ### Changed
