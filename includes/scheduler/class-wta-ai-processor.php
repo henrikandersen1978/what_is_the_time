@@ -1139,17 +1139,15 @@ class WTA_AI_Processor {
 			return sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name );
 		}
 		
-		// v3.0.21: For cities, use question-based template with year (no AI needed)
-		// Matches search intent + includes freshness signal
+		// v3.0.24: For cities, use question-based template (no AI needed, no year)
+		// Matches search intent perfectly
 		if ( 'city' === $type ) {
 			$parent_id = wp_get_post_parent_id( $post_id );
 			if ( $parent_id ) {
 				$country_name = get_post_field( 'post_title', $parent_id );
-				$current_year = date( 'Y' );
-				return sprintf( 'Hvad er klokken i %s, %s? [%s]', $name, $country_name, $current_year );
+				return sprintf( 'Hvad er klokken i %s, %s?', $name, $country_name );
 			} else {
-				$current_year = date( 'Y' );
-				return sprintf( 'Hvad er klokken i %s? [%s]', $name, $current_year );
+				return sprintf( 'Hvad er klokken i %s?', $name );
 			}
 		}
 		
@@ -1526,12 +1524,10 @@ class WTA_AI_Processor {
 	// This prevents FAQ duplication (was appearing twice on frontend)
 	// FAQ generation happens in process_item() after generate_city_content() returns
 	
-	// v3.0.22: Use new title format with year for consistency
-	$current_year = date( 'Y' );
-	
+	// v3.0.24: No year in titles
 	return array(
 		'content' => $content,
-		'yoast_title' => sprintf( 'Hvad er klokken i %s, %s? [%s]', $name_local, $country_name, $current_year ),
+		'yoast_title' => sprintf( 'Hvad er klokken i %s, %s?', $name_local, $country_name ),
 		'yoast_desc' => "Test mode indhold for {$name_local}, {$country_name}. Tidszone {$timezone}."
 	);
 }
@@ -1582,12 +1578,10 @@ class WTA_AI_Processor {
 	$content .= "<h2>Hvad du skal vide om tid når du rejser til {$name_local}</h2>\n";
 	$content .= "<p>Dummy tekst om rejseinformation. Test mode.</p>\n\n";
 		
-		// v3.0.22: Use consistent title format (though countries may use AI in production)
-		$current_year = date( 'Y' );
-		
+		// v3.0.24: No year in titles
 		return array(
 			'content' => $content,
-			'yoast_title' => sprintf( 'Hvad er klokken i %s? [%s]', $name_local, $current_year ),
+			'yoast_title' => sprintf( 'Hvad er klokken i %s?', $name_local ),
 			'yoast_desc' => "Test mode indhold for {$name_local}, {$continent_name}."
 		);
 	}
@@ -1629,12 +1623,10 @@ class WTA_AI_Processor {
 	$content .= "<h2>Interessante fakta om {$name_local}</h2>\n";
 	$content .= "<p>Dummy tekst med fakta. Test mode.</p>\n\n";
 		
-		// v3.0.22: Use consistent title format with year
-		$current_year = date( 'Y' );
-		
+		// v3.0.24: No year in titles
 		return array(
 			'content' => $content,
-			'yoast_title' => sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid [%s]', $name_local, $current_year ),
+			'yoast_title' => sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name_local ),
 			'yoast_desc' => "Test mode indhold for {$name_local}. Ingen AI-omkostninger."
 		);
 	}

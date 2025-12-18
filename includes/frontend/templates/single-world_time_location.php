@@ -102,20 +102,24 @@ while ( have_posts() ) :
 		</header>
 		
 		<?php
-		// v3.0.23: Extract intro paragraph for continents/countries to show before navigation buttons
-		// CRITICAL FIX: Apply content filters BEFORE extraction (get_the_content() doesn't have <p> tags!)
+		// v3.0.24: Extract intro paragraph for continents/countries to show before navigation buttons
+		// CRITICAL FIX: Split RAW content BEFORE shortcode expansion to avoid mixing intro with shortcode output
 		$intro_paragraph = '';
 		$remaining_content = get_the_content();
 		
 		if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
-			// Apply content filters first to generate <p> tags (wpautop, shortcodes, etc.)
-			$filtered_content = apply_filters( 'the_content', $remaining_content );
+			// Split by double newline (paragraph break in raw content)
+			// This separates intro from shortcodes BEFORE they are expanded
+			$paragraphs = preg_split('/\n\s*\n/', trim($remaining_content), 2);
 			
-			// Extract first <p> tag from filtered content
-			if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $filtered_content, $matches ) ) {
-				$intro_paragraph = '<p>' . $matches[1] . '</p>';
-				// Remove first paragraph from content to avoid duplication
-				$remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $filtered_content, 1 );
+			if ( count($paragraphs) >= 2 && !empty($paragraphs[0]) ) {
+				// First paragraph is intro - apply filters separately (wpautop, etc.)
+				$intro_paragraph = apply_filters('the_content', $paragraphs[0]);
+				// Remaining content will be filtered later via the_content()
+				$remaining_content = $paragraphs[1];
+			} else {
+				// Fallback: Only one paragraph, show it all normally
+				$remaining_content = get_the_content();
 			}
 		}
 		
@@ -158,10 +162,10 @@ while ( have_posts() ) :
 
 		<div class="wta-location-content">
 			<?php 
-			// v3.0.23: For continents/countries, show remaining content (intro already shown above)
+			// v3.0.24: For continents/countries, show remaining content (intro already shown above)
 			if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
-				// Content is already filtered above (v3.0.23), just echo it
-				echo $remaining_content;
+				// Apply filters to remaining content (shortcodes, wpautop, etc.)
+				echo apply_filters( 'the_content', $remaining_content );
 			} else {
 				// For cities, show all content normally
 				the_content();

@@ -2,6 +2,123 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.24] - 2025-12-18
+
+### Fixed
+- **CRITICAL: Intro paragraph still appearing AFTER navigation buttons (v3.0.23 regression)**
+  - **Problem**: Despite v3.0.23 fix, intro text still appeared below buttons on continent/country pages
+    - Backend content was correct: `Intro → [wta_child_locations] → Rest`
+    - Frontend displayed: `Buttons → Intro → Child locations → Rest` ❌
+  - **Root Cause**: Previous fix applied `the_content` filter BEFORE extraction
+    - `apply_filters('the_content')` expands shortcodes AND adds `<p>` tags
+    - After filtering: `<p>Intro</p><div class="child-grid">...</div><h2>Tidszoner...</h2>`
+    - Regex extracted first `<p>` correctly
+    - BUT remaining content included shortcode output already expanded!
+    - Template showed: Intro → Buttons → **Shortcode output** → Rest
+    - Shortcode output contained child locations grid, so it appeared like: Buttons → Intro visually
+  - **Fix** (`single-world_time_location.php` lines 104-128):
+    ```php
+    // v3.0.24: Split RAW content BEFORE shortcode expansion
+    $paragraphs = preg_split('/\n\s*\n/', trim($remaining_content), 2);
+    
+    if ( count($paragraphs) >= 2 ) {
+        // First paragraph = intro (filter separately)
+        $intro_paragraph = apply_filters('the_content', $paragraphs[0]);
+        // Remaining content will be filtered later via the_content()
+        $remaining_content = $paragraphs[1];
+    }
+    ```
+  - **Key Insight**: Split content by paragraph breaks in RAW state, not after filtering
+  - **Result**: 
+    - Intro extracted cleanly before shortcodes expand ✅
+    - Remaining content filters properly with shortcodes in correct positions ✅
+    - Display order now correct: Intro → Buttons → Child locations → Rest ✅
+
+### Changed
+- **Removed year from all page titles (user request)**
+  - **Before**: `"Hvad er klokken i København, Danmark? [2025]"`
+  - **After**: `"Hvad er klokken i København, Danmark?"` ✅
+  - **Reason**: Year in title was deemed unnecessary and cluttering
+  - **Impact**: Cleaner, more focused titles across all page types
+  - **Changes**:
+    1. **City titles (normal mode)** - `class-wta-ai-processor.php` lines 1144-1154
+    2. **City titles (test mode)** - `class-wta-ai-processor.php` line 1530
+    3. **Country titles (test mode)** - `class-wta-ai-processor.php` line 1590
+    4. **Continent titles (test mode)** - `class-wta-ai-processor.php` line 1637
+    5. **City import titles** - `class-wta-structure-processor.php` line 642
+  - **SEO Impact**: Titles now match user search intent more directly without date clutter
+
+### Technical Details
+
+**Before (v3.0.23 - Failed Attempt)**:
+```php
+// Applied filters TOO EARLY
+$filtered_content = apply_filters( 'the_content', $remaining_content );
+// Problem: Shortcodes already expanded, mixing with intro
+if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $filtered_content, $matches ) ) {
+    $intro_paragraph = '<p>' . $matches[1] . '</p>';
+    $remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $filtered_content, 1 );
+}
+```
+
+**After (v3.0.24 - Working Fix)**:
+```php
+// Split RAW content first (before shortcode expansion)
+$paragraphs = preg_split('/\n\s*\n/', trim($remaining_content), 2);
+
+if ( count($paragraphs) >= 2 && !empty($paragraphs[0]) ) {
+    // Filter intro separately
+    $intro_paragraph = apply_filters('the_content', $paragraphs[0]);
+    // Remaining content filtered later (shortcodes stay in place)
+    $remaining_content = $paragraphs[1];
+}
+```
+
+**Content Flow**:
+```
+RAW:      Intro\n\n[shortcode]\n\nRest
+          ↓ Split by \n\n
+SPLIT:    [0]="Intro", [1]="[shortcode]\n\nRest"
+          ↓ Filter separately
+FILTERED: intro="<p>Intro</p>", remaining="[shortcode]\n\nRest"
+          ↓ Display
+RENDER:   Intro → Buttons → [shortcode expands] → Rest ✅
+```
+
+**Why This Works**:
+- Shortcodes remain in `$remaining_content` as text `[wta_child_locations]`
+- When `apply_filters('the_content', $remaining_content)` runs in template (line 162)
+- Shortcode expands in correct position AFTER intro already shown
+- No mixing, no duplication, perfect order ✅
+
+**Files Changed**:
+1. `includes/frontend/templates/single-world_time_location.php`:
+   - Lines 104-128: New intro extraction logic (split by paragraph)
+   - Line 162: Apply filters to remaining content separately
+
+2. `includes/scheduler/class-wta-ai-processor.php`:
+   - Lines 1144-1154: Removed year from city titles (normal mode)
+   - Line 1530: Removed year from city titles (test mode)
+   - Line 1590: Removed year from country titles (test mode)
+   - Line 1637: Removed year from continent titles (test mode)
+
+3. `includes/scheduler/class-wta-structure-processor.php`:
+   - Line 642: Removed year from city title during import
+
+**Backward Compatibility**:
+- Fallback logic: If content has only one paragraph, show normally
+- Existing pages regenerate titles without year on next AI run
+- No database migration needed
+
+**User Feedback Addressed**:
+> "I backend ser det rigtigt ud, men ikke i frontend."
+
+→ **ROOT CAUSE IDENTIFIED**: Shortcode expansion timing issue ✅
+
+> "Og ja. Årstal skal fjernes fra både overskrifter og seo title tag"
+
+→ **IMPLEMENTED**: All 6 locations updated ✅
+
 ## [3.0.23] - 2025-12-18
 
 ### Fixed

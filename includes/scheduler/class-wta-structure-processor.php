@@ -636,10 +636,9 @@ class WTA_Structure_Processor {
 	$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// v3.0.21: Question-based title tag (better CTR in SERP)
-	// Title matches search query + includes year for freshness
-	$current_year = date( 'Y' );
-	$seo_title = sprintf( 'Hvad er klokken i %s, %s? [%s]', $data['name_local'], $parent_country_name, $current_year );
+	// v3.0.24: Question-based title tag (better CTR in SERP) - no year
+	// Title matches search query
+	$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
 	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 
 	// ==========================================
