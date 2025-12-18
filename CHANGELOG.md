@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.18] - 2025-12-18
+
+### Fixed
+- **Global Time Comparison Shortcode - Cache & SQL Issues**
+  - **Problem**: Shortcode showed only 1 country (Denmark) despite multiple countries imported
+    - User used "Clear Shortcode Cache" button but issue persisted
+    - Other countries not appearing in time comparison table
+  - **Root Cause 1: Incomplete Cache Clearing**
+    - Cache clear function looked for `_transient_wta_continent_data_%`
+    - But actual transients named: `wta_continent_EU_20251218`, `wta_continent_AS_20251218`, etc.
+    - Result: Cache NOT cleared, old data persisted for 24 hours
+    - Also missing: `wta_global_cities_%`, `wta_comparison_intro_%`
+  - **Root Cause 2: LEFT JOIN Performance Issues**
+    - SQL queries used `LEFT JOIN` which can return rows with NULL meta values
+    - Less efficient query execution (optimizer can't use indexes as well)
+    - Potential data quality issues with incomplete meta
+  - **Solution 1: Enhanced Cache Clearing** (`includes/admin/class-wta-admin.php`)
+    - Added all 6 continents: `wta_continent_EU_%`, `wta_continent_AS_%`, etc.
+    - Added missing: `wta_global_cities_%` (comparison city selection)
+    - Added missing: `wta_comparison_intro_%` (AI-generated intro text)
+    - Now clears ALL shortcode-related transients properly
+  - **Solution 2: SQL Optimization** (`includes/frontend/class-wta-shortcodes.php`)
+    - Changed `LEFT JOIN` → `INNER JOIN` in 3 query locations:
+      - `get_cities_for_continent()`: Line 1513-1515 (country list query)
+      - `get_cities_for_continent()`: Line 1531-1534 (top cities query)
+      - `get_random_city_for_country()`: Line 1629-1632 (Denmark city query)
+    - Ensures only cities with complete meta data are selected
+    - Better query performance (MySQL can optimize INNER JOIN better)
+  - **Result**:
+    - ✅ "Clear Shortcode Cache" button now actually clears ALL caches
+    - ✅ Time comparison table shows cities from all continents
+    - ✅ Denmark no longer the only country in comparison
+    - ✅ Better SQL performance with INNER JOIN
+    - ✅ Ensures data quality (no NULL meta values)
+
+### Technical Details
+**Cache Keys Added to Clear Function:**
+```
+_transient_wta_continent_EU_*       (Europe cities cache)
+_transient_wta_continent_AS_*       (Asia cities cache)
+_transient_wta_continent_NA_*       (North America cities cache)
+_transient_wta_continent_SA_*       (South America cities cache)
+_transient_wta_continent_AF_*       (Africa cities cache)
+_transient_wta_continent_OC_*       (Oceania cities cache)
+_transient_wta_global_cities_*      (Global comparison selection)
+_transient_wta_comparison_intro_*   (AI intro text)
+```
+
+**SQL Changes (LEFT → INNER JOIN):**
+- **Before**: `LEFT JOIN {$wpdb->postmeta} pm_type ON ...`
+  - Returns rows even if meta doesn't exist (NULL values)
+  - Slower query execution (can't use indexes efficiently)
+- **After**: `INNER JOIN {$wpdb->postmeta} pm_type ON ...`
+  - Only returns rows with valid meta values
+  - Faster query execution (better index usage)
+  - Guaranteed data quality
+
+**Impact:**
+- Users must click "Clear Shortcode Cache" once after update
+- Then time comparison tables will populate correctly
+- Daily cache refresh will work properly going forward
+- Better performance for all shortcode queries
+
 ## [3.0.17] - 2025-12-18
 
 ### Fixed

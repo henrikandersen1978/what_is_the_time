@@ -1507,12 +1507,13 @@ class WTA_Shortcodes {
 			global $wpdb;
 			
 			// Get ALL countries in continent
+			// v3.0.17: Changed LEFT JOIN to INNER JOIN to ensure valid meta values
 			$all_countries = $wpdb->get_col( $wpdb->prepare( "
 				SELECT DISTINCT pm_cc.meta_value as country_code
 				FROM {$wpdb->posts} p
-				LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
-				LEFT JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
-				LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+				INNER JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
+				INNER JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
 				WHERE p.post_type = %s
 				AND p.post_status = 'publish'
 				AND pm_type.meta_value = 'city'
@@ -1525,13 +1526,14 @@ class WTA_Shortcodes {
 			
 			foreach ( $all_countries as $country_code ) {
 				// Get top 20 cities per country (to have selection pool)
+				// v3.0.17: Changed LEFT JOIN to INNER JOIN to ensure valid meta values
 				$cities = $wpdb->get_results( $wpdb->prepare( "
 					SELECT p.ID, pm_tz.meta_value as timezone
 					FROM {$wpdb->posts} p
-					LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-					LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
-					LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
-					LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+					INNER JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+					INNER JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+					INNER JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+					INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 					WHERE p.post_type = %s
 					AND p.post_status = 'publish'
 					AND pm_type.meta_value = 'city'
@@ -1625,13 +1627,14 @@ class WTA_Shortcodes {
 		global $wpdb;
 		
 		// Get top 5 cities in country
+		// v3.0.17: Changed LEFT JOIN to INNER JOIN to ensure valid meta values
 		$city_ids = $wpdb->get_col( $wpdb->prepare( "
 			SELECT p.ID
 			FROM {$wpdb->posts} p
-			LEFT JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
-			LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
-			LEFT JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			INNER JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
+			INNER JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+			INNER JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
+			INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
 			AND p.ID != %d
