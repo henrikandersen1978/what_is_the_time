@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.27] - 2025-12-18
+
+### Fixed
+- **CRITICAL: FAQ Schema Missing After v3.0.26 Template Changes**
+  - **Problem**: FAQ HTML displays correctly but JSON-LD schema is missing
+    - User: "Faq'en er nu væk fra bunden OG fra schema"
+    - After force AI regenerate: FAQ HTML appears but schema still missing ❌
+    - Database confirmed `wta_faq_data` meta exists (4046 bytes for test post)
+  - **ROOT CAUSE**: `append_faq_schema()` conditions too strict for theme templates
+    - Method in `class-wta-template-loader.php` (line 745-774) had these checks:
+      ```php
+      if ( ! is_singular( WTA_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+          return $content; // Returns early, never appends schema!
+      }
+      ```
+    - When using **theme's template** (discovered in v3.0.26), `the_content` filter runs in different context
+    - Either `in_the_loop()` or `is_main_query()` returns false
+    - Result: Schema never appended, even though FAQ data exists in database
+  - **Fix**: Simplified `append_faq_schema()` conditions (line 745-777):
+    - ❌ Removed: `in_the_loop()` check (not reliable with theme templates)
+    - ❌ Removed: `is_main_query()` check (not reliable with theme templates)
+    - ✅ Kept: `is_singular( WTA_POST_TYPE )` check (sufficient for single location pages)
+    - ✅ Added: `if ( ! $post_id )` safety check
+    - Result: FAQ schema now appends correctly on all city pages! ✅
+
+### Technical Details
+- **File Modified**: `includes/frontend/class-wta-template-loader.php`
+  - `append_faq_schema()` method simplified for theme template compatibility
+  - Removed overly strict WordPress loop checks that break with custom templates
+  - FAQ data retrieval and schema generation logic unchanged (already working)
+- **Why It Broke**: v3.0.26 didn't change `append_faq_schema()` directly
+  - But the discovery that plugin uses theme's template revealed existing fragility
+  - The `in_the_loop()` / `is_main_query()` checks worked by luck before
+  - Now properly fixed for all template scenarios
+- **Impact**: All city pages now correctly display FAQ schema in `<script type="application/ld+json">`
+
 ## [3.0.26] - 2025-12-18
 
 ### Fixed

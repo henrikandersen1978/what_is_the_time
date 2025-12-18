@@ -743,12 +743,17 @@ class WTA_Template_Loader {
 	 * @return   string          Content with FAQ schema appended.
 	 */
 	public function append_faq_schema( $content ) {
-		// Only on single location pages
-		if ( ! is_singular( WTA_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+		// Only on single location pages (simplified check for theme template compatibility)
+		// v3.0.27: Removed in_the_loop() and is_main_query() checks for theme template compatibility
+		if ( ! is_singular( WTA_POST_TYPE ) ) {
 			return $content;
 		}
 		
 		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return $content;
+		}
+		
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		
 		// Only for cities
