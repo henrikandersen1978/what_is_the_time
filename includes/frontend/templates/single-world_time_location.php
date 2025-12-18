@@ -84,9 +84,18 @@ while ( have_posts() ) :
 		
 		<header class="wta-location-header">
 			<?php
-			if ( 'city' === $type ) {
+			// v3.0.20: Use SEO-optimized H1 from meta (includes country name for cities)
+			// This ensures H1 is correct from server-side render (no JavaScript needed)
+			$seo_h1 = get_post_meta( get_the_ID(), '_pilanto_page_h1', true );
+			
+			if ( ! empty( $seo_h1 ) ) {
+				// Use pre-generated SEO H1 (e.g., "Hvad er klokken i København, Danmark?")
+				printf( '<h1 class="wta-location-title">%s</h1>', esc_html( $seo_h1 ) );
+			} elseif ( 'city' === $type ) {
+				// Fallback for cities without meta
 				printf( '<h1 class="wta-location-title">%s</h1>', esc_html( sprintf( __( 'Hvad er klokken i %s?', 'world-time-ai' ), $name_local ) ) );
 			} else {
+				// Fallback for continents/countries
 				printf( '<h1 class="wta-location-title">%s</h1>', esc_html( $name_local ) );
 			}
 			?>

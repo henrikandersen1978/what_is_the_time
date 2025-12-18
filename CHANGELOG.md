@@ -2,6 +2,108 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.20] - 2025-12-18
+
+### Fixed
+- **H1 Title vs Page Title - SEO Critical Issue**
+  - **Problem**: Multiple inconsistencies between H1 and page title across the site
+    - Template H1 used hardcoded format: `"Hvad er klokken i {city}?"` (missing country)
+    - Database `_pilanto_page_h1`: `"Hvad er klokken i {city}, {country}?"` (correct)
+    - JavaScript changed H1 after page load (bad for SEO - crawlers see wrong title first)
+    - FAQ schema used H1 title instead of page title (too long for schema name)
+  - **User Feedback**: "FAQ schema skal der f.eks. bruges pagetitle og ikke overskrift. Overskrift skal sådan set kun bruges ét sted. Nemlig som h1 i templaten. Ikke andre steder."
+  - **SEO Impact Before Fix**:
+    - ❌ Search engines initially saw incomplete H1 (no country name)
+    - ❌ JavaScript modified H1 client-side (not in HTML source)
+    - ❌ FAQ schema had wrong name: `"Ofte stillede spørgsmål om tid i Hvad er klokken i København, Danmark?"`
+    - ❌ Three different versions of the title in use
+    - ❌ Inconsistent title across template, schema, and meta
+  - **Root Cause Analysis**:
+    - Template hardcoded H1 format instead of using `_pilanto_page_h1` meta
+    - JavaScript hack (`inject_h1_script()`) tried to fix it client-side
+    - `the_title` filter changed ALL `get_the_title()` calls to return H1
+    - FAQ schema used `get_the_title()` which was filtered to H1
+  - **Solution 1: Template H1** (`includes/frontend/templates/single-world_time_location.php`)
+    - Changed to use `get_post_meta( 'pilanto_page_h1' )` directly
+    - Server-side correct H1 from database (includes country name)
+    - No JavaScript manipulation needed
+  - **Solution 2: FAQ Schema** (`includes/frontend/class-wta-template-loader.php`)
+    - Changed from `get_the_title()` to `get_post_field( 'post_title' )`
+    - Bypasses `the_title` filter completely
+    - Uses raw page title for schema name
+  - **Solution 3: Remove JavaScript Hack**
+    - Removed entire `inject_h1_script()` function
+    - Removed call to `inject_h1_script()`
+    - No client-side H1 manipulation anymore
+  - **Result**:
+    - ✅ H1 correct from server-side render: `"Hvad er klokken i København, Danmark?"`
+    - ✅ FAQ schema uses page title: `"Ofte stillede spørgsmål om tid i København"`
+    - ✅ No JavaScript H1 manipulation (better SEO)
+    - ✅ Search engines see correct H1 immediately
+    - ✅ One source of truth: `_pilanto_page_h1` meta for H1
+    - ✅ Consistent titles across all uses
+
+### Technical Details
+**Before Fix - Title Usage:**
+```
+1. Database post_title: "København"
+2. Database _pilanto_page_h1: "Hvad er klokken i København, Danmark?"
+3. Template H1 (PHP): "Hvad er klokken i København?" ❌ Missing country!
+4. JavaScript (after load): Changes to "Hvad er klokken i København, Danmark?"
+5. FAQ Schema: Uses get_the_title() → filtered to H1 → TOO LONG ❌
+```
+
+**After Fix - Title Usage:**
+```
+1. Database post_title: "København" → Used for: Breadcrumbs, navigation
+2. Database _pilanto_page_h1: "Hvad er klokken i København, Danmark?" → Used for: H1 only
+3. Template H1 (PHP): Reads _pilanto_page_h1 directly ✅
+4. JavaScript: NONE (removed)
+5. FAQ Schema: Uses get_post_field('post_title') → "København" ✅
+```
+
+**Code Changes:**
+
+**1. Template H1** (lines 85-93):
+```php
+// OLD:
+if ( 'city' === $type ) {
+    printf( '<h1>%s</h1>', 
+        sprintf( 'Hvad er klokken i %s?', $name_local ) 
+    );
+}
+
+// NEW:
+$seo_h1 = get_post_meta( get_the_ID(), '_pilanto_page_h1', true );
+if ( ! empty( $seo_h1 ) ) {
+    printf( '<h1>%s</h1>', esc_html( $seo_h1 ) );
+} elseif ( 'city' === $type ) {
+    // Fallback
+}
+```
+
+**2. FAQ Schema** (line 789):
+```php
+// OLD (filtered to H1):
+$city_name = get_the_title( $post_id );
+
+// NEW (raw page title):
+$city_name = get_post_field( 'post_title', $post_id );
+```
+
+**3. JavaScript Removal** (lines 711 + 723-754):
+```php
+// REMOVED: $this->inject_h1_script();
+// REMOVED: private function inject_h1_script() { ... }
+```
+
+**SEO Benefits:**
+- Correct H1 in HTML source (crawlers see it immediately)
+- No client-side manipulation (better indexing)
+- Clean FAQ schema with appropriate name length
+- Consistent title usage across all contexts
+- Single source of truth for each title type
+
 ## [3.0.19] - 2025-12-18
 
 ### Fixed

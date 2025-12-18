@@ -707,50 +707,10 @@ class WTA_Template_Loader {
 					);
 				}
 				
-				// Add custom H1 handler
-				$this->inject_h1_script();
+				// v3.0.20: JavaScript H1 hack removed
+				// H1 now set correctly server-side in template using _pilanto_page_h1 meta
 			}
 		}
-	}
-	
-	/**
-	 * Inject JavaScript to replace H1 with custom title.
-	 *
-	 * Fallback solution if theme doesn't use the_title() for H1.
-	 *
-	 * @since    2.8.4
-	 */
-	private function inject_h1_script() {
-		global $post;
-		
-		$custom_h1 = get_post_meta( $post->ID, '_pilanto_page_h1', true );
-		
-		if ( empty( $custom_h1 ) ) {
-			return;
-		}
-		
-		// Escape for JavaScript
-		$custom_h1_escaped = esc_js( $custom_h1 );
-		$post_title_escaped = esc_js( get_the_title() );
-		
-		?>
-		<script type="text/javascript">
-		document.addEventListener('DOMContentLoaded', function() {
-			// Find H1 that contains the post title
-			var h1Elements = document.querySelectorAll('h1');
-			var postTitle = <?php echo wp_json_encode( $post_title_escaped ); ?>;
-			var customH1 = <?php echo wp_json_encode( $custom_h1_escaped ); ?>;
-			
-			h1Elements.forEach(function(h1) {
-				// Check if H1 contains the post title (case-insensitive)
-				if (h1.textContent.trim().toLowerCase().indexOf(postTitle.toLowerCase()) !== -1) {
-					// Replace with custom H1
-					h1.textContent = customH1;
-				}
-			});
-		});
-		</script>
-		<?php
 	}
 	
 	/**
@@ -786,7 +746,10 @@ class WTA_Template_Loader {
 		}
 		
 		// Generate and append FAQ schema
-		$city_name = get_the_title( $post_id );
+		// v3.0.20: Use get_post_field() to bypass the_title filter
+		// This ensures FAQ schema uses page title (e.g., "København")
+		// not H1 title (e.g., "Hvad er klokken i København, Danmark?")
+		$city_name = get_post_field( 'post_title', $post_id );
 		$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $city_name );
 		
 		return $content;
