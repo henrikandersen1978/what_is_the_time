@@ -202,7 +202,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_clear_shortcode_cache', $admin, 'ajax_clear_shortcode_cache' ); // v2.35.51
 		$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
 		$this->loader->add_action( 'wp_ajax_wta_force_reschedule', $admin, 'ajax_force_reschedule' ); // v2.35.33
-		$this->loader->add_action( 'wp_ajax_wta_migrate_country_gps', $admin, 'ajax_migrate_country_gps' ); // v2.35.73
+		// v3.0.19: Country GPS migration removed - no longer needed with GeoNames
 
 		// Settings
 		$settings = new WTA_Settings();

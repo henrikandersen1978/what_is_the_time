@@ -105,31 +105,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div id="wta-shortcode-cache-result"></div>
 		</div>
 
-		<!-- Country GPS Migration (v2.35.73) -->
-		<div class="wta-card">
-			<h2><?php esc_html_e( 'Country GPS Coordinates', WTA_TEXT_DOMAIN ); ?></h2>
-			<p><?php esc_html_e( 'Calculate and store GPS coordinates for all countries based on their largest city. This dramatically improves performance for the "Nearby Countries" shortcode.', WTA_TEXT_DOMAIN ); ?></p>
-			<?php
-			$migration_info = get_option( 'wta_country_gps_migration_last_run' );
-			if ( $migration_info ) :
-				$stats = $migration_info['stats'];
-			?>
-			<p class="description">
-				<strong><?php esc_html_e( 'Last Run:', WTA_TEXT_DOMAIN ); ?></strong> <?php echo esc_html( $migration_info['timestamp'] ); ?><br>
-				<strong><?php esc_html_e( 'Stats:', WTA_TEXT_DOMAIN ); ?></strong> 
-				<?php echo esc_html( $stats['updated'] ); ?> countries updated, 
-				<?php echo esc_html( $stats['skipped'] ); ?> skipped,
-				<?php echo esc_html( $stats['duration'] ); ?>s duration
-			</p>
-			<?php else : ?>
-			<p class="description"><strong><?php esc_html_e( 'Status:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'Not run yet. Run this once after import to enable fast nearby countries lookup.', WTA_TEXT_DOMAIN ); ?></p>
-			<?php endif; ?>
-			<p>
-				<button type="button" class="button button-primary" id="wta-migrate-country-gps"><?php esc_html_e( 'Calculate Country GPS', WTA_TEXT_DOMAIN ); ?></button>
-				<span class="spinner"></span>
-			</p>
-			<div id="wta-country-gps-result"></div>
-		</div>
+		<!-- v3.0.19: Country GPS Migration removed - no longer needed -->
+		<!-- GeoNames migration uses post_parent hierarchy, shortcodes work directly with city GPS -->
 
 		<!-- Permalink Regeneration -->
 		<div class="wta-card">

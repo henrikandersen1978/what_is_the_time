@@ -893,58 +893,9 @@ class WTA_Admin {
 		) );
 	}
 
-	/**
-	 * Migrate country GPS coordinates (AJAX handler).
-	 * 
-	 * Calculates and stores GPS coordinates for all countries based on their largest city.
-	 * This dramatically improves performance for nearby countries shortcode.
-	 *
-	 * @since    2.35.73
-	 */
-	public function ajax_migrate_country_gps() {
-		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
-		}
-
-		WTA_Logger::info( 'Starting country GPS migration', array(
-			'user' => wp_get_current_user()->user_login,
-		) );
-
-		// Run the migration
-		$stats = WTA_Country_GPS_Migration::run_migration();
-
-		WTA_Logger::info( 'Country GPS migration completed', $stats );
-
-		$message = sprintf(
-			'✅ Country GPS migration completed!<br><br>' .
-			'<strong>Stats:</strong><br>' .
-			'• Total countries: %d<br>' .
-			'• Updated with GPS: %d<br>' .
-			'• Skipped (no cities): %d<br>' .
-			'• Duration: %s seconds',
-			$stats['total'],
-			$stats['updated'],
-			$stats['skipped'],
-			$stats['duration']
-		);
-
-		if ( ! empty( $stats['errors'] ) ) {
-			$message .= '<br><br><strong>Warnings:</strong><br>';
-			foreach ( array_slice( $stats['errors'], 0, 10 ) as $error ) {
-				$message .= '• ' . esc_html( $error ) . '<br>';
-			}
-			if ( count( $stats['errors'] ) > 10 ) {
-				$message .= '• ... and ' . ( count( $stats['errors'] ) - 10 ) . ' more';
-			}
-		}
-
-		wp_send_json_success( array(
-			'message' => $message,
-			'stats'   => $stats,
-		) );
-	}
+	// v3.0.19: Country GPS migration removed - no longer needed
+	// GeoNames migration uses post_parent hierarchy for city-to-country relationships
+	// Regional centres shortcode works directly with city GPS data
 
 	/**
 	 * Add custom admin columns for content status.

@@ -811,8 +811,9 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Get parent country from meta (not post_parent column)
-		$country_id = get_post_meta( $post_id, 'wta_country_id', true );
+		// v3.0.19: Get parent country from post_parent (not meta)
+		// GeoNames migration uses post hierarchy, not meta keys
+		$country_id = wp_get_post_parent_id( $post_id );
 		if ( ! $country_id ) {
 			return '';
 		}
@@ -830,6 +831,7 @@ class WTA_Shortcodes {
 			return $this->render_regional_centres( $filtered_ids, $post_id, $country_id );
 		}
 		
+		// v3.0.19: Simplified query using post_parent instead of meta join
 		// Get all cities in country with coordinates and population
 		$cities = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, 
@@ -838,16 +840,14 @@ class WTA_Shortcodes {
 				MAX(CASE WHEN pm.meta_key = 'wta_population' THEN pm.meta_value END) as pop
 			FROM {$wpdb->posts} p
 			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-			INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id 
-				AND pm_country.meta_key = 'wta_country_id' 
-				AND pm_country.meta_value = %d
 			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
+			AND p.post_parent = %d
 			AND pm.meta_key IN ('wta_latitude', 'wta_longitude', 'wta_population')
 			GROUP BY p.ID
 			HAVING lat IS NOT NULL AND lon IS NOT NULL",
-			$country_id,
-			WTA_POST_TYPE
+			WTA_POST_TYPE,
+			$country_id
 		) );
 		
 		if ( count( $cities ) < 2 ) {

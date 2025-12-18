@@ -2,6 +2,73 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.19] - 2025-12-18
+
+### Fixed
+- **Regional Centres Shortcode - GeoNames Compatibility**
+  - **Problem**: `[wta_regional_centres]` shortcode didn't work after GeoNames migration
+    - Required manual "Calculate Country GPS" button click in admin
+    - Used `wta_country_id` meta key which doesn't exist on cities
+    - SQL query joined on non-existent meta key
+  - **Root Cause Investigation**:
+    - User asked: "Do countries have GPS from GeoNames?"
+    - Answer: **NO** - GeoNames `countryInfo.txt` does NOT include latitude/longitude
+    - File contains: ISO codes, name, capital, area, population, continent, languages
+    - GPS would need to be calculated from largest city (what "Calculate Country GPS" did)
+  - **Solution**: Use `post_parent` instead of meta keys
+    - Changed shortcode to use `wp_get_post_parent_id()` (line 815)
+    - Simplified SQL query to use `p.post_parent = %d` (line 841-843)
+    - Removed need for separate GPS meta on country posts
+    - Works directly with existing post hierarchy from GeoNames import
+  - **Result**:
+    - ✅ Shortcode works immediately after import (no manual step needed)
+    - ✅ Simpler code using WordPress core hierarchy
+    - ✅ No need to maintain separate GPS meta on countries
+    - ✅ Faster queries (no meta join needed)
+
+### Removed
+- **"Calculate Country GPS" Backend Function**
+  - Removed AJAX handler `ajax_migrate_country_gps()` from `class-wta-admin.php`
+  - Removed AJAX action registration from `class-wta-core.php`
+  - Removed admin UI card from `includes/admin/views/tools.php`
+  - **Reason**: Function no longer needed with new approach
+    - GeoNames cities already have GPS coordinates
+    - Shortcode works directly with city GPS via `post_parent`
+    - No need to copy GPS from city to country
+  - **Migration Note**: If you previously ran "Calculate Country GPS":
+    - Old `wta_latitude`/`wta_longitude` meta on countries will remain
+    - But they're not used by any shortcodes anymore
+    - Safe to ignore or manually delete if desired
+
+### Technical Details
+**GeoNames Data Structure:**
+```
+countryInfo.txt columns:
+ISO  ISO3  ISO-Numeric  fips  Country  Capital  Area  Population  
+Continent  tld  CurrencyCode  CurrencyName  Phone  Languages  
+geonameid  neighbours  EquivalentFipsCode
+
+❌ NO latitude/longitude columns!
+```
+
+**New Shortcode Logic:**
+```php
+// OLD (required manual GPS calculation):
+$country_id = get_post_meta( $post_id, 'wta_country_id', true );
+INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id 
+    AND pm_country.meta_key = 'wta_country_id'
+
+// NEW (uses WordPress hierarchy):
+$country_id = wp_get_post_parent_id( $post_id );
+WHERE p.post_parent = %d
+```
+
+**Benefits:**
+- Simpler code (less meta key management)
+- Faster queries (no meta joins)
+- No manual admin steps required
+- Works with core WordPress relationships
+
 ## [3.0.18] - 2025-12-18
 
 ### Fixed
