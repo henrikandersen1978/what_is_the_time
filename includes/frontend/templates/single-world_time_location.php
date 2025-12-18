@@ -92,6 +92,28 @@ while ( have_posts() ) :
 			?>
 		</header>
 		
+		<?php
+		// v3.0.17: Extract intro paragraph for continents/countries to show before navigation buttons
+		$intro_paragraph = '';
+		$remaining_content = get_the_content();
+		
+		if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
+			// Extract first <p> tag from content (intro text)
+			if ( preg_match( '/<p[^>]*>(.*?)<\/p>/s', $remaining_content, $matches ) ) {
+				$intro_paragraph = '<p>' . $matches[1] . '</p>';
+				// Remove first paragraph from content to avoid duplication
+				$remaining_content = preg_replace( '/<p[^>]*>.*?<\/p>/s', '', $remaining_content, 1 );
+			}
+		}
+		
+		// Show intro paragraph before navigation buttons (continent/country only)
+		if ( ! empty( $intro_paragraph ) ) {
+			echo '<div class="wta-intro-section">' . "\n";
+			echo $intro_paragraph . "\n";
+			echo '</div>' . "\n";
+		}
+		?>
+		
 		<?php if ( $has_children || $has_major_cities ) : ?>
 		<!-- Quick Navigation -->
 		<div class="wta-quick-nav">
@@ -122,7 +144,16 @@ while ( have_posts() ) :
 		<?php endif; ?>
 
 		<div class="wta-location-content">
-			<?php the_content(); ?>
+			<?php 
+			// v3.0.17: For continents/countries, show remaining content (intro already shown above)
+			if ( in_array( $type, array( 'continent', 'country' ) ) && ! empty( $remaining_content ) ) {
+				// Apply content filters manually since we're not using the_content()
+				echo apply_filters( 'the_content', $remaining_content );
+			} else {
+				// For cities, show all content normally
+				the_content();
+			}
+			?>
 		</div>
 
 		<?php

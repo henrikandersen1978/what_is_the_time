@@ -2,6 +2,75 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.17] - 2025-12-18
+
+### Fixed
+- **Continent/Country Landing Page Structure - UX Improvement**
+  - **Problem**: Navigation buttons appeared BEFORE intro text
+    - User screenshot showed: H1 → Buttons → Intro text → Content
+    - Poor UX: Buttons without context, intro pushed down below fold
+    - Inconsistent with expected landing page flow
+  - **User Feedback**: "Tidligere er jeg ganske sikker på at landingssiden ikke startede med de 2 knapper. Måske er det bare indledningen der er blevet skubbet ned under nu."
+  - **Root Cause**: Template file rendered navigation buttons before `the_content()`
+    - `single-world_time_location.php` showed buttons at line 95-112
+    - Content (including intro) started at line 125
+    - No way to show intro before buttons without extracting it
+  - **Solution**: Extract intro paragraph and display before navigation
+    - Added PHP logic to extract first `<p>` tag from content
+    - Display intro between H1 and navigation buttons
+    - Remove extracted paragraph from remaining content to avoid duplication
+    - Apply `the_content` filters to remaining content
+  - **Result**:
+    - ✅ **NEW STRUCTURE**: H1 → Intro text → Buttons → Content sections
+    - ✅ Intro provides context before navigation options
+    - ✅ Buttons appear below fold with proper context
+    - ✅ Better UX and logical flow
+    - ✅ Works for both test mode and AI mode
+    - ✅ Works for both continents and countries
+
+### Technical Details
+**File**: `includes/frontend/templates/single-world_time_location.php`
+- **Lines 94-106**: Extract intro paragraph logic (PHP regex)
+  - Uses `preg_match()` to find first `<p>` tag
+  - Removes extracted paragraph from remaining content
+  - Only applies to continents and countries (not cities)
+- **Lines 108-112**: Display intro in new section
+  - Wrapped in `.wta-intro-section` div for styling
+  - Shown before navigation buttons
+- **Lines 145-156**: Modified content rendering
+  - For continents/countries: Show remaining content (intro already extracted)
+  - For cities: Show all content normally (no extraction)
+  - Apply `the_content` filters manually for proper formatting
+
+**Content Structure (Already Correct in AI Processor):**
+- Continent AI mode: Intro → [wta_child_locations] → Sections
+- Continent test mode: Intro → [wta_child_locations] → Sections
+- Country AI mode: Intro → [wta_child_locations] → Sections
+- Country test mode: Intro → [wta_child_locations] → Sections
+
+**Why No Changes to AI Processor:**
+- Both test and AI modes already start with intro paragraph
+- Template extracts intro automatically via regex
+- No need to modify content generation logic
+- Works for both existing and new pages
+
+### User Experience Flow
+**Before Fix:**
+```
+1. H1: "Hvad er klokken i Europa?"
+2. 📍 Buttons: "Se alle lande" | "Live tidspunkter"  ← No context!
+3. Intro: "Dette er testindhold for Europa..."
+4. Child locations section
+```
+
+**After Fix:**
+```
+1. H1: "Hvad er klokken i Europa?"
+2. Intro: "Dette er testindhold for Europa..."  ← Context first!
+3. 📍 Buttons: "Se alle lande" | "Live tidspunkter"
+4. Child locations section
+```
+
 ## [3.0.16] - 2025-12-17
 
 ### Fixed
