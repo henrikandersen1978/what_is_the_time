@@ -2,6 +2,63 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.38] - 2025-12-19
+
+### Fixed
+- **🔥 CRITICAL FIX: Hook Registration Timing for Concurrent Processing**
+  - **Problem**: v3.0.37 manual queue runner initiator was not working
+    - `initiate_additional_runners()` hook was registered via `$this->loader->add_action()`
+    - These hooks are not registered until `$this->loader->run()` executes
+    - **But** `action_scheduler_run_queue` triggers BEFORE `loader->run()` in request lifecycle
+    - Result: Hook never fires, no loopback requests sent, concurrent processing never starts
+  - **Solution**: Register `action_scheduler_run_queue` hook DIRECTLY via `add_action()`
+    - Changed from: `$this->loader->add_action( 'action_scheduler_run_queue', ... )`
+    - Changed to: `add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 0 )`
+    - This ensures immediate hook registration in constructor, not delayed until loader runs
+  - **Result**: Hook now fires correctly every minute, loopback requests sent, TRUE concurrent processing! 🚀
+
+### Enhanced
+- **📊 Enhanced Logging for Loopback Debugging**
+  - `initiate_additional_runners()`: Now logs when hook fires, concurrent setting, and loopback dispatch
+  - `handle_additional_runner_request()`: Logs when loopback received, validation, runner start/complete
+  - Makes it easy to verify concurrent processing is working via log files
+  - Log file: `https://testsite2.pilanto.dk/wp-content/uploads/world-time-ai-data/logs/YYYY-MM-DD-log.txt`
+
+### Technical Details
+
+**Root Cause Analysis:**
+
+WordPress plugin initialization flow:
+1. Plugin file loaded → `__construct()` called
+2. Constructor calls `define_action_scheduler_hooks()`
+3. Hooks added to `$this->loader` (NOT WordPress yet)
+4. **Meanwhile:** WP-Cron triggers `action_scheduler_run_queue` hook
+5. **Later:** `$plugin->run()` called → `$this->loader->run()` → hooks registered with WordPress
+
+**The Fix:**
+
+```php
+// ❌ OLD (v3.0.37) - Hook registered too late
+$this->loader->add_action( 'action_scheduler_run_queue', $this, 'initiate_additional_runners', 0 );
+
+// ✅ NEW (v3.0.38) - Hook registered immediately
+add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 0 );
+```
+
+**Files Modified:**
+- `includes/class-wta-core.php`: Direct hook registration + enhanced logging
+
+**Verification:**
+
+Check log for these entries when cron runs:
+```
+🔥 initiate_additional_runners HOOK FIRED!
+Initiating loopback requests (additional_runners: 11)
+🎯 LOOPBACK REQUEST RECEIVED! (instance: 1)
+⚡ Starting additional queue runner (instance: 1)
+✅ Queue runner completed (instance: 1)
+```
+
 ## [3.0.37] - 2025-12-19
 
 ### Added

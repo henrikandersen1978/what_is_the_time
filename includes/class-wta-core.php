@@ -301,12 +301,12 @@ class WTA_Core {
 	$ai_processor = new WTA_AI_Processor();
 	$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
 	
-	// v3.0.37: Initiate additional runners for concurrent processing
-	$this->loader->add_action( 'action_scheduler_run_queue', $this, 'initiate_additional_runners', 0 );
-	
-	// AJAX handlers for additional runners (no auth required - nonce validated)
-	$this->loader->add_action( 'wp_ajax_nopriv_wta_run_additional_queue', $this, 'handle_additional_runner_request' );
-	$this->loader->add_action( 'wp_ajax_wta_run_additional_queue', $this, 'handle_additional_runner_request' );
+	// v3.0.38: Register additional runner hooks DIRECTLY (not via loader)
+	// This ensures they are registered immediately, not delayed until loader->run()
+	// CRITICAL: action_scheduler_run_queue triggers very early, before loader->run()
+	add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 0 );
+	add_action( 'wp_ajax_nopriv_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
+	add_action( 'wp_ajax_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
 
 	// Log cleanup (v2.35.7) - Runs daily at 04:00
 	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
@@ -462,26 +462,39 @@ class WTA_Core {
 	 * @link     https://actionscheduler.org/perf/
 	 */
 	public function initiate_additional_runners() {
-		// Get current concurrent batches setting
+		// v3.0.38: Enhanced logging to debug loopback issues
 		$concurrent = $this->set_concurrent_batches( 1 );
 		
-		// Only initiate additional runners if concurrent > 1
+		WTA_Logger::info( '🔥 initiate_additional_runners HOOK FIRED!', array(
+			'concurrent_setting' => $concurrent,
+			'time' => current_time( 'mysql' ),
+			'hook' => current_filter(),
+		) );
+		
 		if ( $concurrent <= 1 ) {
+			WTA_Logger::debug( 'No additional runners needed (concurrent = 1)' );
 			return;
 		}
 		
-		// Allow self-signed SSL certificates
+		// Allow self-signed SSL certificates for loopback
 		add_filter( 'https_local_ssl_verify', '__return_false', 100 );
+		add_filter( 'http_request_timeout', function( $timeout ) { return 1; }, 100 );
+		
+		$ajax_url = admin_url( 'admin-ajax.php' );
+		
+		WTA_Logger::info( 'Initiating loopback requests', array(
+			'url' => $ajax_url,
+			'additional_runners' => $concurrent - 1,
+		) );
 		
 		// Start (concurrent - 1) additional runners
-		// -1 because WP-Cron already started 1 runner
 		for ( $i = 1; $i < $concurrent; $i++ ) {
-			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
+			$response = wp_remote_post( $ajax_url, array(
 				'method'      => 'POST',
-				'timeout'     => 0.01, // Very short timeout (non-blocking)
+				'timeout'     => 0.01,
 				'redirection' => 5,
 				'httpversion' => '1.0',
-				'blocking'    => false, // Non-blocking request
+				'blocking'    => false,
 				'sslverify'   => false,
 				'headers'     => array(),
 				'body'        => array(
@@ -490,11 +503,18 @@ class WTA_Core {
 					'nonce'    => wp_create_nonce( 'wta_runner_' . $i ),
 				),
 			) );
+			
+			// Log errors even for non-blocking requests
+			if ( is_wp_error( $response ) ) {
+				WTA_Logger::warning( 'Loopback request failed', array(
+					'instance' => $i,
+					'error' => $response->get_error_message(),
+				) );
+			}
 		}
 		
-		WTA_Logger::debug( 'Initiated additional queue runners', array(
-			'concurrent' => $concurrent,
-			'additional_runners' => $concurrent - 1,
+		WTA_Logger::info( '✅ All loopback requests dispatched', array(
+			'total_runners' => $concurrent,
 		) );
 	}
 	
@@ -504,27 +524,42 @@ class WTA_Core {
 	 * Validates nonce and starts ActionScheduler queue runner.
 	 * Called via AJAX from initiate_additional_runners().
 	 * 
+	 * v3.0.38: Enhanced logging for debugging
+	 * 
 	 * @since    3.0.37
 	 */
 	public function handle_additional_runner_request() {
+		WTA_Logger::info( '🎯 LOOPBACK REQUEST RECEIVED!', array(
+			'url' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+			'time' => current_time( 'mysql' ),
+		) );
+		
 		// Verify nonce
 		if ( ! isset( $_POST['nonce'] ) || ! isset( $_POST['instance'] ) ) {
+			WTA_Logger::error( 'Loopback validation failed: missing parameters' );
 			wp_die( 'Invalid request', 403 );
 		}
 		
 		$instance = absint( $_POST['instance'] );
 		
 		if ( ! wp_verify_nonce( $_POST['nonce'], 'wta_runner_' . $instance ) ) {
+			WTA_Logger::error( 'Loopback validation failed: invalid nonce', array( 'instance' => $instance ) );
 			wp_die( 'Invalid nonce', 403 );
 		}
 		
 		// Start ActionScheduler queue runner
 		if ( class_exists( 'ActionScheduler_QueueRunner' ) ) {
-			WTA_Logger::debug( 'Additional queue runner started', array(
+			WTA_Logger::info( '⚡ Starting additional queue runner', array(
 				'instance' => $instance,
 			) );
 			
 			ActionScheduler_QueueRunner::instance()->run();
+			
+			WTA_Logger::info( '✅ Queue runner completed', array(
+				'instance' => $instance,
+			) );
+		} else {
+			WTA_Logger::error( 'ActionScheduler_QueueRunner class not found!' );
 		}
 		
 		wp_die(); // End request
