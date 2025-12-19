@@ -140,6 +140,11 @@ class WTA_Activator {
 		add_option( 'wta_min_population', 0 );
 		add_option( 'wta_max_cities_per_country', 0 );
 
+		// Concurrent processing settings (v3.0.41)
+		add_option( 'wta_concurrent_test_mode', 10 );
+		add_option( 'wta_concurrent_normal_mode', 5 );
+		add_option( 'wta_concurrent_structure', 2 );
+
 		// Default AI prompts
 		self::set_default_prompts();
 	}
