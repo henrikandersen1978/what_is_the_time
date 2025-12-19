@@ -2,6 +2,65 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.40] - 2025-12-19
+
+### Removed
+- **🧹 ROLLBACK: Removed ALL Concurrent Processing Experiments (v3.0.36-3.0.39)**
+  - **Why**: Concurrent processing via loopback requests proved too complex and unreliable:
+    - v3.0.36-3.0.37: Loopback approach didn't work in practice
+    - v3.0.38: Hook registration timing issues
+    - v3.0.39: Debug hooks crashed plugin during activation
+    - **Reality**: Action Scheduler's loopback concurrency requires system-cron + WP-CLI setup (too complex)
+  - **Solution**: Return to stable, proven single-batch processing
+    - Action Scheduler will naturally run 1-2 jobs concurrently (default behavior)
+    - Batch sizes optimized for this throughput
+    - Simple, reliable, maintainable
+  
+### Technical Details
+
+**What Was Removed:**
+
+1. **`includes/class-wta-core.php`:**
+   - Removed `set_concurrent_batches()` method
+   - Removed `initiate_additional_runners()` method
+   - Removed `handle_additional_runner_request()` method
+   - Removed `action_scheduler_queue_runner_concurrent_batches` filter
+   - Removed all debug hook registrations (anonymous functions causing crashes)
+
+2. **`includes/admin/class-wta-settings.php`:**
+   - Removed `wta_concurrent_batches_test` setting registration
+   - Removed `wta_concurrent_batches_normal` setting registration
+
+3. **`includes/admin/views/data-import.php`:**
+   - Removed "Concurrent Batches (Test Mode)" input field
+   - Removed "Concurrent Batches (Normal Mode)" input field
+   - Removed "Current Active Setting" display
+   - Simplified to show only "Queue Runner Time Limit"
+
+4. **`includes/scheduler/class-wta-timezone-processor.php`:**
+   - Removed `wta_timezone_processor_lock` transient lock
+   - No longer needed (was added to prevent concurrent timezone processors)
+
+**What Remains:**
+
+- ✅ `increase_time_limit()` filter (60 seconds per batch) - **KEPT**
+- ✅ Optimized batch sizes for test/normal mode - **KEPT**
+- ✅ All 3 processors (structure, timezone, AI) - **KEPT**
+- ✅ Exponential backoff for API rate limits - **KEPT**
+
+**Result:**
+
+Clean, stable plugin that uses Action Scheduler's default behavior:
+- 1-2 concurrent jobs max (Action Scheduler default)
+- Proven reliability
+- No complex loopback setup needed
+- Import speed: Same as v3.0.35 (before concurrent experiments)
+
+**Migration:**
+
+No action needed. Old concurrent settings will be ignored (not deleted, just unused).
+Plugin will work exactly as it did before v3.0.36.
+
 ## [3.0.39] - 2025-12-19
 
 ### Fixed

@@ -285,9 +285,6 @@ class WTA_Core {
 	private function define_action_scheduler_hooks() {
 		// Increase Action Scheduler time limit for API-heavy operations
 		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
-		
-		// v3.0.36: Set concurrent batches dynamically based on test mode
-		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches' );
 
 		// Structure processor
 		$structure_processor = new WTA_Structure_Processor();
@@ -297,37 +294,12 @@ class WTA_Core {
 		$timezone_processor = new WTA_Timezone_Processor();
 		$this->loader->add_action( 'wta_process_timezone', $timezone_processor, 'process_batch' );
 
-	// AI processor
-	$ai_processor = new WTA_AI_Processor();
-	$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
-	
-	// v3.0.39: Debug - Register ALL Action Scheduler hooks to see which ones trigger
-	add_action( 'action_scheduler_run_queue', function() {
-		WTA_Logger::info( '🔥 action_scheduler_run_queue FIRED!' );
-	}, 0 );
-	
-	add_action( 'action_scheduler_before_process_queue', function() {
-		WTA_Logger::info( '🔥 action_scheduler_before_process_queue FIRED!' );
-	}, 0 );
-	
-	add_action( 'action_scheduler_after_process_queue', function() {
-		WTA_Logger::info( '🔥 action_scheduler_after_process_queue FIRED!' );
-	}, 999 );
-	
-	add_action( 'action_scheduler_before_execute', function( $action_id ) {
-		WTA_Logger::debug( '🔥 action_scheduler_before_execute FIRED!', array( 'action_id' => $action_id ) );
-	}, 0 );
-	
-	// v3.0.39: Try multiple hooks for initiating additional runners
-	add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 1 );
-	add_action( 'action_scheduler_before_process_queue', array( $this, 'initiate_additional_runners' ), 1 );
-	
-	// AJAX handlers for additional runners
-	add_action( 'wp_ajax_nopriv_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
-	add_action( 'wp_ajax_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
+		// AI processor
+		$ai_processor = new WTA_AI_Processor();
+		$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
 
-	// Log cleanup (v2.35.7) - Runs daily at 04:00
-	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
+		// Log cleanup (v2.35.7) - Runs daily at 04:00
+		$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
 	}
 
 	/**
@@ -436,165 +408,6 @@ class WTA_Core {
 	 */
 	public function increase_time_limit( $time_limit ) {
 		return 60; // 60 seconds to safely process timezone lookups
-	}
-	
-	/**
-	 * Set concurrent batches dynamically based on test mode.
-	 * 
-	 * Test mode: Higher concurrency (no API limits, only templates)
-	 * Normal mode: Moderate concurrency (respects OpenAI Tier 5 limits)
-	 * 
-	 * Note: Timezone processor has its own lock to run single-threaded
-	 * (TimeZoneDB FREE tier rate limit: 1 req/s)
-	 *
-	 * @since    3.0.36
-	 * @param    int $default Default concurrent batches (usually 1).
-	 * @return   int          Number of concurrent batches allowed.
-	 */
-	public function set_concurrent_batches( $default ) {
-		$test_mode = get_option( 'wta_test_mode', 0 );
-		
-		if ( $test_mode ) {
-			// Test mode: High parallelization (no API limits)
-			// Default: 12 concurrent batches
-			// Optimizes structure creation + template generation
-			return intval( get_option( 'wta_concurrent_batches_test', 12 ) );
-		} else {
-			// Normal mode: Moderate parallelization (respects OpenAI API limits)
-			// Default: 6 concurrent batches
-			// OpenAI Tier 5: 10,000 RPM - 6 concurrent = ~80 API calls/min (safe)
-			return intval( get_option( 'wta_concurrent_batches_normal', 6 ) );
-		}
-	}
-	
-	/**
-	 * Initiate additional queue runners for concurrent processing.
-	 * 
-	 * Triggers multiple async loopback requests to start additional runners.
-	 * Based on Action Scheduler performance recommendations.
-	 * 
-	 * Only runs if concurrent_batches > 1. For concurrent=12, this initiates 11 
-	 * additional runners via loopback requests (WP-Cron already started 1).
-	 * 
-	 * @since    3.0.37
-	 * @link     https://actionscheduler.org/perf/
-	 */
-	public function initiate_additional_runners() {
-		// v3.0.39: Prevent duplicate calls if multiple hooks fire
-		static $already_running = false;
-		
-		if ( $already_running ) {
-			WTA_Logger::debug( 'initiate_additional_runners already running, skipping duplicate call', array(
-				'hook' => current_filter(),
-			) );
-			return;
-		}
-		
-		$already_running = true;
-		
-		$concurrent = $this->set_concurrent_batches( 1 );
-		
-		WTA_Logger::info( '🔥 initiate_additional_runners CALLED!', array(
-			'concurrent_setting' => $concurrent,
-			'time' => current_time( 'mysql' ),
-			'hook' => current_filter(),
-		) );
-		
-		if ( $concurrent <= 1 ) {
-			WTA_Logger::debug( 'No additional runners needed (concurrent = 1)' );
-			$already_running = false;
-			return;
-		}
-		
-		// Allow self-signed SSL certificates for loopback
-		add_filter( 'https_local_ssl_verify', '__return_false', 100 );
-		add_filter( 'http_request_timeout', function( $timeout ) { return 1; }, 100 );
-		
-		$ajax_url = admin_url( 'admin-ajax.php' );
-		
-		WTA_Logger::info( 'Initiating loopback requests', array(
-			'url' => $ajax_url,
-			'additional_runners' => $concurrent - 1,
-		) );
-		
-		// Start (concurrent - 1) additional runners
-		for ( $i = 1; $i < $concurrent; $i++ ) {
-			$response = wp_remote_post( $ajax_url, array(
-				'method'      => 'POST',
-				'timeout'     => 0.01,
-				'redirection' => 5,
-				'httpversion' => '1.0',
-				'blocking'    => false,
-				'sslverify'   => false,
-				'headers'     => array(),
-				'body'        => array(
-					'action'   => 'wta_run_additional_queue',
-					'instance' => $i,
-					'nonce'    => wp_create_nonce( 'wta_runner_' . $i ),
-				),
-			) );
-			
-			// Log errors even for non-blocking requests
-			if ( is_wp_error( $response ) ) {
-				WTA_Logger::warning( 'Loopback request failed', array(
-					'instance' => $i,
-					'error' => $response->get_error_message(),
-				) );
-			}
-		}
-		
-		WTA_Logger::info( '✅ All loopback requests dispatched', array(
-			'total_runners' => $concurrent,
-		) );
-		
-		$already_running = false;
-	}
-	
-	/**
-	 * Handle additional queue runner requests.
-	 * 
-	 * Validates nonce and starts ActionScheduler queue runner.
-	 * Called via AJAX from initiate_additional_runners().
-	 * 
-	 * v3.0.38: Enhanced logging for debugging
-	 * 
-	 * @since    3.0.37
-	 */
-	public function handle_additional_runner_request() {
-		WTA_Logger::info( '🎯 LOOPBACK REQUEST RECEIVED!', array(
-			'url' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-			'time' => current_time( 'mysql' ),
-		) );
-		
-		// Verify nonce
-		if ( ! isset( $_POST['nonce'] ) || ! isset( $_POST['instance'] ) ) {
-			WTA_Logger::error( 'Loopback validation failed: missing parameters' );
-			wp_die( 'Invalid request', 403 );
-		}
-		
-		$instance = absint( $_POST['instance'] );
-		
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'wta_runner_' . $instance ) ) {
-			WTA_Logger::error( 'Loopback validation failed: invalid nonce', array( 'instance' => $instance ) );
-			wp_die( 'Invalid nonce', 403 );
-		}
-		
-		// Start ActionScheduler queue runner
-		if ( class_exists( 'ActionScheduler_QueueRunner' ) ) {
-			WTA_Logger::info( '⚡ Starting additional queue runner', array(
-				'instance' => $instance,
-			) );
-			
-			ActionScheduler_QueueRunner::instance()->run();
-			
-			WTA_Logger::info( '✅ Queue runner completed', array(
-				'instance' => $instance,
-			) );
-		} else {
-			WTA_Logger::error( 'ActionScheduler_QueueRunner class not found!' );
-		}
-		
-		wp_die(); // End request
 	}
 
 	/**

@@ -21,21 +21,6 @@ class WTA_Timezone_Processor {
 	 * @since    2.0.0
 	 */
 	public function process_batch() {
-		// v3.0.36: Single-threaded lock for TimeZoneDB FREE tier rate limit (1 req/s)
-		// Prevents multiple concurrent timezone processors from violating API limits
-		$lock_key = 'wta_timezone_processor_lock';
-		$lock_value = get_transient( $lock_key );
-		
-		if ( false !== $lock_value ) {
-			WTA_Logger::info( 'Timezone processor skipped - another instance running', array(
-				'lock_age_seconds' => time() - intval( $lock_value ),
-			) );
-			return; // Another processor is running, skip this one
-		}
-		
-		// Set lock (expires after 2 minutes as safety)
-		set_transient( $lock_key, time(), 120 );
-		
 		// Dynamic batch size based on cron interval
 		// v3.0.7: Reduced batch size + increased delay for FREE tier rate limit safety
 		// Each item: ~2.0s (API call + 2.0s delay)
@@ -48,8 +33,6 @@ class WTA_Timezone_Processor {
 		$items = WTA_Queue::get_pending( 'timezone', $batch_size );
 
 		if ( empty( $items ) ) {
-			// Release lock before returning
-			delete_transient( $lock_key );
 			return;
 		}
 
@@ -107,9 +90,6 @@ class WTA_Timezone_Processor {
 		'duration_seconds' => $duration,
 		'avg_per_item' => round( $duration / max( $processed, 1 ), 2 ),
 	) );
-	
-	// v3.0.36: Release lock to allow next processor to run
-	delete_transient( 'wta_timezone_processor_lock' );
 }
 
 	/**
