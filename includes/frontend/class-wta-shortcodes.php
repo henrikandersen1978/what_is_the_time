@@ -49,13 +49,19 @@ class WTA_Shortcodes {
 			return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
 		}
 		
-		// v3.0.23: Dynamic defaults based on location type
-		// Continents = broader scope → show 30 cities
-		// Countries = focused scope → show 50 cities (more detail)
-		$default_count = ( 'continent' === $type ) ? 30 : 50;
+		// v3.0.28: Check backend settings FIRST, then fallback to hardcoded defaults
+		// Continents = broader scope → default 30 cities
+		// Countries = focused scope → default 50 cities (more detail)
+		if ( 'continent' === $type ) {
+			$backend_setting = get_option( 'wta_major_cities_count_continent', 0 );
+			$default_count = $backend_setting > 0 ? $backend_setting : 30;
+		} else {
+			$backend_setting = get_option( 'wta_major_cities_count_country', 0 );
+			$default_count = $backend_setting > 0 ? $backend_setting : 50;
+		}
 		
 		$atts = shortcode_atts( array(
-			'count' => $default_count,
+			'count' => $default_count, // Now respects backend settings!
 		), $atts );
 		
 		// Check cache first (24 hours)

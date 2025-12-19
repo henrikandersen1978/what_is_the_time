@@ -17,7 +17,6 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_shortcode_settings' 
 	update_option( 'wta_child_locations_limit', intval( $_POST['wta_child_locations_limit'] ) );
 	update_option( 'wta_nearby_cities_count', intval( $_POST['wta_nearby_cities_count'] ) );
 	update_option( 'wta_nearby_countries_count', intval( $_POST['wta_nearby_countries_count'] ) );
-	update_option( 'wta_global_comparison_count', intval( $_POST['wta_global_comparison_count'] ) );
 	
 	echo '<div class="notice notice-success"><p>' . esc_html__( 'Shortcode settings saved. Caches will be refreshed automatically.', WTA_TEXT_DOMAIN ) . '</p></div>';
 }
@@ -28,7 +27,6 @@ $major_cities_country = get_option( 'wta_major_cities_count_country', 50 );
 $child_locations_limit = get_option( 'wta_child_locations_limit', 300 );
 $nearby_cities_count = get_option( 'wta_nearby_cities_count', 120 );
 $nearby_countries_count = get_option( 'wta_nearby_countries_count', 24 );
-$global_comparison_count = get_option( 'wta_global_comparison_count', 24 );
 ?>
 
 <div class="wrap">
@@ -127,18 +125,6 @@ $global_comparison_count = get_option( 'wta_global_comparison_count', 24 );
 							<p class="description">
 								<?php esc_html_e( 'Number of nearby countries to show (GPS-based distance). Recommended: 24', WTA_TEXT_DOMAIN ); ?>
 								<br><code>[wta_nearby_countries]</code>
-							</p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="wta_global_comparison_count"><?php esc_html_e( 'Global Time Comparison', WTA_TEXT_DOMAIN ); ?></label>
-						</th>
-						<td>
-							<input type="number" id="wta_global_comparison_count" name="wta_global_comparison_count" value="<?php echo esc_attr( $global_comparison_count ); ?>" min="1" max="50" class="small-text">
-							<p class="description">
-								<?php esc_html_e( 'Number of global cities to show in time comparison table. Recommended: 24', WTA_TEXT_DOMAIN ); ?>
-								<br><code>[wta_global_time_comparison]</code>
 							</p>
 						</td>
 					</tr>

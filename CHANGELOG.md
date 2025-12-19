@@ -2,6 +2,59 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.29] - 2025-12-19
+
+### Fixed
+- **Backend Settings Not Respected by Major Cities Shortcode**
+  - **Problem**: User set "Cities on Countries" to 48 in backend settings, but `[wta_major_cities]` on country pages showed 50 cities (hardcoded default)
+    - Backend setting: `wta_major_cities_count_country = 48` ✅
+    - Frontend output: 50 cities displayed ❌
+    - Schema also showed 50 items instead of 48
+  - **ROOT CAUSE**: `major_cities_shortcode()` used hardcoded defaults directly without checking backend settings first
+    ```php
+    // WRONG (v3.0.28 and earlier):
+    $default_count = ( 'continent' === $type ) ? 30 : 50; // Always 30/50!
+    ```
+  - **Fix**: Check backend settings FIRST, then fallback to hardcoded defaults (lines 52-62 in `class-wta-shortcodes.php`)
+    ```php
+    // CORRECT (v3.0.29):
+    if ( 'continent' === $type ) {
+        $backend_setting = get_option( 'wta_major_cities_count_continent', 0 );
+        $default_count = $backend_setting > 0 ? $backend_setting : 30;
+    } else {
+        $backend_setting = get_option( 'wta_major_cities_count_country', 0 );
+        $default_count = $backend_setting > 0 ? $backend_setting : 50;
+    }
+    ```
+  - **Priority Order** (now correct):
+    1. **Shortcode attribute** (highest): `[wta_major_cities count="20"]` → uses 20
+    2. **Backend setting** (medium): No attribute + backend = 48 → uses 48 ✅
+    3. **Hardcoded default** (lowest): No attribute + backend empty → uses 30/50
+  - **Already Working Correctly** (no changes needed):
+    - `[wta_child_locations]` → respects `wta_child_locations_limit` ✅
+    - `[wta_nearby_cities]` → respects `wta_nearby_cities_count` ✅
+    - `[wta_nearby_countries]` → respects `wta_nearby_countries_count` ✅
+
+### Changed
+- **Removed Global Time Comparison from Backend Settings**
+  - Removed `[wta_global_time_comparison]` count setting from Shortcode Settings page
+  - This shortcode uses distribution logic (5 cities from Europe, 5 from Asia, etc.) and doesn't support simple count configuration
+  - Removed saving/loading of `wta_global_comparison_count` option
+  - Backend settings now only show configurable shortcodes that actually respect the settings
+
+### Technical Details
+- **File Modified**: `includes/frontend/class-wta-shortcodes.php`
+  - Updated `major_cities_shortcode()` to check `get_option()` before using hardcoded defaults
+- **File Modified**: `includes/admin/views/shortcode-settings.php`
+  - Removed Global Time Comparison field and related code
+  - Cleaner UI showing only relevant, functional settings
+
+### Impact
+- Backend settings for shortcode counts now work as expected for ALL shortcodes ✅
+- User can now control exact number of cities displayed on continent/country pages ✅
+- Setting 48 in backend → frontend shows 48 (not 50) ✅
+- Cache keys include count, so changes apply immediately after cache refresh ✅
+
 ## [3.0.28] - 2025-12-18
 
 ### Fixed
