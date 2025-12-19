@@ -2,6 +2,61 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.34] - 2025-12-19
+
+### Fixed
+- **CRITICAL: H1 Not Updating for Countries/Continents in Force Regenerate**
+  - **Problem**: User repeatedly used "Force Regenerate" on Østrig (country page)
+    - Content updated ✅
+    - Yoast title updated ✅
+    - **H1 remained unchanged** ❌ (still showed old "Hvad er klokken i Østrig? Tidszoner og aktuelle tider")
+  - **ROOT CAUSE**: `force_regenerate_single()` only updated H1 for cities, not countries/continents
+    - Line 80 comment said "H1 is now generated separately in main flow" but that flow is in `process_item()`, not `force_regenerate_single()`
+    - The function was missing the entire H1 update logic for countries and continents
+  - **Solution**: Added H1 update logic to `force_regenerate_single()` for ALL location types
+    - Cities: `"Aktuel tid i {city}, {country}"` ✅
+    - Countries: `"Aktuel tid i byer i {country}"` ✅
+    - Continents: `"Aktuel tid i lande og byer i {continent}"` ✅
+  - **Impact**: 
+    - "Force Regenerate" now correctly updates H1 for countries and continents ✅
+    - Matches the behavior of `process_item()` (queue processing) ✅
+    - Added detailed logging for all H1 updates ✅
+
+### Changed
+- **Enhanced Logging in `force_regenerate_single()`**
+  - Added `WTA_Logger::info()` calls when H1 is updated for any location type
+  - Log messages include "(force regenerate)" suffix to distinguish from queue processing
+  - Helps verify that Force Regenerate is working correctly
+  - Check logs at: `wp-content/uploads/world-time-ai-data/logs/YYYY-MM-DD-log.txt`
+
+### Technical Details
+- **Files Modified**: `includes/scheduler/class-wta-ai-processor.php`
+  - `force_regenerate_single()` (lines 77-117): Added H1 update for all location types
+  - Logic mirrors `process_item()` H1 updates (lines 326-366)
+  - Now both code paths (queue + force regenerate) update H1 consistently
+- **Why It Was Missing**: The function was created before the H1/Title separation was implemented
+  - When H1 was changed to answer-based format (v3.0.30-31), only `process_item()` was updated
+  - `force_regenerate_single()` was overlooked
+  - This created inconsistent behavior between queue processing and manual regeneration
+
+### Testing Instructions
+1. Upload v3.0.34
+2. Go to: `WP Admin → World Time AI → Force Regenerate`
+3. Find post ID for Østrig: Run in phpMyAdmin:
+   ```sql
+   SELECT ID FROM wp_posts WHERE post_title = 'Østrig' AND post_type = 'wta_location';
+   ```
+4. Enter post ID and click "Regenerate Now"
+5. Wait 30-45 seconds
+6. Check database: `_pilanto_page_h1` should show "Aktuel tid i byer i Østrig" ✅
+7. Check frontend: https://testsite2.pilanto.dk/europa/oestrig/ - H1 should be updated ✅
+8. Check logs for "H1 updated (country - force regenerate)" message ✅
+
+### Related Issues
+- This completes the H1/Title separation work started in v3.0.30-31
+- Both processing methods (queue + force regenerate) now behave identically
+- Resolves user's repeated reports of H1 not updating despite content changes
+
 ## [3.0.33] - 2025-12-19
 
 ### Fixed

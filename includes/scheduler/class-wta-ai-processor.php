@@ -74,15 +74,51 @@ class WTA_AI_Processor {
 				'post_status'  => 'publish',
 			) );
 			
-			// Update Yoast SEO meta if available
-			if ( isset( $result['yoast_title'] ) ) {
-				update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
-				// v3.0.31: H1 is now generated separately in main flow (lines 303-330)
-				// This FAQ backfill section only runs for cities without FAQ
+		// Update Yoast SEO meta if available
+		if ( isset( $result['yoast_title'] ) ) {
+			update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+			
+			// v3.0.34: Generate answer-based H1 for ALL location types (separate from title tag)
+			// This was missing for countries/continents in force_regenerate_single!
+			if ( 'city' === $type ) {
+				// For cities: Generate answer-based H1
+				$parent_id = wp_get_post_parent_id( $post_id );
+				if ( $parent_id ) {
+					$country_name = get_post_field( 'post_title', $parent_id );
+					$city_name = get_the_title( $post_id );
+					$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
+					update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+					
+					WTA_Logger::info( 'H1 updated (city - force regenerate)', array( 
+						'post_id' => $post_id,
+						'h1' => $seo_h1
+					) );
+				}
+			} elseif ( 'country' === $type ) {
+				// For countries: Generate answer-based H1 (separate from title tag)
+				$country_name = get_the_title( $post_id );
+				$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $country_name );
+				update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+				
+				WTA_Logger::info( 'H1 updated (country - force regenerate)', array( 
+					'post_id' => $post_id,
+					'h1' => $seo_h1
+				) );
+			} elseif ( 'continent' === $type ) {
+				// For continents: Generate answer-based H1 (separate from title tag)
+				$continent_name = get_the_title( $post_id );
+				$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $continent_name );
+				update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+				
+				WTA_Logger::info( 'H1 updated (continent - force regenerate)', array( 
+					'post_id' => $post_id,
+					'h1' => $seo_h1
+				) );
 			}
-			if ( isset( $result['yoast_desc'] ) ) {
-				update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
-			}
+		}
+		if ( isset( $result['yoast_desc'] ) ) {
+			update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
+		}
 			
 			// Mark as done
 			update_post_meta( $post_id, 'wta_ai_status', 'done' );
