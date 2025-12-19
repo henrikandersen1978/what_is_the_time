@@ -247,6 +247,32 @@ class WTA_AI_Processor {
 						return;
 					}
 				} else {
+					// v3.0.32: For continents/countries, update H1 if it's outdated (old format)
+					// This ensures old pages get new answer-based H1 format
+					if ( 'continent' === $type || 'country' === $type ) {
+						$current_h1 = get_post_meta( $post_id, '_pilanto_page_h1', true );
+						
+						// Check if H1 needs updating (old format starts with "Hvad er")
+						if ( empty( $current_h1 ) || strpos( $current_h1, 'Hvad er' ) === 0 ) {
+							$location_name = get_the_title( $post_id );
+							
+							if ( 'country' === $type ) {
+								$new_h1 = sprintf( 'Aktuel tid i byer i %s', $location_name );
+							} else {
+								$new_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $location_name );
+							}
+							
+							update_post_meta( $post_id, '_pilanto_page_h1', $new_h1 );
+							
+							WTA_Logger::info( 'H1 updated to new format', array( 
+								'post_id' => $post_id,
+								'type' => $type,
+								'old_h1' => $current_h1,
+								'new_h1' => $new_h1
+							) );
+						}
+					}
+					
 					WTA_Logger::info( 'AI content already generated', array( 'post_id' => $post_id ) );
 					WTA_Queue::mark_done( $item['id'] );
 					return;

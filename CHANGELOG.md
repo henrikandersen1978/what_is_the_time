@@ -2,6 +2,65 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.32] - 2025-12-19
+
+### Fixed
+- **CRITICAL: H1 Not Updating for Existing Continents/Countries with "Force AI Content"**
+  - **Problem**: User reported after uploading v3.0.31 and running "Force AI Content" on Europa and Østrig, H1 titles remained in old format:
+    - Europa: Still showed "Hvad er klokken i Europa? Tidszoner og aktuel tid" ❌
+    - Østrig: Still showed "Hvad er klokken i Østrig? Tidszoner og aktuelle tider" ❌
+    - Expected: "Aktuel tid i lande og byer i Europa" and "Aktuel tid i byer i Østrig" ✅
+  - **ROOT CAUSE**: Early return in AI processor prevented H1 update
+    ```php
+    // PROBLEM (lines 249-252):
+    if ( 'done' === $ai_status ) {
+        // For cities: FAQ backfill logic (lines 209-248) ✅
+        // For continents/countries: Early return WITHOUT H1 update ❌
+        WTA_Logger::info( 'AI content already generated' );
+        return; // <--- Stops here! Never reaches H1 update code (lines 304-325)
+    }
+    ```
+  - **Why It Worked for Cities**: Cities have FAQ backfill logic (lines 209-248) that runs BEFORE the early return, updating H1 for old cities ✅
+  - **Why It Failed for Continents/Countries**: No equivalent logic for these types → early return skipped H1 update ❌
+  - **Fix**: Added H1 backfill logic for continents/countries (lines 251-277)
+    ```php
+    // v3.0.32: Update H1 for continents/countries if outdated
+    if ( 'continent' === $type || 'country' === $type ) {
+        $current_h1 = get_post_meta( $post_id, '_pilanto_page_h1', true );
+        
+        // Check if H1 needs updating (old format starts with "Hvad er")
+        if ( empty( $current_h1 ) || strpos( $current_h1, 'Hvad er' ) === 0 ) {
+            // Generate new answer-based H1
+            if ( 'country' === $type ) {
+                $new_h1 = sprintf( 'Aktuel tid i byer i %s', $location_name );
+            } else {
+                $new_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $location_name );
+            }
+            update_post_meta( $post_id, '_pilanto_page_h1', $new_h1 );
+        }
+    }
+    ```
+  - **Impact**: 
+    - "Force AI Content" now updates H1 for existing continents/countries ✅
+    - Old pages automatically get new H1 format without full content regeneration ✅
+    - Efficient: Only updates H1 if it's in old format (starts with "Hvad er") ✅
+
+### Technical Details
+- **File Modified**: `includes/scheduler/class-wta-ai-processor.php` (lines 249-277)
+  - Added H1 backfill logic in "already done" check section
+  - Mirrors FAQ backfill approach used for cities
+  - Checks if H1 is outdated by detecting old format ("Hvad er...")
+  - Updates only if needed (doesn't modify already correct H1s)
+- **Detection Logic**: `strpos( $current_h1, 'Hvad er' ) === 0` identifies old format
+- **Logging**: Added detailed logging for H1 updates with old/new values for debugging
+
+### Testing
+To update existing pages:
+1. Go to Europa or Østrig page in admin
+2. Click "Force AI Content"
+3. H1 will update from "Hvad er klokken i..." to "Aktuel tid i..." ✅
+4. Content remains unchanged (efficient - no AI costs) ✅
+
 ## [3.0.31] - 2025-12-19
 
 ### Changed
