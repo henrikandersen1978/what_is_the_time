@@ -2,6 +2,75 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.42] - 2025-12-19
+
+### Fixed
+- **🔧 AI Processor Smart Filtering (Prevents FAQ Generation Crashes)**
+  - **Problem**: AI processor was claiming ALL ai_content items, including cities without timezone data
+  - **Result**: FAQ generator failed on first city without timezone → entire batch crashed → 50+ items stuck in "claimed" limbo
+  - **Root Cause**: Structure processor queues AI content immediately, but timezone processor runs later for complex countries
+  - **Solution**: Modified `WTA_Queue::get_pending()` to intelligently filter ai_content items:
+    - ✅ **Continents/Countries**: Always claim (they don't require timezone)
+    - ✅ **Cities**: Only claim if `wta_timezone` postmeta exists and is valid (not NULL/empty/'multiple')
+  - **How It Works**: 
+    - Uses SQL JOIN with wp_postmeta to check timezone existence BEFORE claiming
+    - Cities without timezone remain in "pending" status
+    - Automatically retried on next batch after timezone processor sets the data
+  - **Benefits**:
+    - 🛡️ FAQ generator NEVER receives cities without timezone data
+    - 🔄 Automatic retry without re-queueing logic
+    - 🚀 No performance impact (single atomic query)
+    - 💯 100% backwards compatible with existing processors
+  - **Files Changed**: `includes/core/class-wta-queue.php` (only file modified)
+
+### Technical Details
+
+**SQL Query Enhancement:**
+```sql
+-- For ai_content type only:
+WHERE q.status = 'pending' AND q.type = 'ai_content'
+AND (
+    -- Continents/countries: always claim
+    JSON_EXTRACT(q.payload, '$.type') IN ('continent', 'country')
+    OR
+    -- Cities: only if timezone exists
+    (
+        JSON_EXTRACT(q.payload, '$.type') = 'city'
+        AND EXISTS (
+            SELECT 1 FROM wp_postmeta 
+            WHERE post_id = JSON_EXTRACT(q.payload, '$.post_id')
+            AND meta_key = 'wta_timezone'
+            AND meta_value IS NOT NULL
+            AND meta_value != ''
+            AND meta_value != 'multiple'
+        )
+    )
+)
+```
+
+**Processing Flow (No Changes to Existing Logic):**
+
+1. **Simple Countries (Denmark, Norway)**:
+   - Structure → Creates city + sets timezone → queues AI
+   - AI processor → Claims city (timezone ✅) → generates FAQ → done
+
+2. **Complex Countries (USA, Russia)**:
+   - Structure → Creates city (no timezone yet) → queues AI
+   - AI processor attempt #1 → Skip (timezone ❌) → item stays "pending"
+   - Timezone processor → Sets timezone via API
+   - AI processor attempt #2 → Claims city (timezone ✅) → generates FAQ → done
+
+3. **Continents & Countries**:
+   - Structure → Creates post → queues AI
+   - AI processor → Claims (no timezone check) → done
+
+**Why This Approach is Better:**
+- ✅ No changes to AI processor, FAQ generator, or structure/timezone processors
+- ✅ No risk of breaking existing functionality
+- ✅ No complex re-queueing logic needed
+- ✅ Atomic and concurrent-safe
+- ✅ Self-healing: items auto-retry when data is ready
+
 ## [3.0.41] - 2025-12-19
 
 ### Added

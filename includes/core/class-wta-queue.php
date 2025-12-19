@@ -82,7 +82,46 @@ class WTA_Queue {
 		
 		// ATOMIC CLAIM: Update status and claim_id in one query
 		// This prevents race conditions with concurrent processors
-		if ( $type ) {
+		
+		// v3.0.42: SPECIAL HANDLING FOR AI_CONTENT
+		// Only claim cities that have timezone data (prevents FAQ generation failures)
+		// Continents/countries are always claimed (they don't require timezone)
+		if ( 'ai_content' === $type ) {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE $table_name q
+					SET q.status = 'claimed', 
+						q.claim_id = %s,
+						q.updated_at = %s
+					WHERE q.status = 'pending' 
+					AND q.type = %s
+					AND (
+						-- Continents and countries: Always claim (no timezone required)
+						JSON_UNQUOTE(JSON_EXTRACT(q.payload, '$.type')) IN ('continent', 'country')
+						OR
+						-- Cities: Only claim if timezone exists and is valid
+						(
+							JSON_UNQUOTE(JSON_EXTRACT(q.payload, '$.type')) = 'city'
+							AND EXISTS (
+								SELECT 1 FROM {$wpdb->postmeta} pm
+								WHERE pm.post_id = JSON_UNQUOTE(JSON_EXTRACT(q.payload, '$.post_id'))
+								AND pm.meta_key = 'wta_timezone'
+								AND pm.meta_value IS NOT NULL
+								AND pm.meta_value != ''
+								AND pm.meta_value != 'multiple'
+							)
+						)
+					)
+					ORDER BY q.created_at ASC 
+					LIMIT %d",
+					$claim_id,
+					$now,
+					$type,
+					$limit
+				)
+			);
+		} elseif ( $type ) {
+			// Standard claiming for other queue types
 			$updated = $wpdb->query(
 				$wpdb->prepare(
 					"UPDATE $table_name 
@@ -100,6 +139,7 @@ class WTA_Queue {
 				)
 			);
 		} else {
+			// No type specified - claim all pending
 			$updated = $wpdb->query(
 				$wpdb->prepare(
 					"UPDATE $table_name 
