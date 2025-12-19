@@ -2,6 +2,49 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.35] - 2025-12-19
+
+### Fixed
+- **H1 Not Updating for Cities in Test Mode Regeneration**
+  - **Problem**: When regenerating city content in test mode, H1 was not updated
+    - Initial import set H1 correctly ✅
+    - But test mode regeneration via `generate_template_city_content()` did not update H1 ❌
+    - Countries and continents were already fixed in v3.0.33-34
+  - **Solution**: Added H1 update to `generate_template_city_content()`
+    ```php
+    // v3.0.34: Update H1 directly in template function
+    update_post_meta( $post_id, '_pilanto_page_h1', sprintf( 'Aktuel tid i %s, %s', $name_local, $country_name ) );
+    ```
+  - **Impact**: All three template functions now consistently update H1 ✅
+    - `generate_template_city_content()` → Cities
+    - `generate_template_country_content()` → Countries (v3.0.33)
+    - `generate_template_continent_content()` → Continents (v3.0.33)
+
+### Summary: H1 Update Consistency Across All Code Paths
+
+**All location types now have H1 updates in all 3 code paths:**
+
+| Code Path | Cities | Countries | Continents |
+|-----------|--------|-----------|------------|
+| **Initial Import** (structure processor) | ✅ v3.0.31 | ✅ v3.0.31 | ✅ v3.0.31 |
+| **Queue Processing** (process_item) | ✅ v3.0.31 | ✅ v3.0.32 | ✅ v3.0.32 |
+| **Force Regenerate** (force_regenerate_single) | ✅ v3.0.34 | ✅ v3.0.34 | ✅ v3.0.34 |
+| **Test Mode Templates** | ✅ v3.0.35 | ✅ v3.0.33 | ✅ v3.0.33 |
+
+**H1 Formats (Answer-based, consistent across all paths):**
+- Cities: `"Aktuel tid i {city}, {country}"`
+- Countries: `"Aktuel tid i byer i {country}"`
+- Continents: `"Aktuel tid i lande og byer i {continent}"`
+
+### Technical Details
+- **Files Modified**: `includes/scheduler/class-wta-ai-processor.php`
+  - `generate_template_city_content()` (line ~1658): Added H1 update for cities
+  - Now matches the pattern in country/continent template functions
+- **Why It Was Missing**: Cities were the first to get test mode templates
+  - When H1 was later separated from title (v3.0.30-31), only the queue path was updated
+  - Template functions for countries/continents were fixed in v3.0.33
+  - City template was overlooked until now
+
 ## [3.0.34] - 2025-12-19
 
 ### Fixed

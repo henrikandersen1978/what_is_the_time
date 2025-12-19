@@ -1656,6 +1656,9 @@ class WTA_AI_Processor {
 	// This prevents FAQ duplication (was appearing twice on frontend)
 	// FAQ generation happens in process_item() after generate_city_content() returns
 	
+	// v3.0.34: Update H1 directly in template function (ensures it's always set)
+	update_post_meta( $post_id, '_pilanto_page_h1', sprintf( 'Aktuel tid i %s, %s', $name_local, $country_name ) );
+	
 	// v3.0.24: No year in titles
 	return array(
 		'content' => $content,
