@@ -177,12 +177,13 @@ class WTA_Structure_Processor {
 	update_post_meta( $post_id, 'wta_continent_code', WTA_Utils::get_continent_code( $data['name'] ) );
 	update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 		
-	// Save SEO-friendly H1 title for theme to display
-	$seo_h1 = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+	// v3.0.31: Answer-based H1 (consistent format across all location types)
+	$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $data['name_local'] );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// Update Yoast SEO title for proper schema integration
-	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_h1 );
+	// Update Yoast SEO title (separate from H1 - question-based for better CTR)
+	$yoast_title = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+	update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 		// Queue AI content generation
 		WTA_Queue::add( 'ai_content', array(
@@ -328,12 +329,13 @@ class WTA_Structure_Processor {
 			}
 		}
 
-	// Save SEO-friendly H1 title matching search intent
-	$seo_h1 = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+	// v3.0.31: Answer-based H1 (consistent format across all location types)
+	$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $data['name_local'] );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// Update Yoast SEO title for proper schema integration
-	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_h1 );
+	// Update Yoast SEO title (separate from H1 - question-based for better CTR)
+	$yoast_title = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+	update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 	// Queue AI content generation
 		WTA_Queue::add( 'ai_content', array(

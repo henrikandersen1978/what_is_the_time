@@ -2,6 +2,81 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.31] - 2025-12-19
+
+### Changed
+- **Consistent Answer-Based H1 Format Across All Location Types**
+  - **User Request**: "For kontinenter kunne overskriften være 'Aktuel tid i lande og byer i [kontinent]' / For lande kunne det være 'Aktuel tid i byer i [land]'"
+  - **Previous H1 Formats** (inconsistent, question-based):
+    - Continents: "Hvad er klokken i Europa? Tidszoner og aktuel tid" ❌
+    - Countries: "Hvad er klokken i Østrig? Tidszoner og aktuelle tider" ❌
+    - Cities: "Aktuel tid i Wien, Østrig" ✅ (already answer-based)
+  - **New H1 Formats** (consistent, answer-based):
+    - Continents: "Aktuel tid i lande og byer i Europa" ✅
+    - Countries: "Aktuel tid i byer i Østrig" ✅
+    - Cities: "Aktuel tid i Wien, Østrig" ✅ (unchanged)
+  - **Why This Is Better**:
+    - ✅ Consistent format across ALL location types
+    - ✅ Answer-based (responds directly to user question)
+    - ✅ Shorter and more precise (less verbose)
+    - ✅ Better for featured snippets (direct answer format)
+    - ✅ Better UX (user gets answer immediately)
+  - **Title Tags Remain Separate** (unchanged, question-based for CTR):
+    - Continents: "Hvad er klokken i Europa? Tidszoner og aktuel tid"
+    - Countries: "Hvad er klokken i Østrig?"
+    - Cities: "Hvad er klokken i Wien, Danmark?"
+    - This separation is **SEO best practice**: Question in SERP → Answer on page
+  - **Implementation**:
+    - **H1** (`_pilanto_page_h1`): Answer-based, displayed as page H1
+    - **Title Tag** (`_yoast_wpseo_title`): Question-based, displayed in SERP and browser tab
+    - These are now **two completely separate fields** with different purposes
+
+### Fixed
+- **H1 Incorrectly Using Title Tag for Continents/Countries**
+  - **Problem**: In AI content regeneration, continents and countries had H1 set to title tag value
+    ```php
+    // WRONG (v3.0.30):
+    update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
+    ```
+  - **Fix**: H1 now generated independently with answer-based format
+    ```php
+    // CORRECT (v3.0.31):
+    if ( 'country' === $type ) {
+        $seo_h1 = sprintf( 'Aktuel tid i byer i %s', $country_name );
+        update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+    } elseif ( 'continent' === $type ) {
+        $seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $continent_name );
+        update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+    }
+    ```
+  - **Impact**: H1 and title tag are now properly separated with distinct purposes ✅
+
+### Technical Details
+- **Files Modified**:
+  - `includes/scheduler/class-wta-structure-processor.php` (lines ~180-186, ~331-337)
+    - Updated initial import H1 generation for continents and countries
+    - Separated H1 from title tag generation
+  - `includes/scheduler/class-wta-ai-processor.php` (lines ~78-84, ~303-330)
+    - Updated AI content regeneration H1 logic
+    - Added explicit H1 generation for continents and countries (no longer reusing title tag)
+- **Field Usage**:
+  - `_pilanto_page_h1`: Used ONLY for H1 tag (answer-based) ✅
+  - `_yoast_wpseo_title`: Used ONLY for title tag (question-based) ✅
+  - No overlap or confusion between these fields ✅
+- **Applies To**:
+  - New imports: Correct H1 format from start ✅
+  - Force AI Content: Regenerates with new H1 format ✅
+  - Normal AI regeneration: Updates to new H1 format ✅
+
+### SEO Impact
+**Best Practice Strategy Now Implemented:**
+- **SERP (Title Tag)**: Question-based → Matches user search query → Better CTR
+- **Page (H1)**: Answer-based → Provides direct answer → Better UX + Featured Snippets
+- **Example for Østrig**:
+  - User searches: "hvad er klokken i østrig"
+  - Sees in SERP: "Hvad er klokken i Østrig?" → Clicks (good CTR) ✅
+  - Lands on page: H1 "Aktuel tid i byer i Østrig" → Gets answer (good UX) ✅
+
 ## [3.0.30] - 2025-12-19
 
 ### Fixed

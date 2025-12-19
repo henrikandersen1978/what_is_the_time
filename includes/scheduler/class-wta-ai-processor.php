@@ -77,10 +77,8 @@ class WTA_AI_Processor {
 			// Update Yoast SEO meta if available
 			if ( isset( $result['yoast_title'] ) ) {
 				update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
-				// Only update H1 for continents and countries, NOT cities
-				if ( 'city' !== $type ) {
-					update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
-				}
+				// v3.0.31: H1 is now generated separately in main flow (lines 303-330)
+				// This FAQ backfill section only runs for cities without FAQ
 			}
 			if ( isset( $result['yoast_desc'] ) ) {
 				update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
@@ -303,7 +301,7 @@ class WTA_AI_Processor {
 	if ( isset( $result['yoast_title'] ) ) {
 		update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
 		
-		// v3.0.22: Regenerate H1 with correct format for all types
+		// v3.0.31: Generate answer-based H1 for ALL location types (separate from title tag)
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		if ( 'city' === $type ) {
 			// For cities: Generate answer-based H1 (ensures old cities get new format)
@@ -314,9 +312,16 @@ class WTA_AI_Processor {
 				$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
 				update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 			}
-		} else {
-			// For continents/countries: Use title as H1
-			update_post_meta( $post_id, '_pilanto_page_h1', $result['yoast_title'] );
+		} elseif ( 'country' === $type ) {
+			// For countries: Generate answer-based H1 (separate from title tag)
+			$country_name = get_the_title( $post_id );
+			$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $country_name );
+			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+		} elseif ( 'continent' === $type ) {
+			// For continents: Generate answer-based H1 (separate from title tag)
+			$continent_name = get_the_title( $post_id );
+			$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $continent_name );
+			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 		}
 	}
 	if ( isset( $result['yoast_desc'] ) ) {
