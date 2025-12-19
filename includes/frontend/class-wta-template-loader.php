@@ -587,20 +587,31 @@ class WTA_Template_Loader {
 			$has_nearby_sections = true;
 		}
 		
-		// v3.0.26: For continents/countries, extract intro to show BEFORE quick nav buttons
+		// v3.0.30: For continents/countries, extract ALL intro paragraphs (before first heading/shortcode)
 		$intro_html = '';
 		$remaining_content = $content;
 		
 		if ( in_array( $type, array( 'continent', 'country' ) ) ) {
-			// Content structure: "<p>Intro...</p>\n\n[shortcode]..."
-			// Extract intro (first paragraph) to show before navigation buttons
-			$pos = strpos( $content, '</p>' );
+			// Extract ALL intro paragraphs up to first <h2> or [shortcode]
+			// This handles both template content (1 paragraph) and AI content (2-3 paragraphs)
+			$h2_pos = strpos( $content, '<h2>' );
+			$shortcode_pos = strpos( $content, '[wta_' );
 			
-			if ( false !== $pos ) {
-				// Extract intro paragraph (including </p> tag)
-				$intro_html = '<div class="wta-intro-section">' . substr( $content, 0, $pos + 4 ) . '</div>';
-				// Remaining content (after intro)
-				$remaining_content = substr( $content, $pos + 4 );
+			// Use whichever comes first (or false if neither exists)
+			$split_pos = false;
+			if ( false !== $h2_pos && false !== $shortcode_pos ) {
+				$split_pos = min( $h2_pos, $shortcode_pos );
+			} elseif ( false !== $h2_pos ) {
+				$split_pos = $h2_pos;
+			} elseif ( false !== $shortcode_pos ) {
+				$split_pos = $shortcode_pos;
+			}
+			
+			if ( false !== $split_pos ) {
+				// Extract ALL intro content (all paragraphs before first heading/shortcode)
+				$intro_html = '<div class="wta-intro-section">' . trim( substr( $content, 0, $split_pos ) ) . '</div>';
+				// Remaining content (from heading/shortcode onwards)
+				$remaining_content = substr( $content, $split_pos );
 			}
 		}
 		

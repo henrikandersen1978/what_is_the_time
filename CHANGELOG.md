@@ -2,6 +2,74 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.30] - 2025-12-19
+
+### Fixed
+- **Multiple Intro Paragraphs Appearing After Navigation Buttons**
+  - **Problem**: When using "Force AI Content" on country/continent pages, intro appeared BOTH before AND after navigation buttons
+    - User report: "det ligner næste at der nu er 2 indledninger. En før og en efter knapperne?"
+    - Example: Østrig page showed one paragraph before buttons, then another after buttons
+    - Only happened with AI-generated content, not template content
+  - **ROOT CAUSE**: Different intro structures between modes
+    - **Template content (test mode)**: Single paragraph intro
+      ```
+      <p>Dette er testindhold for Østrig...</p>
+      [wta_child_locations]
+      ```
+    - **AI-generated content (force_ai or normal AI)**: Multiple paragraph intro (2-3)
+      ```
+      <p>Østrig ligger i Centraleuropa...</p>
+      <p>I øjeblikket er klokken i Østrig...</p>
+      [wta_child_locations]
+      ```
+    - Old extraction logic (v3.0.29): Only extracted up to **first** `</p>` tag
+      - First paragraph → moved before buttons ✅
+      - Remaining intro paragraphs → stayed after buttons ❌
+  - **Fix**: Extract ALL intro paragraphs before first heading or shortcode (lines 590-615 in `class-wta-template-loader.php`)
+    ```php
+    // v3.0.30: Find first <h2> OR [shortcode]
+    $h2_pos = strpos( $content, '<h2>' );
+    $shortcode_pos = strpos( $content, '[wta_' );
+    $split_pos = min( $h2_pos, $shortcode_pos ); // Use earliest
+    
+    // Extract ALL intro content (all paragraphs before split)
+    $intro_html = substr( $content, 0, $split_pos );
+    $remaining_content = substr( $content, $split_pos );
+    ```
+  - **Impact**: 
+    - Template content (1 paragraph): Works perfectly ✅
+    - AI content (2-3 paragraphs): ALL intro paragraphs now before buttons ✅
+    - No more split intros! ✅
+
+### Technical Details
+- **File Modified**: `includes/frontend/class-wta-template-loader.php`
+  - Enhanced intro extraction logic in `inject_navigation()` method
+  - Now splits on first structural element (`<h2>` or `[wta_`) instead of first `</p>`
+  - Handles variable intro lengths gracefully
+- **Why AI Creates Multiple Paragraphs**: 
+  - AI generates longer, more detailed intros (600 tokens)
+  - `add_paragraph_breaks()` splits long text into 2-3 paragraphs for readability (lines 1425-1460 in `class-wta-ai-processor.php`)
+  - This is by design for better UX! ✅
+
+### Clarification: Force AI vs Normal Mode
+**Question**: "Forskellen i 'Forced AI content' og 'normal mode ai'?"
+
+**Answer**: 
+- **When Test Mode is ON** (your current setting):
+  - Normal import → Template content (no AI, no costs) 📝
+  - Force AI → Real AI content (ignores test mode) 🤖
+  - **Different outputs!** This is why you saw the difference.
+
+- **When Test Mode is OFF** (production):
+  - Normal import → Real AI ✅
+  - Force AI → Real AI ✅
+  - **Identical outputs!** Same prompts, same model, same tokens.
+  - Both use prompts from backend ✅
+  - Both use same token limits (600-800 per section) ✅
+  - No quality difference! ✅
+
+**Token limits you configured earlier are preserved** - they're hardcoded in the AI processor and apply to BOTH methods! Your longer, better texts are safe. ✅
+
 ## [3.0.29] - 2025-12-19
 
 ### Fixed
