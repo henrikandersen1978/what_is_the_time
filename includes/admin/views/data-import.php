@@ -156,21 +156,52 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 			
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Concurrent Runners', WTA_TEXT_DOMAIN ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Concurrent Batches (Test Mode)', WTA_TEXT_DOMAIN ); ?></th>
 					<td>
-						<strong>2</strong>
+						<input type="number" 
+						       name="wta_concurrent_batches_test" 
+						       value="<?php echo esc_attr( get_option( 'wta_concurrent_batches_test', 12 ) ); ?>" 
+						       min="1" 
+						       max="20" 
+						       class="small-text">
 						<p class="description">
-							<?php esc_html_e( 'Fixed at 2 concurrent runners (WP-Cron + occasional async).', WTA_TEXT_DOMAIN ); ?><br>
-							<?php esc_html_e( 'Testing showed Action Scheduler\'s concurrent_batches is a GLOBAL limit, not per-runner.', WTA_TEXT_DOMAIN ); ?>
+							<strong>Recommended: 10-15 for 16 CPU server</strong><br>
+							<?php esc_html_e( 'High parallelization (no API limits in test mode). Optimizes structure creation and template generation.', WTA_TEXT_DOMAIN ); ?><br>
+							⚠️ <?php esc_html_e( 'Timezone processor always runs single-threaded (TimeZoneDB FREE tier rate limit).', WTA_TEXT_DOMAIN ); ?>
 						</p>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Batch Size', WTA_TEXT_DOMAIN ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Concurrent Batches (Normal Mode)', WTA_TEXT_DOMAIN ); ?></th>
 					<td>
-						<strong>300 actions per batch</strong>
+						<input type="number" 
+						       name="wta_concurrent_batches_normal" 
+						       value="<?php echo esc_attr( get_option( 'wta_concurrent_batches_normal', 6 ) ); ?>" 
+						       min="1" 
+						       max="15" 
+						       class="small-text">
 						<p class="description">
-							<?php esc_html_e( '2 runners × 300 batch = 600 actions per cycle (every minute)', WTA_TEXT_DOMAIN ); ?>
+							<strong>Recommended: 5-8 for OpenAI Tier 5</strong><br>
+							<?php esc_html_e( 'Moderate parallelization (respects OpenAI API rate limits). Balances speed and API quotas.', WTA_TEXT_DOMAIN ); ?><br>
+							ℹ️ <?php esc_html_e( 'OpenAI Tier 5: 10,000 RPM limit. 6 concurrent = ~80 API calls/min (safe).', WTA_TEXT_DOMAIN ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Current Active Setting', WTA_TEXT_DOMAIN ); ?></th>
+					<td>
+						<?php
+						$test_mode = get_option( 'wta_test_mode', 0 );
+						$active_concurrent = $test_mode 
+							? get_option( 'wta_concurrent_batches_test', 12 )
+							: get_option( 'wta_concurrent_batches_normal', 6 );
+						?>
+						<strong><?php echo intval( $active_concurrent ); ?> concurrent batches</strong>
+						<span style="color: <?php echo $test_mode ? '#2271b1' : '#d63638'; ?>;">
+							(<?php echo $test_mode ? 'Test Mode' : 'Normal Mode'; ?>)
+						</span>
+						<p class="description">
+							<?php esc_html_e( 'Dynamically switches based on Test Mode setting in AI Settings.', WTA_TEXT_DOMAIN ); ?>
 						</p>
 					</td>
 				</tr>

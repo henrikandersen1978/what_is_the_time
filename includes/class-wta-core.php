@@ -285,6 +285,9 @@ class WTA_Core {
 	private function define_action_scheduler_hooks() {
 		// Increase Action Scheduler time limit for API-heavy operations
 		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
+		
+		// v3.0.36: Set concurrent batches dynamically based on test mode
+		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches' );
 
 		// Structure processor
 		$structure_processor = new WTA_Structure_Processor();
@@ -408,6 +411,35 @@ class WTA_Core {
 	 */
 	public function increase_time_limit( $time_limit ) {
 		return 60; // 60 seconds to safely process timezone lookups
+	}
+	
+	/**
+	 * Set concurrent batches dynamically based on test mode.
+	 * 
+	 * Test mode: Higher concurrency (no API limits, only templates)
+	 * Normal mode: Moderate concurrency (respects OpenAI Tier 5 limits)
+	 * 
+	 * Note: Timezone processor has its own lock to run single-threaded
+	 * (TimeZoneDB FREE tier rate limit: 1 req/s)
+	 *
+	 * @since    3.0.36
+	 * @param    int $default Default concurrent batches (usually 1).
+	 * @return   int          Number of concurrent batches allowed.
+	 */
+	public function set_concurrent_batches( $default ) {
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		
+		if ( $test_mode ) {
+			// Test mode: High parallelization (no API limits)
+			// Default: 12 concurrent batches
+			// Optimizes structure creation + template generation
+			return intval( get_option( 'wta_concurrent_batches_test', 12 ) );
+		} else {
+			// Normal mode: Moderate parallelization (respects OpenAI API limits)
+			// Default: 6 concurrent batches
+			// OpenAI Tier 5: 10,000 RPM - 6 concurrent = ~80 API calls/min (safe)
+			return intval( get_option( 'wta_concurrent_batches_normal', 6 ) );
+		}
 	}
 
 	/**

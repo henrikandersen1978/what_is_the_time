@@ -19,10 +19,14 @@ class WTA_Settings {
 		register_setting( 'wta_data_import_settings_group', 'wta_github_states_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
 		register_setting( 'wta_data_import_settings_group', 'wta_github_cities_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
 		
-		// Performance Settings
-		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_batches', array( 
+		// Performance Settings (v3.0.36)
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_batches_test', array( 
 			'sanitize_callback' => 'absint',
-			'default' => 10
+			'default' => 12
+		) );
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_batches_normal', array( 
+			'sanitize_callback' => 'absint',
+			'default' => 6
 		) );
 
 		// AI Settings

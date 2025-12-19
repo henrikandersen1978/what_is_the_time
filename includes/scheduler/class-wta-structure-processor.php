@@ -73,9 +73,10 @@ class WTA_Structure_Processor {
 	$test_mode = get_option( 'wta_test_mode', 0 );
 	
 	if ( $test_mode ) {
-		// Test mode: Faster processing (v3.0.6 - reduced for better AI parallelization)
-		// 1-min: 25 cities (~13s) + 55 AI = 80 jobs/min, 5-min: 200 cities (~100s)
-		$batch_size = ( $cron_interval >= 300 ) ? 200 : 25;
+		// Test mode: Fast processing (v3.0.36 - optimized for concurrent batches)
+		// 1-min: 100 cities (~50s), 5-min: 200 cities (~100s)
+		// With 5 concurrent structure processors = 500 cities/min throughput
+		$batch_size = ( $cron_interval >= 300 ) ? 200 : 100;
 	} else {
 		// Normal mode: Conservative for API limits
 		// 1-min: 10 cities (~5s), 5-min: 50 cities (~25s)

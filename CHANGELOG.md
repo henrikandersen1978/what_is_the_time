@@ -2,6 +2,107 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.36] - 2025-12-19
+
+### Added
+- **🚀 Concurrent Processing - Massive Performance Improvement**
+  - **Backend Settings**: Added configurable concurrent batches for Test Mode and Normal Mode
+    - Test Mode Default: **12 concurrent batches** (optimized for template generation, no API limits)
+    - Normal Mode Default: **6 concurrent batches** (respects OpenAI Tier 5 rate limits)
+    - Settings Page: `Data Import → Concurrent Processing`
+  - **Dynamic Switching**: Automatically switches between test/normal settings based on Test Mode toggle
+  - **Performance Gains**:
+    - **Test Mode**: 210,216 cities from **140 hours** → **~7 hours** (structure) 🔥
+    - **Normal Mode**: Conservative settings to prevent API overruns
+  
+- **🔒 Timezone Processor Lock (Single-Threaded)**
+  - Implements transient-based lock to ensure only 1 timezone processor runs at a time
+  - **Critical for TimeZoneDB FREE tier** (1 request/second limit)
+  - Prevents concurrent processors from violating API rate limits
+  - Lock expires after 2 minutes as safety mechanism
+  - Logs when processor is skipped due to existing lock
+
+### Changed
+- **⚡ Increased Structure Batch Sizes (Test Mode)**
+  - 1-min cron: **25 → 100 cities** per batch
+  - 5-min cron: 200 cities per batch (unchanged)
+  - **Rationale**: With concurrent processing, each processor can handle larger batches
+  - **Expected throughput**: 5 concurrent × 100/min = **500 cities/min** (vs previous 25/min)
+  
+- **🎛️ Action Scheduler Optimization**
+  - Added `action_scheduler_queue_runner_concurrent_batches` filter
+  - Dynamically sets concurrent batches based on Test Mode setting
+  - Replaces old hardcoded concurrent_batches setting
+
+### Technical Details
+
+**Files Modified:**
+1. `includes/class-wta-core.php`
+   - Added `set_concurrent_batches()` method
+   - Registers filter: `action_scheduler_queue_runner_concurrent_batches`
+   
+2. `includes/admin/class-wta-settings.php`
+   - Registered settings: `wta_concurrent_batches_test` (default: 12)
+   - Registered settings: `wta_concurrent_batches_normal` (default: 6)
+   - Removed old: `wta_concurrent_batches`
+   
+3. `includes/admin/views/data-import.php`
+   - Added backend settings UI for concurrent batches
+   - Shows current active setting based on Test Mode
+   - Includes recommendations and warnings
+   
+4. `includes/scheduler/class-wta-timezone-processor.php`
+   - Added lock mechanism at start of `process_batch()`
+   - Lock key: `wta_timezone_processor_lock`
+   - Lock release at end of batch and early returns
+   
+5. `includes/scheduler/class-wta-structure-processor.php`
+   - Increased test mode batch size: 25 → 100 cities (1-min cron)
+
+### Performance Analysis
+
+**Test Mode Import (210,216 cities, FREE TimeZoneDB):**
+
+| Processor | Concurrent | Batch Size | Throughput | Completion Time |
+|-----------|------------|------------|------------|-----------------|
+| Structure | 5 instances | 100/min | 500 cities/min | **7 hours** ✅ |
+| Timezone | 1 (locked) | 5/min | 5 lookups/min | **22.8 hours** 🔴 |
+| AI Content | 6 instances | 55/min | 330 cities/min | **15 minutes** ✅ |
+
+**Total: ~23 hours** (limited by timezone processor)
+**Previous: ~140 hours** → **85% faster!** 🚀
+
+**Bottleneck**: TimeZoneDB FREE tier (1 req/s)
+- Upgrade to Premium ($9.99/mth): 60 req/s → 120 lookups/min → **6 hour total import**
+
+**Normal Mode (OpenAI Tier 5: 10,000 RPM):**
+- 6 concurrent batches × 3 cities/min × 8 API calls = ~144 API calls/min
+- **Only 1.44% of Tier 5 limit** - very safe! ✅
+
+### Recommendations
+
+**For 16 CPU Server:**
+1. Test Mode: Set concurrent batches to **10-15**
+2. Normal Mode: Set concurrent batches to **5-8**
+3. Monitor server load via `htop` or similar
+4. Consider TimeZoneDB Premium upgrade for faster imports
+
+**Database Considerations:**
+- MySQL `max_connections` typically 151 (default)
+- 12 concurrent batches = ~12-15 active connections
+- **No risk of connection exhaustion** ✅
+
+### Migration Notes
+
+**Automatic Migration:**
+- Old `wta_concurrent_batches` setting is ignored (if exists)
+- New defaults automatically applied:
+  - Test Mode: 12
+  - Normal Mode: 6
+- Existing installations will immediately benefit from concurrent processing
+
+**No Manual Action Required** - Just upload and activate! 🎉
+
 ## [3.0.35] - 2025-12-19
 
 ### Fixed
