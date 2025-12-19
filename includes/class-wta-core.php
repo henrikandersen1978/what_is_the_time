@@ -286,6 +286,9 @@ class WTA_Core {
 		// Increase Action Scheduler time limit for API-heavy operations
 		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
 
+		// Dynamic concurrent batches per action type (v3.0.41)
+		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', 999 );
+
 		// Structure processor
 		$structure_processor = new WTA_Structure_Processor();
 		$this->loader->add_action( 'wta_process_structure', $structure_processor, 'process_batch' );
@@ -408,6 +411,50 @@ class WTA_Core {
 	 */
 	public function increase_time_limit( $time_limit ) {
 		return 60; // 60 seconds to safely process timezone lookups
+	}
+
+	/**
+	 * Set concurrent batches dynamically per action type.
+	 * 
+	 * Enables different concurrency levels for each processor based on:
+	 * - API rate limits (timezone: 1 req/s, must be sequential)
+	 * - Processing characteristics (AI: slow, structure: fast)
+	 * - Backend settings (user-configurable per mode)
+	 * 
+	 * v3.0.41: Implements atomic claiming in WTA_Queue to prevent race conditions.
+	 *
+	 * @since    3.0.41
+	 * @param    int $default Default concurrent batches.
+	 * @return   int Adjusted concurrent batches.
+	 */
+	public function set_concurrent_batches( $default ) {
+		// Timezone: ALWAYS 1 (API rate limit protection)
+		// TimeZoneDB FREE tier: 1 req/s, concurrent processing would exceed limits
+		if ( doing_action( 'wta_process_timezone' ) ) {
+			return 1;
+		}
+		
+		// Structure: From settings (default 2)
+		// Limited benefit due to sequential continent/country processing
+		// Only cities benefit from concurrency
+		if ( doing_action( 'wta_process_structure' ) ) {
+			return intval( get_option( 'wta_concurrent_structure', 2 ) );
+		}
+		
+		// AI Content: From settings based on test mode
+		// Test mode: High concurrency (10+) safe - no API calls
+		// Normal mode: Moderate concurrency (3-5) - OpenAI Tier 5 has high limits
+		if ( doing_action( 'wta_process_ai_content' ) ) {
+			$test_mode = get_option( 'wta_test_mode', 0 );
+			if ( $test_mode ) {
+				return intval( get_option( 'wta_concurrent_test_mode', 10 ) );
+			} else {
+				return intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+			}
+		}
+		
+		// Default for any other actions
+		return $default;
 	}
 
 	/**

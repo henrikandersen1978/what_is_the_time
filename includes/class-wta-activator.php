@@ -31,13 +31,15 @@ class WTA_Activator {
 			source_id VARCHAR(100),
 			payload LONGTEXT NOT NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'pending',
+			claim_id VARCHAR(32) DEFAULT NULL,
 			last_error TEXT,
 			attempts INT DEFAULT 0,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NOT NULL,
 			INDEX idx_type_status (type, status),
 			INDEX idx_status (status),
-			INDEX idx_created (created_at)
+			INDEX idx_created (created_at),
+			INDEX idx_claim_id (claim_id)
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -62,6 +64,9 @@ class WTA_Activator {
 
 		// Install performance indices for postmeta queries (v2.35.46)
 		self::install_performance_indices();
+
+		// Add claim_id column to queue table (v3.0.41)
+		self::add_claim_id_column();
 
 		// Update plugin version
 		update_option( 'wta_plugin_version', WTA_VERSION );
@@ -433,6 +438,47 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		// Log success (optional - for debugging)
 		if ( function_exists( 'error_log' ) ) {
 			error_log( 'World Time AI: Performance indices installed/verified' );
+		}
+	}
+
+	/**
+	 * Add claim_id column to queue table for atomic claiming.
+	 * 
+	 * Enables concurrent queue processing by allowing multiple processors
+	 * to atomically claim different batches of items without race conditions.
+	 * 
+	 * Safe to run multiple times - checks if column exists before adding.
+	 *
+	 * @since 3.0.41
+	 */
+	private static function add_claim_id_column() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . WTA_QUEUE_TABLE;
+
+		// Check if column already exists
+		$column_exists = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+				WHERE TABLE_SCHEMA = %s 
+				AND TABLE_NAME = %s 
+				AND COLUMN_NAME = 'claim_id'",
+				DB_NAME,
+				$table_name
+			)
+		);
+
+		if ( empty( $column_exists ) ) {
+			// Add claim_id column after status
+			$wpdb->query(
+				"ALTER TABLE $table_name 
+				ADD COLUMN claim_id VARCHAR(32) DEFAULT NULL AFTER status,
+				ADD INDEX idx_claim_id (claim_id)"
+			);
+
+			// Log success
+			if ( function_exists( 'error_log' ) ) {
+				error_log( 'World Time AI: claim_id column added to queue table for concurrent processing' );
+			}
 		}
 	}
 }

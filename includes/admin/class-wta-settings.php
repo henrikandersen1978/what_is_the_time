@@ -39,6 +39,20 @@ class WTA_Settings {
 			'default' => 60
 		) );
 
+		// Concurrent processing settings (v3.0.41)
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_test_mode', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 10
+		) );
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_normal_mode', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 5
+		) );
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_structure', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 2
+		) );
+
 		// AI Prompts
 		$prompt_types = array(
 			'translate_name', 'city_title', 'city_content', 'country_title', 'country_content',

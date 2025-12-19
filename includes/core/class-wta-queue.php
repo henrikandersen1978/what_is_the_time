@@ -52,9 +52,21 @@ class WTA_Queue {
 	}
 
 	/**
-	 * Get pending queue items.
+	 * Get pending queue items with atomic claiming.
+	 * 
+	 * CRITICAL: v3.0.41 - Implements atomic claiming to prevent race conditions
+	 * when multiple concurrent queue processors are running.
+	 * 
+	 * Each processor atomically claims a unique batch of items by:
+	 * 1. Generating a unique claim_id
+	 * 2. Updating status from 'pending' to 'claimed' with the claim_id
+	 * 3. Selecting only items with that specific claim_id
+	 * 
+	 * This ensures no two processors ever get the same items, even when
+	 * running concurrently.
 	 *
 	 * @since    2.0.0
+	 * @since    3.0.41  Added atomic claiming for concurrent processing.
 	 * @param    string $type   Queue item type.
 	 * @param    int    $limit  Maximum number of items to retrieve.
 	 * @return   array          Array of queue items.
@@ -63,16 +75,59 @@ class WTA_Queue {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . WTA_QUEUE_TABLE;
-
-		$sql = "SELECT * FROM $table_name WHERE status = 'pending'";
-
+		
+		// Generate unique claim ID for this batch
+		$claim_id = md5( microtime() . wp_rand() );
+		$now = current_time( 'mysql' );
+		
+		// ATOMIC CLAIM: Update status and claim_id in one query
+		// This prevents race conditions with concurrent processors
 		if ( $type ) {
-			$sql .= $wpdb->prepare( ' AND type = %s', $type );
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE $table_name 
+					SET status = 'claimed', 
+						claim_id = %s,
+						updated_at = %s
+					WHERE status = 'pending' 
+					AND type = %s
+					ORDER BY created_at ASC 
+					LIMIT %d",
+					$claim_id,
+					$now,
+					$type,
+					$limit
+				)
+			);
+		} else {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE $table_name 
+					SET status = 'claimed', 
+						claim_id = %s,
+						updated_at = %s
+					WHERE status = 'pending'
+					ORDER BY created_at ASC 
+					LIMIT %d",
+					$claim_id,
+					$now,
+					$limit
+				)
+			);
 		}
-
-		$sql .= $wpdb->prepare( ' ORDER BY created_at ASC LIMIT %d', $limit );
-
-		$results = $wpdb->get_results( $sql, ARRAY_A );
+		
+		if ( $updated === 0 ) {
+			return array(); // Nothing to claim
+		}
+		
+		// Now SELECT only items we just claimed
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM $table_name WHERE claim_id = %s",
+				$claim_id
+			),
+			ARRAY_A
+		);
 
 		// Decode payloads
 		foreach ( $results as &$item ) {
@@ -84,8 +139,13 @@ class WTA_Queue {
 
 	/**
 	 * Mark an item as processing.
+	 * 
+	 * v3.0.41: Updated to handle transition from 'claimed' to 'processing'.
+	 * Items are first claimed atomically, then marked as processing when
+	 * actual processing begins.
 	 *
 	 * @since    2.0.0
+	 * @since    3.0.41  Updated to handle 'claimed' status.
 	 * @param    int $item_id Queue item ID.
 	 * @return   bool         Success status.
 	 */
@@ -265,9 +325,13 @@ class WTA_Queue {
 	/**
 	 * Reset stuck items.
 	 *
-	 * Items stuck in 'processing' status for more than 5 minutes.
+	 * Items stuck in 'processing' or 'claimed' status for more than 5 minutes.
+	 * 
+	 * v3.0.41: Also resets 'claimed' items (from atomic claiming) to prevent
+	 * items from being permanently stuck if processor crashes after claiming.
 	 *
 	 * @since    2.0.0
+	 * @since    3.0.41  Also resets 'claimed' items.
 	 * @return   int Number of items reset.
 	 */
 	public static function reset_stuck() {
@@ -279,8 +343,8 @@ class WTA_Queue {
 		$result = $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE $table_name 
-				SET status = 'pending', updated_at = %s 
-				WHERE status = 'processing' AND updated_at < %s",
+				SET status = 'pending', claim_id = NULL, updated_at = %s 
+				WHERE status IN ('processing', 'claimed') AND updated_at < %s",
 				current_time( 'mysql' ),
 				$threshold
 			)
