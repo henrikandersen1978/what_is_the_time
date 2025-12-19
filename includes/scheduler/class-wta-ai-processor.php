@@ -337,18 +337,39 @@ class WTA_AI_Processor {
 				$city_name = get_the_title( $post_id );
 				$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
 				update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+				
+				WTA_Logger::info( 'H1 updated (city)', array( 
+					'post_id' => $post_id,
+					'h1' => $seo_h1
+				) );
 			}
 		} elseif ( 'country' === $type ) {
 			// For countries: Generate answer-based H1 (separate from title tag)
 			$country_name = get_the_title( $post_id );
 			$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $country_name );
 			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+			
+			WTA_Logger::info( 'H1 updated (country)', array( 
+				'post_id' => $post_id,
+				'h1' => $seo_h1
+			) );
 		} elseif ( 'continent' === $type ) {
 			// For continents: Generate answer-based H1 (separate from title tag)
 			$continent_name = get_the_title( $post_id );
 			$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $continent_name );
 			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+			
+			WTA_Logger::info( 'H1 updated (continent)', array( 
+				'post_id' => $post_id,
+				'h1' => $seo_h1
+			) );
 		}
+	} else {
+		// v3.0.33: If yoast_title not set, still try to update H1
+		WTA_Logger::warning( 'yoast_title not set in result', array( 
+			'post_id' => $post_id,
+			'result_keys' => array_keys( $result )
+		) );
 	}
 	if ( isset( $result['yoast_desc'] ) ) {
 		update_post_meta( $post_id, '_yoast_wpseo_metadesc', $result['yoast_desc'] );
@@ -1653,6 +1674,9 @@ class WTA_AI_Processor {
 	$content .= "<h2>Hvad du skal vide om tid når du rejser til {$name_local}</h2>\n";
 	$content .= "<p>Dummy tekst om rejseinformation. Test mode.</p>\n\n";
 		
+		// v3.0.33: Update H1 directly in template function (ensures it's always set)
+		update_post_meta( $post_id, '_pilanto_page_h1', sprintf( 'Aktuel tid i byer i %s', $name_local ) );
+		
 		// v3.0.24: No year in titles
 		return array(
 			'content' => $content,
@@ -1697,6 +1721,9 @@ class WTA_AI_Processor {
 	// Facts section
 	$content .= "<h2>Interessante fakta om {$name_local}</h2>\n";
 	$content .= "<p>Dummy tekst med fakta. Test mode.</p>\n\n";
+		
+		// v3.0.33: Update H1 directly in template function (ensures it's always set)
+		update_post_meta( $post_id, '_pilanto_page_h1', sprintf( 'Aktuel tid i lande og byer i %s', $name_local ) );
 		
 		// v3.0.24: No year in titles
 		return array(

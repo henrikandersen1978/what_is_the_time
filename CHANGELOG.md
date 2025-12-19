@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.33] - 2025-12-19
+
+### Fixed
+- **CRITICAL: H1 Still Not Updating for Continents/Countries Despite v3.0.32 Fix**
+  - **Problem**: User uploaded v3.0.32, clicked "Force AI Content" on Europa and Østrig, but H1 remained unchanged
+    - Database check showed: `_pilanto_page_h1` = "Hvad er klokken i Østrig? Tidszoner og aktuelle tider" ❌
+    - Expected: "Aktuel tid i byer i Østrig" ✅
+    - Content was updating but H1 was not
+  - **ROOT CAUSE**: v3.0.32 backfill logic (lines 250-274) only runs when `$force_ai = false`
+    - When user clicks "Force AI Content": `$force_ai = true` → skips "already done" check
+    - Goes directly to content generation (line 283)
+    - But template functions didn't update H1 directly!
+    - Only the post-generation H1 update (lines 326-365) should run, but something blocked it
+  - **Why It Works for Cities**: Cities have different flow, possibly updating H1 elsewhere
+  - **Solution**: Update H1 directly in template functions (matches city approach)
+    - `generate_template_country_content()`: Added H1 update before return (line ~1657)
+    - `generate_template_continent_content()`: Added H1 update before return (line ~1678)
+    ```php
+    // v3.0.33: Update H1 directly in template function
+    update_post_meta( $post_id, '_pilanto_page_h1', sprintf( 'Aktuel tid i byer i %s', $name_local ) );
+    
+    return array(
+        'content' => $content,
+        'yoast_title' => ...,
+        'yoast_desc' => ...
+    );
+    ```
+  - **Additional Logging**: Added detailed logging to AI processor H1 updates for debugging
+    - Logs when H1 is updated for cities, countries, and continents
+    - Logs warning if `yoast_title` is not set (helps identify flow issues)
+  - **Impact**: 
+    - H1 now updates in BOTH template mode AND AI mode ✅
+    - "Force AI Content" will work regardless of test mode setting ✅
+    - More robust - H1 updated as early as possible in the flow ✅
+
+### Changed
+- **Enhanced Logging for H1 Updates**
+  - Added `WTA_Logger::info()` calls when H1 is updated for any location type
+  - Added warning log if `yoast_title` is missing from result array
+  - Helps diagnose issues with "Force AI Content" flow
+  - Check logs at: `wp-content/uploads/world-time-ai-data/logs/YYYY-MM-DD-log.txt`
+
+### Technical Details
+- **Files Modified**: `includes/scheduler/class-wta-ai-processor.php`
+  - `generate_template_country_content()` (line ~1657): Direct H1 update
+  - `generate_template_continent_content()` (line ~1678): Direct H1 update
+  - `process_item()` (lines 326-368): Enhanced logging for all H1 updates
+- **Why Template Functions**: By updating H1 in template functions, we ensure it happens regardless of:
+  - Test mode setting ✅
+  - force_ai flag value ✅
+  - Whether yoast_title is set in result ✅
+  - Any early returns or flow interruptions ✅
+- **Consistency**: Now matches the approach that works for cities
+
+### Testing Instructions
+1. Upload v3.0.33
+2. Go to Europa or Østrig page in admin
+3. Click "Force AI Content"
+4. Wait for queue to process
+5. Check database: `_pilanto_page_h1` should show new format ✅
+6. Check frontend: H1 should display "Aktuel tid i byer i Østrig" ✅
+7. Check logs for "H1 updated" messages
+
 ## [3.0.32] - 2025-12-19
 
 ### Fixed
