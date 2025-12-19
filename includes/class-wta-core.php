@@ -301,10 +301,28 @@ class WTA_Core {
 	$ai_processor = new WTA_AI_Processor();
 	$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
 	
-	// v3.0.38: Register additional runner hooks DIRECTLY (not via loader)
-	// This ensures they are registered immediately, not delayed until loader->run()
-	// CRITICAL: action_scheduler_run_queue triggers very early, before loader->run()
-	add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 0 );
+	// v3.0.39: Debug - Register ALL Action Scheduler hooks to see which ones trigger
+	add_action( 'action_scheduler_run_queue', function() {
+		WTA_Logger::info( '🔥 action_scheduler_run_queue FIRED!' );
+	}, 0 );
+	
+	add_action( 'action_scheduler_before_process_queue', function() {
+		WTA_Logger::info( '🔥 action_scheduler_before_process_queue FIRED!' );
+	}, 0 );
+	
+	add_action( 'action_scheduler_after_process_queue', function() {
+		WTA_Logger::info( '🔥 action_scheduler_after_process_queue FIRED!' );
+	}, 999 );
+	
+	add_action( 'action_scheduler_before_execute', function( $action_id ) {
+		WTA_Logger::debug( '🔥 action_scheduler_before_execute FIRED!', array( 'action_id' => $action_id ) );
+	}, 0 );
+	
+	// v3.0.39: Try multiple hooks for initiating additional runners
+	add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 1 );
+	add_action( 'action_scheduler_before_process_queue', array( $this, 'initiate_additional_runners' ), 1 );
+	
+	// AJAX handlers for additional runners
 	add_action( 'wp_ajax_nopriv_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
 	add_action( 'wp_ajax_wta_run_additional_queue', array( $this, 'handle_additional_runner_request' ) );
 
@@ -462,10 +480,21 @@ class WTA_Core {
 	 * @link     https://actionscheduler.org/perf/
 	 */
 	public function initiate_additional_runners() {
-		// v3.0.38: Enhanced logging to debug loopback issues
+		// v3.0.39: Prevent duplicate calls if multiple hooks fire
+		static $already_running = false;
+		
+		if ( $already_running ) {
+			WTA_Logger::debug( 'initiate_additional_runners already running, skipping duplicate call', array(
+				'hook' => current_filter(),
+			) );
+			return;
+		}
+		
+		$already_running = true;
+		
 		$concurrent = $this->set_concurrent_batches( 1 );
 		
-		WTA_Logger::info( '🔥 initiate_additional_runners HOOK FIRED!', array(
+		WTA_Logger::info( '🔥 initiate_additional_runners CALLED!', array(
 			'concurrent_setting' => $concurrent,
 			'time' => current_time( 'mysql' ),
 			'hook' => current_filter(),
@@ -473,6 +502,7 @@ class WTA_Core {
 		
 		if ( $concurrent <= 1 ) {
 			WTA_Logger::debug( 'No additional runners needed (concurrent = 1)' );
+			$already_running = false;
 			return;
 		}
 		
@@ -516,6 +546,8 @@ class WTA_Core {
 		WTA_Logger::info( '✅ All loopback requests dispatched', array(
 			'total_runners' => $concurrent,
 		) );
+		
+		$already_running = false;
 	}
 	
 	/**

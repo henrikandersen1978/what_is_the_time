@@ -2,6 +2,73 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.39] - 2025-12-19
+
+### Fixed
+- **🔍 DEBUGGING: Action Scheduler Hook Investigation**
+  - **Problem**: v3.0.38 registered hooks correctly, but `action_scheduler_run_queue` still never fired
+    - Log shows "Action Scheduler optimized" (from `increase_time_limit` filter)
+    - But NO log entries from `initiate_additional_runners()` 
+    - This means `action_scheduler_run_queue` hook is **NOT triggering** in this WordPress setup
+  - **Solution**: Comprehensive debugging + alternative hooks
+    - Added debug logging for ALL Action Scheduler hooks to identify which ones actually fire:
+      - `action_scheduler_run_queue`
+      - `action_scheduler_before_process_queue`
+      - `action_scheduler_after_process_queue`
+      - `action_scheduler_before_execute`
+    - Registered `initiate_additional_runners()` on **BOTH** `run_queue` and `before_process_queue`
+    - One of them MUST fire! (Different Action Scheduler versions use different hooks)
+    - Added static flag to prevent duplicate execution if both hooks fire
+  - **Expected Result**: Log will show which hooks trigger, concurrent processing will start
+
+### Enhanced
+- **📊 Comprehensive Action Scheduler Hook Logging**
+  - Every Action Scheduler hook now logs when it fires
+  - Makes it trivial to debug Action Scheduler integration issues
+  - Log file: `https://testsite2.pilanto.dk/wp-content/uploads/world-time-ai-data/logs/YYYY-MM-DD-log.txt`
+
+### Technical Details
+
+**Debugging Strategy:**
+
+This version adds extensive logging to understand the Action Scheduler lifecycle:
+
+```php
+// Debug: Which hooks actually fire?
+add_action( 'action_scheduler_run_queue', function() {
+    WTA_Logger::info( '🔥 action_scheduler_run_queue FIRED!' );
+}, 0 );
+
+add_action( 'action_scheduler_before_process_queue', function() {
+    WTA_Logger::info( '🔥 action_scheduler_before_process_queue FIRED!' );
+}, 0 );
+
+// Try BOTH hooks for initiating runners
+add_action( 'action_scheduler_run_queue', array( $this, 'initiate_additional_runners' ), 1 );
+add_action( 'action_scheduler_before_process_queue', array( $this, 'initiate_additional_runners' ), 1 );
+```
+
+**Duplicate Prevention:**
+
+```php
+static $already_running = false;
+if ( $already_running ) {
+    return; // Skip if already called
+}
+$already_running = true;
+```
+
+**What to Look For in Logs:**
+
+After installing v3.0.39, check log for:
+1. Which Action Scheduler hooks fire: `🔥 action_scheduler_X FIRED!`
+2. If `initiate_additional_runners` is called: `🔥 initiate_additional_runners CALLED!`
+3. If loopback requests are sent: `Initiating loopback requests`
+4. If loopbacks are received: `🎯 LOOPBACK REQUEST RECEIVED!`
+
+**Files Modified:**
+- `includes/class-wta-core.php`: Debug hooks + try both `run_queue` and `before_process_queue`
+
 ## [3.0.38] - 2025-12-19
 
 ### Fixed
