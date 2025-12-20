@@ -339,62 +339,72 @@ class WTA_Queue {
 
 	/**
 	 * Retry failed items.
+	 * 
+	 * v3.0.52: Updated to work with Action Scheduler (Pilanto-AI model)
+	 * instead of custom queue table.
 	 *
 	 * @since    2.0.0
+	 * @since    3.0.52  Updated for Action Scheduler.
 	 * @param    int $max_attempts Maximum attempts before permanent failure.
 	 * @return   int               Number of items reset to pending.
 	 */
 	public static function retry_failed( $max_attempts = 3 ) {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . WTA_QUEUE_TABLE;
+		// v3.0.52: Work with Action Scheduler table
+		$table_name = $wpdb->prefix . 'actionscheduler_actions';
+		
+		// Get WTA hooks (our actions only)
+		$wta_hooks = array(
+			'wta_create_continent',
+			'wta_create_country',
+			'wta_create_city',
+			'wta_lookup_timezone',
+			'wta_generate_ai_content',
+		);
+		
+		$hooks_placeholders = implode( ',', array_fill( 0, count( $wta_hooks ), '%s' ) );
 
+		// Reset failed actions to pending
+		// Schedule them to run now
 		$result = $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE $table_name 
-				SET status = 'pending', updated_at = %s 
-				WHERE status = 'error' AND attempts < %d",
+				SET status = 'pending',
+					scheduled_date_gmt = %s,
+					scheduled_date_local = %s
+				WHERE status = 'failed' 
+				AND hook IN ($hooks_placeholders)",
+				gmdate( 'Y-m-d H:i:s' ),
 				current_time( 'mysql' ),
-				$max_attempts
+				...$wta_hooks
 			)
 		);
+		
+		if ( $result > 0 ) {
+			WTA_Logger::info( "Retry failed: Reset $result failed Action Scheduler actions to pending" );
+		}
 
 		return $result;
 	}
 
 	/**
 	 * Reset stuck items.
-	 *
-	 * Items stuck in 'processing' or 'claimed' status for more than 5 minutes.
 	 * 
-	 * v3.0.41: Also resets 'claimed' items (from atomic claiming) to prevent
-	 * items from being permanently stuck if processor crashes after claiming.
+	 * v3.0.52: Deprecated in Pilanto-AI model. Action Scheduler handles
+	 * timeouts and stuck actions automatically via its runner system.
+	 * 
+	 * This method now returns 0 and logs a message. For stuck Action Scheduler
+	 * actions, use the built-in Action Scheduler management tools instead.
 	 *
 	 * @since    2.0.0
 	 * @since    3.0.41  Also resets 'claimed' items.
-	 * @return   int Number of items reset.
+	 * @since    3.0.52  Deprecated - Action Scheduler handles this automatically.
+	 * @return   int Number of items reset (always 0).
 	 */
 	public static function reset_stuck() {
-		global $wpdb;
-
-		$table_name = $wpdb->prefix . WTA_QUEUE_TABLE;
-		$threshold = date( 'Y-m-d H:i:s', strtotime( '-5 minutes' ) );
-
-		$result = $wpdb->query(
-			$wpdb->prepare(
-				"UPDATE $table_name 
-				SET status = 'pending', claim_id = NULL, updated_at = %s 
-				WHERE status IN ('processing', 'claimed') AND updated_at < %s",
-				current_time( 'mysql' ),
-				$threshold
-			)
-		);
-
-		if ( $result > 0 ) {
-			WTA_Logger::warning( "Reset $result stuck queue items" );
-		}
-
-		return $result;
+		WTA_Logger::debug( 'reset_stuck() called but deprecated in v3.0.52 (Pilanto-AI model). Action Scheduler manages timeouts automatically.' );
+		return 0;
 	}
 
 	/**

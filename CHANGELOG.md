@@ -2,6 +2,67 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.53] - 2025-12-20
+
+### 🔧 FIXED: "Retry Failed Items" Button Now Works with Action Scheduler
+
+**Backend retry button updated for Pilanto-AI model!**
+
+#### Problem
+
+The "Retry Failed Items" button in **Tools & Maintenance** was not working - it showed "Reset 0 failed items to pending" even when failed actions existed.
+
+**Root Cause:**
+The button was calling `WTA_Queue::retry_failed()`, which was designed for the **old custom queue table** (`wp_world_time_queue`) that was removed in v3.0.43.
+
+The new Pilanto-AI model (v3.0.43+) uses **Action Scheduler directly**, storing actions in `wp_actionscheduler_actions` instead.
+
+#### Solution
+
+**Updated `WTA_Queue::retry_failed()` to work with Action Scheduler:**
+
+```php
+// Now queries wp_actionscheduler_actions instead of wp_world_time_queue
+// Resets failed WTA actions (wta_create_*, wta_lookup_*, wta_generate_*) 
+// back to pending and schedules them to run immediately
+```
+
+**Also updated `WTA_Queue::reset_stuck()`:**
+- Marked as deprecated (Action Scheduler handles timeouts automatically)
+- Returns 0 with log message explaining it's no longer needed
+
+#### How It Works Now
+
+When you click **"Retry Failed Items"** in Tools & Maintenance:
+
+1. ✅ Finds all failed Action Scheduler actions with WTA hooks
+2. ✅ Resets their status from `failed` → `pending`
+3. ✅ Schedules them to run immediately
+4. ✅ Your concurrent runners pick them up automatically
+5. ✅ Shows accurate count: "Reset X failed items to pending"
+
+#### Files Modified
+
+- `includes/core/class-wta-queue.php`:
+  - `retry_failed()`: Updated to query `wp_actionscheduler_actions`
+  - `reset_stuck()`: Marked as deprecated (no longer needed)
+
+#### Testing
+
+After update:
+1. Go to **World Time AI → Tools**
+2. Click **"Retry Failed Items"**
+3. Should show: "✅ Reset X failed items to pending"
+4. Check Action Scheduler - failed actions should now be pending/in-progress
+
+#### Background Context
+
+This is the last piece of the **Pilanto-AI model migration** that needed updating. The main import/processing logic was migrated in v3.0.43, but the admin tools were still pointing to the old queue system.
+
+**Now 100% migrated! All queue operations use Action Scheduler.** 🎉
+
+---
+
 ## [3.0.52] - 2025-12-20
 
 ### ⚖️ OPTIMIZATION: Reduced Batch Size for Better Stability
