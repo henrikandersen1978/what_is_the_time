@@ -2,6 +2,124 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.51] - 2025-12-20
+
+### 🔧 CRITICAL FIXES: Loopback Nonce & Filter Priority
+
+**Fixed 2 critical issues preventing concurrent processing:**
+
+#### Problem 1: Loopback Runners Failed with "Invalid Nonce"
+
+From logs:
+```
+[2025-12-20 18:03:12] ERROR: Loopback runner: Invalid nonce
+Context: { "instance": "2" }
+... (all instances 2-8 failed!)
+```
+
+**Root Cause:**
+WordPress nonces are session-bound. When we make async loopback requests, they run in a NEW session context without the original user, so `wp_verify_nonce()` always fails!
+
+**Solution:**
+- Removed nonce verification (doesn't work for async requests)
+- Added localhost verification instead:
+  ```php
+  $remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+  $is_local = in_array( $remote_addr, array( '127.0.0.1', '::1', $_SERVER['SERVER_ADDR'] ) );
+  ```
+- Only allows requests from same server (localhost)
+- More secure than nonce for this use case!
+
+#### Problem 2: Concurrent Limit Was 2 Instead of 10
+
+From logs:
+```
+[2025-12-20 18:03:13] DEBUG: Concurrent batches filter called
+Context: { "concurrent": 10 }  ← Our filter returns 10
+
+[2025-12-20 18:03:13] INFO: 🚀 Queue runner starting  
+Context: { "allowed_concurrent": 2 }  ← Action Scheduler uses 2!
+```
+
+**Root Cause:**
+Another filter with higher priority was overriding our value!
+
+**Solution:**
+- Changed filter priority from `999` to `PHP_INT_MAX` (maximum possible priority)
+- Ensures our filter is the LAST to run, so our value is always used
+
+#### Files Modified
+
+`includes/class-wta-core.php`:
+
+**1. Increased filter priority:**
+```php
+// FROM:
+add_filter( 'action_scheduler_queue_runner_concurrent_batches', [...], 999 );
+
+// TO:
+add_filter( 'action_scheduler_queue_runner_concurrent_batches', [...], PHP_INT_MAX );
+```
+
+**2. Removed nonce, added localhost verification:**
+```php
+public function start_queue_runner() {
+    // Removed: wp_verify_nonce() check
+    
+    // Added: Localhost verification
+    $remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+    $is_local = in_array( $remote_addr, array( '127.0.0.1', '::1', $_SERVER['SERVER_ADDR'] ) );
+    
+    if ( ! $is_local ) {
+        wp_die( 'Forbidden', 403 );
+    }
+    
+    // ... start runner
+}
+```
+
+**3. Enhanced debug logging:**
+- Added backtrace to `set_concurrent_batches()` to see where filter is called from
+- Added direct settings check in `debug_before_queue()` to compare filter vs settings
+- Changed log level from DEBUG to INFO for better visibility
+
+#### Expected Results
+
+**Before v3.0.51:**
+```
+✅ Loopback runners: ERROR - Invalid nonce (all failed)
+✅ Concurrent limit: 2 (overridden by unknown filter)
+Result: Only 1-2 runners processed
+```
+
+**After v3.0.51:**
+```
+✅ Loopback runners: SUCCESS - Localhost verified
+✅ Concurrent limit: 10 (our filter has max priority)
+Result: All 10 runners should process! 🚀
+```
+
+#### Verification in Logs
+
+Look for:
+```
+🔧 Concurrent batches filter called
+   - concurrent: 10
+   - returning: 10
+   - caller: ActionScheduler_QueueRunner::get_allowed_concurrent_batches
+
+🚀 Queue runner starting
+   - allowed_concurrent: 10  ← Should now be 10!
+   - setting_value: 10
+
+🔄 Loopback runner received (instance: 1-9)
+   ← Should now succeed without nonce errors!
+
+✅ Queue runner finished
+```
+
+---
+
 ## [3.0.50] - 2025-12-20
 
 ### 🎯 CRITICAL FIX: Added Batch Size Filter (THE MISSING PIECE!)

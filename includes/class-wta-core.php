@@ -291,7 +291,8 @@ class WTA_Core {
 		$this->loader->add_filter( 'action_scheduler_queue_runner_batch_size', $this, 'increase_batch_size', 10 );
 
 		// Dynamic concurrent batches per action type (v3.0.43 - Pilanto-AI Model)
-		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', 999 );
+		// v3.0.51: MAXIMUM priority to ensure our value is used!
+		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', PHP_INT_MAX );
 
 		// Initiate additional queue runners via loopback requests (v3.0.48)
 		// This is the ONLY way to achieve true concurrency when proc_open() is disabled
@@ -447,11 +448,20 @@ class WTA_Core {
 			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
 			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
 		
-		// Debug logging
-		WTA_Logger::debug( 'Concurrent batches filter called', array(
+		// Get backtrace to see where filter is being called from
+		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
+		$caller = 'unknown';
+		if ( isset( $backtrace[3] ) ) {
+			$caller = ( $backtrace[3]['class'] ?? '' ) . '::' . ( $backtrace[3]['function'] ?? '' );
+		}
+		
+		// Debug logging with MORE context
+		WTA_Logger::info( '🔧 Concurrent batches filter called', array(
 			'test_mode'  => $test_mode ? 'yes' : 'no',
 			'concurrent' => $concurrent,
 			'default'    => $default,
+			'returning'  => $concurrent,
+			'caller'     => $caller,
 		) );
 		
 		return $concurrent;
@@ -491,6 +501,7 @@ class WTA_Core {
 		
 		// Start N additional runners via async loopback requests
 		// Using exact parameters from Action Scheduler documentation
+		// v3.0.51: Removed nonce (doesn't work for async requests)
 		for ( $i = 0; $i < $additional_runners; $i++ ) {
 			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
 				'method'      => 'POST',
@@ -503,7 +514,6 @@ class WTA_Core {
 				'body'        => array(
 					'action'     => 'wta_start_queue_runner',
 					'instance'   => $i,
-					'wta_nonce'  => wp_create_nonce( 'wta_runner_' . $i ),
 				),
 				'cookies'     => array(),
 			) );
@@ -520,34 +530,44 @@ class WTA_Core {
 	 * Handle loopback requests and start queue runner.
 	 * 
 	 * This is the callback for async loopback requests initiated by
-	 * request_additional_runners(). It verifies the nonce and starts
-	 * an Action Scheduler queue runner.
+	 * request_additional_runners(). 
+	 * 
+	 * v3.0.51: Removed nonce verification - it doesn't work for async requests
+	 * because they run in a different session context. Instead, we verify:
+	 * 1. Request comes from localhost (same server)
+	 * 2. Instance parameter is present
 	 * 
 	 * @since    3.0.48
 	 */
 	public function start_queue_runner() {
-		// Verify nonce for security
-		if ( ! isset( $_POST['wta_nonce'] ) || ! isset( $_POST['instance'] ) ) {
-			WTA_Logger::error( 'Loopback runner: Invalid request (missing nonce or instance)' );
+		// Basic verification
+		if ( ! isset( $_POST['instance'] ) || ! isset( $_POST['action'] ) ) {
+			WTA_Logger::error( 'Loopback runner: Invalid request (missing parameters)' );
 			wp_die( 'Invalid request', 403 );
 		}
 		
-		if ( ! wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
-			WTA_Logger::error( 'Loopback runner: Invalid nonce', array(
-				'instance' => $_POST['instance'],
+		// Verify it's a loopback request (from same server)
+		$remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+		$is_local = in_array( $remote_addr, array( '127.0.0.1', '::1', $_SERVER['SERVER_ADDR'] ?? '' ) );
+		
+		if ( ! $is_local ) {
+			WTA_Logger::error( 'Loopback runner: Not from localhost', array(
+				'remote_addr' => $remote_addr,
 			) );
-			wp_die( 'Invalid nonce', 403 );
+			wp_die( 'Forbidden', 403 );
 		}
 		
+		$instance = intval( $_POST['instance'] );
+		
 		WTA_Logger::info( '🔄 Loopback runner received', array(
-			'instance' => $_POST['instance'],
+			'instance' => $instance,
 		) );
 		
 		// Start queue runner
 		if ( class_exists( 'ActionScheduler_QueueRunner' ) ) {
-			ActionScheduler_QueueRunner::instance()->run();
+			ActionScheduler_QueueRunner::instance()->run( 'WTA Async Runner #' . $instance );
 			WTA_Logger::debug( 'Loopback runner completed', array(
-				'instance' => $_POST['instance'],
+				'instance' => $instance,
 			) );
 		} else {
 			WTA_Logger::error( 'ActionScheduler_QueueRunner class not found!' );
@@ -578,13 +598,22 @@ class WTA_Core {
 			WHERE claim_id != 0 AND status IN ('pending', 'in-progress')"
 		);
 		
-		// Get allowed concurrent batches
+		// IMPORTANT: Get allowed concurrent batches by calling the filter
+		// This should trigger our set_concurrent_batches() method
 		$allowed_concurrent = apply_filters( 'action_scheduler_queue_runner_concurrent_batches', 1 );
+		
+		// Also check settings directly
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		$setting_value = $test_mode 
+			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
 		
 		WTA_Logger::info( '🚀 Queue runner starting', array(
 			'pending_wta_actions' => $pending_count,
 			'current_claims'      => $claim_count,
 			'allowed_concurrent'  => $allowed_concurrent,
+			'setting_value'       => $setting_value,
+			'test_mode'           => $test_mode ? 'yes' : 'no',
 			'has_maximum'         => $claim_count >= $allowed_concurrent ? 'YES (will skip!)' : 'NO (will process)',
 		) );
 	}
