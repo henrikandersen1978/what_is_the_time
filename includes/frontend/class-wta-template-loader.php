@@ -281,27 +281,71 @@ class WTA_Template_Loader {
 	// Calculate sunrise/sunset using PHP's built-in function
 	$sun_text = '';
 	if ( ! empty( $lat ) && ! empty( $lng ) ) {
-		$sun_info = date_sun_info( time(), $lat, $lng );
-		
-		if ( $sun_info && isset( $sun_info['sunrise'] ) && isset( $sun_info['sunset'] ) ) {
-			// Format times in the location's timezone
-			$sunrise_time = new DateTime( '@' . $sun_info['sunrise'] );
-			$sunset_time = new DateTime( '@' . $sun_info['sunset'] );
-			$sunrise_time->setTimezone( $city_tz );
-			$sunset_time->setTimezone( $city_tz );
+		try {
+			$sun_info = date_sun_info( time(), $lat, $lng );
 			
-			// Calculate day length
-			$day_length_seconds = $sun_info['sunset'] - $sun_info['sunrise'];
-			$hours = floor( $day_length_seconds / 3600 );
-			$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
+			// Check for polar regions (Arctic Circle: 66.56°N, Antarctic Circle: -66.56°S)
+			$is_polar_region = ( abs( $lat ) > 66.56 );
 			
-			$sun_text = sprintf(
-				'Solopgang: %s, Solnedgang: %s, Dagens længde: %02d:%02d',
-				$sunrise_time->format( 'H:i' ),
-				$sunset_time->format( 'H:i' ),
-				$hours,
-				$minutes
-			);
+			if ( $sun_info && isset( $sun_info['sunrise'] ) && isset( $sun_info['sunset'] ) ) {
+				// Check for valid sunrise/sunset times (not false or 0)
+				$sunrise_valid = ( $sun_info['sunrise'] !== false && $sun_info['sunrise'] > 0 );
+				$sunset_valid = ( $sun_info['sunset'] !== false && $sun_info['sunset'] > 0 );
+				
+				if ( $sunrise_valid && $sunset_valid ) {
+					// Format times in the location's timezone
+					$sunrise_time = new DateTime( '@' . $sun_info['sunrise'] );
+					$sunset_time = new DateTime( '@' . $sun_info['sunset'] );
+					$sunrise_time->setTimezone( $city_tz );
+					$sunset_time->setTimezone( $city_tz );
+					
+					// Calculate day length
+					$day_length_seconds = $sun_info['sunset'] - $sun_info['sunrise'];
+					$hours = floor( $day_length_seconds / 3600 );
+					$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
+					
+					$sun_text = sprintf(
+						'Solopgang: %s, Solnedgang: %s, Dagens længde: %02d:%02d',
+						$sunrise_time->format( 'H:i' ),
+						$sunset_time->format( 'H:i' ),
+						$hours,
+						$minutes
+					);
+				} elseif ( $is_polar_region ) {
+					// Polar region with no valid sunrise/sunset
+					$month = intval( $now->format( 'n' ) );
+					$is_northern = ( $lat > 0 );
+					
+					// Determine if it's polar night or midnight sun based on hemisphere and season
+					if ( $is_northern ) {
+						// Northern hemisphere: polar night in winter (Nov-Jan), midnight sun in summer (May-Jul)
+						if ( in_array( $month, array( 11, 12, 1 ) ) ) {
+							$sun_text = 'Mørketid (polarnatt) - ingen solopgang i denne periode';
+						} elseif ( in_array( $month, array( 5, 6, 7 ) ) ) {
+							$sun_text = 'Midnatssol - solen går ikke ned i denne periode';
+						} else {
+							$sun_text = 'Ekstreme lysforhold på grund af polarregion';
+						}
+					} else {
+						// Southern hemisphere: reversed seasons
+						if ( in_array( $month, array( 5, 6, 7 ) ) ) {
+							$sun_text = 'Mørketid (polarnatt) - ingen solopgang i denne periode';
+						} elseif ( in_array( $month, array( 11, 12, 1 ) ) ) {
+							$sun_text = 'Midnatssol - solen går ikke ned i denne periode';
+						} else {
+							$sun_text = 'Ekstreme lysforhold på grund af polarregion';
+						}
+					}
+				}
+			} elseif ( $is_polar_region ) {
+				// Fallback for polar regions when date_sun_info returns no data
+				$sun_text = 'Ekstreme lysforhold på grund af polarregion (over polarcirklen)';
+			}
+		} catch ( Exception $e ) {
+			// Silently handle any errors in sun calculation without breaking the entire display
+			if ( abs( $lat ) > 66.56 ) {
+				$sun_text = 'Soldata ikke tilgængelig (polarregion)';
+			}
 		}
 	}
 	

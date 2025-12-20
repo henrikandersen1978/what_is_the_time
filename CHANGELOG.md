@@ -2,6 +2,36 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.55] - 2025-12-20
+
+### 🌑 FIX: Polar Region Sunrise/Sunset Handling
+
+**Fixed missing live-time display for cities north of Arctic Circle (>68°N)**
+
+#### Problem
+Cities in polar regions (like Finnsnes, Norway at 69.2°N) had no live-time display during winter because:
+- `date_sun_info()` returns invalid data during polar night (no sunrise)
+- Silent failure in try-catch block prevented entire HTML generation
+- Only affected cities >68°N during winter months
+
+#### Solution
+Added robust polar region handling:
+- ✅ Detects polar regions (latitude > 66.56°)
+- ✅ Validates sunrise/sunset data before use
+- ✅ Shows appropriate messages:
+  - **Winter (Nov-Jan):** "Mørketid (polarnatt) - ingen solopgang i denne periode"
+  - **Summer (May-Jul):** "Midnatssol - solen går ikke ned i denne periode"
+- ✅ Graceful fallback prevents display crashes
+- ✅ Live-time clock now works for ALL cities worldwide
+
+#### Testing
+Verified fix for Norwegian cities:
+- ✅ Finnsnes (69.2°N) - now shows live-time with polar night message
+- ✅ Bodø (67.3°N) - continues working (just below extreme polar region)
+- ✅ All other cities unaffected
+
+---
+
 ## [3.0.54] - 2025-12-20
 
 ### 📊 NEW: Batch Processing Performance Logging
