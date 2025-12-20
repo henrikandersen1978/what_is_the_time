@@ -39,54 +39,73 @@ $as_failed = $wpdb->get_var(
 );
 
 // Get counts by type (continent, country, city, timezone, AI)
+// v3.0.47: Use WTA_POST_TYPE constant with $wpdb->prepare for security
 $continents_pending = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'draft'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'continent'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'draft'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'continent'",
+		WTA_POST_TYPE
+	)
 );
 $countries_pending = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'draft'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'country'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'draft'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'country'",
+		WTA_POST_TYPE
+	)
 );
 $cities_pending = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'draft'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'city'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'draft'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'city'",
+		WTA_POST_TYPE
+	)
 );
 
 $continents_done = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'publish'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'continent'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'publish'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'continent'",
+		WTA_POST_TYPE
+	)
 );
 $countries_done = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'publish'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'country'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'publish'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'country'",
+		WTA_POST_TYPE
+	)
 );
 $cities_done = $wpdb->get_var( 
-	"SELECT COUNT(*) FROM {$wpdb->posts} p
-	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-	WHERE p.post_type = 'world_time_location'
-	AND p.post_status = 'publish'
-	AND pm.meta_key = 'wta_type'
-	AND pm.meta_value = 'city'" 
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+		WHERE p.post_type = %s
+		AND p.post_status = 'publish'
+		AND pm.meta_key = 'wta_type'
+		AND pm.meta_value = 'city'",
+		WTA_POST_TYPE
+	)
 );
 
 // Build stats array compatible with old structure

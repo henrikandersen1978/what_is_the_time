@@ -2,6 +2,60 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.47] - 2025-12-20
+
+### 🔧 Critical Fix: Dashboard Post Type Mismatch
+
+**Fixed bug where dashboard showed 0 posts despite 41 posts being successfully created.**
+
+#### Problem
+
+Dashboard queries used **hardcoded** `'world_time_location'` post type:
+
+```php
+// WRONG:
+WHERE p.post_type = 'world_time_location'  // ❌ Hardcoded!
+```
+
+But posts are actually created with `WTA_POST_TYPE` constant = `'wta_location'`:
+
+```php
+// From time-zone-clock.php:
+define( 'WTA_POST_TYPE', 'wta_location' );  // ✅ Actual post type
+```
+
+**Result:** Dashboard searched for wrong post type → showed 0 posts even though 41 existed!
+
+#### Solution
+
+Updated all dashboard queries to use `WTA_POST_TYPE` constant with proper `$wpdb->prepare()`:
+
+```php
+// CORRECT (v3.0.47):
+$continents_pending = $wpdb->get_var( 
+    $wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->posts} p
+        WHERE p.post_type = %s  // ✅ Uses WTA_POST_TYPE via prepare
+        ...",
+        WTA_POST_TYPE
+    )
+);
+```
+
+**Changes:**
+- 6 queries updated to use `$wpdb->prepare()` with `WTA_POST_TYPE`
+- Improved security (prepared statements prevent SQL injection)
+- Dashboard now correctly displays all location posts
+
+#### Verification
+
+After update, dashboard should show:
+- ✅ **Total Posts:** 41 (or current count)
+- ✅ **Queue by Type:** Accurate breakdown of continents/countries/cities
+- ✅ **Published/Draft counts:** Correct values
+
+---
+
 ## [3.0.46] - 2025-12-20
 
 ### 🔧 Critical Fix: Remove Old Recurring Action Auto-Scheduling
