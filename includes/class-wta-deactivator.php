@@ -33,6 +33,8 @@ class WTA_Deactivator {
 	/**
 	 * Unschedule all Action Scheduler actions.
 	 *
+	 * v3.0.46: Cleanup both old (v3.0.42 and earlier) and new (v3.0.43+) actions.
+	 *
 	 * @since 2.0.0
 	 */
 	private static function unschedule_actions() {
@@ -40,9 +42,14 @@ class WTA_Deactivator {
 			return;
 		}
 
+		// OLD recurring actions (v3.0.42 and earlier) - should not exist but clean up anyway
 		as_unschedule_all_actions( 'wta_process_structure', array(), 'world-time-ai' );
 		as_unschedule_all_actions( 'wta_process_timezone', array(), 'world-time-ai' );
 		as_unschedule_all_actions( 'wta_process_ai_content', array(), 'world-time-ai' );
+
+		// NEW single actions (v3.0.43+) - these are scheduled on-demand, not recurring
+		// We don't unschedule these as they represent actual work in progress
+		// They will complete naturally or be cancelled by import reset
 	}
 
 	/**

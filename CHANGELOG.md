@@ -2,6 +2,83 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.46] - 2025-12-20
+
+### 🔧 Critical Fix: Remove Old Recurring Action Auto-Scheduling
+
+**Fixed bug where old v3.0.42 recurring actions were auto-scheduled on plugin activation, preventing Pilanto-AI model from working.**
+
+#### Problem in v3.0.43-45
+
+When user deactivated/activated plugin, old recurring actions were **automatically rescheduled**:
+- `wta_process_structure` ❌
+- `wta_process_timezone` ❌
+- `wta_process_ai_content` ❌
+
+These actions conflicted with the new Pilanto-AI single actions and consumed resources unnecessarily.
+
+**Root Cause:** `WTA_Activator::schedule_recurring_actions()` still contained code to schedule old actions.
+
+#### Solution (v3.0.46)
+
+**1. Cleaned up `class-wta-activator.php`:**
+
+Removed all code that scheduled old recurring actions. Now only schedules log cleanup:
+
+```php
+// v3.0.46: Pilanto-AI Model uses single actions scheduled on-demand
+// NO recurring actions for structure/timezone/AI needed
+// Only schedule log cleanup
+
+if ( false === as_next_scheduled_action( 'wta_cleanup_old_logs' ) ) {
+    $tomorrow_4am = strtotime( 'tomorrow 04:00:00' );
+    as_schedule_recurring_action( $tomorrow_4am, DAY_IN_SECONDS, 'wta_cleanup_old_logs', array(), 'world-time-ai' );
+}
+```
+
+**2. Updated `class-wta-deactivator.php`:**
+
+Added comment explaining why old actions are cleaned but new ones are not:
+
+```php
+// OLD recurring actions (v3.0.42 and earlier) - should not exist but clean up anyway
+as_unschedule_all_actions( 'wta_process_structure', array(), 'world-time-ai' );
+as_unschedule_all_actions( 'wta_process_timezone', array(), 'world-time-ai' );
+as_unschedule_all_actions( 'wta_process_ai_content', array(), 'world-time-ai' );
+
+// NEW single actions (v3.0.43+) - these are scheduled on-demand, not recurring
+// We don't unschedule these as they represent actual work in progress
+```
+
+**3. Deprecated admin force reschedule endpoint:**
+
+`force_reschedule_actions` now returns error explaining it's deprecated:
+
+```php
+wp_send_json_error( array( 
+    'message' => '⚠️ This function is deprecated in v3.0.43+. Pilanto-AI model uses single on-demand actions scheduled during import, not recurring actions. Please use "Start Import" instead.' 
+) );
+```
+
+#### Verification After Update
+
+After installing v3.0.46, **deactivate + activate plugin**, then verify:
+
+```sql
+-- Should show NO old recurring actions
+SELECT hook, status, COUNT(*) as count
+FROM wp_actionscheduler_actions 
+WHERE hook LIKE 'wta_%'
+GROUP BY hook, status;
+```
+
+**Expected:**
+- ✅ NO `wta_process_*` actions
+- ✅ Only `wta_cleanup_old_logs` recurring
+- ✅ NEW actions: `wta_create_*`, `wta_lookup_timezone`, `wta_generate_ai_content` (when import runs)
+
+---
+
 ## [3.0.45] - 2025-12-20
 
 ### 🔧 Critical Fixes: AI Scheduler Arguments + Method Visibility

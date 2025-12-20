@@ -865,49 +865,12 @@ class WTA_Admin {
 			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
 		}
 
-		$actions = array(
-			'wta_process_structure',
-			'wta_process_timezone',
-			'wta_process_ai_content',
-		);
-
-		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
-		$rescheduled = 0;
-
-		WTA_Logger::info( 'Force rescheduling recurring actions', array(
-			'interval' => $interval . 's',
-			'user'     => wp_get_current_user()->user_login,
-		) );
-
-		foreach ( $actions as $action ) {
-			// Unschedule all instances of this action
-			$unscheduled = as_unschedule_all_actions( $action, array(), 'world-time-ai' );
-			
-			// Reschedule with current interval
-			as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
-			
-			WTA_Logger::info( "Rescheduled recurring action", array(
-				'action'       => $action,
-				'interval'     => $interval . 's',
-				'unscheduled'  => $unscheduled,
-			) );
-			
-			$rescheduled++;
-		}
-
-		// Clear the auto-schedule check so it re-validates immediately
-		delete_transient( 'wta_actions_checked' );
-
-		$interval_text = ( $interval === 300 ) ? '5 minutes' : '1 minute';
-
-		wp_send_json_success( array(
-			'message'     => sprintf( 
-				'✅ Successfully rescheduled %d recurring actions to run every %s. Check Tools → Scheduled Actions to verify.', 
-				$rescheduled, 
-				$interval_text 
-			),
-			'rescheduled' => $rescheduled,
-			'interval'    => $interval_text,
+		// v3.0.46: Pilanto-AI Model does not use recurring actions
+		// This endpoint is deprecated and should not be used
+		WTA_Logger::warning( 'force_reschedule_actions called but deprecated in v3.0.43+' );
+		
+		wp_send_json_error( array( 
+			'message' => '⚠️ This function is deprecated in v3.0.43+. Pilanto-AI model uses single on-demand actions scheduled during import, not recurring actions. Please use "Start Import" instead.' 
 		) );
 	}
 
