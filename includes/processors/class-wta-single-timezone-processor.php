@@ -25,6 +25,32 @@ class WTA_Single_Timezone_Processor {
 	public function lookup_timezone( $post_id, $lat, $lng ) {
 		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
+			// RATE LIMITING: TimeZoneDB FREE tier allows 1 request/second
+			// Use transient as distributed lock across all runners
+			$last_api_call = get_transient( 'wta_timezone_api_last_call' );
+			if ( false !== $last_api_call ) {
+				$time_since_last_call = microtime( true ) - $last_api_call;
+				if ( $time_since_last_call < 1.0 ) {
+					// Too soon! Wait and reschedule
+					$wait_time = ceil( 1.0 - $time_since_last_call );
+					WTA_Logger::debug( 'Timezone API rate limit - rescheduling', array(
+						'post_id'   => $post_id,
+						'wait_time' => $wait_time . ' seconds',
+					) );
+					
+					as_schedule_single_action(
+						time() + $wait_time,
+						'wta_lookup_timezone',
+						array( $post_id, $lat, $lng ),
+						'wta_timezone'
+					);
+					return;
+				}
+			}
+			
+			// Set timestamp BEFORE API call (pessimistic locking)
+			set_transient( 'wta_timezone_api_last_call', microtime( true ), 5 );
+			
 			// Validate post exists
 			$post = get_post( $post_id );
 			if ( ! $post ) {

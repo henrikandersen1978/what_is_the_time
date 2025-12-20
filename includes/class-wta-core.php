@@ -391,55 +391,33 @@ class WTA_Core {
 	}
 
 	/**
-	 * Set concurrent batches dynamically per action type.
+	 * Set concurrent batches dynamically.
 	 * 
-	 * Enables different concurrency levels for each processor based on:
-	 * - API rate limits (timezone: 1 req/s, must be sequential)
-	 * - Processing characteristics (AI: slow, structure: fast)
-	 * - Backend settings (user-configurable per mode)
+	 * v3.0.48: SIMPLIFIED - Returns global concurrent setting based on test mode.
+	 * This is called by ActionScheduler BEFORE any actions are dispatched, so
+	 * doing_action() checks don't work here.
 	 * 
-	 * v3.0.41: Implements atomic claiming in WTA_Queue to prevent race conditions.
+	 * Individual action throttling (timezone = 1/sec) is handled at the ACTION level,
+	 * not at the concurrent batches level.
 	 *
 	 * @since    3.0.41
 	 * @param    int $default Default concurrent batches.
 	 * @return   int Adjusted concurrent batches.
 	 */
 	public function set_concurrent_batches( $default ) {
-		// Timezone: ALWAYS 1 (API rate limit protection)
-		// TimeZoneDB FREE tier: 1 req/s, concurrent processing would exceed limits
-		if ( doing_action( 'wta_lookup_timezone' ) ) {
-			return 1; // FIXED - cannot be changed!
-		}
-		
-		// Structure: From settings (default 2)
-		// Pilanto-AI Model: Each continent/country/city is a single action
-		// Can safely run 2-10 concurrent without API limits
-		if ( doing_action( 'wta_create_continent' ) || 
-		     doing_action( 'wta_create_country' ) || 
-		     doing_action( 'wta_create_city' ) ) {
-			return intval( get_option( 'wta_concurrent_structure', 2 ) );
-		}
-		
-		// AI Content: From settings based on test mode
-		// Test mode: High concurrency (10+) safe - no API calls
-		// Normal mode: Moderate concurrency (5) - OpenAI Tier 5 has high limits
-		if ( doing_action( 'wta_generate_ai_content' ) ) {
-			$test_mode = get_option( 'wta_test_mode', 0 );
-			if ( $test_mode ) {
-				return intval( get_option( 'wta_concurrent_test_mode', 10 ) );
-			} else {
-				return intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
-			}
-		}
-		
-		// Default for any other WTA actions: Use test mode setting
-		// v3.0.48: This ensures loopback runners get correct concurrent limit
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		if ( $test_mode ) {
-			return intval( get_option( 'wta_concurrent_test_mode', 10 ) );
-		} else {
-			return intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
-		}
+		$concurrent = $test_mode 
+			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		
+		// Debug logging
+		WTA_Logger::debug( 'Concurrent batches filter called', array(
+			'test_mode'  => $test_mode ? 'yes' : 'no',
+			'concurrent' => $concurrent,
+			'default'    => $default,
+		) );
+		
+		return $concurrent;
 	}
 
 	/**
@@ -475,19 +453,22 @@ class WTA_Core {
 		add_filter( 'https_local_ssl_verify', '__return_false', 100 );
 		
 		// Start N additional runners via async loopback requests
+		// Using exact parameters from Action Scheduler documentation
 		for ( $i = 0; $i < $additional_runners; $i++ ) {
 			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
 				'method'      => 'POST',
-				'timeout'     => 0.01, // Very short timeout for non-blocking
-				'blocking'    => false, // CRITICAL: Non-blocking = async!
-				'sslverify'   => false,
-				'redirection' => 0,
+				'timeout'     => 45,         // Long timeout as per AS docs
+				'redirection' => 5,
 				'httpversion' => '1.0',
+				'blocking'    => false,      // CRITICAL: Non-blocking = async!
+				'sslverify'   => false,
+				'headers'     => array(),
 				'body'        => array(
 					'action'     => 'wta_start_queue_runner',
 					'instance'   => $i,
 					'wta_nonce'  => wp_create_nonce( 'wta_runner_' . $i ),
 				),
+				'cookies'     => array(),
 			) );
 		}
 		

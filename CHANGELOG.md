@@ -2,6 +2,110 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.49] - 2025-12-20
+
+### 🔧 CRITICAL FIX: Concurrent Batches Filter & Rate Limiting
+
+**Fixed critical issues preventing true concurrent processing from working.**
+
+#### Problems Identified
+
+1. **Concurrent batches filter timing issue:**
+   - Filter used `doing_action()` checks to determine concurrent limit
+   - **But** `get_allowed_concurrent_batches()` is called **BEFORE** any actions are dispatched!
+   - Result: `doing_action()` always returned `false`, filter returned wrong values
+   - Action Scheduler's `has_maximum_concurrent_batches()` check prevented runners from starting
+
+2. **Loopback request parameters:**
+   - Used `timeout => 0.01` (too short!)
+   - Missing some HTTP parameters recommended by Action Scheduler docs
+
+3. **Missing timezone rate limiting:**
+   - With higher concurrent batches, multiple timezone lookups could run simultaneously
+   - Would exceed TimeZoneDB FREE tier limit (1 req/sec)
+
+#### Solutions Implemented
+
+**1. Simplified Concurrent Batches Filter (`class-wta-core.php`):**
+
+```php
+public function set_concurrent_batches( $default ) {
+    $test_mode = get_option( 'wta_test_mode', 0 );
+    $concurrent = $test_mode 
+        ? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+        : intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+    
+    return $concurrent; // Simple! No doing_action() checks
+}
+```
+
+- Returns global concurrent setting based on test mode
+- No more complex `doing_action()` checks (they don't work here anyway)
+- Added debug logging to monitor filter calls
+
+**2. Fixed Loopback Request Parameters (`class-wta-core.php`):**
+
+Changed from:
+```php
+'timeout' => 0.01,
+'blocking' => false,
+'sslverify' => false,
+```
+
+To (matching Action Scheduler docs):
+```php
+'timeout'     => 45,       // Long timeout!
+'redirection' => 5,
+'httpversion' => '1.0',
+'blocking'    => false,
+'sslverify'   => false,
+'headers'     => array(),
+'cookies'     => array(),
+```
+
+**3. Added Timezone API Rate Limiting (`class-wta-single-timezone-processor.php`):**
+
+```php
+// Use transient as distributed lock
+$last_api_call = get_transient( 'wta_timezone_api_last_call' );
+if ( false !== $last_api_call ) {
+    $time_since_last_call = microtime( true ) - $last_api_call;
+    if ( $time_since_last_call < 1.0 ) {
+        // Too soon! Reschedule with delay
+        $wait_time = ceil( 1.0 - $time_since_last_call );
+        as_schedule_single_action(
+            time() + $wait_time,
+            'wta_lookup_timezone',
+            array( $post_id, $lat, $lng ),
+            'wta_timezone'
+        );
+        return;
+    }
+}
+
+// Set timestamp BEFORE API call (pessimistic locking)
+set_transient( 'wta_timezone_api_last_call', microtime( true ), 5 );
+```
+
+- Uses WordPress transient as distributed lock across all concurrent runners
+- Enforces 1-second minimum interval between API calls
+- Automatically reschedules if rate limit would be exceeded
+- Works even with 10 concurrent runners!
+
+#### Expected Results
+
+- **Test Mode (10 concurrent):** Should now see up to 10 "in-progress" actions simultaneously
+- **Normal Mode (5 concurrent):** Should see up to 5 "in-progress" actions
+- **Timezone API:** Never exceeds 1 request/second, regardless of concurrent runners
+- **Debug logs:** Show concurrent batches filter being called with correct values
+
+#### Files Modified
+
+- `includes/class-wta-core.php`: Simplified filter, fixed loopback params, added debug logging
+- `includes/processors/class-wta-single-timezone-processor.php`: Added rate limiting with transient lock
+
+---
+
 ## [3.0.48] - 2025-12-20
 
 ### 🚀 MAJOR: True Concurrent Processing via Async Loopback Requests
