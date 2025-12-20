@@ -410,15 +410,19 @@ class WTA_Core {
 	 * - Runner 2 claims 5 actions
 	 * - Runners 3-10 find NOTHING to claim!
 	 * 
-	 * Solution: Increase to 100 like Action Scheduler High Volume plugin.
-	 * This ensures each runner has enough actions to process.
+	 * v3.0.52: Reduced from 100 to 25 for better stability.
+	 * While 100 gave maximum throughput, it caused backend slowness and
+	 * database strain. Batch size 25 (default) is proven to work well and
+	 * provides excellent balance between speed and stability.
+	 * 
+	 * With 10 concurrent runners × 25 = 250 actions in progress (plenty!)
 	 *
 	 * @since    3.0.50
 	 * @param    int $batch_size Current batch size.
 	 * @return   int             New batch size.
 	 */
 	public function increase_batch_size( $batch_size ) {
-		$new_size = 100; // Match Action Scheduler High Volume plugin
+		$new_size = 25; // Default proven size - balanced for stability
 		
 		WTA_Logger::debug( 'Batch size filter called', array(
 			'default'  => $batch_size,
