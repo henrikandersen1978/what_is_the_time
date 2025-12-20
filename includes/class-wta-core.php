@@ -289,6 +289,14 @@ class WTA_Core {
 		// Dynamic concurrent batches per action type (v3.0.43 - Pilanto-AI Model)
 		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', 999 );
 
+		// Initiate additional queue runners via loopback requests (v3.0.48)
+		// This is the ONLY way to achieve true concurrency when proc_open() is disabled
+		$this->loader->add_action( 'action_scheduler_run_queue', $this, 'request_additional_runners', 0 );
+		
+		// Handle loopback requests to start queue runners (v3.0.48)
+		$this->loader->add_action( 'wp_ajax_nopriv_wta_start_queue_runner', $this, 'start_queue_runner', 0 );
+		$this->loader->add_action( 'wp_ajax_wta_start_queue_runner', $this, 'start_queue_runner', 0 );
+
 		// Single Structure Processor (v3.0.43 - Pilanto-AI Model)
 		$structure_processor = new WTA_Single_Structure_Processor();
 		$this->loader->add_action( 'wta_create_continent', $structure_processor, 'create_continent', 10, 2 );  // name, name_local
@@ -424,8 +432,97 @@ class WTA_Core {
 			}
 		}
 		
-		// Default for any other actions
-		return $default;
+		// Default for any other WTA actions: Use test mode setting
+		// v3.0.48: This ensures loopback runners get correct concurrent limit
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		if ( $test_mode ) {
+			return intval( get_option( 'wta_concurrent_test_mode', 10 ) );
+		} else {
+			return intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		}
+	}
+
+	/**
+	 * Initiate additional queue runners via async loopback requests.
+	 * 
+	 * Since proc_open() is disabled on RunCloud/OpenLiteSpeed, the ONLY way to achieve
+	 * true concurrent processing is via async HTTP loopback requests.
+	 * 
+	 * This function starts (N-1) additional runners, where N is the concurrent setting,
+	 * because Action Scheduler already starts 1 runner automatically.
+	 * 
+	 * Inspired by Action Scheduler High Volume plugin.
+	 * 
+	 * @since    3.0.48
+	 * @link     https://github.com/woocommerce/action-scheduler-high-volume
+	 * @link     https://actionscheduler.org/perf/
+	 */
+	public function request_additional_runners() {
+		// Determine concurrent setting based on test mode
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		$concurrent = $test_mode 
+			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		
+		// Number of additional runners (minus 1 because AS already starts one)
+		$additional_runners = max( 0, $concurrent - 1 );
+		
+		if ( $additional_runners < 1 ) {
+			return; // No additional runners needed
+		}
+		
+		// Allow self-signed SSL certificates for loopback requests
+		add_filter( 'https_local_ssl_verify', '__return_false', 100 );
+		
+		// Start N additional runners via async loopback requests
+		for ( $i = 0; $i < $additional_runners; $i++ ) {
+			wp_remote_post( admin_url( 'admin-ajax.php' ), array(
+				'method'      => 'POST',
+				'timeout'     => 0.01, // Very short timeout for non-blocking
+				'blocking'    => false, // CRITICAL: Non-blocking = async!
+				'sslverify'   => false,
+				'redirection' => 0,
+				'httpversion' => '1.0',
+				'body'        => array(
+					'action'     => 'wta_start_queue_runner',
+					'instance'   => $i,
+					'wta_nonce'  => wp_create_nonce( 'wta_runner_' . $i ),
+				),
+			) );
+		}
+		
+		WTA_Logger::debug( 'Initiated additional queue runners', array(
+			'additional_runners' => $additional_runners,
+			'total_concurrent'   => $concurrent,
+			'test_mode'          => $test_mode ? 'yes' : 'no',
+		) );
+	}
+
+	/**
+	 * Handle loopback requests and start queue runner.
+	 * 
+	 * This is the callback for async loopback requests initiated by
+	 * request_additional_runners(). It verifies the nonce and starts
+	 * an Action Scheduler queue runner.
+	 * 
+	 * @since    3.0.48
+	 */
+	public function start_queue_runner() {
+		// Verify nonce for security
+		if ( ! isset( $_POST['wta_nonce'] ) || ! isset( $_POST['instance'] ) ) {
+			wp_die( 'Invalid request', 403 );
+		}
+		
+		if ( ! wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
+			wp_die( 'Invalid nonce', 403 );
+		}
+		
+		// Start queue runner
+		if ( class_exists( 'ActionScheduler_QueueRunner' ) ) {
+			ActionScheduler_QueueRunner::instance()->run();
+		}
+		
+		wp_die(); // Terminate cleanly
 	}
 
 	/**

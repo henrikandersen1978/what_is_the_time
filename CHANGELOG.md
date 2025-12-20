@@ -2,6 +2,131 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.48] - 2025-12-20
+
+### 🚀 MAJOR: True Concurrent Processing via Async Loopback Requests
+
+**Implemented the ONLY way to achieve true concurrent processing when `proc_open()` is disabled.**
+
+#### Problem: Why Concurrent Wasn't Working
+
+Despite setting `action_scheduler_queue_runner_concurrent_batches` filter to 10, only 1-2 actions ran concurrently.
+
+**Root Cause Analysis:**
+
+From `https://testsite2.pilanto.dk/test-async.php`:
+- ✅ **Async HTTP: YES** (loopback requests work!)
+- ❌ **proc_open: NO** (server cannot spawn child processes)
+
+Action Scheduler has TWO methods for concurrent processing:
+
+1. **Via `proc_open()` (child processes):** Spawns real PHP processes ❌ **Disabled on RunCloud/OpenLiteSpeed**
+2. **Via async HTTP loopback:** Makes HTTP requests to itself ✅ **Available!**
+
+**The filter alone doesn't START runners—it only sets the MAXIMUM allowed concurrent batches.**
+
+Action Scheduler initiates only **ONE runner** per WP-Cron trigger (every minute). Without `proc_open()` or loopback requests, concurrency is impossible.
+
+#### Solution: Manual Loopback Runner Initialization
+
+Inspired by [Action Scheduler High Volume plugin](https://github.com/woocommerce/action-scheduler-high-volume), we now manually initiate additional queue runners via async HTTP loopback requests.
+
+**New Function: `request_additional_runners()`**
+
+Hooks into `action_scheduler_run_queue` and starts (N-1) additional runners:
+
+```php
+public function request_additional_runners() {
+    $test_mode = get_option( 'wta_test_mode', 0 );
+    $concurrent = $test_mode 
+        ? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+        : intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+    
+    // Start N-1 additional runners (AS already starts 1)
+    $additional_runners = max( 0, $concurrent - 1 );
+    
+    for ( $i = 0; $i < $additional_runners; $i++ ) {
+        wp_remote_post( admin_url( 'admin-ajax.php' ), array(
+            'blocking'    => false, // CRITICAL: Async!
+            'timeout'     => 0.01,
+            'body'        => array(
+                'action'     => 'wta_start_queue_runner',
+                'instance'   => $i,
+                'wta_nonce'  => wp_create_nonce( 'wta_runner_' . $i ),
+            ),
+        ) );
+    }
+}
+```
+
+**New Function: `start_queue_runner()`**
+
+AJAX callback that handles loopback requests and starts queue runners:
+
+```php
+public function start_queue_runner() {
+    // Verify nonce
+    if ( wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
+        ActionScheduler_QueueRunner::instance()->run();
+    }
+    wp_die();
+}
+```
+
+#### Changes Made
+
+**Files Modified:**
+- `includes/class-wta-core.php`:
+  - Added `request_additional_runners()` method
+  - Added `start_queue_runner()` method
+  - Registered hook: `action_scheduler_run_queue` → `request_additional_runners`
+  - Registered AJAX: `wta_start_queue_runner` → `start_queue_runner`
+  - Updated `set_concurrent_batches()` to return global setting for non-specific actions
+
+#### Expected Results
+
+**Test Mode (concurrent = 10):**
+- Action Scheduler starts 1 runner automatically
+- Plugin starts 9 additional runners via loopback
+- **Total: 10 concurrent queue runners** ✅
+
+**Normal Mode (concurrent = 5):**
+- Action Scheduler starts 1 runner
+- Plugin starts 4 additional runners
+- **Total: 5 concurrent queue runners** ✅
+
+**Verification:**
+
+```sql
+-- Should now show up to 10 in-progress actions simultaneously
+SELECT hook, status, COUNT(*) as count
+FROM wp_actionscheduler_actions 
+WHERE hook LIKE 'wta_%' AND status IN ('in-progress', 'running')
+GROUP BY hook, status;
+```
+
+#### Performance Impact
+
+**Before v3.0.48:**
+- Max 1-2 concurrent actions
+- 221,000 cities @ 1/minute = **153 days** ❌
+
+**After v3.0.48 (test mode, 10 concurrent):**
+- Up to 10 concurrent actions
+- 221,000 cities @ 10/minute = **15 days** ✅ (10x faster!)
+
+**After v3.0.48 (normal mode, 5 concurrent):**
+- Up to 5 concurrent actions with OpenAI
+- More conservative but still 5x faster than before
+
+#### References
+
+- [Action Scheduler Performance Tuning](https://actionscheduler.org/perf/)
+- [Action Scheduler High Volume Plugin](https://github.com/woocommerce/action-scheduler-high-volume)
+- Test async capabilities: `https://testsite2.pilanto.dk/test-async.php`
+
+---
+
 ## [3.0.47] - 2025-12-20
 
 ### 🔧 Critical Fix: Dashboard Post Type Mismatch
