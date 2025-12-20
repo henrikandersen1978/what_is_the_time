@@ -96,16 +96,13 @@ class WTA_Single_Timezone_Processor {
 			) );
 
 			// CRITICAL: Schedule AI content after timezone resolved
-			$type = get_post_meta( $post_id, 'wta_type', true );
-			as_schedule_single_action(
-				time(),
-				'wta_generate_ai_content',
-				array(
-					'post_id' => $post_id,
-					'type'    => $type,
-				),
-				'wta_ai_content'
-			);
+		$type = get_post_meta( $post_id, 'wta_type', true );
+		as_schedule_single_action(
+			time(),
+			'wta_generate_ai_content',
+			array( $post_id, $type, false ),  // post_id, type, force_ai
+			'wta_ai_content'
+		);
 
 			WTA_Logger::info( 'AI content scheduled after timezone resolution', array(
 				'post_id' => $post_id,

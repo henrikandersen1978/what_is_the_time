@@ -2,6 +2,85 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.45] - 2025-12-20
+
+### 🔧 Critical Fixes: AI Scheduler Arguments + Method Visibility
+
+**Fixed 2 critical bugs preventing AI content generation in v3.0.44.**
+
+#### Bug 1: Incorrect Action Scheduler Arguments ❌→✅
+
+**Problem:** AI content scheduling passed associative arrays instead of ordered arguments:
+
+```php
+// WRONG (v3.0.44):
+as_schedule_single_action( time(), 'wta_generate_ai_content', array(
+    'post_id' => 262494,
+    'type'    => 'continent',
+));
+// Action Scheduler calls: do_action('wta_generate_ai_content', 262494, 'continent')
+// But method expected array! ❌
+```
+
+**Solution:** Pass ordered arguments to match Action Scheduler's unpacking:
+
+```php
+// CORRECT (v3.0.45):
+as_schedule_single_action( time(), 'wta_generate_ai_content', 
+    array( 262494, 'continent', false )  // post_id, type, force_ai
+);
+```
+
+**Files Fixed:**
+- `includes/processors/class-wta-single-structure-processor.php` (3 instances)
+- `includes/processors/class-wta-single-timezone-processor.php` (1 instance)
+
+#### Bug 2: Private Methods Inaccessible to Child Class ❌→✅
+
+**Problem:** `WTA_Single_AI_Processor` extends `WTA_AI_Processor`, but all helper methods were `private`:
+
+```php
+// OLD:
+class WTA_AI_Processor {
+    private function generate_ai_content() { ... }      // ❌ Inaccessible!
+    private function generate_continent_content() { ... } // ❌ Inaccessible!
+}
+
+class WTA_Single_AI_Processor extends WTA_AI_Processor {
+    public function generate_content() {
+        $this->generate_ai_content();  // ❌ Fatal: Call to private method
+    }
+}
+```
+
+**Solution:** Changed visibility from `private` to `protected`:
+
+```php
+// NEW:
+class WTA_AI_Processor {
+    protected function generate_ai_content() { ... }      // ✅ Accessible!
+    protected function generate_continent_content() { ... } // ✅ Accessible!
+}
+```
+
+**Methods Changed in `class-wta-ai-processor.php`:**
+- `generate_ai_content()` → protected
+- `generate_continent_content()` → protected
+- `generate_country_content()` → protected
+- `generate_city_content()` → protected
+- `generate_template_continent_content()` → protected
+- `generate_template_country_content()` → protected
+- `generate_template_city_content()` → protected
+
+#### Expected Results After Fix
+
+✅ AI content actions no longer fail with "Call to private method"  
+✅ Arguments unpacked correctly: `(262494, 'continent', false)`  
+✅ Posts progress from `draft` → `publish` as AI completes  
+✅ Dashboard shows accurate counts  
+
+---
+
 ## [3.0.44] - 2025-12-20
 
 ### 🔧 Critical Fix: Action Scheduler Argument Unpacking

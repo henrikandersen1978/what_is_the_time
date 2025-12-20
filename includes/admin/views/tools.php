@@ -132,31 +132,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 	<!-- Data Files (v3.0.0 - GeoNames) -->
-	<div class="wta-card">
+		<div class="wta-card">
 		<h2><?php esc_html_e( 'GeoNames Data Files', WTA_TEXT_DOMAIN ); ?></h2>
 		<p><?php esc_html_e( 'Data files location:', WTA_TEXT_DOMAIN ); ?> <code><?php echo esc_html( WTA_GeoNames_Parser::get_data_directory() ); ?></code></p>
-		<p class="description"><?php esc_html_e( 'Files in this directory persist across plugin updates.', WTA_TEXT_DOMAIN ); ?></p>
-		<?php
+			<p class="description"><?php esc_html_e( 'Files in this directory persist across plugin updates.', WTA_TEXT_DOMAIN ); ?></p>
+			<?php
 		$data_dir = WTA_GeoNames_Parser::get_data_directory();
 		$cities_file = $data_dir . '/cities500.txt';
 		$countries_file = $data_dir . '/countryInfo.txt';
 		$alt_names_file = $data_dir . '/alternateNamesV2.txt';
-		?>
-		<ul>
-			<li>
+			?>
+			<ul>
+				<li>
 				<strong>cities500.txt:</strong>
 				<?php echo file_exists( $cities_file ) ? '✅ ' . size_format( filesize( $cities_file ) ) : '❌ Not found'; ?>
 			</li>
 			<li>
 				<strong>countryInfo.txt:</strong>
 				<?php echo file_exists( $countries_file ) ? '✅ ' . size_format( filesize( $countries_file ) ) : '❌ Not found'; ?>
-			</li>
-			<li>
+				</li>
+				<li>
 				<strong>alternateNamesV2.txt:</strong>
 				<?php echo file_exists( $alt_names_file ) ? '✅ ' . size_format( filesize( $alt_names_file ) ) : '❌ Not found'; ?>
-			</li>
-		</ul>
-	</div>
+				</li>
+			</ul>
+		</div>
 
 		<!-- System Info -->
 		<div class="wta-card">

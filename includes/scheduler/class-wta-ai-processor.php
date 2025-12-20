@@ -439,7 +439,7 @@ class WTA_AI_Processor {
 	 * @param    bool   $force_ai Force AI generation (ignore test mode).
 	 * @return   array|false      Generated content or false on failure.
 	 */
-	private function generate_ai_content( $post_id, $type, $force_ai = false ) {
+	protected function generate_ai_content( $post_id, $type, $force_ai = false ) {
 		// Use multi-section generation for continents, countries, and cities
 		if ( 'continent' === $type ) {
 			return $this->generate_continent_content( $post_id, $force_ai );
@@ -463,7 +463,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_continent_content( $post_id, $force_ai = false ) {
+	protected function generate_continent_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
 		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
@@ -605,7 +605,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_country_content( $post_id, $force_ai = false ) {
+	protected function generate_country_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
 		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
@@ -813,7 +813,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array|false  Generated content or false on failure.
 	 */
-	private function generate_city_content( $post_id, $force_ai = false ) {
+	protected function generate_city_content( $post_id, $force_ai = false ) {
 		// Check if test mode is enabled (template content instead of AI)
 		// Skip test mode if force_ai is true (manual single-post regeneration)
 		$test_mode = get_option( 'wta_test_mode', 0 );
@@ -1604,7 +1604,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array        Generated content array.
 	 */
-	private function generate_template_city_content( $post_id ) {
+	protected function generate_template_city_content( $post_id ) {
 		$name_local = get_the_title( $post_id );
 		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 		
@@ -1674,7 +1674,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array        Generated content array.
 	 */
-	private function generate_template_country_content( $post_id ) {
+	protected function generate_template_country_content( $post_id ) {
 		$name_local = get_the_title( $post_id );
 		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 		
@@ -1731,7 +1731,7 @@ class WTA_AI_Processor {
 	 * @param    int $post_id Post ID.
 	 * @return   array        Generated content array.
 	 */
-	private function generate_template_continent_content( $post_id ) {
+	protected function generate_template_continent_content( $post_id ) {
 		$name_local = get_the_title( $post_id );
 		
 	// Build simple template content (test mode - no AI)

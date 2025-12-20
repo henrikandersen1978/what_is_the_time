@@ -83,10 +83,7 @@ class WTA_Single_Structure_Processor {
 			as_schedule_single_action(
 				time(),
 				'wta_generate_ai_content',
-				array(
-					'post_id' => $post_id,
-					'type'    => 'continent',
-				),
+				array( $post_id, 'continent', false ),  // post_id, type, force_ai
 				'wta_ai_content'
 			);
 
@@ -247,10 +244,7 @@ class WTA_Single_Structure_Processor {
 			as_schedule_single_action(
 				time(),
 				'wta_generate_ai_content',
-				array(
-					'post_id' => $post_id,
-					'type'    => 'country',
-				),
+				array( $post_id, 'country', false ),  // post_id, type, force_ai
 				'wta_ai_content'
 			);
 
@@ -436,16 +430,13 @@ class WTA_Single_Structure_Processor {
 					update_post_meta( $post_id, 'wta_timezone', $timezone );
 					update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 					
-					// Schedule AI content immediately for simple countries
-					as_schedule_single_action(
-						time(),
-						'wta_generate_ai_content',
-						array(
-							'post_id' => $post_id,
-							'type'    => 'city',
-						),
-						'wta_ai_content'
-					);
+				// Schedule AI content immediately for simple countries
+				as_schedule_single_action(
+					time(),
+					'wta_generate_ai_content',
+					array( $post_id, 'city', false ),  // post_id, type, force_ai
+					'wta_ai_content'
+				);
 				} else {
 					// Country not in list - use API
 					if ( $final_lat !== null && $final_lon !== null ) {
