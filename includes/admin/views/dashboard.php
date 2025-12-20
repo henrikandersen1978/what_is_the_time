@@ -12,7 +12,115 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Get statistics
 $posts_count = wp_count_posts( WTA_POST_TYPE );
-$queue_stats = WTA_Queue::get_stats();
+
+// v3.0.43+ - Get Action Scheduler stats instead of custom queue
+global $wpdb;
+$as_table = $wpdb->prefix . 'actionscheduler_actions';
+
+$as_pending = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$as_table} 
+	WHERE hook LIKE 'wta_%' 
+	AND status = 'pending'" 
+);
+$as_running = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$as_table} 
+	WHERE hook LIKE 'wta_%' 
+	AND status IN ('in-progress', 'running')" 
+);
+$as_complete = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$as_table} 
+	WHERE hook LIKE 'wta_%' 
+	AND status = 'complete'" 
+);
+$as_failed = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$as_table} 
+	WHERE hook LIKE 'wta_%' 
+	AND status = 'failed'" 
+);
+
+// Get counts by type (continent, country, city, timezone, AI)
+$continents_pending = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'draft'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'continent'" 
+);
+$countries_pending = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'draft'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'country'" 
+);
+$cities_pending = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'draft'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'city'" 
+);
+
+$continents_done = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'publish'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'continent'" 
+);
+$countries_done = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'publish'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'country'" 
+);
+$cities_done = $wpdb->get_var( 
+	"SELECT COUNT(*) FROM {$wpdb->posts} p
+	INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+	WHERE p.post_type = 'world_time_location'
+	AND p.post_status = 'publish'
+	AND pm.meta_key = 'wta_type'
+	AND pm.meta_value = 'city'" 
+);
+
+// Build stats array compatible with old structure
+$queue_stats = array(
+	'by_status' => array(
+		'pending'    => intval( $as_pending ),
+		'processing' => intval( $as_running ),
+		'done'       => intval( $as_complete ),
+		'error'      => intval( $as_failed ),
+	),
+	'by_type' => array(
+		'continents' => array(
+			'pending'    => intval( $continents_pending ),
+			'processing' => 0,
+			'done'       => intval( $continents_done ),
+			'error'      => 0,
+			'total'      => intval( $continents_pending + $continents_done ),
+		),
+		'countries' => array(
+			'pending'    => intval( $countries_pending ),
+			'processing' => 0,
+			'done'       => intval( $countries_done ),
+			'error'      => 0,
+			'total'      => intval( $countries_pending + $countries_done ),
+		),
+		'cities' => array(
+			'pending'    => intval( $cities_pending ),
+			'processing' => 0,
+			'done'       => intval( $cities_done ),
+			'error'      => 0,
+			'total'      => intval( $cities_pending + $cities_done ),
+		),
+	),
+);
 ?>
 
 <div class="wrap">

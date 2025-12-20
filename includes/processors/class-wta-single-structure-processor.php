@@ -24,9 +24,15 @@ class WTA_Single_Structure_Processor {
 	 * Create continent post.
 	 *
 	 * @since    3.0.43
-	 * @param    array $data Continent data.
+	 * @param    string $name       Original continent name.
+	 * @param    string $name_local Local (Danish) continent name.
 	 */
-	public function create_continent( $data ) {
+	public function create_continent( $name, $name_local ) {
+		// Rebuild data array from unpacked arguments
+		$data = array(
+			'name'       => $name,
+			'name_local' => $name_local,
+		);
 		try {
 			// Check if post already exists
 			$existing = get_posts( array(
@@ -101,9 +107,27 @@ class WTA_Single_Structure_Processor {
 	 * Create country post.
 	 *
 	 * @since    3.0.43
-	 * @param    array $data Country data.
+	 * @param    string      $name         Original country name.
+	 * @param    string      $name_local   Local (Danish) country name.
+	 * @param    string      $country_code ISO2 country code.
+	 * @param    string      $country_id   Country ID.
+	 * @param    string      $continent    Continent name.
+	 * @param    float|null  $latitude     Latitude (optional).
+	 * @param    float|null  $longitude    Longitude (optional).
+	 * @param    int         $geonameid    GeoNames ID.
 	 */
-	public function create_country( $data ) {
+	public function create_country( $name, $name_local, $country_code, $country_id, $continent, $latitude = null, $longitude = null, $geonameid = 0 ) {
+		// Rebuild data array from unpacked arguments
+		$data = array(
+			'name'         => $name,
+			'name_local'   => $name_local,
+			'country_code' => $country_code,
+			'country_id'   => $country_id,
+			'continent'    => $continent,
+			'latitude'     => $latitude,
+			'longitude'    => $longitude,
+			'geonameid'    => $geonameid,
+		);
 		try {
 			// Find parent continent post
 			$continent_name_local = WTA_AI_Translator::translate( $data['continent'], 'continent' );
@@ -123,11 +147,11 @@ class WTA_Single_Structure_Processor {
 				as_schedule_single_action(
 					time() + 5,
 					'wta_create_country',
-					$data
+					array( $name, $name_local, $country_code, $country_id, $continent, $latitude, $longitude, $geonameid )
 				);
 				WTA_Logger::debug( 'Parent continent not found, rescheduling country', array(
-					'continent' => $data['continent'],
-					'country'   => $data['name'],
+					'continent' => $continent,
+					'country'   => $name,
 				) );
 				return;
 			}
@@ -247,9 +271,25 @@ class WTA_Single_Structure_Processor {
 	 * Create city post.
 	 *
 	 * @since    3.0.43
-	 * @param    array $data City data.
+	 * @param    string      $name         Original city name.
+	 * @param    string      $name_local   Local (Danish) city name.
+	 * @param    int         $geonameid    GeoNames ID.
+	 * @param    string      $country_code ISO2 country code.
+	 * @param    float       $latitude     Latitude.
+	 * @param    float       $longitude    Longitude.
+	 * @param    int         $population   Population.
 	 */
-	public function create_city( $data ) {
+	public function create_city( $name, $name_local, $geonameid, $country_code, $latitude, $longitude, $population ) {
+		// Rebuild data array from unpacked arguments
+		$data = array(
+			'name'         => $name,
+			'name_local'   => $name_local,
+			'geonameid'    => $geonameid,
+			'country_code' => $country_code,
+			'latitude'     => $latitude,
+			'longitude'    => $longitude,
+			'population'   => $population,
+		);
 		try {
 			// Find parent country post
 			$country_post_id = get_posts( array(
@@ -278,11 +318,11 @@ class WTA_Single_Structure_Processor {
 				as_schedule_single_action(
 					time() + 5,
 					'wta_create_city',
-					$data
+					array( $name, $name_local, $geonameid, $country_code, $latitude, $longitude, $population )
 				);
 				WTA_Logger::debug( 'Parent country not found, rescheduling city', array(
-					'city'         => $data['name'],
-					'country_code' => $data['country_code'],
+					'city'         => $name,
+					'country_code' => $country_code,
 				) );
 				return;
 			}

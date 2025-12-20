@@ -291,9 +291,9 @@ class WTA_Core {
 
 		// Single Structure Processor (v3.0.43 - Pilanto-AI Model)
 		$structure_processor = new WTA_Single_Structure_Processor();
-		$this->loader->add_action( 'wta_create_continent', $structure_processor, 'create_continent' );
-		$this->loader->add_action( 'wta_create_country', $structure_processor, 'create_country' );
-		$this->loader->add_action( 'wta_create_city', $structure_processor, 'create_city' );
+		$this->loader->add_action( 'wta_create_continent', $structure_processor, 'create_continent', 10, 2 );  // name, name_local
+		$this->loader->add_action( 'wta_create_country', $structure_processor, 'create_country', 10, 8 );     // name, name_local, country_code, country_id, continent, latitude, longitude, geonameid
+		$this->loader->add_action( 'wta_create_city', $structure_processor, 'create_city', 10, 7 );           // name, name_local, geonameid, country_code, latitude, longitude, population
 
 		// Cities scheduler (delegates to importer)
 		$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );

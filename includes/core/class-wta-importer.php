@@ -78,13 +78,11 @@ class WTA_Importer {
 
 			// Schedule continent (deduplicated)
 			if ( ! in_array( $continent, $continents_scheduled, true ) ) {
+				$name_local = WTA_AI_Translator::translate( $continent, 'continent' );
 				as_schedule_single_action(
 					time(),
 					'wta_create_continent',
-					array(
-						'name'       => $continent,
-						'name_local' => WTA_AI_Translator::translate( $continent, 'continent' ),
-					),
+					array( $continent, $name_local ),  // Separate args, NOT nested array
 					'wta_structure'
 				);
 				$continents_scheduled[] = $continent;
@@ -111,15 +109,15 @@ class WTA_Importer {
 			as_schedule_single_action(
 				time() + $delay,
 				'wta_create_country',
-				array(
-					'name'         => $country['name'],
-					'name_local'   => $name_local,
-					'country_code' => $country['iso2'],
-					'country_id'   => $country['iso2'],
-					'continent'    => $country['continent'],
-					'latitude'     => null,
-					'longitude'    => null,
-					'geonameid'    => $geonameid,
+				array(  // Separate args, NOT nested array
+					$country['name'],     // name
+					$name_local,          // name_local
+					$country['iso2'],     // country_code
+					$country['iso2'],     // country_id
+					$country['continent'], // continent
+					null,                  // latitude
+					null,                  // longitude
+					$geonameid            // geonameid
 				),
 				'wta_structure'
 			);
@@ -249,14 +247,14 @@ class WTA_Importer {
 			as_schedule_single_action(
 				time() + $delay,
 				'wta_create_city',
-				array(
-					'name'         => $name,
-					'name_local'   => $name_local,
-					'geonameid'    => intval( $geonameid ),
-					'country_code' => strtoupper( $country_code ),
-					'latitude'     => floatval( $latitude ),
-					'longitude'    => floatval( $longitude ),
-					'population'   => intval( $population ),
+				array(  // Separate args, NOT nested array
+					$name,                         // name
+					$name_local,                   // name_local
+					intval( $geonameid ),          // geonameid
+					strtoupper( $country_code ),   // country_code
+					floatval( $latitude ),         // latitude
+					floatval( $longitude ),        // longitude
+					intval( $population )          // population
 				),
 				'wta_structure'
 			);
@@ -348,14 +346,14 @@ class WTA_Importer {
 			as_schedule_single_action(
 				time() + $delay,
 				'wta_create_city',
-				array(
-					'name'         => $city['name'],
-					'name_local'   => $name_local,
-					'geonameid'    => $geonameid,
-					'country_code' => $city['country_code'],
-					'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
-					'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
-					'population'   => isset( $city['population'] ) ? $city['population'] : null,
+				array(  // Separate args, NOT nested array
+					$city['name'],                                           // name
+					$name_local,                                             // name_local
+					$geonameid,                                              // geonameid
+					$city['country_code'],                                   // country_code
+					isset( $city['latitude'] ) ? $city['latitude'] : 0.0,   // latitude
+					isset( $city['longitude'] ) ? $city['longitude'] : 0.0, // longitude
+					isset( $city['population'] ) ? $city['population'] : 0  // population
 				),
 				'wta_structure'
 			);

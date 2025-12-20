@@ -2,6 +2,113 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.44] - 2025-12-20
+
+### 🔧 Critical Fix: Action Scheduler Argument Unpacking
+
+**Fixed issue where no posts were created after v3.0.43 deployment.**
+
+#### What Was Wrong?
+
+Action Scheduler **automatically unpacks** array arguments when calling hooks. Our v3.0.43 code was passing:
+
+```php
+as_schedule_single_action( time(), 'wta_create_continent', array(
+    'name'       => 'Europe',
+    'name_local' => 'Europa',
+));
+```
+
+But Action Scheduler calls the hook as:
+```php
+do_action( 'wta_create_continent', 'Europe', 'Europa' ); // 2 separate args!
+```
+
+Our processor method expected:
+```php
+public function create_continent( $data ) { // Receives 'Europe' string, not array!
+```
+
+Result: Method received string `'Europe'` instead of array, causing `$data['name_local']` errors.
+
+#### The Fix
+
+**1. Updated all processor methods to accept unpacked arguments:**
+
+```php
+// OLD (v3.0.43):
+public function create_continent( $data ) { ... }
+
+// NEW (v3.0.44):
+public function create_continent( $name, $name_local ) {
+    $data = array( 'name' => $name, 'name_local' => $name_local );
+    // ... rest of logic unchanged
+}
+```
+
+**2. Updated hook registrations to declare correct argument count:**
+
+```php
+// OLD:
+$this->loader->add_action( 'wta_create_continent', $processor, 'create_continent' );
+
+// NEW:
+$this->loader->add_action( 'wta_create_continent', $processor, 'create_continent', 10, 2 );
+                                                                                      // ↑ accepts 2 args
+```
+
+**3. Updated all scheduling calls to pass separate arguments:**
+
+```php
+// OLD:
+as_schedule_single_action( time(), 'wta_create_continent', array(
+    'name'       => 'Europe',
+    'name_local' => 'Europa',
+));
+
+// NEW:
+as_schedule_single_action( time(), 'wta_create_continent', array( 'Europe', 'Europa' ) );
+// Args are now in ORDER, not key-value pairs
+```
+
+**4. Updated Dashboard to use Action Scheduler + Post Meta instead of custom queue:**
+
+Dashboard now counts:
+- **Pending**: Draft posts (structure created, AI pending)
+- **Done**: Published posts (AI complete)
+- **AS Actions**: Action Scheduler pending/running/complete/failed counts
+
+This is aligned with v3.0.43's removal of custom queue.
+
+#### Files Changed
+
+- `includes/processors/class-wta-single-structure-processor.php`: All 3 methods (continent, country, city) now accept unpacked args
+- `includes/processors/class-wta-single-timezone-processor.php`: Method signature documented (already correct)
+- `includes/processors/class-wta-single-ai-processor.php`: Method signature documented (already correct)
+- `includes/class-wta-core.php`: Hook registrations now declare `accepted_args` count
+- `includes/core/class-wta-importer.php`: All 5 scheduling calls now pass args in order, not as key-value array
+- `includes/admin/views/dashboard.php`: Now queries Action Scheduler + post meta instead of custom queue
+
+#### Testing Steps
+
+1. Deactivate/activate plugin to clear old actions
+2. Import test data (e.g., Denmark, 30k population, 10 max cities)
+3. Dashboard should show:
+   - **Pending AS actions** > 0
+   - **Location posts** increasing (draft → publish)
+   - **By type breakdown** (continents/countries/cities)
+
+#### Expected Behavior
+
+✅ Continents created immediately  
+✅ Countries created with correct parent hierarchy  
+✅ Cities created with correct parent hierarchy  
+✅ Timezone lookups scheduled for cities with GPS data  
+✅ AI content scheduled AFTER timezone resolved  
+✅ Dashboard accurately reflects import progress  
+
+---
+
 ## [3.0.43] - 2025-12-20
 
 ### 🚀 MAJOR: Pilanto-AI Concurrent Processing Model

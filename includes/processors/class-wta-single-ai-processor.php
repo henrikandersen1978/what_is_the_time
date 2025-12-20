@@ -18,12 +18,15 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 	/**
 	 * Generate AI content for a single post.
 	 *
+	 * Action Scheduler unpacks args, so this receives separate parameters.
+	 *
 	 * @since    3.0.43
 	 * @param    int    $post_id  Post ID.
 	 * @param    string $type     Location type.
 	 * @param    bool   $force_ai Force AI generation (ignore test mode).
 	 */
 	public function generate_content( $post_id, $type, $force_ai = false ) {
+		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
 			// Validate post exists
 			$post = get_post( $post_id );

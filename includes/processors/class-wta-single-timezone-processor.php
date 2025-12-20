@@ -15,12 +15,15 @@ class WTA_Single_Timezone_Processor {
 	/**
 	 * Lookup timezone for a single post.
 	 *
+	 * Action Scheduler unpacks args, so this receives separate parameters.
+	 *
 	 * @since    3.0.43
 	 * @param    int   $post_id Post ID.
 	 * @param    float $lat     Latitude.
 	 * @param    float $lng     Longitude.
 	 */
 	public function lookup_timezone( $post_id, $lat, $lng ) {
+		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
 			// Validate post exists
 			$post = get_post( $post_id );
