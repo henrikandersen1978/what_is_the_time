@@ -2,6 +2,150 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.50] - 2025-12-20
+
+### 🎯 CRITICAL FIX: Added Batch Size Filter (THE MISSING PIECE!)
+
+**This was the root cause why concurrent processing didn't work!**
+
+#### Discovery Process
+
+After comparing with Pilanto-AI (which uses [Action Scheduler High Volume plugin](https://github.com/woocommerce/action-scheduler-high-volume)), we discovered that plugin sets **4 critical filters**:
+
+1. ✅ `action_scheduler_queue_runner_time_limit` (we had this)
+2. ✅ `action_scheduler_queue_runner_concurrent_batches` (we had this)
+3. ❌ **`action_scheduler_queue_runner_batch_size`** (WE WERE MISSING THIS!)
+4. ✅ Loopback runner initialization (we had this)
+
+#### Why Batch Size Matters
+
+**The Problem:**
+
+Default batch size is **25 actions**. When 10 concurrent runners start simultaneously:
+
+```
+Scenario: 30 pending actions in queue, 10 runners starting
+
+Runner 1: Claims 25 actions ✅
+Runner 2: Claims 5 actions ✅
+Runner 3-10: Find NOTHING to claim ❌
+
+Result: Only 2 runners actually process actions!
+```
+
+**From Action Scheduler code (line 157 in `ActionScheduler_QueueRunner.php`):**
+
+```php
+$batch_size = apply_filters( 'action_scheduler_queue_runner_batch_size', 25 );
+$processed_actions_in_batch = $this->do_batch( $batch_size, $context );
+```
+
+Each runner calls `stake_claim($batch_size)` to claim actions. If batch size is too small, early runners claim everything!
+
+#### Solution Implemented
+
+**1. Added Batch Size Filter:**
+
+```php
+public function increase_batch_size( $batch_size ) {
+    return 100; // Match Action Scheduler High Volume plugin
+}
+add_filter( 'action_scheduler_queue_runner_batch_size', [$this, 'increase_batch_size'], 10 );
+```
+
+Now with 1000 pending actions and 10 concurrent runners:
+- Each runner can claim up to 100 actions
+- All 10 runners will find actions to process!
+- True concurrent processing achieved! 🚀
+
+**2. Added Comprehensive Debug Logging:**
+
+New hooks to monitor Action Scheduler behavior:
+
+```php
+// Before queue processing
+public function debug_before_queue() {
+    // Logs: pending actions, current claims, allowed concurrent, has_maximum check
+}
+
+// After queue processing  
+public function debug_after_queue() {
+    // Logs: in-progress action count
+}
+
+// In loopback runner
+public function start_queue_runner() {
+    // Logs: runner received, runner completed
+}
+```
+
+**3. Enhanced Existing Logging:**
+
+- `set_concurrent_batches()`: Added debug logging
+- `increase_batch_size()`: Added debug logging
+- `request_additional_runners()`: Already had logging
+- `start_queue_runner()`: Added comprehensive logging
+
+#### Expected Results
+
+**Before v3.0.50:**
+```
+Pending: 100 actions
+Batch size: 25
+Concurrent: 10 (configured)
+Result: Only 2-4 runners process (others find nothing to claim)
+```
+
+**After v3.0.50:**
+```
+Pending: 100 actions
+Batch size: 100
+Concurrent: 10 (configured)
+Result: All 10 runners process simultaneously! ✅
+```
+
+#### Files Modified
+
+- `includes/class-wta-core.php`:
+  - Added `increase_batch_size()` method
+  - Added `debug_before_queue()` method
+  - Added `debug_after_queue()` method
+  - Enhanced `start_queue_runner()` with logging
+  - Registered new filters and hooks
+
+#### Verification
+
+After deploying v3.0.50, check logs for:
+
+```
+🚀 Queue runner starting
+   - pending_wta_actions: 100
+   - current_claims: 0
+   - allowed_concurrent: 10
+   - has_maximum: NO (will process)
+
+Batch size filter called
+   - default: 25
+   - new_size: 100
+
+Initiated additional queue runners
+   - additional_runners: 9
+   - total_concurrent: 10
+
+🔄 Loopback runner received (x9)
+
+✅ Queue runner finished
+```
+
+And in Action Scheduler UI: **Up to 10 "in-progress" actions simultaneously!**
+
+#### References
+
+- [Action Scheduler High Volume plugin](https://github.com/woocommerce/action-scheduler-high-volume)
+- [Action Scheduler Performance Tuning](https://actionscheduler.org/perf/)
+
+---
+
 ## [3.0.49] - 2025-12-20
 
 ### 🔧 CRITICAL FIX: Concurrent Batches Filter & Rate Limiting

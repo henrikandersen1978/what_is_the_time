@@ -286,6 +286,10 @@ class WTA_Core {
 		// Increase Action Scheduler time limit for API-heavy operations
 		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
 
+		// CRITICAL: Increase batch size (v3.0.50 - like Action Scheduler High Volume plugin)
+		// Default is 25, but with 10 concurrent runners, we need bigger batches!
+		$this->loader->add_filter( 'action_scheduler_queue_runner_batch_size', $this, 'increase_batch_size', 10 );
+
 		// Dynamic concurrent batches per action type (v3.0.43 - Pilanto-AI Model)
 		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', 999 );
 
@@ -296,6 +300,10 @@ class WTA_Core {
 		// Handle loopback requests to start queue runners (v3.0.48)
 		$this->loader->add_action( 'wp_ajax_nopriv_wta_start_queue_runner', $this, 'start_queue_runner', 0 );
 		$this->loader->add_action( 'wp_ajax_wta_start_queue_runner', $this, 'start_queue_runner', 0 );
+		
+		// Debug hooks to monitor Action Scheduler behavior (v3.0.50)
+		$this->loader->add_action( 'action_scheduler_before_process_queue', $this, 'debug_before_queue', 10 );
+		$this->loader->add_action( 'action_scheduler_after_process_queue', $this, 'debug_after_queue', 10 );
 
 		// Single Structure Processor (v3.0.43 - Pilanto-AI Model)
 		$structure_processor = new WTA_Single_Structure_Processor();
@@ -388,6 +396,35 @@ class WTA_Core {
 	 */
 	public function increase_time_limit( $time_limit ) {
 		return 60; // 60 seconds to safely process timezone lookups
+	}
+
+	/**
+	 * Increase Action Scheduler batch size.
+	 * 
+	 * CRITICAL FIX v3.0.50: This was the missing piece!
+	 * 
+	 * Default batch size is 25 actions. When multiple concurrent runners start,
+	 * if there are only 30 pending actions:
+	 * - Runner 1 claims 25 actions
+	 * - Runner 2 claims 5 actions
+	 * - Runners 3-10 find NOTHING to claim!
+	 * 
+	 * Solution: Increase to 100 like Action Scheduler High Volume plugin.
+	 * This ensures each runner has enough actions to process.
+	 *
+	 * @since    3.0.50
+	 * @param    int $batch_size Current batch size.
+	 * @return   int             New batch size.
+	 */
+	public function increase_batch_size( $batch_size ) {
+		$new_size = 100; // Match Action Scheduler High Volume plugin
+		
+		WTA_Logger::debug( 'Batch size filter called', array(
+			'default'  => $batch_size,
+			'new_size' => $new_size,
+		) );
+		
+		return $new_size;
 	}
 
 	/**
@@ -491,19 +528,83 @@ class WTA_Core {
 	public function start_queue_runner() {
 		// Verify nonce for security
 		if ( ! isset( $_POST['wta_nonce'] ) || ! isset( $_POST['instance'] ) ) {
+			WTA_Logger::error( 'Loopback runner: Invalid request (missing nonce or instance)' );
 			wp_die( 'Invalid request', 403 );
 		}
 		
 		if ( ! wp_verify_nonce( $_POST['wta_nonce'], 'wta_runner_' . $_POST['instance'] ) ) {
+			WTA_Logger::error( 'Loopback runner: Invalid nonce', array(
+				'instance' => $_POST['instance'],
+			) );
 			wp_die( 'Invalid nonce', 403 );
 		}
+		
+		WTA_Logger::info( '🔄 Loopback runner received', array(
+			'instance' => $_POST['instance'],
+		) );
 		
 		// Start queue runner
 		if ( class_exists( 'ActionScheduler_QueueRunner' ) ) {
 			ActionScheduler_QueueRunner::instance()->run();
+			WTA_Logger::debug( 'Loopback runner completed', array(
+				'instance' => $_POST['instance'],
+			) );
+		} else {
+			WTA_Logger::error( 'ActionScheduler_QueueRunner class not found!' );
 		}
 		
 		wp_die(); // Terminate cleanly
+	}
+
+	/**
+	 * Debug: Log queue state BEFORE processing.
+	 * 
+	 * This helps diagnose why concurrent processing might not work.
+	 * 
+	 * @since    3.0.50
+	 */
+	public function debug_before_queue() {
+		global $wpdb;
+		
+		// Get pending actions count
+		$pending_count = $wpdb->get_var( 
+			"SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions 
+			WHERE status = 'pending' AND hook LIKE 'wta_%'"
+		);
+		
+		// Get claim count (concurrent batches running)
+		$claim_count = $wpdb->get_var(
+			"SELECT COUNT(DISTINCT claim_id) FROM {$wpdb->prefix}actionscheduler_actions 
+			WHERE claim_id != 0 AND status IN ('pending', 'in-progress')"
+		);
+		
+		// Get allowed concurrent batches
+		$allowed_concurrent = apply_filters( 'action_scheduler_queue_runner_concurrent_batches', 1 );
+		
+		WTA_Logger::info( '🚀 Queue runner starting', array(
+			'pending_wta_actions' => $pending_count,
+			'current_claims'      => $claim_count,
+			'allowed_concurrent'  => $allowed_concurrent,
+			'has_maximum'         => $claim_count >= $allowed_concurrent ? 'YES (will skip!)' : 'NO (will process)',
+		) );
+	}
+
+	/**
+	 * Debug: Log queue state AFTER processing.
+	 * 
+	 * @since    3.0.50
+	 */
+	public function debug_after_queue() {
+		global $wpdb;
+		
+		$in_progress_count = $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions 
+			WHERE status = 'in-progress' AND hook LIKE 'wta_%'"
+		);
+		
+		WTA_Logger::info( '✅ Queue runner finished', array(
+			'in_progress_actions' => $in_progress_count,
+		) );
 	}
 
 	/**
