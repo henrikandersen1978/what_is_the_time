@@ -18,21 +18,28 @@ class WTA_Single_Timezone_Processor {
 	 * Action Scheduler unpacks args, so this receives separate parameters.
 	 *
 	 * @since    3.0.43
+	 * @since    3.0.54  Added execution time logging.
 	 * @param    int   $post_id Post ID.
 	 * @param    float $lat     Latitude.
 	 * @param    float $lng     Longitude.
 	 */
 	public function lookup_timezone( $post_id, $lat, $lng ) {
+		$start_time = microtime( true );
+		
 		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
 			// RATE LIMITING: TimeZoneDB FREE tier allows 1 request/second
 			// Use transient as distributed lock across all runners
 			$last_api_call = get_transient( 'wta_timezone_api_last_call' );
+			$wait_time_applied = 0;
+			
 			if ( false !== $last_api_call ) {
 				$time_since_last_call = microtime( true ) - $last_api_call;
 				if ( $time_since_last_call < 1.0 ) {
 					// Too soon! Wait and reschedule
 					$wait_time = ceil( 1.0 - $time_since_last_call );
+					$wait_time_applied = $wait_time;
+					
 					WTA_Logger::debug( 'Timezone API rate limit - rescheduling', array(
 						'post_id'   => $post_id,
 						'wait_time' => $wait_time . ' seconds',
@@ -49,6 +56,7 @@ class WTA_Single_Timezone_Processor {
 			}
 			
 			// Set timestamp BEFORE API call (pessimistic locking)
+			$api_start = microtime( true );
 			set_transient( 'wta_timezone_api_last_call', microtime( true ), 5 );
 			
 			// Validate post exists
@@ -116,9 +124,14 @@ class WTA_Single_Timezone_Processor {
 			update_post_meta( $post_id, 'wta_timezone', $timezone );
 			update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 
-			WTA_Logger::info( 'Timezone resolved', array(
-				'post_id'  => $post_id,
-				'timezone' => $timezone,
+			$api_time = round( microtime( true ) - $api_start, 3 );
+			$execution_time = round( microtime( true ) - $start_time, 3 );
+			
+			WTA_Logger::info( '🌍 Timezone resolved', array(
+				'post_id'        => $post_id,
+				'timezone'       => $timezone,
+				'api_time'       => $api_time . 's',
+				'execution_time' => $execution_time . 's',
 			) );
 
 			// CRITICAL: Schedule AI content after timezone resolved

@@ -2,6 +2,126 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.54] - 2025-12-20
+
+### 📊 NEW: Batch Processing Performance Logging
+
+**Track execution times for all action types to optimize settings!**
+
+#### What's New
+
+Added detailed execution time logging to all 3 processor types:
+- **Structure Processor** (continents, countries, cities)
+- **Timezone Processor** (API lookups)
+- **AI Processor** (content generation)
+
+#### Log Output Examples
+
+**Structure (City Creation):**
+```
+[INFO] 🏙️ City post created
+  post_id: 12345
+  name: Copenhagen
+  population: 1234567
+  execution_time: 0.234s
+```
+
+**Timezone Lookup:**
+```
+[INFO] 🌍 Timezone resolved
+  post_id: 12345
+  timezone: Europe/Copenhagen
+  api_time: 1.234s
+  execution_time: 1.456s
+```
+
+**AI Content Generation:**
+```
+[INFO] 🤖 AI content generated and post published
+  post_id: 12345
+  type: city
+  used_ai: yes
+  execution_time: 3.456s
+```
+
+#### What You Can Analyze
+
+✅ **Average execution times per action type:**
+- Structure: ~0.2-0.5s
+- Timezone: ~1-2s (includes API call + rate limiting)
+- AI Content: ~3-8s (OpenAI API)
+
+✅ **Optimal batch size calculation:**
+```
+If: avg_time × batch_size > 60s
+→ Reduce batch size (actions timing out)
+
+If: avg_time × batch_size < 30s
+→ Can increase batch size (underutilized)
+```
+
+✅ **Bottleneck identification:**
+- Timezone > 5s → TimeZoneDB slow/overloaded
+- AI Content > 10s → OpenAI Tier 5 rate limits hit
+- Structure > 1s → Database slow (check indexes)
+
+✅ **Rate limit monitoring:**
+- Timezone logs show actual wait times
+- Can verify 1 req/s limit is respected
+
+#### Files Modified
+
+- `includes/processors/class-wta-single-structure-processor.php`:
+  - Added `$start_time` tracking to all 3 methods
+  - Added `execution_time` to log output
+  - Added emojis for easier log scanning (🌍🌎🏙️)
+
+- `includes/processors/class-wta-single-timezone-processor.php`:
+  - Added `$start_time` and `$api_start` tracking
+  - Logs both API time and total execution time
+  - Shows rate limit wait times
+
+- `includes/processors/class-wta-single-ai-processor.php`:
+  - Added `$start_time` tracking
+  - Logs whether AI or template was used
+  - Shows execution time for content generation
+
+#### How to Use
+
+1. **Monitor logs during import:**
+   ```
+   https://testsite2.pilanto.dk/wp-content/uploads/world-time-ai-data/logs/2025-12-20-log.txt
+   ```
+
+2. **Calculate averages:**
+   - Grep for "execution_time" in logs
+   - Calculate average per action type
+   - Compare against your batch size settings
+
+3. **Optimize settings:**
+   - If structure is fast (~0.2s) → Can increase concurrent
+   - If timezone is slow (~3s) → Keep at 1 concurrent
+   - If AI is slow (~10s) → Reduce concurrent or check OpenAI tier
+
+4. **Identify issues:**
+   - Sudden spikes in execution time → Server load
+   - Consistent high times → API issues or database bottleneck
+   - Timeouts → Batch size too large
+
+#### Performance Baseline
+
+**Expected times with current settings (batch 25, concurrent 10):**
+
+| Action Type | Avg Time | Batch Time | Throughput |
+|-------------|----------|------------|------------|
+| Structure   | 0.3s     | 7.5s       | ~200/min   |
+| Timezone    | 1.5s     | 1.5s       | ~60/min    |
+| AI Content  | 4s       | 100s       | ~15/min    |
+
+**Bottleneck:** Timezone (1 req/s API limit) and AI Content (OpenAI Tier 5)
+
+---
+
 ## [3.0.53] - 2025-12-20
 
 ### 🔧 FIXED: "Retry Failed Items" Button Now Works with Action Scheduler

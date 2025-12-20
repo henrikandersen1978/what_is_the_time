@@ -21,11 +21,14 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 	 * Action Scheduler unpacks args, so this receives separate parameters.
 	 *
 	 * @since    3.0.43
+	 * @since    3.0.54  Added execution time logging.
 	 * @param    int    $post_id  Post ID.
 	 * @param    string $type     Location type.
 	 * @param    bool   $force_ai Force AI generation (ignore test mode).
 	 */
 	public function generate_content( $post_id, $type, $force_ai = false ) {
+		$start_time = microtime( true );
+		
 		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
 			// Validate post exists
@@ -150,9 +153,15 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 			// Mark as done
 			update_post_meta( $post_id, 'wta_ai_status', 'done' );
 
-			WTA_Logger::info( 'AI content generated and post published', array(
-				'post_id' => $post_id,
-				'type'    => $type,
+			$execution_time = round( microtime( true ) - $start_time, 3 );
+			$test_mode = get_option( 'wta_test_mode', 0 );
+			$used_ai = ! $test_mode || $force_ai;
+			
+			WTA_Logger::info( '🤖 AI content generated and post published', array(
+				'post_id'        => $post_id,
+				'type'           => $type,
+				'used_ai'        => $used_ai ? 'yes' : 'no (template)',
+				'execution_time' => $execution_time . 's',
 			) );
 
 		} catch ( Exception $e ) {

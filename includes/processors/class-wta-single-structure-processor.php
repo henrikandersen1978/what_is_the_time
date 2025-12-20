@@ -24,10 +24,13 @@ class WTA_Single_Structure_Processor {
 	 * Create continent post.
 	 *
 	 * @since    3.0.43
+	 * @since    3.0.54  Added execution time logging.
 	 * @param    string $name       Original continent name.
 	 * @param    string $name_local Local (Danish) continent name.
 	 */
 	public function create_continent( $name, $name_local ) {
+		$start_time = microtime( true );
+		
 		// Rebuild data array from unpacked arguments
 		$data = array(
 			'name'       => $name,
@@ -87,9 +90,12 @@ class WTA_Single_Structure_Processor {
 				'wta_ai_content'
 			);
 
-			WTA_Logger::info( 'Continent post created', array(
-				'post_id' => $post_id,
-				'name'    => $data['name_local'],
+			$execution_time = round( microtime( true ) - $start_time, 3 );
+			
+			WTA_Logger::info( '🌍 Continent post created', array(
+				'post_id'        => $post_id,
+				'name'           => $data['name_local'],
+				'execution_time' => $execution_time . 's',
 			) );
 
 		} catch ( Exception $e ) {
@@ -104,6 +110,7 @@ class WTA_Single_Structure_Processor {
 	 * Create country post.
 	 *
 	 * @since    3.0.43
+	 * @since    3.0.54  Added execution time logging.
 	 * @param    string      $name         Original country name.
 	 * @param    string      $name_local   Local (Danish) country name.
 	 * @param    string      $country_code ISO2 country code.
@@ -114,6 +121,8 @@ class WTA_Single_Structure_Processor {
 	 * @param    int         $geonameid    GeoNames ID.
 	 */
 	public function create_country( $name, $name_local, $country_code, $country_id, $continent, $latitude = null, $longitude = null, $geonameid = 0 ) {
+		$start_time = microtime( true );
+		
 		// Rebuild data array from unpacked arguments
 		$data = array(
 			'name'         => $name,
@@ -248,9 +257,12 @@ class WTA_Single_Structure_Processor {
 				'wta_ai_content'
 			);
 
-			WTA_Logger::info( 'Country post created', array(
-				'post_id' => $post_id,
-				'name'    => $data['name_local'],
+			$execution_time = round( microtime( true ) - $start_time, 3 );
+			
+			WTA_Logger::info( '🌎 Country post created', array(
+				'post_id'        => $post_id,
+				'name'           => $data['name_local'],
+				'execution_time' => $execution_time . 's',
 			) );
 
 		} catch ( Exception $e ) {
@@ -274,6 +286,8 @@ class WTA_Single_Structure_Processor {
 	 * @param    int         $population   Population.
 	 */
 	public function create_city( $name, $name_local, $geonameid, $country_code, $latitude, $longitude, $population ) {
+		$start_time = microtime( true );
+		
 		// Rebuild data array from unpacked arguments
 		$data = array(
 			'name'         => $name,
@@ -463,9 +477,13 @@ class WTA_Single_Structure_Processor {
 			$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 
-			WTA_Logger::info( 'City post created', array(
-				'post_id' => $post_id,
-				'name'    => $data['name_local'],
+			$execution_time = round( microtime( true ) - $start_time, 3 );
+			
+			WTA_Logger::info( '🏙️ City post created', array(
+				'post_id'        => $post_id,
+				'name'           => $data['name_local'],
+				'population'     => $data['population'],
+				'execution_time' => $execution_time . 's',
 			) );
 
 		} catch ( Exception $e ) {
