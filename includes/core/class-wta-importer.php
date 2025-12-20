@@ -12,9 +12,12 @@
 class WTA_Importer {
 
 	/**
-	 * Prepare import queue.
+	 * Prepare import (Pilanto-AI Model).
 	 *
-	 * @since    2.0.0
+	 * Schedules single Action Scheduler actions for each continent/country,
+	 * and delegates city scheduling to structure processor.
+	 *
+	 * @since    3.0.43
 	 * @param    array $options Import options.
 	 * @return   array          Statistics.
 	 */
@@ -30,10 +33,15 @@ class WTA_Importer {
 
 		$options = wp_parse_args( $options, $defaults );
 
-		// Clear existing queue if requested
+		// Clear existing Action Scheduler actions if requested
 		if ( $options['clear_queue'] ) {
-			WTA_Queue::clear();
-			WTA_Logger::info( 'Queue cleared before import' );
+			// Cancel all pending actions for our hooks
+			as_unschedule_all_actions( 'wta_create_continent' );
+			as_unschedule_all_actions( 'wta_create_country' );
+			as_unschedule_all_actions( 'wta_create_city' );
+			as_unschedule_all_actions( 'wta_lookup_timezone' );
+			as_unschedule_all_actions( 'wta_generate_ai_content' );
+			WTA_Logger::info( 'All pending actions cleared before import' );
 		}
 
 		$stats = array(
@@ -42,46 +50,44 @@ class WTA_Importer {
 			'cities'     => 0,
 		);
 
-	// Fetch countries data from GeoNames countryInfo.txt (v3.0.0)
-	$countries = WTA_GeoNames_Parser::parse_countryInfo();
-	if ( false === $countries ) {
-		WTA_Logger::error( 'Failed to parse countryInfo.txt' );
-		return $stats;
-	}
+		// Fetch countries data from GeoNames countryInfo.txt
+		$countries = WTA_GeoNames_Parser::parse_countryInfo();
+		if ( false === $countries ) {
+			WTA_Logger::error( 'Failed to parse countryInfo.txt' );
+			return $stats;
+		}
 
-		// Queue continents and filter countries
-		$continents_queued = array();
+		// Schedule continents and filter countries
+		$continents_scheduled = array();
 		$filtered_countries = array();
 
 		foreach ( $countries as $country ) {
-			// GeoNames already provides continent name (v3.0.0)
 			$continent = $country['continent'];
 			$continent_code = WTA_Utils::get_continent_code( $continent );
 
 			// Filter based on import mode
 			if ( $options['import_mode'] === 'countries' ) {
-				// Filter by selected countries (by ISO2 code)
 				if ( ! empty( $options['selected_countries'] ) && ! in_array( $country['iso2'], $options['selected_countries'], true ) ) {
 					continue;
 				}
 			} else {
-			// Filter by selected continents (by code)
-			if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
-				continue;
+				if ( ! empty( $options['selected_continents'] ) && ! in_array( $continent_code, $options['selected_continents'], true ) ) {
+					continue;
 				}
 			}
 
-			// Queue continent (deduplicated)
-			if ( ! in_array( $continent, $continents_queued, true ) ) {
-WTA_Queue::add(
-					'continent',
+			// Schedule continent (deduplicated)
+			if ( ! in_array( $continent, $continents_scheduled, true ) ) {
+				as_schedule_single_action(
+					time(),
+					'wta_create_continent',
 					array(
-						'name'     => $continent,
+						'name'       => $continent,
 						'name_local' => WTA_AI_Translator::translate( $continent, 'continent' ),
 					),
-					'continent_' . sanitize_title( $continent )
+					'wta_structure'
 				);
-				$continents_queued[] = $continent;
+				$continents_scheduled[] = $continent;
 				$stats['continents']++;
 			}
 
@@ -89,11 +95,11 @@ WTA_Queue::add(
 			$filtered_countries[] = $country;
 		}
 
-		WTA_Logger::info( 'Continents queued', array( 'count' => $stats['continents'] ) );
+		WTA_Logger::info( 'Continents scheduled', array( 'count' => $stats['continents'] ) );
 
-		// Queue countries (v3.0.0 - using GeoNames)
+		// Schedule countries (with small delay to spread load)
+		$delay = 0;
 		foreach ( $filtered_countries as $country ) {
-			// Use GeoNames ID for translation
 			$geonameid = $country['geonameid'];
 			$name_local = WTA_AI_Translator::translate( 
 				$country['name'], 
@@ -102,65 +108,191 @@ WTA_Queue::add(
 				$geonameid 
 			);
 			
-			WTA_Queue::add(
-				'country',
+			as_schedule_single_action(
+				time() + $delay,
+				'wta_create_country',
 				array(
 					'name'         => $country['name'],
 					'name_local'   => $name_local,
 					'country_code' => $country['iso2'],
-					'country_id'   => $country['iso2'], // Use ISO2 as ID (simpler than old system)
+					'country_id'   => $country['iso2'],
 					'continent'    => $country['continent'],
-					'latitude'     => null, // Will be calculated from largest city later
+					'latitude'     => null,
 					'longitude'    => null,
 					'geonameid'    => $geonameid,
 				),
-				'country_' . $country['iso2']
+				'wta_structure'
 			);
 			$stats['countries']++;
+			
+			// Spread countries over 10 seconds
+			$delay = ( $delay + 1 ) % 10;
 		}
 
-		WTA_Logger::info( 'Countries queued', array( 'count' => $stats['countries'] ) );
+		WTA_Logger::info( 'Countries scheduled', array( 'count' => $stats['countries'] ) );
 
-	// Queue cities batch job (ONE item) - v3.0.0: Using GeoNames cities500.txt
-	$cities_file = WTA_GeoNames_Parser::get_cities_file_path();
-	if ( false === $cities_file ) {
-		WTA_Logger::error( 'cities500.txt not found - please upload to wp-content/uploads/world-time-ai-data/' );
-		return $stats;
-	}
+		// Schedule cities import job to run after continents/countries
+		$cities_file = WTA_GeoNames_Parser::get_cities_file_path();
+		if ( false === $cities_file ) {
+			WTA_Logger::error( 'cities500.txt not found - please upload to wp-content/uploads/world-time-ai-data/' );
+			return $stats;
+		}
 
-	// Use country_code (iso2) for matching cities
-	$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
+		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
-	WTA_Queue::add(
-		'cities_import',
-		array(
-			'file_path'       => $cities_file,
-			'min_population'  => $options['min_population'],
-			'max_cities_per_country' => $options['max_cities_per_country'],
-			'selected_continents' => $options['selected_continents'],
-			'filtered_country_codes' => $filtered_country_codes,
-		),
-		'cities_import_' . time()
-	);
+		// Schedule a single action to process all cities
+		as_schedule_single_action(
+			time() + 15, // Wait 15 seconds for continents/countries to start
+			'wta_schedule_cities',
+			array(
+				'file_path'              => $cities_file,
+				'min_population'         => $options['min_population'],
+				'max_cities_per_country' => $options['max_cities_per_country'],
+				'filtered_country_codes' => $filtered_country_codes,
+			),
+			'wta_structure'
+		);
 
-	$stats['cities'] = 1; // This is the batch job count, not actual cities
+		$stats['cities'] = 1; // This is the scheduler job count
 
-	WTA_Logger::info( 'Cities import batch job queued', $options );
-	// v3.0.16: Debug logging for country-specific imports
-	if ( ! empty( $filtered_country_codes ) ) {
-		WTA_Logger::debug( 'Filtered country codes for cities_import', array( 'codes' => $filtered_country_codes ) );
-	}
+		WTA_Logger::info( 'Cities scheduler job scheduled' );
 
 		return $stats;
 	}
 
 	/**
-	 * Queue cities from array.
+	 * Schedule cities from GeoNames file (Pilanto-AI Model).
 	 *
-	 * Called by Action Scheduler processor to queue individual cities.
-	 * CRITICAL: Correct population filter - include cities with null population!
+	 * Reads cities500.txt and schedules ONE Action Scheduler action per city.
+	 * This allows Action Scheduler to parallelize processing.
 	 *
-	 * @since    2.0.0
+	 * @since    3.0.43
+	 * @param    string $file_path              Path to cities500.txt.
+	 * @param    int    $min_population         Minimum population filter.
+	 * @param    int    $max_cities_per_country Max cities per country.
+	 * @param    array  $filtered_country_codes Country codes to include.
+	 */
+	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes ) {
+		set_time_limit( 300 ); // 5 minutes
+
+		WTA_Logger::info( 'Starting cities scheduling', array(
+			'file'                   => basename( $file_path ),
+			'min_population'         => $min_population,
+			'max_cities_per_country' => $max_cities_per_country,
+			'filtered_countries'     => count( $filtered_country_codes ),
+		) );
+
+		$file = fopen( $file_path, 'r' );
+		if ( ! $file ) {
+			WTA_Logger::error( 'Failed to open cities500.txt' );
+			return;
+		}
+
+		$scheduled = 0;
+		$skipped = 0;
+		$per_country = array();
+		$delay = 0;
+
+		while ( ( $line = fgets( $file ) ) !== false ) {
+			$parts = explode( "\t", trim( $line ) );
+			
+			if ( count( $parts ) < 19 ) {
+				continue;
+			}
+
+			$geonameid = $parts[0];
+			$name = $parts[1];
+			$latitude = $parts[4];
+			$longitude = $parts[5];
+			$feature_class = $parts[6];
+			$country_code = $parts[8];
+			$population = $parts[14];
+
+			// Only populated places
+			if ( $feature_class !== 'P' ) {
+				continue;
+			}
+
+			// Filter by country
+			if ( ! empty( $filtered_country_codes ) && ! in_array( strtoupper( $country_code ), $filtered_country_codes, true ) ) {
+				$skipped++;
+				continue;
+			}
+
+			// Population filter
+			if ( $min_population > 0 ) {
+				$pop = intval( $population );
+				if ( $pop > 0 && $pop < $min_population ) {
+					$skipped++;
+					continue;
+				}
+			}
+
+			// Max cities per country
+			if ( $max_cities_per_country > 0 ) {
+				if ( ! isset( $per_country[ $country_code ] ) ) {
+					$per_country[ $country_code ] = 0;
+				}
+
+				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
+					$skipped++;
+					continue;
+				}
+
+				$per_country[ $country_code ]++;
+			}
+
+			// Translate city name
+			$name_local = WTA_AI_Translator::translate( $name, 'city', null, intval( $geonameid ) );
+
+			// Schedule city creation
+			as_schedule_single_action(
+				time() + $delay,
+				'wta_create_city',
+				array(
+					'name'         => $name,
+					'name_local'   => $name_local,
+					'geonameid'    => intval( $geonameid ),
+					'country_code' => strtoupper( $country_code ),
+					'latitude'     => floatval( $latitude ),
+					'longitude'    => floatval( $longitude ),
+					'population'   => intval( $population ),
+				),
+				'wta_structure'
+			);
+
+			$scheduled++;
+
+			// Spread cities over time (1 per second)
+			$delay++;
+
+			// Log progress every 1000 cities
+			if ( $scheduled % 1000 === 0 ) {
+				WTA_Logger::info( 'Cities scheduling progress', array(
+					'scheduled' => $scheduled,
+					'skipped'   => $skipped,
+				) );
+			}
+
+			// Prevent timeout
+			if ( $scheduled % 500 === 0 ) {
+				set_time_limit( 60 );
+			}
+		}
+
+		fclose( $file );
+
+		WTA_Logger::info( 'Cities scheduling complete', array(
+			'scheduled' => $scheduled,
+			'skipped'   => $skipped,
+		) );
+	}
+
+	/**
+	 * Legacy method kept for backward compatibility.
+	 * Now delegates to schedule_cities for single actions.
+	 *
+	 * @deprecated 3.0.43 Use schedule_cities() instead.
 	 * @param    array $cities  Cities data.
 	 * @param    array $options Import options.
 	 * @return   int            Number of cities queued.
@@ -170,33 +302,29 @@ WTA_Queue::add(
 		$max_cities_per_country = isset( $options['max_cities_per_country'] ) ? (int) $options['max_cities_per_country'] : 0;
 		$filtered_country_codes = isset( $options['filtered_country_codes'] ) ? $options['filtered_country_codes'] : array();
 
-		$queued = 0;
+		$scheduled = 0;
 		$per_country = array();
+		$delay = 0;
 
 		foreach ( $cities as $city ) {
-			// Filter by country_code (iso2)
+			// Filter by country_code
 			if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
 				continue;
 			}
 
-			// CRITICAL: Population filter logic
-			// Only filter if:
-			// 1. min_population > 0 (filter is active)
-			// 2. population is explicitly set (not null)
-			// 3. population is less than min_population
+			// Population filter
 			if ( $min_population > 0 ) {
 				if ( isset( $city['population'] ) && null !== $city['population'] ) {
 					$population = (int) $city['population'];
 					if ( $population > 0 && $population < $min_population ) {
-						continue; // Skip this city
+						continue;
 					}
 				}
-				// If population is null or not set, INCLUDE the city
 			}
 
 			// Max cities per country
 			if ( $max_cities_per_country > 0 ) {
-				$country_id = $city['country_id'];
+				$country_id = $city['country_code'];
 				if ( ! isset( $per_country[ $country_id ] ) ) {
 					$per_country[ $country_id ] = 0;
 				}
@@ -208,36 +336,39 @@ WTA_Queue::add(
 				$per_country[ $country_id ]++;
 			}
 
-		// Queue city with GeoNames support (v3.0.0)
-		$geonameid = $city['geonameid'];
-		$name_local = WTA_AI_Translator::translate( 
-			$city['name'], 
-			'city', 
-			null, 
-			$geonameid 
-		);
-		
-		$city_payload = array(
-			'name'         => $city['name'],
-			'name_ascii'   => isset( $city['name_ascii'] ) ? $city['name_ascii'] : $city['name'],
-			'name_local'   => $name_local,
-			'geonameid'    => $geonameid,
-			'country_code' => $city['country_code'],
-			'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
-			'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
-			'population'   => isset( $city['population'] ) ? $city['population'] : null,
-			'timezone'     => isset( $city['timezone'] ) ? $city['timezone'] : null,
-		);
+			// Schedule city with Action Scheduler
+			$geonameid = $city['geonameid'];
+			$name_local = WTA_AI_Translator::translate( 
+				$city['name'], 
+				'city', 
+				null, 
+				$geonameid 
+			);
+			
+			as_schedule_single_action(
+				time() + $delay,
+				'wta_create_city',
+				array(
+					'name'         => $city['name'],
+					'name_local'   => $name_local,
+					'geonameid'    => $geonameid,
+					'country_code' => $city['country_code'],
+					'latitude'     => isset( $city['latitude'] ) ? $city['latitude'] : null,
+					'longitude'    => isset( $city['longitude'] ) ? $city['longitude'] : null,
+					'population'   => isset( $city['population'] ) ? $city['population'] : null,
+				),
+				'wta_structure'
+			);
 
-		WTA_Queue::add( 'city', $city_payload, 'city_' . $geonameid );
-		$queued++;
+			$scheduled++;
+			$delay++;
 
 			// Prevent timeout
-			if ( $queued % 100 === 0 ) {
+			if ( $scheduled % 100 === 0 ) {
 				set_time_limit( 30 );
 			}
 		}
 
-		return $queued;
+		return $scheduled;
 	}
 }

@@ -2,6 +2,129 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.43] - 2025-12-20
+
+### 🚀 MAJOR: Pilanto-AI Concurrent Processing Model
+
+**Complete architectural rewrite to enable true parallel processing using Action Scheduler's async HTTP runners.**
+
+#### Why This Change?
+
+Previous attempts (v3.0.36-42) to enable concurrent processing failed because:
+- Custom queue lacked atomic claiming → race conditions
+- Server has `proc_open()` disabled → Action Scheduler can't spawn child processes
+- `concurrent_batches` filter ineffective with single recurring action
+
+Testing revealed: **Pilanto-AI project achieves true concurrency** because it schedules **1 action per item**, allowing Action Scheduler to parallelize via async HTTP requests (which DO work on RunCloud/OpenLiteSpeed).
+
+#### The Solution: Pilanto-AI Model
+
+Instead of:
+```
+1 recurring action → processes batch of 50 items → hopes for concurrency
+```
+
+We now do:
+```
+221,000 single actions → Action Scheduler parallelizes automatically via async HTTP
+```
+
+#### Implementation
+
+**New Single Processor Classes:**
+- `WTA_Single_Structure_Processor` - Creates 1 continent/country/city per action
+- `WTA_Single_Timezone_Processor` - Lookups 1 timezone per action (serial, rate-limited)
+- `WTA_Single_AI_Processor` - Generates 1 AI content per action (parallel)
+
+**New Action Hooks:**
+- `wta_create_continent` - Single continent creation
+- `wta_create_country` - Single country creation (waits for parent)
+- `wta_create_city` - Single city creation (waits for parent)
+- `wta_lookup_timezone` - Single timezone lookup (1 req/sec, serial)
+- `wta_generate_ai_content` - Single AI generation (5-10 concurrent)
+- `wta_schedule_cities` - Bulk scheduler (reads cities500.txt, schedules all cities)
+
+**Updated Importer:**
+- `WTA_Importer::prepare_import()` - Schedules single actions instead of queue items
+- `WTA_Importer::schedule_cities()` - Reads GeoNames file, schedules 1 action per city
+
+**Updated Core:**
+- Registers new single action hooks
+- Dynamic `concurrent_batches` filter per action type
+- Removed recurring action scheduling (no longer needed)
+
+**Concurrent Settings (Backend Configurable):**
+- Structure: 2 concurrent (default) - No API limits
+- Timezone: 1 concurrent (FIXED) - TimeZoneDB FREE tier protection
+- AI Test Mode: 10 concurrent - No API calls
+- AI Normal Mode: 5 concurrent - OpenAI Tier 5 safe
+
+#### Expected Performance
+
+**Current (v3.0.42):**
+- 4 cities/min (1 concurrent, batch processing)
+- 221k cities = ~923 hours
+
+**New (v3.0.43):**
+- 60 cities/min (limited by timezone API)
+- 221k cities = ~61 hours
+- **15x faster!**
+
+#### Breaking Changes
+
+**Removed:**
+- Old batch processors (`class-wta-structure-processor.php`, etc.)
+- Old recurring actions (`wta_process_structure`, etc.)
+- Custom queue batch logic (though `WTA_Queue` class kept for backward compatibility)
+
+**Preserved:**
+- Force AI regenerate functionality (via `force_regenerate_single()`)
+- All metadata operations (identical to old processors)
+- FAQ generation logic
+- SEO metadata handling
+- Timezone resolution logic
+- All existing settings (reused for concurrent control)
+
+#### Migration Path
+
+1. **Automatic**: Plugin activation registers new actions
+2. **Clean Start**: Import starts fresh with single actions
+3. **No Data Loss**: Existing posts unaffected
+
+#### Technical Details
+
+**Dependency Scheduling:**
+- Countries wait for parent continents (5s retry if not ready)
+- Cities wait for parent countries (5s retry if not ready)
+- AI content waits for timezone data (on `updated_post_meta` hook)
+
+**Rate Limiting:**
+- Timezone: 1 action/sec via scheduling delays (TimeZoneDB FREE tier)
+- Structure: Spread over 10 seconds to prevent server overload
+- AI: No delays (OpenAI Tier 5 = 10,000 RPM capacity)
+
+**Atomic Safety:**
+- Each action is independent (no race conditions)
+- Action Scheduler handles concurrent execution
+- Retry logic built into each processor
+
+#### Files Changed
+
+**New Files:**
+- `includes/processors/class-wta-single-structure-processor.php`
+- `includes/processors/class-wta-single-timezone-processor.php`
+- `includes/processors/class-wta-single-ai-processor.php`
+
+**Modified Files:**
+- `includes/core/class-wta-importer.php` - New scheduling logic
+- `includes/class-wta-core.php` - Register new actions, update filters
+- `includes/admin/views/force-regenerate.php` - Use new processor
+
+**Deprecated (kept for backward compatibility):**
+- `includes/scheduler/class-wta-structure-processor.php`
+- `includes/scheduler/class-wta-timezone-processor.php`
+- `includes/scheduler/class-wta-ai-processor.php`
+
 ## [3.0.42] - 2025-12-19
 
 ### Fixed

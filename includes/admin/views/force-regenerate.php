@@ -19,7 +19,7 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 		$start_time = microtime( true );
 		
 		try {
-			// Load all required dependencies (v2.35.26)
+			// Load all required dependencies (v3.0.43 - Pilanto-AI Model)
 			if ( ! class_exists( 'WTA_Logger' ) ) {
 				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-logger.php';
 			}
@@ -29,12 +29,13 @@ if ( isset( $_POST['wta_force_regenerate'] ) && check_admin_referer( 'wta_force_
 			if ( ! class_exists( 'WTA_FAQ_Renderer' ) ) {
 				require_once WTA_PLUGIN_DIR . '/includes/helpers/class-wta-faq-renderer.php';
 			}
-			if ( ! class_exists( 'WTA_AI_Processor' ) ) {
-				require_once WTA_PLUGIN_DIR . '/includes/scheduler/class-wta-ai-processor.php';
+			if ( ! class_exists( 'WTA_Single_AI_Processor' ) ) {
+				require_once WTA_PLUGIN_DIR . '/includes/processors/class-wta-single-ai-processor.php';
 			}
 			
 			// Force regenerate single post (NO queue involvement)
-			$processor = new WTA_AI_Processor();
+			// v3.0.43: Use Single AI Processor (inherits force_regenerate_single from parent)
+			$processor = new WTA_Single_AI_Processor();
 			$success = $processor->force_regenerate_single( $post_id );
 			
 			$elapsed = round( microtime( true ) - $start_time, 2 );

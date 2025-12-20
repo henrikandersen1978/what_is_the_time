@@ -74,10 +74,10 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-log-cleaner.php'; // v2.35.7
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-country-gps-migration.php'; // v2.35.73
 
-		// Action Scheduler Processors
-		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-structure-processor.php';
-		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-timezone-processor.php';
-		require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-ai-processor.php';
+		// Action Scheduler Processors (v3.0.43 - Pilanto-AI Model)
+		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-structure-processor.php';
+		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-timezone-processor.php';
+		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-ai-processor.php';
 
 		// Admin
 		if ( is_admin() ) {
@@ -286,20 +286,25 @@ class WTA_Core {
 		// Increase Action Scheduler time limit for API-heavy operations
 		$this->loader->add_filter( 'action_scheduler_queue_runner_time_limit', $this, 'increase_time_limit' );
 
-		// Dynamic concurrent batches per action type (v3.0.41)
+		// Dynamic concurrent batches per action type (v3.0.43 - Pilanto-AI Model)
 		$this->loader->add_filter( 'action_scheduler_queue_runner_concurrent_batches', $this, 'set_concurrent_batches', 999 );
 
-		// Structure processor
-		$structure_processor = new WTA_Structure_Processor();
-		$this->loader->add_action( 'wta_process_structure', $structure_processor, 'process_batch' );
+		// Single Structure Processor (v3.0.43 - Pilanto-AI Model)
+		$structure_processor = new WTA_Single_Structure_Processor();
+		$this->loader->add_action( 'wta_create_continent', $structure_processor, 'create_continent' );
+		$this->loader->add_action( 'wta_create_country', $structure_processor, 'create_country' );
+		$this->loader->add_action( 'wta_create_city', $structure_processor, 'create_city' );
 
-		// Timezone processor
-		$timezone_processor = new WTA_Timezone_Processor();
-		$this->loader->add_action( 'wta_process_timezone', $timezone_processor, 'process_batch' );
+		// Cities scheduler (delegates to importer)
+		$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );
 
-		// AI processor
-		$ai_processor = new WTA_AI_Processor();
-		$this->loader->add_action( 'wta_process_ai_content', $ai_processor, 'process_batch' );
+		// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
+		$timezone_processor = new WTA_Single_Timezone_Processor();
+		$this->loader->add_action( 'wta_lookup_timezone', $timezone_processor, 'lookup_timezone', 10, 3 );
+
+		// Single AI Processor (v3.0.43 - Pilanto-AI Model)
+		$ai_processor = new WTA_Single_AI_Processor();
+		$this->loader->add_action( 'wta_generate_ai_content', $ai_processor, 'generate_content', 10, 3 );
 
 		// Log cleanup (v2.35.7) - Runs daily at 04:00
 		$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
@@ -308,8 +313,8 @@ class WTA_Core {
 	/**
 	 * Auto-heal: Ensure Action Scheduler actions are scheduled.
 	 * 
-	 * Runs on admin_init to automatically schedule missing recurring actions.
-	 * This prevents issues where actions get unscheduled or were never scheduled.
+	 * v3.0.43: Pilanto-AI Model uses single actions scheduled on-demand.
+	 * No recurring actions needed. Only ensure log cleanup is scheduled.
 	 *
 	 * @since    2.0.0
 	 */
@@ -328,71 +333,35 @@ class WTA_Core {
 		// Set transient for 1 hour
 		set_transient( 'wta_actions_checked', time(), HOUR_IN_SECONDS );
 
-		// Define required actions
-		$required_actions = array(
-			'wta_process_structure',
-			'wta_process_timezone',
-			'wta_process_ai_content',
-		);
-
-		// Get current cron interval setting
-		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
-
-		// Check and schedule missing actions
-		foreach ( $required_actions as $action ) {
-			if ( false === as_next_scheduled_action( $action ) ) {
-				as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
-				
-				WTA_Logger::info( "Auto-scheduled missing action: $action", array( 'interval' => $interval . 's' ) );
-			}
+		// Ensure log cleanup is scheduled (daily at 04:00)
+		if ( false === as_next_scheduled_action( 'wta_cleanup_old_logs' ) ) {
+			$tomorrow_4am = strtotime( 'tomorrow 04:00:00' );
+			as_schedule_recurring_action( $tomorrow_4am, DAY_IN_SECONDS, 'wta_cleanup_old_logs', array(), 'world-time-ai' );
+			WTA_Logger::info( 'Auto-scheduled missing action: wta_cleanup_old_logs' );
 		}
 	}
 	
 	/**
 	 * Reschedule recurring actions when cron interval setting changes.
 	 * 
-	 * Unschedules all existing actions and reschedules with new interval.
-	 * This ensures batch sizes and time limits match the new interval.
+	 * v3.0.43: Pilanto-AI Model - No recurring actions to reschedule.
+	 * Settings are applied dynamically via filters.
 	 *
 	 * @since    2.35.32
+	 * @deprecated 3.0.43 No longer needed with Pilanto-AI Model.
 	 */
 	public function reschedule_recurring_actions() {
-		// Only if Action Scheduler is available
-		if ( ! function_exists( 'as_unschedule_all_actions' ) || ! function_exists( 'as_schedule_recurring_action' ) ) {
-			return;
-		}
-
-		$actions = array(
-			'wta_process_structure',
-			'wta_process_timezone',
-			'wta_process_ai_content',
-		);
-
-		$interval = intval( get_option( 'wta_cron_interval', 60 ) );
-
-		foreach ( $actions as $action ) {
-			// Unschedule all instances of this action
-			as_unschedule_all_actions( $action, array(), 'world-time-ai' );
-			
-			// Reschedule with new interval
-			as_schedule_recurring_action( time(), $interval, $action, array(), 'world-time-ai' );
-			
-			WTA_Logger::info( "Rescheduled recurring action", array(
-				'action'   => $action,
-				'interval' => $interval . 's',
-			) );
-		}
-		
-		// Clear the auto-schedule check so it re-validates immediately
-		delete_transient( 'wta_actions_checked' );
+		// Pilanto-AI Model: No recurring actions to reschedule
+		// Concurrent settings are applied dynamically via set_concurrent_batches() filter
+		WTA_Logger::info( 'Cron interval updated (Pilanto-AI Model - no rescheduling needed)' );
 		
 		// Add admin notice
 		add_settings_error(
 			'wta_cron_interval',
 			'wta_cron_interval_updated',
 			sprintf( 
-				__( 'Background processing interval updated to %s. All recurring actions have been rescheduled. Batch sizes will automatically adjust.', 'world-time-ai' ),
-				$interval === 300 ? '5 minutes' : '1 minute'
+				__( 'Processing frequency updated to %s. Concurrent settings are applied dynamically.', 'world-time-ai' ),
+				intval( get_option( 'wta_cron_interval', 60 ) ) === 300 ? '5 minutes' : '1 minute'
 			),
 			'success'
 		);
@@ -430,21 +399,23 @@ class WTA_Core {
 	public function set_concurrent_batches( $default ) {
 		// Timezone: ALWAYS 1 (API rate limit protection)
 		// TimeZoneDB FREE tier: 1 req/s, concurrent processing would exceed limits
-		if ( doing_action( 'wta_process_timezone' ) ) {
-			return 1;
+		if ( doing_action( 'wta_lookup_timezone' ) ) {
+			return 1; // FIXED - cannot be changed!
 		}
 		
 		// Structure: From settings (default 2)
-		// Limited benefit due to sequential continent/country processing
-		// Only cities benefit from concurrency
-		if ( doing_action( 'wta_process_structure' ) ) {
+		// Pilanto-AI Model: Each continent/country/city is a single action
+		// Can safely run 2-10 concurrent without API limits
+		if ( doing_action( 'wta_create_continent' ) || 
+		     doing_action( 'wta_create_country' ) || 
+		     doing_action( 'wta_create_city' ) ) {
 			return intval( get_option( 'wta_concurrent_structure', 2 ) );
 		}
 		
 		// AI Content: From settings based on test mode
 		// Test mode: High concurrency (10+) safe - no API calls
-		// Normal mode: Moderate concurrency (3-5) - OpenAI Tier 5 has high limits
-		if ( doing_action( 'wta_process_ai_content' ) ) {
+		// Normal mode: Moderate concurrency (5) - OpenAI Tier 5 has high limits
+		if ( doing_action( 'wta_generate_ai_content' ) ) {
 			$test_mode = get_option( 'wta_test_mode', 0 );
 			if ( $test_mode ) {
 				return intval( get_option( 'wta_concurrent_test_mode', 10 ) );
