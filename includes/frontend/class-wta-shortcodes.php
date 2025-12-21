@@ -45,11 +45,33 @@ class WTA_Shortcodes {
 		// Get location type
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		
-		if ( empty( $type ) || ! in_array( $type, array( 'continent', 'country' ) ) ) {
-			return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
-		}
+	if ( empty( $type ) || ! in_array( $type, array( 'continent', 'country' ) ) ) {
+		return '<!-- Major Cities: Not a continent or country (type: ' . esc_html( $type ) . ') -->';
+	}
+	
+	// v3.0.59: Auto-populate country GPS and timezone on first page view (same as nearby_countries)
+	if ( 'country' === $type ) {
+		$current_lat = get_post_meta( $post_id, 'wta_latitude', true );
+		$current_lon = get_post_meta( $post_id, 'wta_longitude', true );
 		
-		// v3.0.28: Check backend settings FIRST, then fallback to hardcoded defaults
+		// Calculate GPS and timezone if missing
+		if ( empty( $current_lat ) || empty( $current_lon ) ) {
+			$calculated_gps = $this->calculate_country_center( $post_id );
+			if ( ! empty( $calculated_gps ) ) {
+				// Cache GPS (geographic center)
+				update_post_meta( $post_id, 'wta_latitude', $calculated_gps['lat'] );
+				update_post_meta( $post_id, 'wta_longitude', $calculated_gps['lon'] );
+				
+				// Also cache timezone from largest city (for live-time display)
+				$largest_city_tz = $this->get_largest_city_timezone( $post_id );
+				if ( ! empty( $largest_city_tz ) ) {
+					update_post_meta( $post_id, 'wta_timezone_primary', $largest_city_tz );
+				}
+			}
+		}
+	}
+	
+	// v3.0.28: Check backend settings FIRST, then fallback to hardcoded defaults
 		// Continents = broader scope → default 30 cities
 		// Countries = focused scope → default 50 cities (more detail)
 		if ( 'continent' === $type ) {

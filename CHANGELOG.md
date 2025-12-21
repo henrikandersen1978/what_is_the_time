@@ -2,6 +2,48 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.60] - 2025-12-21
+
+### 🔧 FIX: Country GPS/Timezone Actually Triggers Now
+
+**Fixed v3.0.59 not working because wrong shortcode was updated**
+
+#### Problem
+- v3.0.59 added GPS/timezone logic to `nearby_countries_shortcode`
+- But country pages use `major_cities_shortcode`, not `nearby_countries`!
+- Result: Country pages still had no GPS/timezone → no live-time box
+
+#### Solution
+**Added GPS/timezone update to correct shortcode:**
+
+✅ `major_cities_shortcode()` now triggers GPS/timezone update
+✅ Runs when country page is first viewed
+✅ Uses same logic: geographic center + largest city timezone
+
+#### Technical
+```php
+// In major_cities_shortcode() for country posts:
+if ( empty( $current_lat ) || empty( $current_lon ) ) {
+    // Calculate GPS (geographic center)
+    $calculated_gps = $this->calculate_country_center( $post_id );
+    
+    // Get timezone from largest city
+    $largest_city_tz = $this->get_largest_city_timezone( $post_id );
+    
+    // Cache both
+    update_post_meta( $post_id, 'wta_latitude', $calculated_gps['lat'] );
+    update_post_meta( $post_id, 'wta_longitude', $calculated_gps['lon'] );
+    update_post_meta( $post_id, 'wta_timezone_primary', $largest_city_tz );
+}
+```
+
+#### Result
+- ✅ Country pages now get GPS/timezone on first view
+- ✅ Live-time box displays correctly
+- ✅ Works for Russia, Mexico, USA, etc.
+
+---
+
 ## [3.0.59] - 2025-12-21
 
 ### ✨ FEATURE: Auto-populate Country Timezone from Largest City
