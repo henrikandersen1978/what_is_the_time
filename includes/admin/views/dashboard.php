@@ -170,29 +170,6 @@ $queue_stats = array(
 			</p>
 		</div>
 
-		<!-- Queue Status -->
-		<div class="wta-card">
-			<h2><?php esc_html_e( 'Queue Status', WTA_TEXT_DOMAIN ); ?></h2>
-			<div class="wta-stats-grid">
-				<div class="wta-stat">
-					<span class="wta-stat-label"><?php esc_html_e( 'Pending', WTA_TEXT_DOMAIN ); ?></span>
-					<span class="wta-stat-value"><?php echo esc_html( number_format( $queue_stats['by_status']['pending'] ) ); ?></span>
-				</div>
-				<div class="wta-stat">
-					<span class="wta-stat-label"><?php esc_html_e( 'Processing', WTA_TEXT_DOMAIN ); ?></span>
-					<span class="wta-stat-value"><?php echo esc_html( number_format( $queue_stats['by_status']['processing'] ) ); ?></span>
-				</div>
-				<div class="wta-stat">
-					<span class="wta-stat-label"><?php esc_html_e( 'Done', WTA_TEXT_DOMAIN ); ?></span>
-					<span class="wta-stat-value"><?php echo esc_html( number_format( $queue_stats['by_status']['done'] ) ); ?></span>
-				</div>
-				<div class="wta-stat">
-					<span class="wta-stat-label"><?php esc_html_e( 'Errors', WTA_TEXT_DOMAIN ); ?></span>
-					<span class="wta-stat-value wta-stat-error"><?php echo esc_html( number_format( $queue_stats['by_status']['error'] ) ); ?></span>
-				</div>
-			</div>
-		</div>
-
 		<!-- Queue by Type -->
 		<?php if ( ! empty( $queue_stats['by_type'] ) ) : ?>
 		<div class="wta-card">

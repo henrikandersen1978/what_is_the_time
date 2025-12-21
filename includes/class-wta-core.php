@@ -43,6 +43,11 @@ class WTA_Core {
 		
 		// Auto-heal: Ensure Action Scheduler actions are scheduled
 		add_action( 'admin_init', array( $this, 'ensure_actions_scheduled' ) );
+		
+		// Aggressive cleanup for completed actions (v3.0.57)
+		add_filter( 'action_scheduler_retention_period', array( $this, 'set_retention_period' ), 10 );
+		add_action( 'init', array( $this, 'schedule_cleanup' ) );
+		add_action( 'wta_cleanup_completed_actions', array( $this, 'cleanup_completed_actions' ) );
 	}
 
 	/**
@@ -660,6 +665,56 @@ class WTA_Core {
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Set aggressive retention period for completed actions.
+	 * 
+	 * @since    3.0.57
+	 * @return   int Retention period in seconds (1 minute).
+	 */
+	public function set_retention_period() {
+		return 1 * MINUTE_IN_SECONDS; // Keep only 1 minute of completed actions
+	}
+
+	/**
+	 * Schedule cleanup job to run every minute.
+	 * 
+	 * @since    3.0.57
+	 */
+	public function schedule_cleanup() {
+		if ( ! function_exists( 'as_next_scheduled_action' ) ) {
+			return;
+		}
+		
+		if ( ! as_next_scheduled_action( 'wta_cleanup_completed_actions' ) ) {
+			as_schedule_recurring_action( 
+				time(), 
+				60, // Every 1 minute
+				'wta_cleanup_completed_actions'
+			);
+		}
+	}
+
+	/**
+	 * Cleanup completed actions older than 1 minute.
+	 * Deletes up to 250k records per run.
+	 * 
+	 * @since    3.0.57
+	 */
+	public function cleanup_completed_actions() {
+		global $wpdb;
+		
+		$deleted = $wpdb->query(
+			"DELETE FROM {$wpdb->prefix}actionscheduler_actions 
+			WHERE status = 'complete' 
+			AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+			LIMIT 250000"
+		);
+		
+		if ( $deleted > 0 ) {
+			WTA_Logger::debug( "Cleanup: Deleted $deleted completed actions" );
+		}
 	}
 
 	/**

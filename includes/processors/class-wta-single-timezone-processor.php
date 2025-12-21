@@ -33,12 +33,12 @@ class WTA_Single_Timezone_Processor {
 			$last_api_call = get_transient( 'wta_timezone_api_last_call' );
 			$wait_time_applied = 0;
 			
-			if ( false !== $last_api_call ) {
-				$time_since_last_call = microtime( true ) - $last_api_call;
-				if ( $time_since_last_call < 1.0 ) {
-					// Too soon! Wait and reschedule
-					$wait_time = ceil( 1.0 - $time_since_last_call );
-					$wait_time_applied = $wait_time;
+		if ( false !== $last_api_call ) {
+			$time_since_last_call = microtime( true ) - $last_api_call;
+			if ( $time_since_last_call < 1.5 ) {
+				// Too soon! Wait and reschedule (v3.0.57: increased to 1.5s for 50% safety margin)
+				$wait_time = ceil( 2.0 - $time_since_last_call );
+				$wait_time_applied = $wait_time;
 					
 					WTA_Logger::debug( 'Timezone API rate limit - rescheduling', array(
 						'post_id'   => $post_id,
