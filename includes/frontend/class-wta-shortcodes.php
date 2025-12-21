@@ -1182,14 +1182,21 @@ class WTA_Shortcodes {
 		$current_lon = get_post_meta( $current_country_id, 'wta_longitude', true );
 		
 		// v3.0.23: Auto-calculate country GPS if missing (countries don't have GPS in GeoNames)
+		// v3.0.59: Also cache timezone from largest city for display purposes
 		if ( empty( $current_lat ) || empty( $current_lon ) ) {
 			$calculated_gps = $this->calculate_country_center( $current_country_id );
 			if ( ! empty( $calculated_gps ) ) {
 				$current_lat = $calculated_gps['lat'];
 				$current_lon = $calculated_gps['lon'];
-				// Cache it for future use
+				// Cache GPS (geographic center)
 				update_post_meta( $current_country_id, 'wta_latitude', $current_lat );
 				update_post_meta( $current_country_id, 'wta_longitude', $current_lon );
+				
+				// Also cache timezone from largest city (for live-time display)
+				$largest_city_tz = $this->get_largest_city_timezone( $current_country_id );
+				if ( ! empty( $largest_city_tz ) ) {
+					update_post_meta( $current_country_id, 'wta_timezone_primary', $largest_city_tz );
+				}
 			} else {
 				return array(); // No cities in country yet
 			}
@@ -1323,6 +1330,40 @@ class WTA_Shortcodes {
 			'lat' => $total_lat / $count,
 			'lon' => $total_lon / $count,
 		);
+	}
+
+	/**
+	 * Get timezone from largest city in country.
+	 * 
+	 * Used to provide a representative timezone for complex countries
+	 * (e.g., Russia → Moscow timezone, Mexico → Mexico City timezone).
+	 *
+	 * @since    3.0.59
+	 * @param    int $country_id Country post ID.
+	 * @return   string|false    Timezone or false if no cities found.
+	 */
+	private function get_largest_city_timezone( $country_id ) {
+		global $wpdb;
+		
+		$timezone = $wpdb->get_var( $wpdb->prepare(
+			"SELECT pm_tz.meta_value
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id 
+				AND pm_tz.meta_key = 'wta_timezone'
+			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
+				AND pm_pop.meta_key = 'wta_population'
+			WHERE p.post_parent = %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'
+			AND pm_tz.meta_value != ''
+			AND pm_tz.meta_value != 'multiple'
+			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			LIMIT 1",
+			$country_id,
+			WTA_POST_TYPE
+		) );
+		
+		return $timezone ? $timezone : false;
 	}
 
 	/**

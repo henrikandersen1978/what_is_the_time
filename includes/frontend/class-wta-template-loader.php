@@ -71,7 +71,12 @@ class WTA_Template_Loader {
 	$post_id = get_the_ID();
 	$type = get_post_meta( $post_id, 'wta_type', true );
 	$name_local = get_post_field( 'post_title', $post_id ); // Get original title, not SEO H1
-	$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+	
+	// v3.0.59: Use primary timezone if available (from largest city for complex countries)
+	$timezone = get_post_meta( $post_id, 'wta_timezone_primary', true );
+	if ( empty( $timezone ) ) {
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+	}
 		
 		$navigation_html = '';
 		

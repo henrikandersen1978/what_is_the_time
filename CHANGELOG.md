@@ -2,6 +2,65 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.59] - 2025-12-21
+
+### ✨ FEATURE: Auto-populate Country Timezone from Largest City
+
+**Country landing pages now display live-time box automatically**
+
+#### Problem
+- Complex countries (Russia, Mexico, USA, etc.) had `wta_timezone = 'multiple'`
+- Template blocks live-time box display when timezone is `'multiple'`
+- Users visiting country pages saw no live-time information
+- GPS calculation existed but timezone was missing
+
+#### Solution
+**Lazy-loading timezone from largest city (same pattern as GPS):**
+
+✅ **Shortcode Enhancement (`class-wta-shortcodes.php`):**
+- `find_nearby_countries_global()` now also caches timezone when calculating GPS
+- New method: `get_largest_city_timezone()` - gets timezone from largest city by population
+- Stores in `wta_timezone_primary` meta field
+- Triggers when country page with `[nearby_countries]` shortcode is first visited
+
+✅ **Template Update (`class-wta-template-loader.php`):**
+- Checks `wta_timezone_primary` first (from largest city)
+- Falls back to `wta_timezone` if primary not available
+- Enables live-time box for complex countries
+
+#### Examples
+- **Russia:** Gets `Europe/Moscow` timezone from Moscow (largest city)
+- **Mexico:** Gets `America/Mexico_City` timezone from Mexico City
+- **USA:** Gets timezone from New York or Los Angeles (depending on largest)
+
+#### Technical Details
+```php
+// When country page visited with [nearby_countries] shortcode:
+if ( empty( $current_lat ) || empty( $current_lon ) ) {
+    // Calculate GPS (geographic center - existing)
+    $calculated_gps = $this->calculate_country_center( $country_id );
+    
+    // NEW: Also get timezone from largest city
+    $largest_city_tz = $this->get_largest_city_timezone( $country_id );
+    if ( ! empty( $largest_city_tz ) ) {
+        update_post_meta( $country_id, 'wta_timezone_primary', $largest_city_tz );
+    }
+}
+```
+
+#### Benefits
+- ✅ **Automatic** - No cron jobs, runs when page visited
+- ✅ **Efficient** - Single query, cached for future
+- ✅ **Representative** - Largest city timezone makes sense for users
+- ✅ **GPS preserved** - Still uses geographic center for coordinates
+- ✅ **Backwards compatible** - Simple countries unaffected
+
+#### Files Changed
+- `includes/frontend/class-wta-shortcodes.php`: Added timezone caching + helper method
+- `includes/frontend/class-wta-template-loader.php`: Check primary timezone first
+
+---
+
 ## [3.0.58] - 2025-12-21
 
 ### 🎯 FIX: Smart Timezone Readiness Flag System
