@@ -73,13 +73,14 @@ class WTA_Template_Loader {
 	$name_local = get_post_field( 'post_title', $post_id ); // Get original title, not SEO H1
 	
 	// v3.0.61: Auto-populate country GPS and timezone EVERY page view (cache-independent)
+	// v3.0.62: Also check for missing timezone_primary (countries may have GPS but no timezone)
 	if ( 'country' === $type ) {
 		$current_lat = get_post_meta( $post_id, 'wta_latitude', true );
 		$current_lon = get_post_meta( $post_id, 'wta_longitude', true );
+		$timezone_primary = get_post_meta( $post_id, 'wta_timezone_primary', true );
 		
-		// Calculate GPS and timezone if missing
-		if ( empty( $current_lat ) || empty( $current_lon ) ) {
-			// We need to call shortcode helper methods, so use a static helper instead
+		// Calculate GPS and timezone if EITHER is missing
+		if ( empty( $current_lat ) || empty( $current_lon ) || empty( $timezone_primary ) ) {
 			$this->populate_country_gps_timezone( $post_id );
 		}
 	}

@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.62] - 2025-12-21
+
+### 🔧 FIX: Also Check for Missing timezone_primary
+
+**Fixed countries with GPS but no timezone_primary (like Russia)**
+
+#### Problem Identified
+SQL query revealed Russia had:
+```
+wta_latitude:  55.17182  ← EXISTS
+wta_longitude: 59.65471  ← EXISTS
+wta_timezone:  multiple  ← EXISTS but wrong value
+wta_timezone_primary: (missing!)  ← NOT SET
+```
+
+v3.0.61 only checked GPS:
+```php
+if ( empty( $current_lat ) || empty( $current_lon ) ) {
+    // Update timezone_primary...
+}
+```
+
+Result: Countries with GPS from earlier visits never got `timezone_primary` updated!
+
+#### Solution
+**Check for BOTH missing GPS AND missing timezone_primary:**
+
+```php
+if ( empty( $current_lat ) || empty( $current_lon ) || empty( $timezone_primary ) ) {
+    $this->populate_country_gps_timezone( $post_id );
+}
+```
+
+#### Result
+- ✅ Updates timezone_primary even if GPS exists
+- ✅ Fixes Russia, Mexico, USA and all complex countries
+- ✅ Live-time box displays after next page visit
+
+---
+
 ## [3.0.61] - 2025-12-21
 
 ### 🔧 CRITICAL FIX: GPS/Timezone Now Cache-Independent
