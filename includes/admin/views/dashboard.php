@@ -145,6 +145,47 @@ $queue_stats = array(
 <div class="wrap">
 	<h1><?php esc_html_e( 'World Time AI Dashboard', WTA_TEXT_DOMAIN ); ?></h1>
 
+	<?php
+	// v3.0.58: Check for stuck cities without timezone
+	$stuck_count = $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) 
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			WHERE p.post_type = %s
+			AND p.post_status = 'draft'
+			AND p.post_modified < DATE_SUB(NOW(), INTERVAL 1 HOUR)
+			AND pm.meta_key = 'wta_has_timezone'
+			AND pm.meta_value = '0'",
+			WTA_POST_TYPE
+		)
+	);
+
+	if ( $stuck_count > 0 ) :
+	?>
+	<div class="notice notice-warning">
+		<p>
+			<strong>⚠️ <?php esc_html_e( 'Warning:', WTA_TEXT_DOMAIN ); ?></strong> 
+			<?php
+			echo esc_html( 
+				sprintf( 
+					_n( 
+						'%d city is stuck without timezone data for 1+ hour.', 
+						'%d cities are stuck without timezone data for 1+ hour.', 
+						$stuck_count, 
+						WTA_TEXT_DOMAIN 
+					), 
+					$stuck_count 
+				) 
+			);
+			?>
+			<a href="<?php echo esc_url( admin_url( 'tools.php?page=action-scheduler&status=failed' ) ); ?>">
+				<?php esc_html_e( 'View Failed Actions →', WTA_TEXT_DOMAIN ); ?>
+			</a>
+		</p>
+	</div>
+	<?php endif; ?>
+
 	<div class="wta-dashboard">
 		<!-- Location Posts -->
 		<div class="wta-card">

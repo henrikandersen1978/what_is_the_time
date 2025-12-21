@@ -2,6 +2,76 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.58] - 2025-12-21
+
+### 🎯 FIX: Smart Timezone Readiness Flag System
+
+**Fixed cities stuck as draft forever when timezone lookups fail**
+
+#### Problem
+Cities could get stuck as draft if timezone lookup failed:
+- USA import created 15k cities → 5,330 stuck as draft with `timezone_status='failed'`
+- When timezone failed → AI content never scheduled → City stuck forever
+- No visibility into which cities were stuck
+- No way to differentiate "waiting for timezone" vs "timezone failed permanently"
+
+#### Solution
+**Introduced `wta_has_timezone` flag system:**
+
+✅ **Simple Boolean Flag:**
+- `has_timezone = 0` → City waiting for timezone data
+- `has_timezone = 1` → City ready for AI content generation
+
+✅ **Intelligent AI Queue:**
+- AI processor only claims cities with `has_timezone = 1`
+- Cities automatically picked up when timezone succeeds
+- No manual rescheduling needed
+
+✅ **Passive Monitoring:**
+- Job runs every 30 minutes
+- Logs cities stuck with `has_timezone = 0` for 2+ hours
+- Dashboard warning if any stuck cities found
+- **No auto-fix** - requires manual investigation
+
+✅ **Dashboard Visibility:**
+- Warning box shows count of stuck cities
+- Link to Action Scheduler failed actions
+- Easy identification of problem cities
+
+#### Flow Comparison
+
+**Before (v3.0.57):**
+```
+City created → Timezone lookup scheduled
+    ↓
+Timezone fails → status='failed' → ❌ Stuck forever as draft
+```
+
+**After (v3.0.58):**
+```
+City created → has_timezone=0 → Timezone lookup scheduled
+    ↓
+✅ Success → has_timezone=1 → AI scheduled → Published
+❌ Fails → has_timezone=0 remains → Logged for investigation
+```
+
+#### Benefits
+- ✅ **No more stuck drafts** - Clear state management
+- ✅ **Intelligent queuing** - AI only processes ready cities
+- ✅ **Automatic pickup** - When timezone succeeds, AI auto-scheduled
+- ✅ **Visibility** - Dashboard warns about stuck cities
+- ✅ **Quality control** - No auto-publishing without timezone data
+- ✅ **Debugging** - Easy to identify problematic cities
+
+#### Files Changed
+- `includes/processors/class-wta-single-structure-processor.php` - Set flag on city creation
+- `includes/processors/class-wta-single-timezone-processor.php` - Set flag=1 on success
+- `includes/core/class-wta-queue.php` - Updated AI claiming logic
+- `includes/class-wta-core.php` - Added monitoring job
+- `includes/admin/views/dashboard.php` - Added warning box
+
+---
+
 ## [3.0.57] - 2025-12-21
 
 ### 🧹 PERFORMANCE: Aggressive Completed Actions Cleanup

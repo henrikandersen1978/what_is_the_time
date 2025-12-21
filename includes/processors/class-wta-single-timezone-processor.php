@@ -116,34 +116,35 @@ class WTA_Single_Timezone_Processor {
 				return;
 			}
 
-			// Success - save timezone
-			delete_post_meta( $post_id, '_wta_timezone_retry_count' );
-			update_post_meta( $post_id, 'wta_timezone', $timezone );
-			update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+		// Success - save timezone
+		delete_post_meta( $post_id, '_wta_timezone_retry_count' );
+		update_post_meta( $post_id, 'wta_timezone', $timezone );
+		update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+		update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Set flag for AI queue
 
-			$api_time = round( microtime( true ) - $api_start, 3 );
-			$execution_time = round( microtime( true ) - $start_time, 3 );
-			
-			WTA_Logger::info( '🌍 Timezone resolved', array(
-				'post_id'        => $post_id,
-				'timezone'       => $timezone,
-				'api_time'       => $api_time . 's',
-				'execution_time' => $execution_time . 's',
-			) );
+		$api_time = round( microtime( true ) - $api_start, 3 );
+		$execution_time = round( microtime( true ) - $start_time, 3 );
+		
+		WTA_Logger::info( '🌍 Timezone resolved', array(
+			'post_id'        => $post_id,
+			'timezone'       => $timezone,
+			'api_time'       => $api_time . 's',
+			'execution_time' => $execution_time . 's',
+		) );
 
-			// CRITICAL: Schedule AI content after timezone resolved
-		$type = get_post_meta( $post_id, 'wta_type', true );
-		as_schedule_single_action(
-			time(),
-			'wta_generate_ai_content',
-			array( $post_id, $type, false ),  // post_id, type, force_ai
-			'wta_ai_content'
-		);
+		// CRITICAL: Schedule AI content after timezone resolved
+	$type = get_post_meta( $post_id, 'wta_type', true );
+	as_schedule_single_action(
+		time(),
+		'wta_generate_ai_content',
+		array( $post_id, $type, false ),  // post_id, type, force_ai
+		'wta_ai_content'
+	);
 
-			WTA_Logger::info( 'AI content scheduled after timezone resolution', array(
-				'post_id' => $post_id,
-				'type'    => $type,
-			) );
+		WTA_Logger::info( 'AI content scheduled after timezone resolution', array(
+			'post_id' => $post_id,
+			'type'    => $type,
+		) );
 
 		} catch ( Exception $e ) {
 			WTA_Logger::error( 'Failed to lookup timezone', array(

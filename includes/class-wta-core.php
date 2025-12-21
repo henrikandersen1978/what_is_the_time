@@ -48,6 +48,10 @@ class WTA_Core {
 		add_filter( 'action_scheduler_retention_period', array( $this, 'set_retention_period' ), 10 );
 		add_action( 'init', array( $this, 'schedule_cleanup' ) );
 		add_action( 'wta_cleanup_completed_actions', array( $this, 'cleanup_completed_actions' ) );
+		
+		// Monitor stuck timezone lookups (v3.0.58)
+		add_action( 'init', array( $this, 'schedule_timezone_monitor' ) );
+		add_action( 'wta_monitor_stuck_timezones', array( $this, 'monitor_stuck_timezones' ) );
 	}
 
 	/**
@@ -714,6 +718,76 @@ class WTA_Core {
 		
 		if ( $deleted > 0 ) {
 			WTA_Logger::debug( "Cleanup: Deleted $deleted completed actions" );
+		}
+	}
+
+	/**
+	 * Schedule timezone monitoring job (every 30 minutes).
+	 * 
+	 * @since    3.0.58
+	 */
+	public function schedule_timezone_monitor() {
+		if ( ! function_exists( 'as_next_scheduled_action' ) ) {
+			return;
+		}
+		
+		if ( ! as_next_scheduled_action( 'wta_monitor_stuck_timezones' ) ) {
+			as_schedule_recurring_action( 
+				time(), 
+				30 * MINUTE_IN_SECONDS, // Every 30 minutes
+				'wta_monitor_stuck_timezones'
+			);
+		}
+	}
+
+	/**
+	 * Monitor cities stuck without timezone data (passive monitoring).
+	 * Logs warnings for manual investigation - NO auto-fix.
+	 * 
+	 * @since    3.0.58
+	 */
+	public function monitor_stuck_timezones() {
+		global $wpdb;
+		
+		// Find draft cities with has_timezone = 0 for more than 2 hours
+		$stuck_posts = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT p.ID, p.post_title, p.post_modified,
+				lat.meta_value as latitude,
+				lng.meta_value as longitude
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+				LEFT JOIN {$wpdb->postmeta} lat ON p.ID = lat.post_id AND lat.meta_key = 'wta_latitude'
+				LEFT JOIN {$wpdb->postmeta} lng ON p.ID = lng.post_id AND lng.meta_key = 'wta_longitude'
+				WHERE p.post_type = %s
+				AND p.post_status = 'draft'
+				AND p.post_modified < DATE_SUB(NOW(), INTERVAL 2 HOUR)
+				AND pm.meta_key = 'wta_has_timezone'
+				AND pm.meta_value = '0'
+				LIMIT 100",
+				WTA_POST_TYPE
+			)
+		);
+		
+		if ( ! empty( $stuck_posts ) ) {
+			$post_details = array();
+			foreach ( $stuck_posts as $post ) {
+				$post_details[] = sprintf(
+					'ID: %d, Title: %s, Coords: %s,%s',
+					$post->ID,
+					$post->post_title,
+					$post->latitude,
+					$post->longitude
+				);
+			}
+			
+			WTA_Logger::error( '⚠️ Cities stuck without timezone for 2+ hours', array(
+				'count'            => count( $stuck_posts ),
+				'post_ids'         => array_column( $stuck_posts, 'ID' ),
+				'details'          => $post_details,
+				'action_required'  => 'Manual investigation needed. Check timezone lookup errors in logs.',
+				'dashboard_warning' => 'Visible in dashboard',
+			) );
 		}
 	}
 

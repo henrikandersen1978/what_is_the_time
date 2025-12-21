@@ -417,13 +417,42 @@ class WTA_Single_Structure_Processor {
 				return;
 			}
 
-			// Handle timezone
-			if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
-				// Complex country - need API lookup
+		// Handle timezone
+		if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+			// Complex country - need API lookup
+			if ( $final_lat !== null && $final_lon !== null ) {
+				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+				update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
+
+			// Schedule timezone lookup (with delay to spread load)
+			as_schedule_single_action(
+				time() + wp_rand( 1, 10 ),
+				'wta_lookup_timezone',
+				array( $post_id, $final_lat, $final_lon ),
+				'wta_timezone'
+			);
+			}
+		} else {
+			// Simple country - try hardcoded list
+			$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
+			if ( $timezone ) {
+				update_post_meta( $post_id, 'wta_timezone', $timezone );
+				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+				update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Flag for AI queue
+				
+			// Schedule AI content immediately for simple countries
+			as_schedule_single_action(
+				time(),
+				'wta_generate_ai_content',
+				array( $post_id, 'city', false ),  // post_id, type, force_ai
+				'wta_ai_content'
+			);
+			} else {
+				// Country not in list - use API
 				if ( $final_lat !== null && $final_lon !== null ) {
 					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
-
-				// Schedule timezone lookup (with delay to spread load)
+					update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
+				
 				as_schedule_single_action(
 					time() + wp_rand( 1, 10 ),
 					'wta_lookup_timezone',
@@ -431,34 +460,8 @@ class WTA_Single_Structure_Processor {
 					'wta_timezone'
 				);
 				}
-			} else {
-				// Simple country - try hardcoded list
-				$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
-				if ( $timezone ) {
-					update_post_meta( $post_id, 'wta_timezone', $timezone );
-					update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
-					
-				// Schedule AI content immediately for simple countries
-				as_schedule_single_action(
-					time(),
-					'wta_generate_ai_content',
-					array( $post_id, 'city', false ),  // post_id, type, force_ai
-					'wta_ai_content'
-				);
-				} else {
-					// Country not in list - use API
-					if ( $final_lat !== null && $final_lon !== null ) {
-						update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
-					
-					as_schedule_single_action(
-						time() + wp_rand( 1, 10 ),
-						'wta_lookup_timezone',
-						array( $post_id, $final_lat, $final_lon ),
-						'wta_timezone'
-					);
-					}
-				}
 			}
+		}
 
 			// SEO metadata
 			$parent_country_name = get_post_field( 'post_title', $parent_id );
