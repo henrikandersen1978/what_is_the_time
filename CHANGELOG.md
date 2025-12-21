@@ -2,6 +2,42 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.56] - 2025-12-21
+
+### 🔧 CRITICAL FIX: Timezone Lookup Argument Format
+
+**Fixed 1,180+ failed timezone lookups from USA import**
+
+#### Problem
+Timezone lookups were failing with invalid arguments:
+- ❌ Some `as_schedule_single_action()` calls used **associative arrays** `array('post_id' => $id, 'lat' => $lat, 'lng' => $lng)`
+- ❌ Action Scheduler unpacks as **ordered array**, causing wrong parameter mapping:
+  - `$post_id` received `'post_id'` (string instead of int)
+  - `$lat` received post_id value
+  - `$lng` received lat value
+- ❌ All TimeZoneDB API calls failed due to invalid coordinates
+- ❌ Affected 4 locations in code (1 in timezone processor, 3 in structure processor)
+
+#### Solution
+Fixed all timezone scheduling to use **ordered arrays**:
+- ✅ `class-wta-single-timezone-processor.php` line 99: Fixed retry logic
+- ✅ `class-wta-single-structure-processor.php` line 232: Fixed country timezone scheduling
+- ✅ `class-wta-single-structure-processor.php` line 427: Fixed city timezone scheduling #1
+- ✅ `class-wta-single-structure-processor.php` line 453: Fixed city timezone scheduling #2
+- ✅ All calls now use: `array( $post_id, $lat, $lng )` (ordered, no keys)
+
+#### Impact
+- 🔧 Fixes all pending timezone lookups
+- 🔧 Prevents future failures
+- 🔧 Makes retry system work correctly
+- 🚀 Ready for Australia test import in normal mode
+
+#### Files Changed
+- `includes/processors/class-wta-single-timezone-processor.php`
+- `includes/processors/class-wta-single-structure-processor.php`
+
+---
+
 ## [3.0.55] - 2025-12-20
 
 ### 🌑 FIX: Polar Region Sunrise/Sunset Handling

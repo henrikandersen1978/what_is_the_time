@@ -232,11 +232,8 @@ class WTA_Single_Structure_Processor {
 						as_schedule_single_action(
 							time(),
 							'wta_lookup_timezone',
-							array(
-								'post_id' => $post_id,
-								'lat'     => $data['latitude'],
-								'lng'     => $data['longitude'],
-							)
+							array( $post_id, $data['latitude'], $data['longitude'] ),
+							'wta_timezone'
 						);
 					}
 				}
@@ -426,16 +423,13 @@ class WTA_Single_Structure_Processor {
 				if ( $final_lat !== null && $final_lon !== null ) {
 					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
 
-					// Schedule timezone lookup (with delay to spread load)
-					as_schedule_single_action(
-						time() + wp_rand( 1, 10 ),
-						'wta_lookup_timezone',
-						array(
-							'post_id' => $post_id,
-							'lat'     => $final_lat,
-							'lng'     => $final_lon,
-						)
-					);
+				// Schedule timezone lookup (with delay to spread load)
+				as_schedule_single_action(
+					time() + wp_rand( 1, 10 ),
+					'wta_lookup_timezone',
+					array( $post_id, $final_lat, $final_lon ),
+					'wta_timezone'
+				);
 				}
 			} else {
 				// Simple country - try hardcoded list
@@ -455,16 +449,13 @@ class WTA_Single_Structure_Processor {
 					// Country not in list - use API
 					if ( $final_lat !== null && $final_lon !== null ) {
 						update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
-						
-						as_schedule_single_action(
-							time() + wp_rand( 1, 10 ),
-							'wta_lookup_timezone',
-							array(
-								'post_id' => $post_id,
-								'lat'     => $final_lat,
-								'lng'     => $final_lon,
-							)
-						);
+					
+					as_schedule_single_action(
+						time() + wp_rand( 1, 10 ),
+						'wta_lookup_timezone',
+						array( $post_id, $final_lat, $final_lon ),
+						'wta_timezone'
+					);
 					}
 				}
 			}

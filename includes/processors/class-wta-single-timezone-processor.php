@@ -95,16 +95,13 @@ class WTA_Single_Timezone_Processor {
 						'next_delay'   => $next_delay . ' seconds',
 					) );
 
-					// Reschedule with exponential backoff
-					as_schedule_single_action(
-						time() + $next_delay,
-						'wta_lookup_timezone',
-						array(
-							'post_id' => $post_id,
-							'lat'     => $lat,
-							'lng'     => $lng,
-						)
-					);
+				// Reschedule with exponential backoff
+				as_schedule_single_action(
+					time() + $next_delay,
+					'wta_lookup_timezone',
+					array( $post_id, $lat, $lng ),
+					'wta_timezone'
+				);
 				} else {
 					// Max retries reached
 					WTA_Logger::error( 'Timezone resolution failed after 3 retries', array(
