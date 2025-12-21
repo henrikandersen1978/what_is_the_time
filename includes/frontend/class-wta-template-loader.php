@@ -72,6 +72,18 @@ class WTA_Template_Loader {
 	$type = get_post_meta( $post_id, 'wta_type', true );
 	$name_local = get_post_field( 'post_title', $post_id ); // Get original title, not SEO H1
 	
+	// v3.0.61: Auto-populate country GPS and timezone EVERY page view (cache-independent)
+	if ( 'country' === $type ) {
+		$current_lat = get_post_meta( $post_id, 'wta_latitude', true );
+		$current_lon = get_post_meta( $post_id, 'wta_longitude', true );
+		
+		// Calculate GPS and timezone if missing
+		if ( empty( $current_lat ) || empty( $current_lon ) ) {
+			// We need to call shortcode helper methods, so use a static helper instead
+			$this->populate_country_gps_timezone( $post_id );
+		}
+	}
+	
 	// v3.0.59: Use primary timezone if available (from largest city for complex countries)
 	$timezone = get_post_meta( $post_id, 'wta_timezone_primary', true );
 	if ( empty( $timezone ) ) {
@@ -836,6 +848,79 @@ class WTA_Template_Loader {
 		$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $city_name );
 		
 		return $content;
+	}
+
+	/**
+	 * Auto-populate country GPS and timezone from cities.
+	 * 
+	 * v3.0.61: Runs on every country page view (cache-independent)
+	 *
+	 * @since    3.0.61
+	 * @param    int $country_id Country post ID.
+	 */
+	private function populate_country_gps_timezone( $country_id ) {
+		global $wpdb;
+		
+		// Get geographic center (average of all cities)
+		$cities = $wpdb->get_results( $wpdb->prepare(
+			"SELECT 
+				pm_lat.meta_value as lat,
+				pm_lon.meta_value as lon
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id 
+				AND pm_lat.meta_key = 'wta_latitude'
+			INNER JOIN {$wpdb->postmeta} pm_lon ON p.ID = pm_lon.post_id 
+				AND pm_lon.meta_key = 'wta_longitude'
+			WHERE p.post_parent = %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'",
+			$country_id,
+			WTA_POST_TYPE
+		) );
+		
+		if ( empty( $cities ) ) {
+			return; // No cities yet
+		}
+		
+		// Calculate geographic center (simple average)
+		$total_lat = 0;
+		$total_lon = 0;
+		$count = count( $cities );
+		
+		foreach ( $cities as $city ) {
+			$total_lat += floatval( $city->lat );
+			$total_lon += floatval( $city->lon );
+		}
+		
+		$center_lat = $total_lat / $count;
+		$center_lon = $total_lon / $count;
+		
+		// Get timezone from largest city
+		$largest_city_tz = $wpdb->get_var( $wpdb->prepare(
+			"SELECT pm_tz.meta_value
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id 
+				AND pm_tz.meta_key = 'wta_timezone'
+			LEFT JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id 
+				AND pm_pop.meta_key = 'wta_population'
+			WHERE p.post_parent = %d
+			AND p.post_type = %s
+			AND p.post_status = 'publish'
+			AND pm_tz.meta_value != ''
+			AND pm_tz.meta_value != 'multiple'
+			ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
+			LIMIT 1",
+			$country_id,
+			WTA_POST_TYPE
+		) );
+		
+		// Cache GPS and timezone
+		update_post_meta( $country_id, 'wta_latitude', $center_lat );
+		update_post_meta( $country_id, 'wta_longitude', $center_lon );
+		
+		if ( ! empty( $largest_city_tz ) ) {
+			update_post_meta( $country_id, 'wta_timezone_primary', $largest_city_tz );
+		}
 	}
 }
 

@@ -2,6 +2,72 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.61] - 2025-12-21
+
+### 🔧 CRITICAL FIX: GPS/Timezone Now Cache-Independent
+
+**Fixed v3.0.60 not working due to shortcode cache**
+
+#### Problem
+- v3.0.60 added GPS/timezone logic to `major_cities_shortcode`
+- BUT shortcode output is cached for 24 hours!
+- When cache exists, shortcode returns cached HTML without executing new code
+- Result: GPS/timezone never updated → no live-time box
+
+#### Root Cause
+```php
+// In major_cities_shortcode():
+// GPS/timezone update code (line 52-72)
+if ( empty( $gps ) ) {
+    // Update GPS/timezone...
+}
+
+// Cache check (line 89-94)
+$cached = get_transient( $cache_key );
+if ( false !== $cached ) {
+    return $cached;  // ← Returns OLD cached HTML!
+}
+```
+
+**Cache was created BEFORE v3.0.60 deployment** → New code never runs!
+
+#### Solution
+**Moved GPS/timezone update to template-loader (runs EVERY page view):**
+
+✅ `class-wta-template-loader.php::inject_navigation()`
+✅ Runs before rendering content (no cache)
+✅ Checks GPS/timezone on EVERY country page view
+✅ Updates meta fields if missing
+✅ Cache-independent!
+
+#### Technical
+```php
+// In inject_navigation() - runs EVERY time page is viewed:
+if ( 'country' === $type ) {
+    $current_lat = get_post_meta( $post_id, 'wta_latitude', true );
+    
+    if ( empty( $current_lat ) ) {
+        // Calculate GPS center + get largest city timezone
+        $this->populate_country_gps_timezone( $post_id );
+    }
+}
+
+// Then template uses wta_timezone_primary for live-time box
+$timezone = get_post_meta( $post_id, 'wta_timezone_primary', true );
+```
+
+#### Why This Works
+- ✅ `inject_navigation()` runs on EVERY page request
+- ✅ Not affected by shortcode cache
+- ✅ Not affected by WordPress page cache (runs server-side)
+- ✅ Updates meta once, then uses cached value
+- ✅ Live-time box displays immediately
+
+#### Files Changed
+- `includes/frontend/class-wta-template-loader.php`: Added GPS/timezone check + helper method
+
+---
+
 ## [3.0.60] - 2025-12-21
 
 ### 🔧 FIX: Country GPS/Timezone Actually Triggers Now
