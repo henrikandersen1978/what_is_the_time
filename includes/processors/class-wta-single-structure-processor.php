@@ -377,13 +377,16 @@ class WTA_Single_Structure_Processor {
 			update_post_meta( $post_id, 'wta_country_code', $country_code );
 			update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 			
-			if ( isset( $data['geonameid'] ) && ! empty( $data['geonameid'] ) ) {
-				update_post_meta( $post_id, 'wta_geonames_id', intval( $data['geonameid'] ) );
-			}
-			
-			if ( isset( $data['population'] ) && $data['population'] > 0 ) {
-				update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
-			}
+		if ( isset( $data['geonameid'] ) && ! empty( $data['geonameid'] ) ) {
+			update_post_meta( $post_id, 'wta_geonames_id', intval( $data['geonameid'] ) );
+		}
+		
+		// v3.0.64: Always save population (default to 1 if NULL/0 for sorting)
+		// Small villages without population data still need a value for shortcode sorting
+		$population = isset( $data['population'] ) && $data['population'] > 0 
+			? intval( $data['population'] ) 
+			: 1; // Default for small villages/towns without population data
+		update_post_meta( $post_id, 'wta_population', $population );
 			
 			if ( isset( $data['wikidata_id'] ) && ! empty( $data['wikidata_id'] ) ) {
 				update_post_meta( $post_id, 'wta_wikidata_id', $data['wikidata_id'] );

@@ -2,6 +2,70 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.64] - 2025-12-22
+
+### 🐛 FIX: Population NULL Caused Only 20-21 Cities to Display
+
+**CRITICAL BUG: Shortcode only showed 20-21 cities instead of all 77**
+
+#### Problem Discovered
+After Portugal import (77 cities):
+- Backend: 77 cities visible ✅
+- Frontend: Only 21 cities visible ❌
+- Debugging revealed: 57 cities had `wta_population = NULL`
+
+**Root Cause:**
+```php
+// OLD CODE (line 384):
+if ( isset( $data['population'] ) && $data['population'] > 0 ) {
+    update_post_meta( $post_id, 'wta_population', intval( $data['population'] ) );
+}
+// Result: Small villages with population=0 in GeoNames → NOT SAVED
+```
+
+**Why it broke shortcodes:**
+```php
+// Shortcode sorts by population (meta_value_num)
+'orderby' => 'meta_value_num',
+'meta_key' => 'wta_population',
+
+// Cities without wta_population meta:
+// → Excluded from query OR randomly sorted
+// → Only 20 cities with population showed up!
+```
+
+#### Solution (v3.0.64)
+**Always save population, default to 1 if NULL/0:**
+
+```php
+// NEW CODE:
+$population = isset( $data['population'] ) && $data['population'] > 0 
+    ? intval( $data['population'] ) 
+    : 1; // Default for small villages without data
+update_post_meta( $post_id, 'wta_population', $population );
+```
+
+#### Result
+- ✅ ALL cities get wta_population meta (even if data is missing)
+- ✅ Small villages default to population=1
+- ✅ Shortcodes can sort ALL cities properly
+- ✅ All 77 cities now visible on frontend
+
+#### Migration for Existing Data
+Run this SQL to fix existing cities with NULL population:
+
+```sql
+INSERT INTO wp_postmeta (post_id, meta_key, meta_value)
+SELECT p.ID, 'wta_population', '1'
+FROM wp_posts p
+LEFT JOIN wp_postmeta pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
+WHERE p.post_type = 'wta_location'
+AND (pm_pop.meta_value IS NULL OR pm_pop.meta_value = '')
+ON DUPLICATE KEY UPDATE meta_value = '1';
+```
+
+---
+
 ## [3.0.63] - 2025-12-22
 
 ### 🔧 FIX: Clear Shortcode Cache Button Now Includes regional_centres
