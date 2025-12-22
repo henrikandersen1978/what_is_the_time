@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.63] - 2025-12-22
+
+### 🔧 FIX: Clear Shortcode Cache Button Now Includes regional_centres
+
+**"Clear Shortcode Cache" button in backend now also clears regional_centres cache**
+
+#### Problem
+The "Clear Shortcode Cache" button in Tools cleared these shortcodes:
+- ✅ `wta_child_locations`
+- ✅ `wta_nearby_cities`
+- ✅ `wta_major_cities`
+- ✅ `wta_global_time_comparison`
+- ✅ Various continent caches
+- ❌ **MISSING:** `wta_regional_centres` (24-hour cache per country)
+
+**Result:** Regional centres shortcode kept showing stale data even after clicking "Clear Cache".
+
+#### Solution
+Added regional_centres to the cache clear query in `class-wta-admin.php`:
+
+```php
+OR option_name LIKE '_transient_wta_regional_centres_%'
+OR option_name LIKE '_transient_timeout_wta_regional_centres_%'
+```
+
+#### Result
+- ✅ Backend "Clear Shortcode Cache" button now clears ALL shortcode caches
+- ✅ Regional centres will regenerate with fresh data after cache clear
+- ✅ Especially useful during imports when city counts change rapidly
+
+---
+
 ## [3.0.62] - 2025-12-21
 
 ### 🔧 FIX: Also Check for Missing timezone_primary

@@ -738,38 +738,40 @@ class WTA_Admin {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
-		global $wpdb;
-		
-		// Delete all WTA shortcode transients
-		$deleted = $wpdb->query( "
-			DELETE FROM {$wpdb->options} 
-			WHERE option_name LIKE '_transient_wta_child_locations_%'
-			OR option_name LIKE '_transient_timeout_wta_child_locations_%'
-			OR option_name LIKE '_transient_wta_nearby_cities_%'
-			OR option_name LIKE '_transient_timeout_wta_nearby_cities_%'
-			OR option_name LIKE '_transient_wta_major_cities_%'
-			OR option_name LIKE '_transient_timeout_wta_major_cities_%'
-			OR option_name LIKE '_transient_wta_global_time_%'
-			OR option_name LIKE '_transient_timeout_wta_global_time_%'
-			OR option_name LIKE '_transient_wta_global_cities_%'
-			OR option_name LIKE '_transient_timeout_wta_global_cities_%'
-			OR option_name LIKE '_transient_wta_continent_EU_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_EU_%'
-			OR option_name LIKE '_transient_wta_continent_AS_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_AS_%'
-			OR option_name LIKE '_transient_wta_continent_NA_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_NA_%'
-			OR option_name LIKE '_transient_wta_continent_SA_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_SA_%'
-			OR option_name LIKE '_transient_wta_continent_AF_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_AF_%'
-			OR option_name LIKE '_transient_wta_continent_OC_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_OC_%'
-			OR option_name LIKE '_transient_wta_comparison_intro_%'
-			OR option_name LIKE '_transient_timeout_wta_comparison_intro_%'
-			OR option_name LIKE '_transient_wta_continent_data_%'
-			OR option_name LIKE '_transient_timeout_wta_continent_data_%'
-		" );
+	global $wpdb;
+	
+	// Delete all WTA shortcode transients
+	$deleted = $wpdb->query( "
+		DELETE FROM {$wpdb->options} 
+		WHERE option_name LIKE '_transient_wta_child_locations_%'
+		OR option_name LIKE '_transient_timeout_wta_child_locations_%'
+		OR option_name LIKE '_transient_wta_nearby_cities_%'
+		OR option_name LIKE '_transient_timeout_wta_nearby_cities_%'
+		OR option_name LIKE '_transient_wta_major_cities_%'
+		OR option_name LIKE '_transient_timeout_wta_major_cities_%'
+		OR option_name LIKE '_transient_wta_global_time_%'
+		OR option_name LIKE '_transient_timeout_wta_global_time_%'
+		OR option_name LIKE '_transient_wta_global_cities_%'
+		OR option_name LIKE '_transient_timeout_wta_global_cities_%'
+		OR option_name LIKE '_transient_wta_continent_EU_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_EU_%'
+		OR option_name LIKE '_transient_wta_continent_AS_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_AS_%'
+		OR option_name LIKE '_transient_wta_continent_NA_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_NA_%'
+		OR option_name LIKE '_transient_wta_continent_SA_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_SA_%'
+		OR option_name LIKE '_transient_wta_continent_AF_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_AF_%'
+		OR option_name LIKE '_transient_wta_continent_OC_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_OC_%'
+		OR option_name LIKE '_transient_wta_comparison_intro_%'
+		OR option_name LIKE '_transient_timeout_wta_comparison_intro_%'
+		OR option_name LIKE '_transient_wta_continent_data_%'
+		OR option_name LIKE '_transient_timeout_wta_continent_data_%'
+		OR option_name LIKE '_transient_wta_regional_centres_%'
+		OR option_name LIKE '_transient_timeout_wta_regional_centres_%'
+	" );
 
 		WTA_Logger::info( 'Shortcode cache cleared by user (' . $deleted . ' entries)' );
 
