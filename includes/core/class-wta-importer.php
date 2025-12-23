@@ -164,35 +164,51 @@ class WTA_Importer {
 	 * Reads cities500.txt and schedules ONE Action Scheduler action per city.
 	 * This allows Action Scheduler to parallelize processing.
 	 *
+	 * v3.0.69: Chunked processing to prevent timeout on large imports.
+	 * Processes cities in chunks of 10,000, self-rescheduling for next chunk.
+	 *
 	 * @since    3.0.43
+	 * @since    3.0.69 Added chunk processing parameters.
 	 * @param    string $file_path              Path to cities500.txt.
 	 * @param    int    $min_population         Minimum population filter.
 	 * @param    int    $max_cities_per_country Max cities per country.
 	 * @param    array  $filtered_country_codes Country codes to include.
+	 * @param    int    $line_offset            Line number to start from (for chunking).
+	 * @param    int    $chunk_size             Maximum cities to schedule per chunk.
 	 */
-	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes ) {
-		set_time_limit( 300 ); // 5 minutes
+	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes, $line_offset = 0, $chunk_size = 10000 ) {
+		set_time_limit( 300 ); // 5 minutes per chunk
 
-		WTA_Logger::info( 'Starting cities scheduling', array(
-			'file'                   => basename( $file_path ),
-			'min_population'         => $min_population,
-			'max_cities_per_country' => $max_cities_per_country,
-			'filtered_countries'     => count( $filtered_country_codes ),
-		) );
+	WTA_Logger::info( 'Starting cities scheduling', array(
+		'file'                   => basename( $file_path ),
+		'min_population'         => $min_population,
+		'max_cities_per_country' => $max_cities_per_country,
+		'filtered_countries'     => count( $filtered_country_codes ),
+		'chunk_offset'           => $line_offset,
+		'chunk_size'             => $chunk_size,
+	) );
 
-		$file = fopen( $file_path, 'r' );
-		if ( ! $file ) {
-			WTA_Logger::error( 'Failed to open cities500.txt' );
-			return;
+	$file = fopen( $file_path, 'r' );
+	if ( ! $file ) {
+		WTA_Logger::error( 'Failed to open cities500.txt' );
+		return;
+	}
+
+	$scheduled = 0;
+	$skipped = 0;
+	$per_country = array();
+	$delay = 0;
+	$current_line = 0;
+
+	while ( ( $line = fgets( $file ) ) !== false ) {
+		$current_line++;
+		
+		// Skip lines until we reach our offset
+		if ( $current_line <= $line_offset ) {
+			continue;
 		}
-
-		$scheduled = 0;
-		$skipped = 0;
-		$per_country = array();
-		$delay = 0;
-
-		while ( ( $line = fgets( $file ) ) !== false ) {
-			$parts = explode( "\t", trim( $line ) );
+		
+		$parts = explode( "\t", trim( $line ) );
 			
 			if ( count( $parts ) < 19 ) {
 				continue;
@@ -259,32 +275,70 @@ class WTA_Importer {
 				'wta_structure'
 			);
 
-			$scheduled++;
+		$scheduled++;
 
-			// Spread cities over time (1 per second)
-			$delay++;
+		// Spread cities over time (1 per second)
+		$delay++;
 
-			// Log progress every 1000 cities
-			if ( $scheduled % 1000 === 0 ) {
-				WTA_Logger::info( 'Cities scheduling progress', array(
-					'scheduled' => $scheduled,
-					'skipped'   => $skipped,
-				) );
-			}
-
-			// Prevent timeout
-			if ( $scheduled % 500 === 0 ) {
-				set_time_limit( 60 );
-			}
+		// Log progress every 1000 cities
+		if ( $scheduled % 1000 === 0 ) {
+			WTA_Logger::info( 'Cities scheduling progress', array(
+				'scheduled' => $scheduled,
+				'skipped'   => $skipped,
+			) );
 		}
 
-		fclose( $file );
+		// Prevent timeout
+		if ( $scheduled % 500 === 0 ) {
+			set_time_limit( 60 );
+		}
+		
+		// v3.0.69: Stop after chunk_size cities scheduled
+		if ( $scheduled >= $chunk_size ) {
+			WTA_Logger::info( 'Chunk limit reached, preparing next chunk', array(
+				'scheduled_in_chunk' => $scheduled,
+				'current_line' => $current_line,
+			) );
+			break;
+		}
+	}
 
-		WTA_Logger::info( 'Cities scheduling complete', array(
-			'scheduled' => $scheduled,
-			'skipped'   => $skipped,
+	$reached_eof = feof( $file );
+	fclose( $file );
+
+	WTA_Logger::info( 'Cities scheduling chunk complete', array(
+		'scheduled' => $scheduled,
+		'skipped'   => $skipped,
+		'next_offset' => $current_line,
+		'reached_eof' => $reached_eof,
+	) );
+	
+	// v3.0.69: If more cities remain, schedule next chunk
+	if ( ! $reached_eof && $scheduled >= $chunk_size ) {
+		WTA_Logger::info( 'Scheduling next chunk', array(
+			'next_offset' => $current_line,
+		) );
+		
+		as_schedule_single_action(
+			time() + 5, // Wait 5 seconds before next chunk
+			'wta_schedule_cities',
+			array(
+				'file_path'              => $file_path,
+				'min_population'         => $min_population,
+				'max_cities_per_country' => $max_cities_per_country,
+				'filtered_country_codes' => $filtered_country_codes,
+				'line_offset'            => $current_line,
+				'chunk_size'             => $chunk_size,
+			),
+			'wta_structure'
+		);
+	} else {
+		WTA_Logger::info( 'All cities scheduled - import complete', array(
+			'total_scheduled' => $scheduled,
+			'total_skipped'   => $skipped,
 		) );
 	}
+}
 
 	/**
 	 * Legacy method kept for backward compatibility.
