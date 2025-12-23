@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.66] - 2025-12-23
+
+### 🐛 Fixed: Incomplete Race Condition Fix
+
+**PROBLEM: v3.0.65 was incomplete**
+
+In v3.0.65, we fixed the retention period to 5 minutes but forgot to update the cleanup SQL query, which was still deleting actions older than 1 minute. This meant the race condition fix was not fully effective.
+
+#### What v3.0.65 Changed (Incomplete)
+```php
+// ✅ Changed retention period:
+return 5 * MINUTE_IN_SECONDS;
+
+// ❌ But cleanup SQL still used 1 minute:
+AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+```
+
+#### Complete Fix (v3.0.66)
+```php
+// class-wta-core.php line 716:
+// OLD: AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+// NEW: AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+```
+
+#### How Cleanup Now Works
+- **Runs:** Every 1 minute (frequent, small chunks)
+- **Deletes:** Only actions completed 5+ minutes ago (safety buffer)
+- **Batch size:** 250,000 records per run (prevents DB strain)
+- **Result:** Max ~25,000 completed actions in DB at any time
+
+#### Example Timeline
+```
+10:00 → 1000 jobs complete → Wait (protected)
+10:01 → 2000 jobs complete → Wait (protected)
+10:02 → 3000 jobs complete → Wait (protected)
+10:03 → 4000 jobs complete → Wait (protected)
+10:04 → 5000 jobs complete → Wait (protected)
+10:05 → Cleanup deletes 1000 jobs from 10:00 ✅
+10:06 → Cleanup deletes 2000 jobs from 10:01 ✅
+```
+
+**Now the race condition fix is FULLY implemented!**
+
+---
+
 ## [3.0.65] - 2025-12-23
 
 ### 🚨 CRITICAL FIX: Timezone Lookup Race Condition

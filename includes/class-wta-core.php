@@ -702,10 +702,12 @@ class WTA_Core {
 	}
 
 	/**
-	 * Cleanup completed actions older than 1 minute.
+	 * Cleanup completed actions older than 5 minutes.
+	 * Runs every 1 minute, but only deletes actions completed 5+ minutes ago.
 	 * Deletes up to 250k records per run.
 	 * 
 	 * @since    3.0.57
+	 * @since    3.0.66  Changed from 1 to 5 minutes to prevent race conditions.
 	 */
 	public function cleanup_completed_actions() {
 		global $wpdb;
@@ -713,12 +715,12 @@ class WTA_Core {
 		$deleted = $wpdb->query(
 			"DELETE FROM {$wpdb->prefix}actionscheduler_actions 
 			WHERE status = 'complete' 
-			AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+			AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
 			LIMIT 250000"
 		);
 		
 		if ( $deleted > 0 ) {
-			WTA_Logger::debug( "Cleanup: Deleted $deleted completed actions" );
+			WTA_Logger::debug( "Cleanup: Deleted $deleted completed actions (5min+ old)" );
 		}
 	}
 
