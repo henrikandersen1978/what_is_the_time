@@ -427,9 +427,9 @@ class WTA_Single_Structure_Processor {
 				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
 				update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
 
-			// Schedule timezone lookup (with delay to spread load)
+			// v3.0.65: Schedule immediately (no delay to prevent cleanup race condition)
 			as_schedule_single_action(
-				time() + wp_rand( 1, 10 ),
+				time(),
 				'wta_lookup_timezone',
 				array( $post_id, $final_lat, $final_lon ),
 				'wta_timezone'
@@ -456,8 +456,9 @@ class WTA_Single_Structure_Processor {
 					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
 					update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
 				
+				// v3.0.65: Schedule immediately (no delay to prevent cleanup race condition)
 				as_schedule_single_action(
-					time() + wp_rand( 1, 10 ),
+					time(),
 					'wta_lookup_timezone',
 					array( $post_id, $final_lat, $final_lon ),
 					'wta_timezone'

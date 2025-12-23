@@ -675,10 +675,11 @@ class WTA_Core {
 	 * Set aggressive retention period for completed actions.
 	 * 
 	 * @since    3.0.57
-	 * @return   int Retention period in seconds (1 minute).
+	 * @since    3.0.65  Increased from 1 to 5 minutes for scheduling safety.
+	 * @return   int Retention period in seconds (5 minutes).
 	 */
 	public function set_retention_period() {
-		return 1 * MINUTE_IN_SECONDS; // Keep only 1 minute of completed actions
+		return 5 * MINUTE_IN_SECONDS; // Keep 5 minutes (safety buffer for pending actions)
 	}
 
 	/**

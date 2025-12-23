@@ -2,6 +2,86 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.65] - 2025-12-23
+
+### 🚨 CRITICAL FIX: Timezone Lookup Race Condition
+
+**PROBLEM: 33% of cities stuck without timezone data**
+
+#### What Happened
+After importing Argentina (965 cities):
+- ✅ 644 cities got timezone data (67%)
+- ❌ 321 cities stuck with `has_timezone = 0` (33%)
+- 🔍 All stuck cities HAD GPS data
+- 🔍 No failed timezone jobs in scheduler
+- ❓ **Where did the timezone jobs go?**
+
+**Root Cause:**
+```php
+// OLD CODE (class-wta-single-structure-processor.php line 432):
+as_schedule_single_action(
+    time() + wp_rand( 1, 10 ),  // Random 1-10 second delay
+    'wta_lookup_timezone',
+    array( $post_id, $final_lat, $final_lon ),
+    'wta_timezone'
+);
+```
+
+**The Race Condition:**
+1. City created at 10:56:00
+2. Timezone job scheduled for 10:56:05 (random delay)
+3. Action Scheduler cleanup: 1-minute retention (v3.0.57)
+4. If runner is slow → Job not claimed in time
+5. Cleanup deletes job at 10:57:05 before it runs
+6. City stuck forever with `has_timezone = 0` ❌
+
+**Timeline Evidence:**
+```
+Argentina Import (Dec 22, 2025):
+- Successful cities: 10:56:02 → 06:35:47 (next day)
+- Stuck cities: 10:56:00 → 11:13:09 (only 17 minutes!)
+→ Proof: Jobs scheduled during peak load were deleted before execution
+```
+
+#### Solutions (v3.0.65)
+
+**FIX 1: Remove Random Delay**
+```php
+// NEW CODE (line 432 + 460):
+as_schedule_single_action(
+    time(),  // ✅ Schedule immediately
+    'wta_lookup_timezone',
+    array( $post_id, $final_lat, $final_lon ),
+    'wta_timezone'
+);
+```
+
+**FIX 2: Increase Retention Period**
+```php
+// class-wta-core.php (line 681):
+// OLD: return 1 * MINUTE_IN_SECONDS;
+// NEW: return 5 * MINUTE_IN_SECONDS;
+```
+
+**Why 5 minutes is optimal:**
+- Max ~1,250 completed actions in DB (still very clean!)
+- Plenty of buffer for slow runners during peak load
+- Still 600x more aggressive than WordPress default (30 days)
+- Dashboard remains fast
+
+#### Files Changed
+- `includes/processors/class-wta-single-structure-processor.php` (line 432, 460)
+- `includes/class-wta-core.php` (line 681)
+
+#### Testing
+After this fix:
+1. Delete all data
+2. Import complex countries (Argentina, Russia, USA, Mexico)
+3. Verify: ALL cities should get `has_timezone = 1`
+4. Monitor: No stuck cities after 1+ hour
+
+---
+
 ## [3.0.64] - 2025-12-22
 
 ### 🐛 FIX: Population NULL Caused Only 20-21 Cities to Display
