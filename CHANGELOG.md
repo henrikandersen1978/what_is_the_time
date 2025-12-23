@@ -2,6 +2,44 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.67] - 2025-12-23
+
+### ✨ Improvements
+
+**PROBLEM:**
+1. Dashboard displayed wrong plugin version (3.0.64 instead of current version)
+2. `[wta_regional_centres]` shortcode showed "Lokalcenter" for small cities (<50k population), which is awkward Danish
+
+**SOLUTION:**
+
+#### 1. Fixed Version Display
+- **File:** `time-zone-clock.php` (line 32)
+- **Change:** Updated `WTA_VERSION` constant from `3.0.64` to `3.0.67`
+- **Result:** Dashboard now shows correct version number
+
+#### 2. Better Danish Text for Small Cities
+- **File:** `includes/frontend/class-wta-shortcodes.php` (line 1004)
+- **Change:** "Lokalcenter" → "Mindre by"
+- **Context:** Cities with population < 50,000
+
+**New City Classification:**
+```
+> 100,000: "X.XXX.XXX indbyggere" (exact population)
+50,000-100,000: "Regional by"
+< 50,000: "Mindre by" (NEW - was "Lokalcenter")
+```
+
+**IMPACT:**
+- ✅ Dashboard shows correct version
+- ✅ More natural Danish for small cities
+- ✅ Better UX in regional centres shortcode
+
+**FILES CHANGED:**
+- `time-zone-clock.php` (version constant)
+- `includes/frontend/class-wta-shortcodes.php` (text improvement)
+
+---
+
 ## [3.0.66] - 2025-12-23
 
 ### 🐛 Fixed: Incomplete Race Condition Fix

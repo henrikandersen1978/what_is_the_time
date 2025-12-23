@@ -1000,9 +1000,9 @@ class WTA_Shortcodes {
 				$description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
 			} elseif ( $population && $population > 50000 ) {
 				$description = 'Regional by';
-			} else {
-				$description = 'Lokalcenter';
-			}
+		} else {
+			$description = 'Mindre by';
+		}
 			
 			$output .= '<div class="wta-nearby-item">' . "\n";
 			$output .= '  <div class="wta-nearby-icon">🏛️</div>' . "\n";
