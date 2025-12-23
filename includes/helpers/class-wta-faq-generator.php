@@ -446,9 +446,9 @@ class WTA_FAQ_Generator {
 		// Calculate time difference for context
 		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
 		
-		// Batched prompt for all 4 AI FAQ
-		$system = 'Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders.';
-		$user = "Skriv FAQ svar for {$city_name}, {$country_name}.
+	// Batched prompt for all 4 AI FAQ (v3.0.68: Improved prompt for clean JSON)
+	$system = 'Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.';
+	$user = "Skriv FAQ svar for {$city_name}, {$country_name}.
 
 FAQ 1: Hvornår skal jeg ringe til {$city_name} fra Danmark?
 Tidsforskel: {$diff_hours} timer. Skriv 2-3 praktiske sætninger (max 60 ord).
@@ -462,7 +462,7 @@ Tidsforskel: {$diff_hours} timer. Skriv 2 jetlag-tips (max 50 ord).
 FAQ 4: Hvad er bedste rejsetidspunkt til {$city_name}?
 Skriv 2 sætninger om vejr og turistsæson (max 50 ord).
 
-Svar i JSON format:
+IMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:
 {
   \"faq1\": \"...\",
   \"faq2\": \"...\",
@@ -470,22 +470,25 @@ Svar i JSON format:
   \"faq4\": \"...\"
 }
 
-INGEN placeholders. KUN faktisk indhold.";
+INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 		
-		$response = self::call_openai_simple( $api_key, $model, $system, $user, 500 );
-		
-		if ( false === $response || empty( $response ) ) {
-			WTA_Logger::warning( 'Failed to generate AI FAQ batch', array( 'city' => $city_name ) );
-			return array();
-		}
-		
-		// Parse JSON response
-		$json_data = json_decode( $response, true );
-		
-		if ( ! is_array( $json_data ) || ! isset( $json_data['faq1'] ) ) {
-			WTA_Logger::warning( 'Invalid AI FAQ JSON response', array( 'response' => $response ) );
-			return array();
-		}
+	$response = self::call_openai_simple( $api_key, $model, $system, $user, 500 );
+	
+	if ( false === $response || empty( $response ) ) {
+		WTA_Logger::warning( 'Failed to generate AI FAQ batch', array( 'city' => $city_name ) );
+		return array();
+	}
+	
+	// v3.0.68: Robust JSON parsing with multiple strategies
+	$json_data = self::parse_json_robust( $response );
+	
+	if ( ! is_array( $json_data ) || ! isset( $json_data['faq1'] ) ) {
+		WTA_Logger::warning( 'Invalid AI FAQ JSON response', array( 
+			'response' => $response,
+			'city' => $city_name 
+		) );
+		return array();
+	}
 		
 		return array(
 			array(
@@ -700,6 +703,56 @@ INGEN placeholders. KUN faktisk indhold.";
 			'percentage'  => number_format( $percentage, 1 ),
 			'phase_name'  => $phase_name,
 		);
+	}
+
+	/**
+	 * Robust JSON parsing with multiple strategies.
+	 * Handles markdown code blocks, whitespace, BOM, and other AI formatting issues.
+	 *
+	 * @since    3.0.68
+	 * @param    string $response Raw AI response.
+	 * @return   array|null       Parsed JSON data or null on failure.
+	 */
+	private static function parse_json_robust( $response ) {
+		// Strategy 1: Direct JSON decode (fastest)
+		$json_data = json_decode( $response, true );
+		if ( is_array( $json_data ) ) {
+			return $json_data;
+		}
+		
+		// Strategy 2: Strip markdown code blocks
+		// Remove ```json and ``` wrappers
+		$cleaned = preg_replace( '/^```(?:json)?\s*\n?/m', '', $response );
+		$cleaned = preg_replace( '/\n?```\s*$/m', '', $cleaned );
+		$cleaned = trim( $cleaned );
+		
+		$json_data = json_decode( $cleaned, true );
+		if ( is_array( $json_data ) ) {
+			WTA_Logger::debug( 'FAQ JSON parsed after stripping markdown blocks' );
+			return $json_data;
+		}
+		
+		// Strategy 3: Remove BOM and control characters
+		$cleaned = preg_replace( '/[\x00-\x1F\x7F]/u', '', $cleaned );
+		$cleaned = trim( $cleaned, "\xEF\xBB\xBF" ); // UTF-8 BOM
+		
+		$json_data = json_decode( $cleaned, true );
+		if ( is_array( $json_data ) ) {
+			WTA_Logger::debug( 'FAQ JSON parsed after removing control characters' );
+			return $json_data;
+		}
+		
+		// Strategy 4: Extract JSON object via regex
+		if ( preg_match( '/\{[^{}]*(?:"faq[1-4]"[^{}]*){4}[^{}]*\}/s', $cleaned, $matches ) ) {
+			$json_data = json_decode( $matches[0], true );
+			if ( is_array( $json_data ) ) {
+				WTA_Logger::debug( 'FAQ JSON extracted via regex pattern matching' );
+				return $json_data;
+			}
+		}
+		
+		// All strategies failed
+		return null;
 	}
 
 	/**
