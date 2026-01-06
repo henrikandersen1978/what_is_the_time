@@ -33,16 +33,17 @@ class WTA_Importer {
 
 		$options = wp_parse_args( $options, $defaults );
 
-		// Clear existing Action Scheduler actions if requested
-		if ( $options['clear_queue'] ) {
-			// Cancel all pending actions for our hooks
-			as_unschedule_all_actions( 'wta_create_continent' );
-			as_unschedule_all_actions( 'wta_create_country' );
-			as_unschedule_all_actions( 'wta_create_city' );
-			as_unschedule_all_actions( 'wta_lookup_timezone' );
-			as_unschedule_all_actions( 'wta_generate_ai_content' );
-			WTA_Logger::info( 'All pending actions cleared before import' );
-		}
+	// Clear existing Action Scheduler actions if requested
+	if ( $options['clear_queue'] ) {
+		// Cancel all pending actions for our hooks
+		as_unschedule_all_actions( 'wta_create_continent' );
+		as_unschedule_all_actions( 'wta_create_country' );
+		as_unschedule_all_actions( 'wta_create_city' );
+		as_unschedule_all_actions( 'wta_schedule_cities' );
+		as_unschedule_all_actions( 'wta_lookup_timezone' );
+		as_unschedule_all_actions( 'wta_generate_ai_content' );
+		WTA_Logger::info( 'All pending actions cleared before import' );
+	}
 
 		$stats = array(
 			'continents' => 0,
@@ -138,28 +139,118 @@ class WTA_Importer {
 
 		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
-		// Schedule a single action to process all cities
-		as_schedule_single_action(
-			time() + 15, // Wait 15 seconds for continents/countries to start
-			'wta_schedule_cities',
-			array(
-				'file_path'              => $cities_file,
-				'min_population'         => $options['min_population'],
-				'max_cities_per_country' => $options['max_cities_per_country'],
-				'filtered_country_codes' => $filtered_country_codes,
-			),
-			'wta_structure'
-		);
+	// Schedule a single action to process all cities
+	// v3.0.70: Wait 15 minutes (900s) to ensure ALL continents and countries are created
+	as_schedule_single_action(
+		time() + 900, // Wait 15 minutes for all 244 countries to be created
+		'wta_schedule_cities',
+		array(
+			'file_path'              => $cities_file,
+			'min_population'         => $options['min_population'],
+			'max_cities_per_country' => $options['max_cities_per_country'],
+			'filtered_country_codes' => $filtered_country_codes,
+			'line_offset'            => 0,
+			'chunk_size'             => 10000,
+		),
+		'wta_structure'
+	);
 
 		$stats['cities'] = 1; // This is the scheduler job count
 
 		WTA_Logger::info( 'Cities scheduler job scheduled' );
 
-		return $stats;
-	}
+	return $stats;
+}
 
-	/**
-	 * Schedule cities from GeoNames file (Pilanto-AI Model).
+/**
+ * Send chunk progress email notification.
+ * 
+ * Sends detailed email after each chunk completion to monitor import progress.
+ * Critical for verifying offset advancement and detecting infinite loops.
+ * 
+ * @since 3.0.70
+ * @param array $chunk_data Chunk completion data.
+ */
+private static function send_chunk_notification( $chunk_data ) {
+	$admin_email = get_option( 'admin_email' );
+	
+	$chunk_num = $chunk_data['chunk_number'];
+	$prev_offset = $chunk_data['prev_offset'];
+	$next_offset = $chunk_data['next_offset'];
+	$offset_diff = $next_offset - $prev_offset;
+	$scheduled = $chunk_data['scheduled'];
+	$skipped = $chunk_data['skipped'];
+	$first_city = $chunk_data['first_city'];
+	$last_city = $chunk_data['last_city'];
+	$progress_pct = $chunk_data['progress_percent'];
+	$is_stuck = isset( $chunk_data['is_stuck'] ) ? $chunk_data['is_stuck'] : false;
+	
+	$subject = $is_stuck 
+		? '🚨 CRITICAL: World Time AI Import STUCK!' 
+		: "✅ World Time AI - Chunk #{$chunk_num} Complete ({$progress_pct}%)";
+	
+	$message = "World Time AI Cities Import - Chunk #{$chunk_num} Status\n";
+	$message .= "================================================================\n\n";
+	
+	if ( $is_stuck ) {
+		$message .= "🚨 CRITICAL ERROR DETECTED!\n";
+		$message .= "Offset is NOT advancing - same cities being scheduled repeatedly!\n";
+		$message .= "Import has been AUTOMATICALLY STOPPED to prevent infinite loop.\n\n";
+		$message .= "ACTION REQUIRED:\n";
+		$message .= "1. Check code for offset calculation bug\n";
+		$message .= "2. DO NOT restart import until bug is fixed\n";
+		$message .= "3. Review logs at: " . get_site_url() . "/wp-content/uploads/world-time-ai-data/logs/\n\n";
+	} else {
+		$message .= "✅ Chunk completed successfully!\n\n";
+	}
+	
+	$message .= "OFFSET PROGRESSION (THIS IS KEY!):\n";
+	$message .= "  Previous offset: {$prev_offset}\n";
+	$message .= "  Next offset:     {$next_offset}\n";
+	$message .= "  Difference:      {$offset_diff} (should be ~{$scheduled})\n";
+	$message .= "  Status:          " . ( $offset_diff > 0 ? '✅ ADVANCING' : '❌ STUCK' ) . "\n\n";
+	
+	$message .= "CITIES PROCESSED:\n";
+	$message .= "  Scheduled: {$scheduled}\n";
+	$message .= "  Skipped:   {$skipped}\n";
+	$message .= "  First city in chunk: " . ( $first_city ? $first_city : 'N/A' ) . "\n";
+	$message .= "  Last city in chunk:  {$last_city}\n\n";
+	
+	$message .= "PROGRESS:\n";
+	$message .= "  Overall: {$progress_pct}% complete\n";
+	$message .= "  Chunk #{$chunk_num} of ~15 total chunks\n";
+	$message .= "  Estimated chunks remaining: " . ( 15 - $chunk_num ) . "\n\n";
+	
+	if ( ! $is_stuck ) {
+		$message .= "WHAT TO CHECK:\n";
+		$message .= "✅ Offset difference should be ~{$scheduled}\n";
+		$message .= "✅ First/Last city should be DIFFERENT from previous chunk\n";
+		$message .= "✅ Progress % should increase with each chunk\n\n";
+		
+		$message .= "If everything looks correct, the import will continue automatically.\n";
+		$message .= "Next chunk will start in ~5 seconds.\n\n";
+		
+		$message .= "TO STOP IMPORT:\n";
+		$message .= "Go to: WP Admin > Tools > Action Scheduler\n";
+		$message .= "Cancel all pending 'wta_schedule_cities' actions\n\n";
+	}
+	
+	$message .= "================================================================\n";
+	$message .= "Timestamp: " . current_time( 'Y-m-d H:i:s' ) . "\n";
+	$message .= "Site: " . get_site_url() . "\n";
+	$message .= "Admin: " . admin_url( 'tools.php?page=action-scheduler' ) . "\n";
+	
+	wp_mail( $admin_email, $subject, $message );
+	
+	WTA_Logger::info( '📧 Chunk notification email sent', array(
+		'chunk_number' => $chunk_num,
+		'recipient' => $admin_email,
+		'is_stuck' => $is_stuck,
+	) );
+}
+
+/**
+ * Schedule cities from GeoNames file (Pilanto-AI Model).
 	 *
 	 * Reads cities500.txt and schedules ONE Action Scheduler action per city.
 	 * This allows Action Scheduler to parallelize processing.
@@ -198,13 +289,14 @@ class WTA_Importer {
 	$skipped = 0;
 	$per_country = array();
 	$delay = 0;
-	$current_line = 0;
+	$file_line = $line_offset; // v3.0.70: Start from offset to track file position correctly
+	$first_city_in_chunk = null; // v3.0.70: Track first city for email notification
 
 	while ( ( $line = fgets( $file ) ) !== false ) {
-		$current_line++;
+		$file_line++; // v3.0.70: Increment BEFORE processing
 		
 		// Skip lines until we reach our offset
-		if ( $current_line <= $line_offset ) {
+		if ( $file_line <= $line_offset ) {
 			continue;
 		}
 		
@@ -256,10 +348,15 @@ class WTA_Importer {
 				$per_country[ $country_code ]++;
 			}
 
-			// Translate city name
-			$name_local = WTA_AI_Translator::translate( $name, 'city', null, intval( $geonameid ) );
+		// Translate city name
+		$name_local = WTA_AI_Translator::translate( $name, 'city', null, intval( $geonameid ) );
 
-			// Schedule city creation
+		// v3.0.70: Track first city for email notification
+		if ( $scheduled === 0 ) {
+			$first_city_in_chunk = $name;
+		}
+
+		// Schedule city creation
 			as_schedule_single_action(
 				time() + $delay,
 				'wta_create_city',
@@ -293,30 +390,80 @@ class WTA_Importer {
 			set_time_limit( 60 );
 		}
 		
-		// v3.0.69: Stop after chunk_size cities scheduled
-		if ( $scheduled >= $chunk_size ) {
-			WTA_Logger::info( 'Chunk limit reached, preparing next chunk', array(
-				'scheduled_in_chunk' => $scheduled,
-				'current_line' => $current_line,
-			) );
-			break;
-		}
+	// v3.0.69: Stop after chunk_size cities scheduled
+	if ( $scheduled >= $chunk_size ) {
+		WTA_Logger::info( 'Chunk limit reached, preparing next chunk', array(
+			'scheduled_in_chunk' => $scheduled,
+			'current_line' => $file_line, // v3.0.70: Fixed - use $file_line
+		) );
+		break;
+	}
 	}
 
 	$reached_eof = feof( $file );
 	fclose( $file );
 
+	// v3.0.70: Calculate chunk number and progress
+	$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
+	$progress_percent = round( ( $file_line / 150000 ) * 100, 1 ); // Approximate total lines
+
 	WTA_Logger::info( 'Cities scheduling chunk complete', array(
-		'scheduled' => $scheduled,
-		'skipped'   => $skipped,
-		'next_offset' => $current_line,
-		'reached_eof' => $reached_eof,
+		'chunk_number'   => $chunk_number,
+		'scheduled'      => $scheduled,
+		'skipped'        => $skipped,
+		'prev_offset'    => $line_offset,
+		'next_offset'    => $file_line, // v3.0.70: Fixed - use $file_line
+		'offset_diff'    => $file_line - $line_offset,
+		'reached_eof'    => $reached_eof,
+		'first_city'     => $first_city_in_chunk,
+		'last_city'      => isset( $name ) ? $name : 'unknown',
+		'progress_pct'   => $progress_percent,
+	) );
+
+	// v3.0.70: CRITICAL SAFETY CHECK - Detect stuck offset
+	$offset_is_stuck = ( $line_offset > 0 && $file_line <= $line_offset );
+
+	if ( $offset_is_stuck ) {
+		WTA_Logger::error( '🚨 CRITICAL: Offset not advancing! Import STOPPED.', array(
+			'previous_offset' => $line_offset,
+			'current_offset'  => $file_line,
+			'scheduled'       => $scheduled,
+		) );
+		
+		// Send emergency email
+		self::send_chunk_notification( array(
+			'chunk_number'      => $chunk_number,
+			'prev_offset'       => $line_offset,
+			'next_offset'       => $file_line,
+			'scheduled'         => $scheduled,
+			'skipped'           => $skipped,
+			'first_city'        => $first_city_in_chunk,
+			'last_city'         => isset( $name ) ? $name : 'unknown',
+			'progress_percent'  => $progress_percent,
+			'is_stuck'          => true,
+		) );
+		
+		// DO NOT schedule next chunk - STOP HERE
+		return;
+	}
+
+	// v3.0.70: Send email notification after EVERY chunk
+	self::send_chunk_notification( array(
+		'chunk_number'      => $chunk_number,
+		'prev_offset'       => $line_offset,
+		'next_offset'       => $file_line,
+		'scheduled'         => $scheduled,
+		'skipped'           => $skipped,
+		'first_city'        => $first_city_in_chunk,
+		'last_city'         => isset( $name ) ? $name : 'unknown',
+		'progress_percent'  => $progress_percent,
+		'is_stuck'          => false,
 	) );
 	
 	// v3.0.69: If more cities remain, schedule next chunk
 	if ( ! $reached_eof && $scheduled >= $chunk_size ) {
 		WTA_Logger::info( 'Scheduling next chunk', array(
-			'next_offset' => $current_line,
+			'next_offset' => $file_line, // v3.0.70: Fixed - use $file_line
 		) );
 		
 		as_schedule_single_action(
@@ -327,7 +474,7 @@ class WTA_Importer {
 				'min_population'         => $min_population,
 				'max_cities_per_country' => $max_cities_per_country,
 				'filtered_country_codes' => $filtered_country_codes,
-				'line_offset'            => $current_line,
+				'line_offset'            => $file_line, // v3.0.70: Fixed - use $file_line
 				'chunk_size'             => $chunk_size,
 			),
 			'wta_structure'

@@ -41,13 +41,13 @@ class WTA_AI_Translator {
 
 	// Generate cache key (include geonameid if provided)
 	$cache_suffix = ! empty( $geonameid ) ? $geonameid : $name;
-	$cache_key = 'wta_trans_' . md5( $cache_suffix . '_' . $type . '_' . $target_lang );
+		$cache_key = 'wta_trans_' . md5( $cache_suffix . '_' . $type . '_' . $target_lang );
 
-	// Check cache first
-	$cached = get_transient( $cache_key );
-	if ( false !== $cached ) {
-		return $cached;
-	}
+		// Check cache first
+		$cached = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
 
 	// 1. Try GeoNames first (fastest + most accurate! v3.0.0)
 	if ( ! empty( $geonameid ) && is_numeric( $geonameid ) ) {
@@ -63,11 +63,11 @@ class WTA_AI_Translator {
 	// Note: geonameid might be a Wikidata Q-ID string from old system
 	if ( ! empty( $geonameid ) && is_string( $geonameid ) && strpos( $geonameid, 'Q' ) === 0 ) {
 		$wikidata_translation = WTA_Wikidata_Translator::get_label( $geonameid, $lang );
-		if ( false !== $wikidata_translation ) {
-			set_transient( $cache_key, $wikidata_translation, YEAR_IN_SECONDS );
-			return $wikidata_translation;
+			if ( false !== $wikidata_translation ) {
+				set_transient( $cache_key, $wikidata_translation, YEAR_IN_SECONDS );
+				return $wikidata_translation;
+			}
 		}
-	}
 
 		// 3. Try static translation (fast and free)
 		$static_translation = WTA_Quick_Translate::translate( $name, $type, $target_lang );
