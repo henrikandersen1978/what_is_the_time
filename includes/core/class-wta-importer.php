@@ -640,8 +640,9 @@ public static function start_waiting_city_processing( $offset = 0 ) {
 		'next_offset' => $next_offset,
 	) );
 	
-	// v3.0.78: Schedule next chunk if we processed a full batch
-	if ( $scheduled >= $chunk_size ) {
+	// v3.0.79: Schedule next chunk if we GOT a full batch from DB
+	// Check count($waiting_cities), NOT $scheduled (which can be less if cities skip)
+	if ( count( $waiting_cities ) >= $chunk_size ) {
 		WTA_Logger::info( '📦 Scheduling next chunk', array(
 			'next_offset' => $next_offset,
 		) );

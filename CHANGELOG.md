@@ -2,6 +2,40 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.79] - 2026-01-06
+
+### 🐛 BUGFIX: Chunked processing recursion logic
+
+**PROBLEM in v3.0.78:**
+- First chunk processed successfully (5,000 cities)
+- Next chunk was NOT scheduled (recursion stopped)
+- Remaining 119,145 cities stuck as "waiting_for_toggle" ❌
+
+**ROOT CAUSE:**
+```php
+// Line 644 - WRONG LOGIC:
+if ( $scheduled >= $chunk_size ) {  // ❌
+    // Schedule next chunk
+}
+```
+
+If some cities were skipped (already processed), `$scheduled` could be 4,999 even though DB returned 5,000 cities. This broke recursion!
+
+**THE FIX:**
+```php
+// Line 644-646 - CORRECT LOGIC:
+if ( count( $waiting_cities ) >= $chunk_size ) {  // ✅
+    // Schedule next chunk
+}
+```
+
+Now checks if DB returned a FULL batch, not how many were scheduled. Ensures all remaining chunks are processed!
+
+### Changed
+- `includes/core/class-wta-importer.php`: Fixed recursion condition in `start_waiting_city_processing()`
+
+---
+
 ## [3.0.78] - 2026-01-06
 
 ### 🚨 CRITICAL FIX: Chunked processing for waiting cities
