@@ -289,16 +289,29 @@ private static function send_chunk_notification( $chunk_data ) {
 	$skipped = 0;
 	$per_country = array();
 	$delay = 0;
-	$file_line = $line_offset; // v3.0.70: Start from offset to track file position correctly
+	$file_line = 0; // v3.0.74: Start from 0 to properly track file position
 	$first_city_in_chunk = null; // v3.0.70: Track first city for email notification
 
-	while ( ( $line = fgets( $file ) ) !== false ) {
-		$file_line++; // v3.0.70: Increment BEFORE processing
+	// v3.0.74: CRITICAL FIX - Skip lines to reach offset BEFORE processing
+	// Without this, we always read from line 1, causing infinite loop on same cities
+	if ( $line_offset > 0 ) {
+		WTA_Logger::debug( 'Skipping to offset', array(
+			'target_offset' => $line_offset,
+		) );
 		
-		// Skip lines until we reach our offset
-		if ( $file_line <= $line_offset ) {
-			continue;
+		while ( $file_line < $line_offset && fgets( $file ) !== false ) {
+			$file_line++;
 		}
+		
+		WTA_Logger::debug( 'Reached offset', array(
+			'file_position' => $file_line,
+			'target_offset' => $line_offset,
+		) );
+	}
+
+	// v3.0.74: Now process lines from offset onwards
+	while ( ( $line = fgets( $file ) ) !== false ) {
+		$file_line++; // Increment for each line read
 		
 		$parts = explode( "\t", trim( $line ) );
 			
