@@ -324,8 +324,8 @@ class WTA_Core {
 	// Cities scheduler (delegates to importer)
 	$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 6 ); // v3.0.75: CRITICAL FIX - Accept all 6 parameters!
 	
-	// Bulk start city processing (v3.0.72)
-	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 0 );
+	// Bulk start city processing (v3.0.72, v3.0.78: Added chunking)
+	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 1 );
 
 	// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
 		$timezone_processor = new WTA_Single_Timezone_Processor();

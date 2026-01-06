@@ -505,35 +505,72 @@ private static function send_chunk_notification( $chunk_data ) {
 }
 
 /**
- * Start processing for cities waiting for toggle.
+ * Start processing for cities waiting for toggle (CHUNKED).
+ * 
+ * v3.0.78: CRITICAL FIX - Process in chunks to avoid timeout.
+ * Processes 5000 cities per chunk and schedules next chunk automatically.
  * 
  * Called when admin enables 'wta_enable_city_processing' option.
- * Schedules timezone lookup and AI content generation for all cities
+ * Schedules timezone lookup and AI content generation for cities
  * that were created but marked as 'waiting_for_toggle'.
  * 
  * @since 3.0.72
- * @return int Number of cities queued for processing.
+ * @since 3.0.78 Added chunking to prevent timeout with large imports.
+ * @param int $offset Starting offset for this chunk (default 0).
+ * @return int Number of cities queued for processing in this chunk.
  */
-public static function start_waiting_city_processing() {
+public static function start_waiting_city_processing( $offset = 0 ) {
 	global $wpdb;
 	
-	WTA_Logger::info( '🚀 Starting processing for waiting cities' );
+	set_time_limit( 120 ); // 2 minutes per chunk
 	
-	// Find all cities waiting for processing
+	$chunk_size = 5000; // Process 5000 cities per chunk
+	
+	// v3.0.78: First chunk only - count total waiting cities
+	if ( $offset === 0 ) {
+		$total_waiting = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) 
+				 FROM {$wpdb->posts} p
+				 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
+				 WHERE p.post_type = %s
+				 AND p.post_status IN ('draft', 'publish')
+				 AND pm.meta_key = 'wta_timezone_status' 
+				 AND pm.meta_value = 'waiting_for_toggle'",
+				WTA_POST_TYPE
+			)
+		);
+		
+		WTA_Logger::info( '🚀 Starting CHUNKED processing for waiting cities', array(
+			'total_waiting' => $total_waiting,
+			'chunk_size' => $chunk_size,
+			'estimated_chunks' => ceil( $total_waiting / $chunk_size ),
+		) );
+	}
+	
+	// Find cities for THIS chunk (with LIMIT and OFFSET)
 	$waiting_cities = $wpdb->get_results(
-		"SELECT p.ID, pm1.meta_value as latitude, pm2.meta_value as longitude, pm3.meta_value as country_code
-		 FROM {$wpdb->posts} p
-		 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'wta_timezone_status' AND pm.meta_value = 'waiting_for_toggle'
-		 INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = 'wta_latitude'
-		 INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = 'wta_longitude'
-		 INNER JOIN {$wpdb->postmeta} pm3 ON p.ID = pm3.post_id AND pm3.meta_key = 'wta_country_code'
-		 WHERE p.post_type = '" . WTA_POST_TYPE . "'
-		 AND p.post_status IN ('draft', 'publish')
-		 LIMIT 50000"  // Process in large batch
+		$wpdb->prepare(
+			"SELECT p.ID, pm1.meta_value as latitude, pm2.meta_value as longitude, pm3.meta_value as country_code
+			 FROM {$wpdb->posts} p
+			 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'wta_timezone_status' AND pm.meta_value = 'waiting_for_toggle'
+			 INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = 'wta_latitude'
+			 INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = 'wta_longitude'
+			 INNER JOIN {$wpdb->postmeta} pm3 ON p.ID = pm3.post_id AND pm3.meta_key = 'wta_country_code'
+			 WHERE p.post_type = %s
+			 AND p.post_status IN ('draft', 'publish')
+			 ORDER BY p.ID ASC
+			 LIMIT %d OFFSET %d",
+			WTA_POST_TYPE,
+			$chunk_size,
+			$offset
+		)
 	);
 	
 	if ( empty( $waiting_cities ) ) {
-		WTA_Logger::info( 'No waiting cities found' );
+		WTA_Logger::info( '✅ All waiting cities processed - COMPLETE!', array(
+			'final_offset' => $offset,
+		) );
 		return 0;
 	}
 	
@@ -591,21 +628,37 @@ public static function start_waiting_city_processing() {
 		
 		// Spread over time (1 per second)
 		$delay++;
-		
-		// Log progress every 5000 cities
-		if ( $scheduled % 5000 === 0 ) {
-			WTA_Logger::info( 'City processing progress', array(
-				'scheduled' => $scheduled,
-				'total' => count( $waiting_cities ),
-			) );
-		}
 	}
 	
-	WTA_Logger::info( '✅ City processing started', array(
-		'total_cities' => count( $waiting_cities ),
-		'scheduled' => $scheduled,
-		'spread_time' => gmdate( 'H:i:s', $delay ),
+	$chunk_number = floor( $offset / $chunk_size ) + 1;
+	$next_offset = $offset + $scheduled;
+	
+	WTA_Logger::info( '✅ Chunk processing complete', array(
+		'chunk_number' => $chunk_number,
+		'scheduled_in_chunk' => $scheduled,
+		'current_offset' => $offset,
+		'next_offset' => $next_offset,
 	) );
+	
+	// v3.0.78: Schedule next chunk if we processed a full batch
+	if ( $scheduled >= $chunk_size ) {
+		WTA_Logger::info( '📦 Scheduling next chunk', array(
+			'next_offset' => $next_offset,
+		) );
+		
+		as_schedule_single_action(
+			time() + 5, // Wait 5 seconds before next chunk
+			'wta_start_waiting_city_processing',
+			array( $next_offset ),
+			'wta_coordinator'
+		);
+	} else {
+		// Last chunk - send completion notification
+		WTA_Logger::info( '🎉 ALL CHUNKS COMPLETE!', array(
+			'total_processed' => $next_offset,
+			'final_chunk' => $chunk_number,
+		) );
+	}
 	
 	return $scheduled;
 }

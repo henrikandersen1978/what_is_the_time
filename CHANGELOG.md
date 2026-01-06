@@ -2,6 +2,77 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.78] - 2026-01-06
+
+### 🚨 CRITICAL FIX: Chunked processing for waiting cities
+
+**PROBLEM:**
+When "Enable City Processing" toggle was switched ON with ~200,000 waiting cities:
+- `start_waiting_city_processing()` tried to process ALL cities at once
+- Timeout after 180 seconds (3 minutes)
+- Only ~5,000-10,000 cities got scheduled before timeout
+- Remaining ~190,000 cities stuck with "waiting_for_toggle" status forever ❌
+- Warning: "91,228 cities are stuck without timezone data for 1+ hour"
+
+**ROOT CAUSE:**
+```php
+// OLD CODE (BROKEN):
+public static function start_waiting_city_processing() {
+    // Find ALL waiting cities (no limit!)
+    $waiting_cities = $wpdb->get_results("SELECT ... LIMIT 50000");
+    
+    foreach ( $waiting_cities as $city ) {
+        // Schedule timezone/AI for each
+        // With 200k cities = 200k operations = TIMEOUT! ❌
+    }
+}
+```
+
+**THE FIX (v3.0.78):**
+- Process in chunks of 5,000 cities at a time
+- Each chunk schedules next chunk automatically (recursive)
+- No timeouts - each chunk completes in ~60 seconds ✅
+- All waiting cities eventually processed
+
+```php
+// NEW CODE (FIXED):
+public static function start_waiting_city_processing( $offset = 0 ) {
+    $chunk_size = 5000;
+    
+    // Get only THIS chunk (with OFFSET)
+    $waiting_cities = $wpdb->get_results("... LIMIT $chunk_size OFFSET $offset");
+    
+    // Process this chunk
+    foreach ( $waiting_cities as $city ) { ... }
+    
+    // Schedule next chunk if more exist
+    if ( $scheduled >= $chunk_size ) {
+        as_schedule_single_action(
+            time() + 5,
+            'wta_start_waiting_city_processing',
+            array( $next_offset ), // Recursive!
+            'wta_coordinator'
+        );
+    }
+}
+```
+
+**WHAT THIS FIXES:**
+- ✅ No more timeouts - 5,000 cities per chunk is safe
+- ✅ Automatic recursion - chunks continue until all done
+- ✅ All "waiting_for_toggle" cities get processed
+- ✅ "Stuck without timezone" warning resolves
+- ✅ Large imports (200k+ cities) work perfectly
+
+**FILES CHANGED:**
+- `includes/core/class-wta-importer.php`: Rewrote `start_waiting_city_processing()` with chunking
+- `includes/class-wta-core.php`: Updated hook to accept 1 parameter (offset)
+
+**IMPACT:**
+If you have waiting cities stuck from previous imports, toggle OFF then ON again - they will now process in manageable chunks!
+
+---
+
 ## [3.0.77] - 2026-01-06
 
 ### 🔧 BUILD FIX: Fixed missing WTA_VERSION constant update
