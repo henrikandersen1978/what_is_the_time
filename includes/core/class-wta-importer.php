@@ -351,26 +351,30 @@ private static function send_chunk_notification( $chunk_data ) {
 		// Translate city name
 		$name_local = WTA_AI_Translator::translate( $name, 'city', null, intval( $geonameid ) );
 
-		// v3.0.70: Track first city for email notification
-		if ( $scheduled === 0 ) {
-			$first_city_in_chunk = $name;
-		}
+	// v3.0.70: Track first city for email notification
+	if ( $scheduled === 0 ) {
+		$first_city_in_chunk = $name;
+	}
 
-		// Schedule city creation
-			as_schedule_single_action(
-				time() + $delay,
-				'wta_create_city',
-				array(  // Separate args, NOT nested array
-					$name,                         // name
-					$name_local,                   // name_local
-					intval( $geonameid ),          // geonameid
-					strtoupper( $country_code ),   // country_code
-					floatval( $latitude ),         // latitude
-					floatval( $longitude ),        // longitude
-					intval( $population )          // population
-				),
-				'wta_structure'
-			);
+	// v3.0.71: Schedule cities 1 hour in the future to separate scheduling from processing
+	// This prevents chunking retries and allows all cities to be scheduled before processing starts
+	$schedule_time = time() + 3600 + $delay;  // 1 hour delay + spread (1 per second)
+	
+	// Schedule city creation
+		as_schedule_single_action(
+			$schedule_time,
+			'wta_create_city',
+			array(  // Separate args, NOT nested array
+				$name,                         // name
+				$name_local,                   // name_local
+				intval( $geonameid ),          // geonameid
+				strtoupper( $country_code ),   // country_code
+				floatval( $latitude ),         // latitude
+				floatval( $longitude ),        // longitude
+				intval( $population )          // population
+			),
+			'wta_structure'
+		);
 
 		$scheduled++;
 
