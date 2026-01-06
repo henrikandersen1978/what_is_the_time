@@ -2,7 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
-## [3.0.75] - 2025-01-06
+## [3.0.76] - 2026-01-06
+
+### 🔧 BUILD FIX: Removed massive log file from repository
+
+**PROBLEM:**
+- Version 3.0.75 accidentally included `local_logs/2026-01-06-log.txt` (1.1M+ lines)
+- ZIP file became too large for WordPress to install
+- Plugin update failed despite correct GitHub release setup
+
+**THE FIX:**
+- Removed `local_logs/2026-01-06-log.txt` from git repository
+- Added `local_logs/` to `.gitignore` to prevent future accidents
+- Version 3.0.76 is identical to 3.0.75 in functionality, just without massive log file
+
+**FILES CHANGED:**
+- `.gitignore`: Added `local_logs/` directory
+- Removed accidentally committed log file from repository
+
+---
+
+## [3.0.75] - 2026-01-06
 
 ### 🐛 CRITICAL FIX: Action Scheduler parameter count bug
 

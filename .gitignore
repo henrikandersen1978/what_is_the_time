@@ -4,6 +4,7 @@ releases/*.zip
 
 # WordPress
 *.log
+local_logs/
 wp-config.php
 wp-content/uploads/
 wp-content/cache/
