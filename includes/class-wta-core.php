@@ -322,7 +322,7 @@ class WTA_Core {
 		$this->loader->add_action( 'wta_create_city', $structure_processor, 'create_city', 10, 7 );           // name, name_local, geonameid, country_code, latitude, longitude, population
 
 	// Cities scheduler (delegates to importer)
-	$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );
+	$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 6 ); // v3.0.75: CRITICAL FIX - Accept all 6 parameters!
 	
 	// Bulk start city processing (v3.0.72)
 	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 0 );

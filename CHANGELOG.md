@@ -2,6 +2,60 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.75] - 2025-01-06
+
+### 🐛 CRITICAL FIX: Action Scheduler parameter count bug
+
+**PROBLEM:**
+Despite v3.0.74 fixing the file offset skip logic, chunking was STILL broken:
+- Chunk #1 email received 6+ times
+- Same cities (Vila → Sunshine West) scheduled repeatedly
+- Log showed `chunk_offset: 0` for ALL chunks (should be 0, 10000, 20000, etc.)
+- `next_offset: 10000` was calculated and sent, but next chunk received `chunk_offset: 0`
+
+**ROOT CAUSE (The ACTUAL bug):**
+```php
+// class-wta-core.php (BROKEN):
+$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );
+                                                                                          ^^ WRONG!
+```
+
+The `4` means WordPress/Action Scheduler only passes the first 4 parameters to the callback!
+
+**schedule_cities() has 6 parameters:**
+1. `$file_path` ✅
+2. `$min_population` ✅
+3. `$max_cities_per_country` ✅
+4. `$filtered_country_codes` ✅
+5. `$line_offset` ❌ NEVER RECEIVED!
+6. `$chunk_size` ❌ NEVER RECEIVED!
+
+**RESULT:**
+- Every chunk received `line_offset=0` (default value)
+- File skip logic in v3.0.74 never ran (offset was always 0)
+- Same 10,000 cities scheduled 6+ times
+- Import stuck in infinite loop
+
+**THE FIX:**
+```php
+// v3.0.75 (CORRECT):
+$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 6 );
+                                                                                          ^^ FIXED!
+```
+
+**WHAT THIS FIXES:**
+- ✅ `line_offset` parameter now actually received by next chunk
+- ✅ File skip logic (v3.0.74) now executes correctly
+- ✅ Each chunk reads DIFFERENT cities (10k-20k, 20k-30k, etc.)
+- ✅ Import progresses through entire file to completion
+- ✅ No more duplicate city scheduling
+- ✅ Pending actions stay at manageable levels
+
+**FILES CHANGED:**
+- `includes/class-wta-core.php`: Changed parameter count from 4 to 6
+
+---
+
 ## [3.0.74] - 2025-01-06
 
 ### 🐛 CRITICAL FIX: Chunking infinite loop - file offset never advanced
