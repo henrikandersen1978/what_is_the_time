@@ -227,6 +227,67 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							</p>
 						</td>
 					</tr>
+
+					<!-- City Processing Toggle (v3.0.72) -->
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'City Processing Control', WTA_TEXT_DOMAIN ); ?>
+						</th>
+						<td>
+							<?php 
+							$processing_enabled = get_option( 'wta_enable_city_processing', '0' );
+							$waiting_count = $wpdb->get_var(
+								"SELECT COUNT(*) 
+								 FROM {$wpdb->posts} p
+								 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
+								 WHERE p.post_type = 'world_time_location'
+								 AND pm.meta_key = 'wta_timezone_status' 
+								 AND pm.meta_value = 'waiting_for_toggle'"
+							);
+							?>
+							<label>
+								<input type="checkbox" 
+									   name="wta_enable_city_processing" 
+									   value="1" 
+									   <?php checked( $processing_enabled, '1' ); ?> />
+								<strong><?php esc_html_e( 'Enable City Processing (Timezone + AI Content)', WTA_TEXT_DOMAIN ); ?></strong>
+							</label>
+							
+							<?php if ( $waiting_count > 0 ): ?>
+							<p style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; margin-top: 10px;">
+								<strong>⚠️ <?php echo number_format_i18n( $waiting_count ); ?> cities waiting for processing</strong>
+								<br><?php esc_html_e( 'When you check this box and save, these cities will start processing (timezone lookups + AI content generation).', WTA_TEXT_DOMAIN ); ?>
+							</p>
+							<?php endif; ?>
+							
+							<p class="description" style="margin-top: 10px;">
+								<strong><?php esc_html_e( 'How it works:', WTA_TEXT_DOMAIN ); ?></strong>
+							</p>
+							<ol class="description">
+								<li><strong><?php esc_html_e( 'Import with toggle OFF:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'City chunks schedule fast (~30-45 min for 150k cities)', WTA_TEXT_DOMAIN ); ?></li>
+								<li><strong><?php esc_html_e( 'Cities created:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'Draft posts created, but marked as "waiting_for_toggle"', WTA_TEXT_DOMAIN ); ?></li>
+								<li><strong><?php esc_html_e( 'Check Action Scheduler:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'When all chunks done (0 pending wta_schedule_cities)', WTA_TEXT_DOMAIN ); ?></li>
+								<li><strong><?php esc_html_e( 'Enable toggle & save:', WTA_TEXT_DOMAIN ); ?></strong> <?php esc_html_e( 'Waiting cities start processing immediately', WTA_TEXT_DOMAIN ); ?></li>
+							</ol>
+							
+							<p class="description" style="padding: 10px; background: #d1ecf1; border-left: 4px solid #0073aa; margin-top: 10px;">
+								<strong>💡 <?php esc_html_e( 'Why use this?', WTA_TEXT_DOMAIN ); ?></strong>
+								<br><?php esc_html_e( 'Separates scheduling from processing. Test that chunking works correctly without wasting API credits or server resources. You have full control over when processing starts.', WTA_TEXT_DOMAIN ); ?>
+							</p>
+							
+							<?php if ( $processing_enabled === '1' ): ?>
+							<p style="padding: 10px; background: #d4edda; border-left: 4px solid #28a745; margin-top: 10px;">
+								<strong>✅ <?php esc_html_e( 'City processing is currently ENABLED', WTA_TEXT_DOMAIN ); ?></strong>
+								<br><?php esc_html_e( 'New cities will start processing immediately after creation.', WTA_TEXT_DOMAIN ); ?>
+							</p>
+							<?php else: ?>
+							<p style="padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; margin-top: 10px;">
+								<strong>⛔ <?php esc_html_e( 'City processing is currently DISABLED', WTA_TEXT_DOMAIN ); ?></strong>
+								<br><?php esc_html_e( 'New cities will be created but NOT processed until you enable this toggle.', WTA_TEXT_DOMAIN ); ?>
+							</p>
+							<?php endif; ?>
+						</td>
+					</tr>
 				</table>
 				<?php submit_button( __( 'Save Processing Settings', WTA_TEXT_DOMAIN ) ); ?>
 			</form>

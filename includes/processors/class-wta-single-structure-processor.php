@@ -417,11 +417,44 @@ class WTA_Single_Structure_Processor {
 					'city' => $data['name'],
 				) );
 				wp_delete_post( $post_id, true );
-				return;
-			}
+			return;
+		}
 
-		// Handle timezone
-		if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+	// v3.0.72: Check if city processing is enabled
+	$processing_enabled = get_option( 'wta_enable_city_processing', '0' );
+	
+	if ( $processing_enabled !== '1' ) {
+		// Processing disabled - mark city as waiting for manual toggle
+		update_post_meta( $post_id, 'wta_timezone_status', 'waiting_for_toggle' );
+		update_post_meta( $post_id, 'wta_has_timezone', 0 );
+		
+		WTA_Logger::debug( 'City created but processing disabled (waiting for toggle)', array(
+			'city' => $data['name_local'],
+			'post_id' => $post_id,
+		) );
+		
+		// SEO metadata (still add this even when waiting)
+		$parent_country_name = get_post_field( 'post_title', $parent_id );
+		$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
+		update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
+		
+		$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+		update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
+		
+		$execution_time = round( microtime( true ) - $start_time, 3 );
+		
+		WTA_Logger::info( '🏙️ City post created (waiting for processing toggle)', array(
+			'post_id'        => $post_id,
+			'name'           => $data['name_local'],
+			'population'     => $data['population'],
+			'execution_time' => $execution_time . 's',
+		) );
+		
+		return; // Exit early - don't schedule timezone/AI yet
+	}
+
+	// Handle timezone
+	if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
 			// Complex country - need API lookup
 			if ( $final_lat !== null && $final_lon !== null ) {
 				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );

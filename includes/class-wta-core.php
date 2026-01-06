@@ -321,10 +321,13 @@ class WTA_Core {
 		$this->loader->add_action( 'wta_create_country', $structure_processor, 'create_country', 10, 8 );     // name, name_local, country_code, country_id, continent, latitude, longitude, geonameid
 		$this->loader->add_action( 'wta_create_city', $structure_processor, 'create_city', 10, 7 );           // name, name_local, geonameid, country_code, latitude, longitude, population
 
-		// Cities scheduler (delegates to importer)
-		$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );
+	// Cities scheduler (delegates to importer)
+	$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 4 );
+	
+	// Bulk start city processing (v3.0.72)
+	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 0 );
 
-		// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
+	// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
 		$timezone_processor = new WTA_Single_Timezone_Processor();
 		$this->loader->add_action( 'wta_lookup_timezone', $timezone_processor, 'lookup_timezone', 10, 3 );
 

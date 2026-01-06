@@ -356,13 +356,13 @@ private static function send_chunk_notification( $chunk_data ) {
 		$first_city_in_chunk = $name;
 	}
 
-	// v3.0.71: Schedule cities 1 hour in the future to separate scheduling from processing
-	// This prevents chunking retries and allows all cities to be scheduled before processing starts
-	$schedule_time = time() + 3600 + $delay;  // 1 hour delay + spread (1 per second)
+	// v3.0.72: Schedule cities IMMEDIATELY (no delay)
+	// Processing controlled by 'wta_enable_city_processing' toggle in admin
+	// This allows chunking to complete fast (~30-45 min) before processing starts
 	
 	// Schedule city creation
 		as_schedule_single_action(
-			$schedule_time,
+			time() + $delay,  // Immediate + spread (1 per second)
 			'wta_create_city',
 			array(  // Separate args, NOT nested array
 				$name,                         // name
@@ -489,6 +489,112 @@ private static function send_chunk_notification( $chunk_data ) {
 			'total_skipped'   => $skipped,
 		) );
 	}
+}
+
+/**
+ * Start processing for cities waiting for toggle.
+ * 
+ * Called when admin enables 'wta_enable_city_processing' option.
+ * Schedules timezone lookup and AI content generation for all cities
+ * that were created but marked as 'waiting_for_toggle'.
+ * 
+ * @since 3.0.72
+ * @return int Number of cities queued for processing.
+ */
+public static function start_waiting_city_processing() {
+	global $wpdb;
+	
+	WTA_Logger::info( '🚀 Starting processing for waiting cities' );
+	
+	// Find all cities waiting for processing
+	$waiting_cities = $wpdb->get_results(
+		"SELECT p.ID, pm1.meta_value as latitude, pm2.meta_value as longitude, pm3.meta_value as country_code
+		 FROM {$wpdb->posts} p
+		 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'wta_timezone_status' AND pm.meta_value = 'waiting_for_toggle'
+		 INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = 'wta_latitude'
+		 INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = 'wta_longitude'
+		 INNER JOIN {$wpdb->postmeta} pm3 ON p.ID = pm3.post_id AND pm3.meta_key = 'wta_country_code'
+		 WHERE p.post_type = '" . WTA_POST_TYPE . "'
+		 AND p.post_status IN ('draft', 'publish')
+		 LIMIT 50000"  // Process in large batch
+	);
+	
+	if ( empty( $waiting_cities ) ) {
+		WTA_Logger::info( 'No waiting cities found' );
+		return 0;
+	}
+	
+	$scheduled = 0;
+	$delay = 0;
+	
+	foreach ( $waiting_cities as $city ) {
+		$country_code = $city->country_code;
+		$post_id = intval( $city->ID );
+		$latitude = floatval( $city->latitude );
+		$longitude = floatval( $city->longitude );
+		
+		// Check if complex country (needs API lookup)
+		if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+			// Schedule timezone lookup
+			as_schedule_single_action(
+				time() + $delay,
+				'wta_lookup_timezone',
+				array( $post_id, $latitude, $longitude ),
+				'wta_timezone'
+			);
+			
+			update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+		} else {
+			// Simple country - check hardcoded list
+			$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
+			
+			if ( $timezone ) {
+				// Use hardcoded timezone
+				update_post_meta( $post_id, 'wta_timezone', $timezone );
+				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+				update_post_meta( $post_id, 'wta_has_timezone', 1 );
+				
+				// Schedule AI content immediately
+				as_schedule_single_action(
+					time() + $delay,
+					'wta_generate_ai_content',
+					array( $post_id, 'city', false ),
+					'wta_ai_content'
+				);
+			} else {
+				// Not in list - use API
+				as_schedule_single_action(
+					time() + $delay,
+					'wta_lookup_timezone',
+					array( $post_id, $latitude, $longitude ),
+					'wta_timezone'
+				);
+				
+				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+			}
+		}
+		
+		$scheduled++;
+		
+		// Spread over time (1 per second)
+		$delay++;
+		
+		// Log progress every 5000 cities
+		if ( $scheduled % 5000 === 0 ) {
+			WTA_Logger::info( 'City processing progress', array(
+				'scheduled' => $scheduled,
+				'total' => count( $waiting_cities ),
+			) );
+		}
+	}
+	
+	WTA_Logger::info( '✅ City processing started', array(
+		'total_cities' => count( $waiting_cities ),
+		'scheduled' => $scheduled,
+		'spread_time' => gmdate( 'H:i:s', $delay ),
+	) );
+	
+	return $scheduled;
 }
 
 	/**
