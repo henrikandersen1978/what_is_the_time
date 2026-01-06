@@ -2,6 +2,34 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.73] - 2025-01-06
+
+### 🐛 HOTFIX: Missing global $wpdb declaration
+
+**PROBLEM:**
+v3.0.72 introduced a critical bug in the admin UI that caused a fatal error when accessing the Data & Import page:
+```
+Uncaught Error: Call to a member function get_var() on null
+in includes/admin/views/data-import.php:239
+```
+
+**ROOT CAUSE:**
+The toggle UI code (v3.0.72) used `$wpdb->get_var()` to count waiting cities, but forgot to declare `global $wpdb;` at the start of the PHP block. This caused `$wpdb` to be `null` in the view file scope.
+
+**FIX:**
+Added `global $wpdb;` declaration on line 238 in `data-import.php`.
+
+**IMPACT:**
+- ✅ Admin page loads correctly
+- ✅ Toggle UI shows waiting city count
+- ✅ No more fatal errors
+
+**Files Changed:**
+- `includes/admin/views/data-import.php` - Added missing `global $wpdb;`
+- `time-zone-clock.php` - Version bump to 3.0.73
+
+---
+
 ## [3.0.72] - 2025-01-06
 
 ### 🎮 GAME CHANGER: Manual Processing Control Toggle

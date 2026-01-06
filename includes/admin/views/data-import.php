@@ -232,11 +232,12 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 					<tr>
 						<th scope="row">
 							<?php esc_html_e( 'City Processing Control', WTA_TEXT_DOMAIN ); ?>
-						</th>
-						<td>
-							<?php 
-							$processing_enabled = get_option( 'wta_enable_city_processing', '0' );
-							$waiting_count = $wpdb->get_var(
+					</th>
+					<td>
+						<?php 
+						global $wpdb;
+						$processing_enabled = get_option( 'wta_enable_city_processing', '0' );
+						$waiting_count = $wpdb->get_var(
 								"SELECT COUNT(*) 
 								 FROM {$wpdb->posts} p
 								 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
