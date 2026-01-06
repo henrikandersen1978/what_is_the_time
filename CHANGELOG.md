@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.77] - 2026-01-06
+
+### 🔧 BUILD FIX: Fixed missing WTA_VERSION constant update
+
+**PROBLEM:**
+- Version 3.0.76 had plugin header `* Version: 3.0.76` but `WTA_VERSION` constant was still `3.0.75`
+- WordPress uses WTA_VERSION constant for upgrade detection
+- Plugin update not detected by WordPress
+
+**THE FIX:**
+- Updated BOTH plugin header AND `WTA_VERSION` constant to 3.0.77
+- Now both version indicators match correctly
+
+**FILES CHANGED:**
+- `time-zone-clock.php`: Updated both `* Version:` header and `WTA_VERSION` constant
+
+---
+
 ## [3.0.76] - 2026-01-06
 
 ### 🔧 BUILD FIX: Removed massive log file from repository
