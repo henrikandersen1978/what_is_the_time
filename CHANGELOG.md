@@ -2,6 +2,24 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.82] - 2026-01-08
+
+### 🔧 FIXED: Build Script Now Includes Cleanup Script
+
+**WHAT WAS WRONG:**
+- Build script (`build-release.ps1`) only copied `time-zone-clock.php` and `includes/` directory
+- `cleanup-wta-transients.php` was not included in ZIP releases
+- File was missing after plugin installation
+
+**THE FIX:**
+- Added `cleanup-wta-transients.php` to build script copy list
+- Verified file is now included in ZIP: `time-zone-clock/cleanup-wta-transients.php`
+
+**RESULT:**
+- ✅ Cleanup script now included in all releases
+- ✅ Works immediately after plugin installation
+- ✅ No manual file upload needed
+
 ## [3.0.81] - 2026-01-08
 
 ### 🌐 CHANGED: Cleanup Script Now URL-Accessible

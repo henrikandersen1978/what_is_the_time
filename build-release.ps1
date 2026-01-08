@@ -44,6 +44,9 @@ Write-Host "Copying files to temp directory..." -ForegroundColor Yellow
 # Copy main plugin file
 Copy-Item -Path "time-zone-clock.php" -Destination $PluginTempDir -Force
 
+# Copy cleanup script
+Copy-Item -Path "cleanup-wta-transients.php" -Destination $PluginTempDir -Force
+
 # Copy includes directory
 Copy-Item -Path "includes" -Destination "$PluginTempDir\includes" -Recurse -Force
 
