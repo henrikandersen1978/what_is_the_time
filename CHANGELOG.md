@@ -2,6 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.81] - 2026-01-08
+
+### 🌐 CHANGED: Cleanup Script Now URL-Accessible
+
+**WHAT CHANGED:**
+- `cleanup-wta-transients.php` can now be executed via HTTP URL (like `wp-cron.php`)
+- Compatible with EasyCron, webcron services, and browser testing
+- No longer requires CLI or filesystem path configuration
+
+**HOW TO USE:**
+```
+URL: https://your-site.com/wp-content/plugins/world-time-ai/cleanup-wta-transients.php
+Setup: Add URL to your webcron service (runs every minute)
+```
+
+**BENEFITS:**
+- ✅ Works on any hosting setup (no SSH needed)
+- ✅ Can be tested directly in browser
+- ✅ Easier to debug and monitor
+- ✅ Compatible with all webcron services
+
 ## [3.0.80] - 2026-01-08
 
 ### 🗑️ PERFORMANCE: Transient Caching Disabled

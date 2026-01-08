@@ -2,22 +2,23 @@
 /**
  * WTA Transient Cleanup - Chunked Batch Deletion
  * 
- * Run via cron every minute:
- * * * * * * php /path/to/wp-content/plugins/world-time-ai/cleanup-wta-transients.php
+ * Run via URL (like wp-cron.php):
+ * https://your-site.com/wp-content/plugins/world-time-ai/cleanup-wta-transients.php
+ * 
+ * Setup with EasyCron or similar:
+ * - URL: https://your-site.com/wp-content/plugins/world-time-ai/cleanup-wta-transients.php
+ * - Interval: Every 1 minute
  * 
  * Deletes WTA transients in safe batches to avoid locking wp_options table.
  * Automatically stops when no more transients found.
  * 
  * @package WorldTimeAI
- * @version 1.0
+ * @version 2.0
  * @since   3.0.80
  */
 
-// Prevent direct browser access
-if ( php_sapi_name() !== 'cli' && ! defined( 'DOING_CRON' ) ) {
-	header( 'HTTP/1.0 403 Forbidden' );
-	die( 'This script can only be run via CLI or cron.' );
-}
+// Allow HTTP access (like wp-cron.php)
+define( 'DOING_WTA_CLEANUP', true );
 
 // Load WordPress
 $wp_load_paths = array(
@@ -33,7 +34,9 @@ foreach ( $wp_load_paths as $path ) {
 }
 
 if ( ! defined( 'ABSPATH' ) ) {
-	die( 'Could not locate wp-load.php. Please adjust the path in this script.' );
+	http_response_code( 500 );
+	header( 'Content-Type: text/plain; charset=utf-8' );
+	die( 'ERROR: Could not locate wp-load.php' );
 }
 
 // Configuration
@@ -53,7 +56,16 @@ $total_before = $wpdb->get_var(
 
 if ( $total_before == 0 ) {
 	// Nothing to delete - cleanup complete!
-	log_message( $log_file, "✓ Cleanup complete - no more WTA transients found." );
+	$message = "✓ Cleanup complete - no more WTA transients found.";
+	log_message( $log_file, $message );
+	
+	// Output for both CLI and HTTP
+	if ( php_sapi_name() === 'cli' ) {
+		echo $message . "\n";
+	} else {
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		echo $message;
+	}
 	exit( 0 );
 }
 
@@ -99,9 +111,13 @@ $message = sprintf(
 
 log_message( $log_file, $message );
 
-// Also output to CLI
+// Output for both CLI and HTTP
 if ( php_sapi_name() === 'cli' ) {
 	echo $message . "\n";
+} else {
+	// HTTP response (like wp-cron.php)
+	header( 'Content-Type: text/plain; charset=utf-8' );
+	echo $message;
 }
 
 // Check database size (optional - every 10th run to avoid overhead)
