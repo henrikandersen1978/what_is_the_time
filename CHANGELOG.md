@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.0.80] - 2026-01-08
+
+### 🗑️ PERFORMANCE: Transient Caching Disabled
+
+**PROBLEM:**
+- Transient caching caused massive `wp_options` table bloat during import
+- After importing 35,000 cities: 15 GB database size
+- Projected 200,000 cities: ~86 GB database size
+- PhpMyAdmin timeouts, slow queries, backup failures
+
+**ANALYSIS:**
+- Transients are only valuable for repeated imports
+- Production sites import once per language site
+- Separate sites don't share transients cache
+- Database bloat > API cost savings for one-time imports
+
+**THE FIX:**
+1. **Disabled all transient caching** in translator classes:
+   - `class-wta-ai-translator.php`: Removed all `get_transient()` and `set_transient()` calls
+   - `class-wta-wikidata-translator.php`: Removed all `get_transient()` and `set_transient()` calls
+   - Results are returned directly without caching
+
+2. **Added cleanup script** for existing transients:
+   - `cleanup-wta-transients.php`: Safe chunked batch deletion script
+   - Deletes 2,000 transient rows per minute via cron
+   - Automatic progress tracking and logging
+   - Auto-stops when cleanup complete
+
+**CRON SETUP:**
+```bash
+# Run every minute:
+* * * * * /usr/bin/php /path/to/wp-content/plugins/world-time-ai/cleanup-wta-transients.php
+```
+
+**RESULT:**
+- ✅ No new transients created during import
+- ✅ Existing transients can be safely cleaned up
+- ✅ Database stays small (1-2 GB instead of 86 GB)
+- ✅ Faster database queries
+- ✅ Smaller backups
+- ⚠️ API calls not cached (acceptable for one-time imports)
+
+**TRADE-OFF:**
+- Lost: Transient cache benefits (~$1-2 in potential repeated API calls)
+- Gained: 80+ GB database space, fast queries, stable site
+
+**FILES MODIFIED:**
+- `includes/helpers/class-wta-ai-translator.php`
+- `includes/helpers/class-wta-wikidata-translator.php`
+
+**FILES ADDED:**
+- `cleanup-wta-transients.php` (chunked transient cleanup script)
+- `wta-cleanup.log` (automatic progress logging)
+
+### Technical Details
+- Commented out all `get_transient()` and `set_transient()` calls
+- Added v3.0.80 version comments explaining the change
+- Cleanup script processes 2,000 rows/minute (safe for production)
+- Estimated cleanup time: 16-33 hours for 2-4 million transients
+- Script auto-stops when no more transients found
+
+---
+
 ## [3.0.79] - 2026-01-06
 
 ### 🐛 BUGFIX: Chunked processing recursion logic

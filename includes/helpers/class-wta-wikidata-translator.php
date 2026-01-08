@@ -31,12 +31,12 @@ class WTA_Wikidata_Translator {
 		// Generate cache key
 		$cache_key = 'wta_wikidata_' . $wikidata_id . '_' . $target_lang;
 
-		// Check cache first
-		$cached = get_transient( $cache_key );
-		if ( false !== $cached ) {
-			// Return cached value (can be false if previous attempt failed)
-			return $cached === '__NOTFOUND__' ? false : $cached;
-		}
+		// Check cache first (v3.0.80: Transient caching disabled to reduce database bloat)
+		// $cached = get_transient( $cache_key );
+		// if ( false !== $cached ) {
+		// 	// Return cached value (can be false if previous attempt failed)
+		// 	return $cached === '__NOTFOUND__' ? false : $cached;
+		// }
 
 		// Call Wikidata API
 		$url = sprintf(
@@ -56,8 +56,7 @@ class WTA_Wikidata_Translator {
 				'wikidata_id' => $wikidata_id,
 				'error'       => $response->get_error_message(),
 			) );
-			// Cache failure for 1 day to avoid repeated failed requests
-			set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+			// v3.0.80: No caching - reduces database bloat
 			return false;
 		}
 
@@ -67,8 +66,7 @@ class WTA_Wikidata_Translator {
 				'wikidata_id' => $wikidata_id,
 				'status_code' => $status_code,
 			) );
-			// Cache failure for 1 day
-			set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+			// v3.0.80: No caching - reduces database bloat
 			return false;
 		}
 
@@ -81,8 +79,7 @@ class WTA_Wikidata_Translator {
 				'wikidata_id'  => $wikidata_id,
 				'target_lang'  => $target_lang,
 			) );
-			// Cache failure for 30 days (longer because missing translations rarely get added)
-			set_transient( $cache_key, '__NOTFOUND__', 30 * DAY_IN_SECONDS );
+			// v3.0.80: No caching - reduces database bloat
 			return false;
 		}
 
@@ -102,8 +99,7 @@ class WTA_Wikidata_Translator {
 			'wikidata_id' => $wikidata_id,
 			'label'       => $label,
 		) );
-		// Cache failure for 1 day
-		set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+		// v3.0.80: No caching - reduces database bloat
 		return false;
 	}
 
@@ -147,8 +143,7 @@ class WTA_Wikidata_Translator {
 				'label'       => $label,
 				'prefix'      => $prefix,
 			) );
-			// Cache failure to prevent repeated API calls
-			set_transient( $cache_key, '__NOTFOUND__', DAY_IN_SECONDS );
+			// v3.0.80: No caching - reduces database bloat
 			return false;
 		}
 	}
@@ -300,8 +295,8 @@ class WTA_Wikidata_Translator {
 		}
 	}
 
-		// Cache successful result for 1 year
-		set_transient( $cache_key, $label, YEAR_IN_SECONDS );
+		// v3.0.80: No caching - reduces database bloat
+		// set_transient( $cache_key, $label, YEAR_IN_SECONDS );
 
 		WTA_Logger::info( 'Wikidata translation successful', array(
 			'wikidata_id' => $wikidata_id,

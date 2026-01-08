@@ -43,18 +43,18 @@ class WTA_AI_Translator {
 	$cache_suffix = ! empty( $geonameid ) ? $geonameid : $name;
 		$cache_key = 'wta_trans_' . md5( $cache_suffix . '_' . $type . '_' . $target_lang );
 
-		// Check cache first
-		$cached = get_transient( $cache_key );
-		if ( false !== $cached ) {
-			return $cached;
-		}
+		// Check cache first (v3.0.80: Transient caching disabled to reduce database bloat)
+		// Transients are not needed for one-time imports
+		// $cached = get_transient( $cache_key );
+		// if ( false !== $cached ) {
+		// 	return $cached;
+		// }
 
 	// 1. Try GeoNames first (fastest + most accurate! v3.0.0)
 	if ( ! empty( $geonameid ) && is_numeric( $geonameid ) ) {
 		$geonames_translation = WTA_GeoNames_Translator::get_name( intval( $geonameid ), $target_lang );
 		if ( false !== $geonames_translation ) {
-			// GeoNames translation found, cache and return
-			set_transient( $cache_key, $geonames_translation, YEAR_IN_SECONDS );
+			// GeoNames translation found - return directly (v3.0.80: no caching)
 			return $geonames_translation;
 		}
 	}
@@ -64,7 +64,7 @@ class WTA_AI_Translator {
 	if ( ! empty( $geonameid ) && is_string( $geonameid ) && strpos( $geonameid, 'Q' ) === 0 ) {
 		$wikidata_translation = WTA_Wikidata_Translator::get_label( $geonameid, $lang );
 			if ( false !== $wikidata_translation ) {
-				set_transient( $cache_key, $wikidata_translation, YEAR_IN_SECONDS );
+				// Wikidata translation found - return directly (v3.0.80: no caching)
 				return $wikidata_translation;
 			}
 		}
@@ -72,8 +72,7 @@ class WTA_AI_Translator {
 		// 3. Try static translation (fast and free)
 		$static_translation = WTA_Quick_Translate::translate( $name, $type, $target_lang );
 		if ( $static_translation !== $name ) {
-			// Static translation found, cache and return
-			set_transient( $cache_key, $static_translation, YEAR_IN_SECONDS );
+			// Static translation found - return directly (v3.0.80: no caching)
 			return $static_translation;
 		}
 
@@ -81,20 +80,19 @@ class WTA_AI_Translator {
 		// Cities should keep their original names unless found in Wikidata or Quick_Translate
 		// This prevents AI from translating city names like "Ojo de Agua" to "Øje de Agua"
 		if ( 'city' === $type ) {
-			set_transient( $cache_key, $name, DAY_IN_SECONDS );
+			// Return original city name (v3.0.80: no caching)
 			return $name;
 		}
 		
 		$ai_translation = self::translate_with_ai( $name, $type, $target_lang );
 		
 		if ( false !== $ai_translation && ! empty( $ai_translation ) ) {
-			// Cache successful AI translation
-			set_transient( $cache_key, $ai_translation, YEAR_IN_SECONDS );
+			// AI translation successful - return directly (v3.0.80: no caching)
 			return $ai_translation;
 		}
 
 		// 5. Return original name (correct for small towns that don't have translations!)
-		set_transient( $cache_key, $name, DAY_IN_SECONDS ); // Shorter cache for fallback
+		// (v3.0.80: no caching to prevent database bloat)
 		return $name;
 	}
 
