@@ -2,6 +2,116 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.8] - 2026-01-09
+
+### ✅ DATE FORMAT & SCHEMA TRANSLATION FIX
+
+**USER ISSUES REPORTED:**
+1. Dato på dansk: "fredag den 9. januar 2026" ikke korrekt svensk ❌
+2. Måne fase: "Sidste kvartal" er dansk ❌
+3. FAQ #9-#12: Stadig danske ❌
+4. Schema/JSON-LD: Ingen schema på landingssider! 🔥 CRITICAL
+
+**SOLUTIONS:**
+
+**1. DATE FORMAT FIX (v3.2.8):**
+
+**PROBLEM:**
+Dansk dato format "fredag den 9. januar 2026" brugt overalt.
+Svensk skal være: "fredag 9 januari 2026" (uden "den").
+
+**SOLUTION:**
+✅ Tilføjet `date_format` til alle JSON language packs:
+- **Dansk:** `"date_format": "l \\d\\e\\n j. F Y"` → "fredag den 9. januar 2026"
+- **Svensk:** `"date_format": "l j F Y"` → "fredag 9 januari 2026"
+- **Engelsk:** `"date_format": "l, F jS, Y"` → "Friday, January 9th, 2026"
+- **Tysk:** `"date_format": "l, j. F Y"` → "Freitag, 9. Januar 2026"
+
+✅ Opdateret `class-wta-template-loader.php` til at bruge:
+```php
+$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';
+date_i18n( $date_format, $timestamp );
+```
+
+**2. MÅNE FASE FIX (v3.2.8):**
+
+**STATUS:**
+✅ Måne faser ER allerede i JSON siden v3.2.2!
+✅ "Sidste kvartal" findes som `"moon_last_quarter": "Sista kvartalet"` i sv.json
+✅ User skal bare **re-loade sv.json** efter v3.2.8 upload!
+
+**3. FAQ #9-#12 FIX (v3.2.8):**
+
+**STATUS:**
+✅ FAQ #9-#12 ER allerede fixet i v3.2.7!
+✅ User skal bare **re-loade sv.json** efter v3.2.8 upload!
+
+**4. SCHEMA/JSON-LD FIX (v3.2.8):**
+
+**PROBLEM:**
+Schema descriptions var hardcoded dansk:
+```php
+$description = sprintf( 'Aktuel tid og tidszone for %s', $name_local );
+$description = sprintf( 'Tidszoner og aktuel tid i %s', $name_local );
+```
+
+**SOLUTION:**
+✅ Tilføjet schema templates til alle JSON files:
+```json
+"schema_time_city": "Aktuel tid og tidszone for %s",
+"schema_time_city_country": "Aktuel tid og tidszone for %s, %s",
+"schema_time_continent": "Tidszoner og aktuel tid i %s"
+```
+
+**Svensk:**
+```json
+"schema_time_city": "Aktuell tid och tidszon för %s",
+"schema_time_city_country": "Aktuell tid och tidszon för %s, %s",
+"schema_time_continent": "Tidszoner och aktuell tid i %s"
+```
+
+✅ Opdateret `class-wta-template-loader.php` linje 549-573:
+```php
+$description_template = self::get_template( 'schema_time_city' ) ?: 'Aktuel tid og tidszone for %s';
+$description = sprintf( $description_template, $name_local );
+
+if ( 'city' === $type && ! empty( $country_code ) ) {
+    // ... får country name ...
+    $description_template = self::get_template( 'schema_time_city_country' );
+    $description = sprintf( $description_template, $name_local, $parent_name );
+}
+elseif ( 'continent' === $type ) {
+    $description_template = self::get_template( 'schema_time_continent' );
+    $description = sprintf( $description_template, $name_local );
+}
+```
+
+**RESULT:**
+✅ Schema Place/City/Country/Continent descriptions NU oversat!
+✅ Schema outputtes stadig korrekt i HTML `<script type="application/ld+json">`
+
+**FILES MODIFIED:**
+- `includes/languages/da.json`: Tilføjet `date_format` + 3 schema templates
+- `includes/languages/sv.json`: Tilføjet `date_format` + 3 schema templates
+- `includes/languages/en.json`: Tilføjet `date_format` + 3 schema templates
+- `includes/languages/de.json`: Tilføjet `date_format` + 3 schema templates
+- `includes/frontend/class-wta-template-loader.php`: Bruger nu `date_format` og schema templates
+
+**TEST CHECKLIST:**
+1. Upload v3.2.8 ZIP
+2. Aktivér plugin
+3. **VIGTIGT:** Klik "Load Default Prompts for SV" (loader dato format, schema, måne, FAQ!)
+4. Delete posts & Re-import Sverige
+5. Verify:
+   - ✅ Dato: "fredag 9 januari 2026" (uden "den")
+   - ✅ Måne: "Sista kvartalet" (svensk)
+   - ✅ FAQ #9-#12: "Hvornår skal jeg ringe..." → "När ska jag ringa..."
+   - ✅ Schema: `"description": "Aktuell tid och tidszon för Stockholm, Sverige"`
+
+**VERSION:** 3.2.8
+
+---
+
 ## [3.2.7] - 2026-01-09
 
 ### ✅ COMPLETE FAQ TRANSLATION: All 12 FAQs Now Use Language Packs

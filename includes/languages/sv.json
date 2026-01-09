@@ -176,7 +176,11 @@
     "btn_nearby_cities": "Närliggande städer",
     "btn_nearby_countries": "Närliggande länder",
     "regional_centres_intro": "Utforska större städer spridda över hela %s.",
-    "nearby_countries_empty": "Det finns inga andra länder i databasen ännu."
+    "nearby_countries_empty": "Det finns inga andra länder i databasen ännu.",
+    "date_format": "l j F Y",
+    "schema_time_city": "Aktuell tid och tidszon för %s",
+    "schema_time_city_country": "Aktuell tid och tidszon för %s, %s",
+    "schema_time_continent": "Tidszoner och aktuell tid i %s"
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",

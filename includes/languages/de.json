@@ -176,7 +176,11 @@
     "btn_nearby_cities": "Nahe gelegene Städte",
     "btn_nearby_countries": "Nahe gelegene Länder",
     "regional_centres_intro": "Erkunden Sie größere Städte verteilt über ganz %s.",
-    "nearby_countries_empty": "Es gibt noch keine anderen Länder in der Datenbank."
+    "nearby_countries_empty": "Es gibt noch keine anderen Länder in der Datenbank.",
+    "date_format": "l, j. F Y",
+    "schema_time_city": "Aktuelle Uhrzeit und Zeitzone für %s",
+    "schema_time_city_country": "Aktuelle Uhrzeit und Zeitzone für %s, %s",
+    "schema_time_continent": "Zeitzonen und aktuelle Uhrzeit in %s"
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

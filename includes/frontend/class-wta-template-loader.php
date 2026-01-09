@@ -215,12 +215,14 @@ class WTA_Template_Loader {
 				
 				// Next transition
 				$next_transition = $transitions[1];
-				$change_type = $dst_active ? ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
-				$next_dst_text = sprintf(
-					'%s: %s',
-					$change_type,
-					date_i18n( 'l j. F Y \k\l. H:i', $next_transition['ts'] )
-				);
+			$change_type = $dst_active ? ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
+			$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';
+			$next_dst_text = sprintf(
+				'%s: %s \k\l. %s',
+				$change_type,
+				date_i18n( $date_format, $next_transition['ts'] ),
+				date_i18n( 'H:i', $next_transition['ts'] )
+			);
 			}
 		} catch ( Exception $e ) {
 			// Ignore if DST info not available
@@ -440,11 +442,12 @@ class WTA_Template_Loader {
 			$now->format( 'H:i:s' )
 		);
 	$date_label = self::get_template( 'date_is' ) ?: 'Datoen er';
+	$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';  // Danish default with "den"
 	$navigation_html .= sprintf(
 		'<p class="wta-current-date-statement">%s <span class="wta-live-date" data-timezone="%s">%s</span></p>',
 		esc_html( $date_label ),
 		esc_attr( $timezone ),
-		date_i18n( 'l j. F Y', $now->getTimestamp() )
+		date_i18n( $date_format, $now->getTimestamp() )
 	);
 		$timezone_label = self::get_template( 'timezone_label' ) ?: 'Tidszone:';
 		$navigation_html .= sprintf(
@@ -543,31 +546,25 @@ class WTA_Template_Loader {
 			);
 		}
 		
-		// Add description based on type
-		$description = sprintf( 
-			'Aktuel tid og tidszone for %s',
-			$name_local
-		);
-		if ( 'city' === $type && ! empty( $country_code ) ) {
-			// Add country name for cities
-			$parent_id = wp_get_post_parent_id( $post_id );
-			if ( $parent_id ) {
-			$parent_name = get_post_meta( $parent_id, 'wta_name_local', true ); // v3.0.0 - renamed
-				if ( ! empty( $parent_name ) ) {
-					$description = sprintf( 
-						'Aktuel tid og tidszone for %s, %s',
-						$name_local,
-						$parent_name
-					);
-				}
+	// Add description based on type (language-aware)
+	$description_template = self::get_template( 'schema_time_city' ) ?: 'Aktuel tid og tidszone for %s';
+	$description = sprintf( $description_template, $name_local );
+	
+	if ( 'city' === $type && ! empty( $country_code ) ) {
+		// Add country name for cities
+		$parent_id = wp_get_post_parent_id( $post_id );
+		if ( $parent_id ) {
+		$parent_name = get_post_meta( $parent_id, 'wta_name_local', true ); // v3.0.0 - renamed
+			if ( ! empty( $parent_name ) ) {
+				$description_template = self::get_template( 'schema_time_city_country' ) ?: 'Aktuel tid og tidszone for %s, %s';
+				$description = sprintf( $description_template, $name_local, $parent_name );
 			}
-		} elseif ( 'continent' === $type ) {
-			$description = sprintf( 
-				'Tidszoner og aktuel tid i %s',
-				$name_local
-			);
 		}
-		$place_schema['description'] = $description;
+	} elseif ( 'continent' === $type ) {
+		$description_template = self::get_template( 'schema_time_continent' ) ?: 'Tidszoner og aktuel tid i %s';
+		$description = sprintf( $description_template, $name_local );
+	}
+	$place_schema['description'] = $description;
 		
 	// Add sameAs link for schema (v3.0.0 - prioritize GeoNames over Wikidata)
 	$geonames_id = get_post_meta( $post_id, 'wta_geonames_id', true );
