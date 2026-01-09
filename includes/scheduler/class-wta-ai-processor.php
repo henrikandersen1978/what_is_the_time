@@ -74,8 +74,8 @@ class WTA_AI_Processor {
 				'post_status'  => 'publish',
 			) );
 			
-		// Update Yoast SEO meta if available
-		if ( isset( $result['yoast_title'] ) ) {
+		// v3.2.12: Update Yoast SEO meta if available and not empty (NULL means it was already set)
+		if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
 			update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
 			
 			// v3.0.34: Generate answer-based H1 for ALL location types (separate from title tag)
@@ -357,13 +357,13 @@ class WTA_AI_Processor {
 			'ID'           => $post_id,
 			'post_content' => $result['content'],
 			'post_status'  => 'publish', // PUBLISH the post!
-		) );
+	) );
 
-	// Update Yoast SEO meta if available
-	if ( isset( $result['yoast_title'] ) ) {
-		update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
-		
-		// v3.0.31: Generate answer-based H1 for ALL location types (separate from title tag)
+// v3.2.12: Update Yoast SEO meta if available and not empty (NULL means it was already set)
+if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
+	update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+	
+	// v3.0.31: Generate answer-based H1 for ALL location types (separate from title tag)
 		$type = get_post_meta( $post_id, 'wta_type', true );
 		if ( 'city' === $type ) {
 			// For cities: Generate answer-based H1 (ensures old cities get new format)
@@ -582,17 +582,23 @@ class WTA_AI_Processor {
 		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_timezones' ) ?: 'Tidszoner i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $timezone_content . "\n\n";
 		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_major_cities' ) ?: 'Hvad er klokken i de største byer i %s?', esc_html( $name_local ) ) . '</h2>' . "\n" . $cities_content . "\n\n";
 		$full_content .= '<h2>' . ( $this->get_template( 'continent_h2_geography' ) ?: 'Geografi og beliggenhed' ) . '</h2>' . "\n" . $geography_content . "\n\n";
-		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_facts' ) ?: 'Interessante fakta om %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $facts_content;
-		
-		// Generate Yoast SEO meta
+	$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_facts' ) ?: 'Interessante fakta om %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $facts_content;
+	
+	// v3.2.12: Generate Yoast SEO meta - skip title if already set by Structure Processor
+	$yoast_title = null;
+	$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+	if ( empty( $existing_title ) ) {
+		// Only generate if not already set (saves DB writes)
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
-		$yoast_desc = $this->generate_yoast_description( $post_id, $name_local, 'continent' );
-		
-		return array(
-			'content'     => $full_content,
-			'yoast_title' => $yoast_title,
-			'yoast_desc'  => $yoast_desc,
-		);
+	}
+	
+	$yoast_desc = $this->generate_yoast_description( $post_id, $name_local, 'continent' );
+	
+	return array(
+		'content'     => $full_content,
+		'yoast_title' => $yoast_title,  // NULL if already set
+		'yoast_desc'  => $yoast_desc,
+	);
 	}
 
 	/**
@@ -731,53 +737,51 @@ class WTA_AI_Processor {
 		$batch_requests['travel'] = array(
 			'system'      => str_replace( array_keys( $variables ), array_values( $variables ), $travel_system ),
 			'user'        => str_replace( array_keys( $variables ), array_values( $variables ), $travel_user ),
-			'temperature' => $temperature,
-			'max_tokens'  => 800,
-		);
-		
-		// 7. YOAST TITLE
-		$yoast_title_system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
-		$yoast_title_user = sprintf(
-			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
-			$name_local
-		);
-		$batch_requests['yoast_title'] = array(
-			'system'      => $yoast_title_system,
-			'user'        => $yoast_title_user,
-			'temperature' => 0.7,
-			'max_tokens'  => 100,
-		);
-		
-		// 8. YOAST DESCRIPTION
-		$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
-		$yoast_desc_user = sprintf(
-			'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
-			$name_local
-		);
-		$batch_requests['yoast_desc'] = array(
-			'system'      => $yoast_desc_system,
-			'user'        => $yoast_desc_user,
-			'temperature' => 0.7,
-			'max_tokens'  => 200,
-		);
-		
-		// Execute all requests in parallel
-		$results = $this->call_openai_api_batch( $api_key, $model, $batch_requests );
-		
-		if ( false === $results ) {
-			WTA_Logger::error( 'All parallel API calls failed for country', array( 'post_id' => $post_id ) );
-			return false;
-		}
-		
-		// Extract results (with fallbacks for failed individual requests)
-		$intro = ! empty( $results['intro'] ) ? $results['intro'] : '';
-		$timezone_content = ! empty( $results['timezone'] ) ? $results['timezone'] : '';
-		$cities_content = ! empty( $results['cities'] ) ? $results['cities'] : '';
-		$weather_content = ! empty( $results['weather'] ) ? $results['weather'] : '';
-		$culture_content = ! empty( $results['culture'] ) ? $results['culture'] : '';
-		$travel_content = ! empty( $results['travel'] ) ? $results['travel'] : '';
-		$yoast_title = ! empty( $results['yoast_title'] ) ? $results['yoast_title'] : '';
-		$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
+		'temperature' => $temperature,
+		'max_tokens'  => 800,
+	);
+	
+	// v3.2.12: YOAST TITLE removed from batch - will be generated separately using templates (no AI cost!)
+	// This avoids duplicate work since Structure Processor already set it with language-aware template
+	
+	// 7. YOAST DESCRIPTION
+	$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
+	$yoast_desc_user = sprintf(
+		'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
+		$name_local
+	);
+	$batch_requests['yoast_desc'] = array(
+		'system'      => $yoast_desc_system,
+		'user'        => $yoast_desc_user,
+		'temperature' => 0.7,
+		'max_tokens'  => 200,
+	);
+	
+	// Execute all requests in parallel
+	$results = $this->call_openai_api_batch( $api_key, $model, $batch_requests );
+	
+	if ( false === $results ) {
+		WTA_Logger::error( 'All parallel API calls failed for country', array( 'post_id' => $post_id ) );
+		return false;
+	}
+	
+	// Extract results (with fallbacks for failed individual requests)
+	$intro = ! empty( $results['intro'] ) ? $results['intro'] : '';
+	$timezone_content = ! empty( $results['timezone'] ) ? $results['timezone'] : '';
+	$cities_content = ! empty( $results['cities'] ) ? $results['cities'] : '';
+	$weather_content = ! empty( $results['weather'] ) ? $results['weather'] : '';
+	$culture_content = ! empty( $results['culture'] ) ? $results['culture'] : '';
+	$travel_content = ! empty( $results['travel'] ) ? $results['travel'] : '';
+	
+	// v3.2.12: Generate Yoast title separately (skips if already set by Structure Processor)
+	$yoast_title = null;
+	$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+	if ( empty( $existing_title ) ) {
+		// Only generate if not already set (uses templates, no AI cost!)
+		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
+	}
+	
+	$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
 		
 		// Add dynamic shortcode for live city clocks (uses default count)
 		$cities_content .= "\n\n" . '[wta_major_cities]';
@@ -923,52 +927,50 @@ class WTA_AI_Processor {
 			'system'      => str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_system ),
 			'user'        => str_replace( array_keys( $variables ), array_values( $variables ), $near_countries_user ),
 			'temperature' => $temperature,
-			'max_tokens'  => 150,
-		);
-		
-		// 7. YOAST TITLE
-		$yoast_title_system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
-		$yoast_title_user = sprintf(
-			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
-			$name_local
-		);
-		$batch_requests['yoast_title'] = array(
-			'system'      => $yoast_title_system,
-			'user'        => $yoast_title_user,
-			'temperature' => 0.7,
-			'max_tokens'  => 100,
-		);
-		
-		// 8. YOAST DESCRIPTION
-		$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
-		$yoast_desc_user = sprintf(
-			'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
-			$name_local
-		);
-		$batch_requests['yoast_desc'] = array(
-			'system'      => $yoast_desc_system,
-			'user'        => $yoast_desc_user,
-			'temperature' => 0.7,
-			'max_tokens'  => 200,
-		);
-		
-		// Execute all requests in parallel
-		$results = $this->call_openai_api_batch( $api_key, $model, $batch_requests );
-		
-		if ( false === $results ) {
-			WTA_Logger::error( 'All parallel API calls failed for city', array( 'post_id' => $post_id ) );
-			return false;
-		}
-		
-		// Extract results (with fallbacks for failed individual requests)
-		$intro = ! empty( $results['intro'] ) ? $results['intro'] : '';
-		$timezone_content = ! empty( $results['timezone'] ) ? $results['timezone'] : '';
-		$attractions_content = ! empty( $results['attractions'] ) ? $results['attractions'] : '';
-		$practical_content = ! empty( $results['practical'] ) ? $results['practical'] : '';
-		$nearby_cities_intro = ! empty( $results['nearby_cities'] ) ? $results['nearby_cities'] : '';
-		$nearby_countries_intro = ! empty( $results['nearby_countries'] ) ? $results['nearby_countries'] : '';
-		$yoast_title = ! empty( $results['yoast_title'] ) ? $results['yoast_title'] : '';
-		$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
+		'max_tokens'  => 150,
+	);
+	
+	// v3.2.12: YOAST TITLE removed from batch - will be generated separately using templates (no AI cost!)
+	// This avoids duplicate work since Structure Processor already set it with language-aware template
+	
+	// 7. YOAST DESCRIPTION
+	$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
+	$yoast_desc_user = sprintf(
+		'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
+		$name_local
+	);
+	$batch_requests['yoast_desc'] = array(
+		'system'      => $yoast_desc_system,
+		'user'        => $yoast_desc_user,
+		'temperature' => 0.7,
+		'max_tokens'  => 200,
+	);
+	
+	// Execute all requests in parallel
+	$results = $this->call_openai_api_batch( $api_key, $model, $batch_requests );
+	
+	if ( false === $results ) {
+		WTA_Logger::error( 'All parallel API calls failed for city', array( 'post_id' => $post_id ) );
+		return false;
+	}
+	
+	// Extract results (with fallbacks for failed individual requests)
+	$intro = ! empty( $results['intro'] ) ? $results['intro'] : '';
+	$timezone_content = ! empty( $results['timezone'] ) ? $results['timezone'] : '';
+	$attractions_content = ! empty( $results['attractions'] ) ? $results['attractions'] : '';
+	$practical_content = ! empty( $results['practical'] ) ? $results['practical'] : '';
+	$nearby_cities_intro = ! empty( $results['nearby_cities'] ) ? $results['nearby_cities'] : '';
+	$nearby_countries_intro = ! empty( $results['nearby_countries'] ) ? $results['nearby_countries'] : '';
+	
+	// v3.2.12: Generate Yoast title separately (skips if already set by Structure Processor)
+	$yoast_title = null;
+	$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+	if ( empty( $existing_title ) ) {
+		// Only generate if not already set (uses templates, no AI cost!)
+		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );
+	}
+	
+	$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
 		
 		// === COMBINE ALL SECTIONS ===
 		$intro = $this->add_paragraph_breaks( $intro );
