@@ -515,7 +515,7 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		}
 
 		// Build file path
-		$json_file = plugin_dir_path( dirname( __FILE__ ) ) . 'includes/languages/' . $lang . '.json';
+		$json_file = plugin_dir_path( __FILE__ ) . 'languages/' . $lang . '.json';
 
 		// Check file exists
 		if ( ! file_exists( $json_file ) ) {
