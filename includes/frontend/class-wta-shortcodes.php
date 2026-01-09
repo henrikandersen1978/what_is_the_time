@@ -9,6 +9,29 @@
 class WTA_Shortcodes {
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.1
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.1
+	 * @param    string $key Template key
+	 * @return   string Template string
+	 */
+	private static function get_template( $key ) {
+		if ( self::$templates_cache === null ) {
+			$templates = get_option( 'wta_templates', array() );
+			self::$templates_cache = is_array( $templates ) ? $templates : array();
+		}
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+	}
+
+	/**
 	 * Register shortcodes.
 	 *
 	 * @since    2.9.0
@@ -184,7 +207,7 @@ class WTA_Shortcodes {
 			} elseif ( $hours_diff < 0 ) {
 				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
 			} else {
-				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+				$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 			}
 				
 			// Initial time with seconds
@@ -217,8 +240,8 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$parent_name = get_post_field( 'post_title', $post_id );
-		$schema_name = sprintf( 'Største byer i %s', $parent_name );
-		$schema_description = sprintf( 'Se hvad klokken er i de største byer i %s', $parent_name );
+		$schema_name = sprintf( self::get_template( 'largest_cities_in' ) ?: 'Største byer i %s', $parent_name );
+		$schema_description = sprintf( self::get_template( 'see_time_largest_cities' ) ?: 'Se hvad klokken er i de største byer i %s', $parent_name );
 		$output .= $this->generate_item_list_schema( $major_cities, $schema_name, $schema_description );
 		
 		// Cache for 24 hours
@@ -290,7 +313,7 @@ class WTA_Shortcodes {
 			} elseif ( $hours_diff < 0 ) {
 				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
 			} else {
-				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+				$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 			}
 			
 			// Initial time with seconds
@@ -452,9 +475,11 @@ class WTA_Shortcodes {
 		
 		// Heading
 		if ( 'continent' === $parent_type ) {
-			$output .= '<h2>Oversigt over ' . esc_html( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+			$heading_template = self::get_template( 'overview_of' ) ?: 'Oversigt over %s i %s';
+			$output .= '<h2>' . esc_html( sprintf( $heading_template, $child_type_plural, $parent_name ) ) . '</h2>' . "\n";
 		} elseif ( 'country' === $parent_type ) {
-			$output .= '<h2>Oversigt over ' . esc_html( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
+			$heading_template = self::get_template( 'overview_of' ) ?: 'Oversigt over %s i %s';
+			$output .= '<h2>' . esc_html( sprintf( $heading_template, $child_type_plural, $parent_name ) ) . '</h2>' . "\n";
 		} else {
 			$output .= '<h2>' . ucfirst( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
 		}
@@ -520,11 +545,11 @@ class WTA_Shortcodes {
 		$schema_description = '';
 		
 		if ( 'continent' === $parent_type ) {
-			$schema_name = sprintf( 'Lande i %s', $parent_name );
-			$schema_description = sprintf( 'Se hvad klokken er i forskellige lande i %s', $parent_name );
+			$schema_name = sprintf( self::get_template( 'countries_in' ) ?: 'Lande i %s', $parent_name );
+			$schema_description = sprintf( self::get_template( 'see_time_countries' ) ?: 'Se hvad klokken er i forskellige lande i %s', $parent_name );
 		} elseif ( 'country' === $parent_type ) {
-			$schema_name = sprintf( 'Steder i %s', $parent_name );
-			$schema_description = sprintf( 'Se hvad klokken er i forskellige steder i %s', $parent_name );
+			$schema_name = sprintf( self::get_template( 'places_in' ) ?: 'Steder i %s', $parent_name );
+			$schema_description = sprintf( self::get_template( 'see_time_places' ) ?: 'Se hvad klokken er i forskellige steder i %s', $parent_name );
 		}
 		
 		$output .= $this->generate_item_list_schema( $children, $schema_name, $schema_description );

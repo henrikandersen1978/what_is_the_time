@@ -9,6 +9,14 @@
 class WTA_Template_Loader {
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.1
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since    2.8.4
@@ -22,6 +30,21 @@ class WTA_Template_Loader {
 		
 		// Append FAQ schema after content (v2.35.40)
 		add_filter( 'the_content', array( $this, 'append_faq_schema' ), 20 );
+	}
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.1
+	 * @param    string $key Template key
+	 * @return   string Template string
+	 */
+	private static function get_template( $key ) {
+		if ( self::$templates_cache === null ) {
+			$templates = get_option( 'wta_templates', array() );
+			self::$templates_cache = is_array( $templates ) ? $templates : array();
+		}
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
 	}
 
 	/**
@@ -96,7 +119,7 @@ class WTA_Template_Loader {
 		// Build breadcrumb
 		$breadcrumb_items = array();
 		$breadcrumb_items[] = array(
-			'name' => 'Forside',
+			'name' => self::get_template( 'breadcrumb_home' ) ?: 'Forside',
 			'url'  => home_url( '/' ),
 		);
 		
@@ -172,7 +195,7 @@ class WTA_Template_Loader {
 		} elseif ( $hours_diff < 0 ) {
 			$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
 		} else {
-			$diff_text = sprintf( 'Samme tid som %s', $base_country );
+			$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 		}
 		
 		// Get UTC offset for display
@@ -188,11 +211,11 @@ class WTA_Template_Loader {
 			$transitions = $city_tz->getTransitions( time(), time() + ( 180 * 86400 ) ); // Next 180 days
 			if ( count( $transitions ) > 1 ) {
 				$dst_active = $transitions[0]['isdst'];
-				$dst_text = $dst_active ? 'Sommertid er aktiv' : 'Vintertid (normaltid) er aktiv';
+				$dst_text = $dst_active ? ( self::get_template( 'dst_active' ) ?: 'Sommertid er aktiv' ) : ( self::get_template( 'standard_time_active' ) ?: 'Vintertid (normaltid) er aktiv' );
 				
 				// Next transition
 				$next_transition = $transitions[1];
-				$change_type = $dst_active ? 'Vintertid starter' : 'Sommertid starter';
+				$change_type = $dst_active ? ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
 				$next_dst_text = sprintf(
 					'%s: %s',
 					$change_type,
@@ -611,7 +634,7 @@ class WTA_Template_Loader {
 			} elseif ( $hours_diff < 0 ) {
 				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
 			} else {
-				$diff_text = sprintf( 'Samme tid som %s', $base_country );
+				$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 			}
 			} catch ( Exception $e ) {
 				$diff_text = '';
@@ -683,7 +706,7 @@ class WTA_Template_Loader {
 			$navigation_html .= '<div class="wta-quick-nav">';
 			
 			if ( $has_children ) {
-				$child_label = ( 'continent' === $type ) ? '📍 Se alle lande' : '📍 Se alle steder';
+				$child_label = ( 'continent' === $type ) ? ( self::get_template( 'btn_see_all_countries' ) ?: '📍 Se alle lande' ) : ( self::get_template( 'btn_see_all_places' ) ?: '📍 Se alle steder' );
 				$navigation_html .= '<a href="#child-locations" class="wta-quick-nav-btn wta-smooth-scroll">';
 				$navigation_html .= esc_html( $child_label );
 				$navigation_html .= '</a>';
@@ -691,7 +714,7 @@ class WTA_Template_Loader {
 			
 			if ( $has_major_cities ) {
 				$navigation_html .= '<a href="#major-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
-				$navigation_html .= '🕐 Live tidspunkter';
+				$navigation_html .= esc_html( self::get_template( 'btn_live_times' ) ?: '🕐 Live tidspunkter' );
 				$navigation_html .= '</a>';
 			}
 			

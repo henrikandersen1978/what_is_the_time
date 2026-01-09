@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.1] - 2026-01-09
+
+### ✨ Frontend Translations - Major Update
+
+**PROBLEM (v3.2.0):**
+Only AI-generated content (prompts, FAQ answers) and H1/titles were translated. ALL hardcoded frontend strings remained in Danish:
+- ❌ Navigation buttons: "Se alle lande", "Live tidspunkter"  
+- ❌ Section headings: "Oversigt over..."
+- ❌ Breadcrumbs: "Forside"
+- ❌ Time differences: "Samme tid som", "timer foran/bagud"
+- ❌ DST status: "Sommertid er aktiv"
+- ❌ Schema/structured data
+- ❌ Quick Facts box labels
+
+**SOLUTION (v3.2.1):**
+Added **48+ new template strings** to all 4 language JSON files:
+
+**Translated to ALL languages (da/sv/en/de):**
+- ✅ Navigation buttons: "Se alla länder" (sv), "See all countries" (en)
+- ✅ Section headings: "Översikt över..." (sv)
+- ✅ Breadcrumbs: "Hem" (sv), "Home" (en)
+- ✅ Time differences: "Samma tid som..." (sv)
+- ✅ DST status: "Sommartid är aktiv" (sv)
+- ✅ Schema metadata (SEO structured data)
+
+**FILES UPDATED:**
+- `includes/languages/*.json` - Added 48 new template strings to templates section
+- `includes/frontend/class-wta-template-loader.php` - Added get_template() helper, updated navigation buttons, breadcrumbs, DST strings
+- `includes/frontend/class-wta-shortcodes.php` - Added get_template() helper, updated "Oversigt over" headings, schema strings
+
+**RESULT:**
+- ✅ Swedish site: Navigation, buttons, headings now in Swedish
+- ✅ German site: Navigation, buttons, headings now in German  
+- ✅ English site: Navigation, buttons, headings now in English
+- ✅ Schema/structured data now language-aware
+- ⚠️ **Still TODO**: FAQ rendering, moon phase strings, sun data strings, Quick Facts box (Phase 2)
+
 ## [3.2.0] - 2026-01-09
 
 ### ✨ Added: Complete Multilingual Support with Language-Aware Templates
