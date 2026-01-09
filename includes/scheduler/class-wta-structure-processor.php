@@ -20,6 +20,29 @@ class WTA_Structure_Processor {
 	private static $admin_user_id = null;
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.11
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.11
+	 * @param    string $key Template key
+	 * @return   string Template string
+	 */
+	private static function get_template( $key ) {
+		if ( self::$templates_cache === null ) {
+			$templates = get_option( 'wta_templates', array() );
+			self::$templates_cache = is_array( $templates ) ? $templates : array();
+		}
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+	}
+
+	/**
 	 * Process batch.
 	 *
 	 * Called by Action Scheduler every minute.
@@ -182,8 +205,9 @@ class WTA_Structure_Processor {
 	$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $data['name_local'] );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// Update Yoast SEO title (separate from H1 - question-based for better CTR)
-	$yoast_title = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+	// v3.2.11: Update Yoast SEO title using language-aware template
+	$title_template = self::get_template( 'continent_title' ) ?: 'Hvad er klokken i %s? Tidszoner og aktuel tid';
+	$yoast_title = sprintf( $title_template, $data['name_local'] );
 	update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 		// Queue AI content generation
@@ -334,8 +358,9 @@ class WTA_Structure_Processor {
 	$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $data['name_local'] );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// Update Yoast SEO title (separate from H1 - question-based for better CTR)
-	$yoast_title = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+	// v3.2.11: Update Yoast SEO title using language-aware template
+	$title_template = self::get_template( 'country_title' ) ?: 'Hvad er klokken i %s?';
+	$yoast_title = sprintf( $title_template, $data['name_local'] );
 	update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 	// Queue AI content generation
@@ -639,9 +664,9 @@ class WTA_Structure_Processor {
 	$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
 	update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 	
-	// v3.0.24: Question-based title tag (better CTR in SERP) - no year
-	// Title matches search query
-	$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+	// v3.2.11: Update Yoast SEO title using language-aware template
+	$title_template = self::get_template( 'city_title' ) ?: 'Hvad er klokken i %s, %s?';
+	$seo_title = sprintf( $title_template, $data['name_local'], $parent_country_name );
 	update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 
 	// ==========================================

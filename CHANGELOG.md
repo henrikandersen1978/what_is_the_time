@@ -2,6 +2,134 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.11] - 2026-01-09
+
+### ✅ STRUCTURE PROCESSOR TITLE FIX - Critical Import Issue
+
+**USER REPORT:**
+"Title tag og meta description er stadig dansk på lande og bysider. Enten bruges der forkert label fra json fil her - eller også overskrives det stadig med dansk. På kontinent forbliver det svensk."
+
+**ROOT CAUSE FOUND:**
+
+`class-wta-structure-processor.php` havde **HARDCODED DANSKE TITLES** ved import!
+
+**The 3-step title problem:**
+
+```
+STEP 1: Structure Processor (IMPORT) ← 🔥 PROBLEM WAS HERE!
+  ↓
+  $yoast_title = sprintf( 'Hvad er klokken i %s?', ... );  // ❌ DANSK HARDCODED
+  update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
+
+STEP 2: Single Structure Processor (per-post)
+  ↓
+  $template = self::get_template( 'city_title' );  // ✅ LANGUAGE-AWARE (v3.2.1)
+  update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
+
+STEP 3: AI Processor (content generation)
+  ↓
+  $result['yoast_title'] = $this->generate_yoast_title( ... );  // ✅ LANGUAGE-AWARE (v3.2.4)
+  update_post_meta( $post_id, '_yoast_wpseo_title', $result['yoast_title'] );
+```
+
+**Problem:**
+- **Continents:** AI processor kører og overskriver med svensk ✅
+- **Countries:** AI processor kører MEN struktur processor satte dansk først ❌
+- **Cities:** AI processor kører MEN struktur processor satte dansk først ❌
+
+**Why continents worked but not countries/cities?**
+Continents fik måske AI content generated korrekt, mens countries/cities beholdt dansk fra structure processor.
+
+**SOLUTION v3.2.11:**
+
+Added `get_template()` helper method to Structure Processor:
+```php
+private static function get_template( $key ) {
+    if ( self::$templates_cache === null ) {
+        $templates = get_option( 'wta_templates', array() );
+        self::$templates_cache = is_array( $templates ) ? $templates : array();
+    }
+    return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+}
+```
+
+Updated 3 title assignments:
+
+**1. Continent titles (linje 215):**
+```php
+// BEFORE v3.2.11
+$yoast_title = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+
+// AFTER v3.2.11
+$title_template = self::get_template( 'continent_title' ) ?: 'Hvad er klokken i %s? Tidszoner og aktuel tid';
+$yoast_title = sprintf( $title_template, $data['name_local'] );
+```
+
+**2. Country titles (linje 367):**
+```php
+// BEFORE v3.2.11
+$yoast_title = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+
+// AFTER v3.2.11
+$title_template = self::get_template( 'country_title' ) ?: 'Hvad er klokken i %s?';
+$yoast_title = sprintf( $title_template, $data['name_local'] );
+```
+
+**3. City titles (linje 673):**
+```php
+// BEFORE v3.2.11
+$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+
+// AFTER v3.2.11
+$title_template = self::get_template( 'city_title' ) ?: 'Hvad er klokken i %s, %s?';
+$seo_title = sprintf( $title_template, $data['name_local'], $parent_country_name );
+```
+
+**RESULT:**
+✅ ALL 3 location types now use language-aware templates from JSON during import!
+✅ No more hardcoded Danish titles in structure processor!
+✅ Titles correct from the moment of post creation!
+
+**FILES MODIFIED:**
+- `includes/scheduler/class-wta-structure-processor.php`:
+  - Added `get_template()` helper method
+  - Updated continent title generation (linje 215)
+  - Updated country title generation (linje 367)
+  - Updated city title generation (linje 673)
+
+**⚠️ CRITICAL: USER ACTION REQUIRED AFTER EVERY UPDATE!**
+
+**USER ALSO REPORTED:**
+- "Datoen står stadig på dansk i den lilla boks" ❌
+- "De sidste 4 faq spørgsmål og svar stadig på dansk" ❌
+
+**These issues mean:**
+→ User has NOT clicked "Load Default Prompts for SV" after v3.2.8/v3.2.9/v3.2.10!
+
+**Why this matters:**
+- v3.2.8 added `date_format` to JSON
+- v3.2.7 added FAQ #9-#12 to JSON
+- v3.2.6 added FAQ #1-#5 to JSON
+- v3.2.5 added 38 new template strings
+- v3.2.2 added moon phase strings
+
+**If these are not loaded, they don't exist in WordPress options!**
+
+**MANDATORY PROCEDURE AFTER EVERY UPDATE:**
+
+1. **Upload new ZIP** to WordPress
+2. **Activate plugin**
+3. **🔥 CRITICAL: Go to WTA → Timezone & Language**
+4. **🔥 Click "Load Default Prompts for SV"** (this loads ALL new strings from JSON!)
+5. **Delete old posts** (if you want fresh import with new strings)
+6. **Re-import** data
+
+**Without step 4, new template strings from JSON are NOT loaded into WordPress options!**
+
+**VERSION:** 3.2.11
+
+---
+
 ## [3.2.10] - 2026-01-09
 
 ### 🔍 SCHEMA DEBUG VERSION - Critical Issue Investigation
