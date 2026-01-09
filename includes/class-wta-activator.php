@@ -546,9 +546,9 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			$options[ 'wta_' . $key ] = $value;
 		}
 
-		// AI Prompts
+		// AI Prompts (add _prompt_ prefix to match Prompts admin page)
 		foreach ( $data['prompts'] as $key => $value ) {
-			$options[ 'wta_' . $key ] = $value;
+			$options[ 'wta_prompt_' . $key ] = $value;
 		}
 
 		// FAQ strings (store as serialized array for easy retrieval)
