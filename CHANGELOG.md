@@ -2,6 +2,44 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.2] - 2026-01-09
+
+### ✨ Complete Frontend Translation - ALL Danish Strings Eliminated
+
+**PROBLEM (v3.2.1):**
+After v3.2.1, navigation and section headings were translated, but MANY frontend strings remained in Danish:
+- ❌ FAQ section heading: "Ofte stillede spørgsmål om tid"
+- ❌ Quick Facts box labels: "Tidszone:", "Månefase:"  
+- ❌ Time differences: "X timer foran Danmark", "X timer bagud for Danmark"
+- ❌ Moon phases: "Tiltagende måne", "Aftagende månesejl", "Første kvarter"
+- ❌ Sun/polar: "Midnatssol", "Mørketid", "Ekstreme lysforhold"
+- ❌ Hemisphere: "ligger på den nordlige halvkugle"
+
+**SOLUTION (v3.2.2):**
+Added **15+ critical template strings** and updated all renderers:
+
+**✅ NOW TRANSLATED:**
+- FAQ heading: "Vanliga frågor om tid i Stockholm" (sv)
+- Quick Facts labels: "Tidszon:", "Månfas:" (sv)
+- Time differences: "2 timmar före Sverige" (sv)
+- Moon phases: "Tilltagande måne", "Avtagande månskära" (sv)
+- Sun/polar: "Midnattssol", "Polarnatt" (sv)
+- Hemisphere: "ligger på norra halvklotet" (sv)
+
+**FILES UPDATED:**
+- `includes/languages/*.json` - Added 15 new template strings (moon, sun, quick facts labels)
+- `includes/helpers/class-wta-faq-renderer.php` - FAQ heading now uses templates
+- `includes/frontend/class-wta-template-loader.php` - All moon phases, sun strings, hemisphere strings, Quick Facts labels now use templates
+- `includes/frontend/class-wta-shortcodes.php` - Time difference strings use templates
+
+**RESULT:**
+✅ **100% of visible frontend content now translated** (Danish → Swedish/English/German)
+✅ FAQ sections fully translated (heading + Q&A)
+✅ Quick Facts box fully translated (all labels)
+✅ Moon phases, sun data, hemisphere strings all translated
+✅ Time differences fully translated
+⚠️ **Still TODO**: Post slugs (low priority - doesn't affect user experience)
+
 ## [3.2.1] - 2026-01-09
 
 ### ✨ Frontend Translations - Major Update

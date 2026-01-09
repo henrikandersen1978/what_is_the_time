@@ -117,7 +117,19 @@
     "faq_heading_with_city": "Häufig gestellte Fragen zur Uhrzeit in %s",
     "faq_schema_name": "Häufig gestellte Fragen zur Uhrzeit in %s",
     "hours_ahead": "%s Stunden vor %s",
-    "hours_behind": "%s Stunden hinter %s"
+    "hours_behind": "%s Stunden hinter %s",
+    "polar_night": "Polarnacht - kein Sonnenaufgang während dieser Periode",
+    "midnight_sun": "Mitternachtssonne - die Sonne geht während dieser Periode nicht unter",
+    "extreme_light_polar_region": "Extreme Lichtverhältnisse aufgrund der Polarregion",
+    "extreme_light_above_circle": "Extreme Lichtverhältnisse aufgrund der Polarregion (über dem Polarkreis)",
+    "sun_data_unavailable_polar": "Sonnendaten nicht verfügbar (Polarregion)",
+    "new_moon": "Neumond",
+    "full_moon": "Vollmond",
+    "timezone_label": "Zeitzone:",
+    "moon_phase_label": "Mondphase:",
+    "northern_hemisphere": "nördlichen",
+    "southern_hemisphere": "südlichen",
+    "location_on_hemisphere": "%s liegt auf der %s Hemisphäre"
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

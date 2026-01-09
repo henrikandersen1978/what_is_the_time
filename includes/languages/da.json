@@ -117,7 +117,19 @@
     "faq_heading_with_city": "Ofte stillede spørgsmål om tid i %s",
     "faq_schema_name": "Ofte stillede spørgsmål om tid i %s",
     "hours_ahead": "%s timer foran %s",
-    "hours_behind": "%s timer bagud for %s"
+    "hours_behind": "%s timer bagud for %s",
+    "polar_night": "Mørketid (polarnatt) - ingen solopgang i denne periode",
+    "midnight_sun": "Midnatssol - solen går ikke ned i denne periode",
+    "extreme_light_polar_region": "Ekstreme lysforhold på grund af polarregion",
+    "extreme_light_above_circle": "Ekstreme lysforhold på grund af polarregion (over polarcirklen)",
+    "sun_data_unavailable_polar": "Soldata ikke tilgængelig (polarregion)",
+    "new_moon": "Nymåne",
+    "full_moon": "Fuldmåne",
+    "timezone_label": "Tidszone:",
+    "moon_phase_label": "Månefase:",
+    "northern_hemisphere": "nordlige",
+    "southern_hemisphere": "sydlige",
+    "location_on_hemisphere": "%s ligger på den %s halvkugle"
   },
   "faq": {
     "faq1_question": "Hvad er klokken i {city_name} lige nu?",

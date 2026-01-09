@@ -236,8 +236,9 @@ class WTA_Template_Loader {
 		if ( ! empty( $lat ) && ! empty( $lng ) ) {
 			$lat = floatval( $lat );
 			$lng = floatval( $lng );
-			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
-			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
+			$hemisphere = $lat > 0 ? ( self::get_template( 'northern_hemisphere' ) ?: 'nordlige' ) : ( self::get_template( 'southern_hemisphere' ) ?: 'sydlige' );
+			$hemisphere_pattern = self::get_template( 'location_on_hemisphere' ) ?: '%s ligger på den %s halvkugle';
+			$hemisphere_text = sprintf( $hemisphere_pattern, $name_local, $hemisphere );
 			
 			// Format GPS coordinates (degrees and minutes)
 			$lat_abs = abs( $lat );
@@ -361,31 +362,31 @@ class WTA_Template_Loader {
 					if ( $is_northern ) {
 						// Northern hemisphere: polar night in winter (Nov-Jan), midnight sun in summer (May-Jul)
 						if ( in_array( $month, array( 11, 12, 1 ) ) ) {
-							$sun_text = 'Mørketid (polarnatt) - ingen solopgang i denne periode';
+							$sun_text = self::get_template( 'polar_night' ) ?: 'Mørketid (polarnatt) - ingen solopgang i denne periode';
 						} elseif ( in_array( $month, array( 5, 6, 7 ) ) ) {
-							$sun_text = 'Midnatssol - solen går ikke ned i denne periode';
+							$sun_text = self::get_template( 'midnight_sun' ) ?: 'Midnatssol - solen går ikke ned i denne periode';
 						} else {
-							$sun_text = 'Ekstreme lysforhold på grund af polarregion';
+							$sun_text = self::get_template( 'extreme_light_polar_region' ) ?: 'Ekstreme lysforhold på grund af polarregion';
 						}
 					} else {
 						// Southern hemisphere: reversed seasons
 						if ( in_array( $month, array( 5, 6, 7 ) ) ) {
-							$sun_text = 'Mørketid (polarnatt) - ingen solopgang i denne periode';
+							$sun_text = self::get_template( 'polar_night' ) ?: 'Mørketid (polarnatt) - ingen solopgang i denne periode';
 						} elseif ( in_array( $month, array( 11, 12, 1 ) ) ) {
-							$sun_text = 'Midnatssol - solen går ikke ned i denne periode';
+							$sun_text = self::get_template( 'midnight_sun' ) ?: 'Midnatssol - solen går ikke ned i denne periode';
 						} else {
-							$sun_text = 'Ekstreme lysforhold på grund af polarregion';
+							$sun_text = self::get_template( 'extreme_light_polar_region' ) ?: 'Ekstreme lysforhold på grund af polarregion';
 						}
 					}
 				}
 			} elseif ( $is_polar_region ) {
 				// Fallback for polar regions when date_sun_info returns no data
-				$sun_text = 'Ekstreme lysforhold på grund af polarregion (over polarcirklen)';
+				$sun_text = self::get_template( 'extreme_light_above_circle' ) ?: 'Ekstreme lysforhold på grund af polarregion (over polarcirklen)';
 			}
 		} catch ( Exception $e ) {
 			// Silently handle any errors in sun calculation without breaking the entire display
 			if ( abs( $lat ) > 66.56 ) {
-				$sun_text = 'Soldata ikke tilgængelig (polarregion)';
+				$sun_text = self::get_template( 'sun_data_unavailable_polar' ) ?: 'Soldata ikke tilgængelig (polarregion)';
 			}
 		}
 	}
@@ -407,19 +408,21 @@ class WTA_Template_Loader {
 	// Determine phase name based on illumination percentage and direction
 	$phase_name = '';
 	if ($illumination < 5) {
-		$phase_name = 'Nymåne';
+		$phase_name = self::get_template( 'new_moon' ) ?: 'Nymåne';
 	} elseif ($illumination < 45) {
-		$phase_name = $is_waxing ? 'Tiltagende månesejl' : 'Aftagende månesejl';
+		$phase_name = $is_waxing ? ( self::get_template( 'moon_waxing_crescent' ) ?: 'Tiltagende månesejl' ) : ( self::get_template( 'moon_waning_crescent' ) ?: 'Aftagende månesejl' );
 	} elseif ($illumination < 55) {
-		$phase_name = $is_waxing ? 'Første kvarter' : 'Sidste kvarter';
+		$phase_name = $is_waxing ? ( self::get_template( 'moon_first_quarter' ) ?: 'Første kvarter' ) : ( self::get_template( 'moon_last_quarter' ) ?: 'Sidste kvarter' );
 	} elseif ($illumination < 95) {
-		$phase_name = $is_waxing ? 'Tiltagende måne' : 'Aftagende måne';
+		$phase_name = $is_waxing ? ( self::get_template( 'moon_waxing' ) ?: 'Tiltagende måne' ) : ( self::get_template( 'moon_waning' ) ?: 'Aftagende måne' );
 	} else {
-		$phase_name = 'Fuldmåne';
+		$phase_name = self::get_template( 'full_moon' ) ?: 'Fuldmåne';
 	}
 	
+	$moon_label = self::get_template( 'moon_phase_label' ) ?: 'Månefase:';
 	$moon_text = sprintf(
-		'Månefase: %.1f%% (%s)',
+		'%s %.1f%% (%s)',
+		$moon_label,
 		$illumination,
 		$phase_name
 	);
@@ -437,8 +440,10 @@ class WTA_Template_Loader {
 			esc_attr( $timezone ),
 			$now->format( 'l j. F Y' )
 		);
+		$timezone_label = self::get_template( 'timezone_label' ) ?: 'Tidszone:';
 		$navigation_html .= sprintf(
-			'<p class="wta-timezone-statement">Tidszone: <span class="wta-timezone-name">%s (%s)</span></p>',
+			'<p class="wta-timezone-statement">%s <span class="wta-timezone-name">%s (%s)</span></p>',
+			esc_html( $timezone_label ),
 			esc_html( $timezone ),
 			esc_html( $offset_formatted )
 		);

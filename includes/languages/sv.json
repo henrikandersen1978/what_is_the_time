@@ -117,7 +117,19 @@
     "faq_heading_with_city": "Vanliga frågor om tid i %s",
     "faq_schema_name": "Vanliga frågor om tid i %s",
     "hours_ahead": "%s timmar före %s",
-    "hours_behind": "%s timmar efter %s"
+    "hours_behind": "%s timmar efter %s",
+    "polar_night": "Polarnatt - ingen soluppgång under denna period",
+    "midnight_sun": "Midnattssol - solen går inte ner under denna period",
+    "extreme_light_polar_region": "Extrema ljusförhållanden på grund av polarregion",
+    "extreme_light_above_circle": "Extrema ljusförhållanden på grund av polarregion (över polcirkeln)",
+    "sun_data_unavailable_polar": "Soldata ej tillgänglig (polarregion)",
+    "new_moon": "Nymåne",
+    "full_moon": "Fullmåne",
+    "timezone_label": "Tidszon:",
+    "moon_phase_label": "Månfas:",
+    "northern_hemisphere": "norra",
+    "southern_hemisphere": "södra",
+    "location_on_hemisphere": "%s ligger på %s halvklotet"
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",

@@ -117,7 +117,19 @@
     "faq_heading_with_city": "Frequently asked questions about time in %s",
     "faq_schema_name": "Frequently asked questions about time in %s",
     "hours_ahead": "%s hours ahead of %s",
-    "hours_behind": "%s hours behind %s"
+    "hours_behind": "%s hours behind %s",
+    "polar_night": "Polar night - no sunrise during this period",
+    "midnight_sun": "Midnight sun - the sun does not set during this period",
+    "extreme_light_polar_region": "Extreme light conditions due to polar region",
+    "extreme_light_above_circle": "Extreme light conditions due to polar region (above polar circle)",
+    "sun_data_unavailable_polar": "Sun data unavailable (polar region)",
+    "new_moon": "New moon",
+    "full_moon": "Full moon",
+    "timezone_label": "Timezone:",
+    "moon_phase_label": "Moon phase:",
+    "northern_hemisphere": "northern",
+    "southern_hemisphere": "southern",
+    "location_on_hemisphere": "%s is located in the %s hemisphere"
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",
