@@ -38,20 +38,13 @@ class WTA_Single_Structure_Processor {
 	private static function get_template( $key ) {
 		// Load templates once
 		if ( self::$templates_cache === null ) {
-			$lang = get_option( 'wta_site_language', 'da' );
-			$json_file = plugin_dir_path( dirname( __FILE__ ) ) . 'languages/' . $lang . '.json';
+			// Try to get from WordPress options (loaded via "Load Default Prompts")
+			$templates = get_option( 'wta_templates', array() );
 			
-			if ( file_exists( $json_file ) ) {
-				$json_content = file_get_contents( $json_file );
-				$data = json_decode( $json_content, true );
-				
-				if ( isset( $data['templates'] ) ) {
-					self::$templates_cache = $data['templates'];
-				}
-			}
-			
-			// Fallback to Danish templates if loading fails
-			if ( empty( self::$templates_cache ) ) {
+			if ( ! empty( $templates ) && is_array( $templates ) ) {
+				self::$templates_cache = $templates;
+			} else {
+				// Fallback to Danish templates if not loaded
 				self::$templates_cache = array(
 					'continent_h1'    => 'Aktuel tid i lande og byer i %s',
 					'continent_title' => 'Hvad er klokken i %s? Tidszoner og aktuel tid',

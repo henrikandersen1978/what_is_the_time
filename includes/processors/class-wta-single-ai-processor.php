@@ -16,6 +16,46 @@ require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-ai-processor.php';
 class WTA_Single_AI_Processor extends WTA_AI_Processor {
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.0
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.0
+	 * @param    string $key Template key (e.g., 'continent_h1', 'city_title')
+	 * @return   string Template string with %s placeholders
+	 */
+	private static function get_template( $key ) {
+		// Load templates once
+		if ( self::$templates_cache === null ) {
+			// Try to get from WordPress options (loaded via "Load Default Prompts")
+			$templates = get_option( 'wta_templates', array() );
+			
+			if ( ! empty( $templates ) && is_array( $templates ) ) {
+				self::$templates_cache = $templates;
+			} else {
+				// Fallback to Danish templates if not loaded
+				self::$templates_cache = array(
+					'continent_h1'    => 'Aktuel tid i lande og byer i %s',
+					'continent_title' => 'Hvad er klokken i %s? Tidszoner og aktuel tid',
+					'country_h1'      => 'Aktuel tid i byer i %s',
+					'country_title'   => 'Hvad er klokken i %s?',
+					'city_h1'         => 'Aktuel tid i %s, %s',
+					'city_title'      => 'Hvad er klokken i %s, %s?',
+					'faq_intro'       => 'Her finder du svar på de mest almindelige spørgsmål om tid i %s.',
+				);
+			}
+		}
+		
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+	}
+
+	/**
 	 * Generate AI content for a single post.
 	 *
 	 * Action Scheduler unpacks args, so this receives separate parameters.
@@ -132,16 +172,16 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 					if ( $parent_id ) {
 						$country_name = get_post_field( 'post_title', $parent_id );
 						$city_name = get_the_title( $post_id );
-						$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $city_name, $country_name );
+						$seo_h1 = sprintf( self::get_template( 'city_h1' ), $city_name, $country_name );
 						update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 					}
 				} elseif ( 'country' === $type ) {
 					$country_name = get_the_title( $post_id );
-					$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $country_name );
+					$seo_h1 = sprintf( self::get_template( 'country_h1' ), $country_name );
 					update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 				} elseif ( 'continent' === $type ) {
 					$continent_name = get_the_title( $post_id );
-					$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $continent_name );
+					$seo_h1 = sprintf( self::get_template( 'continent_h1' ), $continent_name );
 					update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 				}
 			}

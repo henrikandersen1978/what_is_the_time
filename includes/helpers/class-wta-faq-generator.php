@@ -124,11 +124,43 @@ class WTA_FAQ_Generator {
 	 * Generate template intro (fallback).
 	 *
 	 * @since    2.35.0
+	 * @since    3.2.0  Updated to use language-aware templates.
 	 * @param    string $city_name City name.
 	 * @return   string            Intro text.
 	 */
 	private static function generate_template_intro( $city_name ) {
-		return "Her finder du svar på de mest almindelige spørgsmål om tid i {$city_name}. Vi dækker alt fra aktuel tid og tidszone til praktiske rejsetips og tidsforskel til Danmark. Scroll gennem spørgsmålene nedenfor for at finde præcis det du søger.";
+		$template = self::get_template( 'faq_intro' );
+		if ( empty( $template ) ) {
+			// Fallback to Danish
+			$template = 'Her finder du svar på de mest almindelige spørgsmål om tid i %s. Vi dækker alt fra aktuel tid og tidszone til praktiske rejsetips og tidsforskel til Danmark. Scroll gennem spørgsmålene nedenfor for at finde præcis det du søger.';
+		}
+		return sprintf( $template, $city_name );
+	}
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.0
+	 * @param    string $key Template key (e.g., 'faq_intro')
+	 * @return   string Template string with %s placeholders
+	 */
+	private static function get_template( $key ) {
+		static $templates_cache = null;
+		
+		// Load templates once
+		if ( $templates_cache === null ) {
+			// Try to get from WordPress options (loaded via "Load Default Prompts")
+			$templates = get_option( 'wta_templates', array() );
+			
+			if ( ! empty( $templates ) && is_array( $templates ) ) {
+				$templates_cache = $templates;
+			} else {
+				// Fallback to empty array
+				$templates_cache = array();
+			}
+		}
+		
+		return isset( $templates_cache[ $key ] ) ? $templates_cache[ $key ] : '';
 	}
 
 	/**

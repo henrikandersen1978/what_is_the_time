@@ -2,6 +2,46 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.0] - 2026-01-09
+
+### ✨ Added: Complete Multilingual Support with Language-Aware Templates
+
+**NEW FEATURE: Full Multilingual System**
+- JSON-based language pack system for easy translation management
+- 4 built-in languages: Danish (da), Swedish (sv), English (en), German (de)
+- Language selector in admin settings
+- "Load Default Prompts" button to switch language instantly
+- ALL content now language-aware: AI prompts, FAQs, H1 titles, meta titles, and intro text
+
+**TEMPLATE SYSTEM:**
+- Added language-aware templates for all hardcoded strings:
+  - Continent H1: "Aktuell tid i länder och städer i %s" (Swedish example)
+  - Country H1: "Aktuell tid i städer i %s"
+  - City H1: "Aktuell tid i %s, %s"
+  - Title tags: "Vad är klockan i %s?"
+  - FAQ intro: "Här hittar du svar på de vanligaste frågorna om tid i %s..."
+
+**FILES UPDATED:**
+- `includes/languages/*.json` - Added "templates" section to all 4 language files
+- `includes/class-wta-activator.php` - Load and validate templates from JSON
+- `includes/processors/class-wta-single-structure-processor.php` - Use templates for continent/country/city creation
+- `includes/processors/class-wta-single-ai-processor.php` - Use templates for AI content generation
+- `includes/helpers/class-wta-faq-generator.php` - Use templates for FAQ intro text
+- `includes/admin/class-wta-settings.php` - Register wta_site_language and wta_enable_city_processing settings
+
+**TECHNICAL:**
+- Templates stored in WordPress options as `wta_templates` array
+- Fallback to Danish if templates not loaded
+- All processor classes now read from `wta_templates` option
+- Static caching for performance
+
+**RESULT:**
+✅ Swedish site: ALL content in Swedish (AI prompts, FAQs, H1, titles, intro)
+✅ German site: ALL content in German
+✅ English site: ALL content in English
+✅ No hardcoded Danish strings in frontend
+✅ Backend/admin remains Danish for developer convenience
+
 ## [3.0.69] - 2025-12-23
 
 ### 🔧 Fixed: Cities Import Timeout on Full World Import

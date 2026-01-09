@@ -534,7 +534,7 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		}
 
 		// Validate structure
-		if ( ! isset( $data['base_settings'] ) || ! isset( $data['prompts'] ) || ! isset( $data['faq'] ) ) {
+		if ( ! isset( $data['base_settings'] ) || ! isset( $data['prompts'] ) || ! isset( $data['faq'] ) || ! isset( $data['templates'] ) ) {
 			return self::get_fallback_defaults();
 		}
 
@@ -553,6 +553,9 @@ Max 40-50 ord. Generisk og inspirerende.' );
 
 		// FAQ strings (store as serialized array for easy retrieval)
 		$options['wta_faq_strings'] = $data['faq'];
+
+		// Templates (store as serialized array for easy retrieval)
+		$options['wta_templates'] = $data['templates'];
 
 		return $options;
 	}
