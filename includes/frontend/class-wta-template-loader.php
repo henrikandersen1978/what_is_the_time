@@ -247,78 +247,78 @@ class WTA_Template_Loader {
 			$lat_dir = $lat >= 0 ? 'N' : 'S';
 			
 			$lng_abs = abs( $lng );
-			$lng_deg = floor( $lng_abs );
-			$lng_min = round( ( $lng_abs - $lng_deg ) * 60, 1 );
-			$lng_dir = $lng >= 0 ? 'Ø' : 'V';
-			
-		$gps_text = sprintf(
-			'Den geografiske placering er %d° %.1f\' %s %d° %.1f\' %s',
-			$lat_deg,
-			$lat_min,
-			$lat_dir,
-			$lng_deg,
-			$lng_min,
-			$lng_dir
-		);
+		$lng_deg = floor( $lng_abs );
+		$lng_min = round( ( $lng_abs - $lng_deg ) * 60, 1 );
+		$lng_dir = $lng >= 0 ? ( self::get_template( 'compass_east' ) ?: 'Ø' ) : ( self::get_template( 'compass_west' ) ?: 'V' );
+		
+	$gps_text = sprintf(
+		self::get_template( 'gps_location' ) ?: 'Den geografiske placering er %d° %.1f\' %s %d° %.1f\' %s',
+		$lat_deg,
+		$lat_min,
+		$lat_dir,
+		$lng_deg,
+		$lng_min,
+		$lng_dir
+	);
+	
+	// Determine season based on month and hemisphere
+	$month = intval( $now->format( 'n' ) );
+	if ( $lat > 0 ) {
+		// Northern hemisphere
+		if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+			$season = self::get_template( 'season_winter' ) ?: 'vinter';
+		} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+			$season = self::get_template( 'season_spring' ) ?: 'forår';
+		} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+			$season = self::get_template( 'season_summer' ) ?: 'sommer';
+		} else {
+			$season = self::get_template( 'season_autumn' ) ?: 'efterår';
+		}
+	} else {
+		// Southern hemisphere (seasons reversed)
+		if ( in_array( $month, array( 12, 1, 2 ) ) ) {
+			$season = self::get_template( 'season_summer' ) ?: 'sommer';
+		} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
+			$season = self::get_template( 'season_autumn' ) ?: 'efterår';
+		} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
+			$season = self::get_template( 'season_winter' ) ?: 'vinter';
+		} else {
+			$season = self::get_template( 'season_spring' ) ?: 'forår';
+		}
+	}
+	$season_text = ( self::get_template( 'current_season' ) ?: 'Nuværende sæson: ' ) . ucfirst( $season );
+} elseif ( ! empty( $lat ) ) {
+			$lat = floatval( $lat );
+			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
+		$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
 		
 		// Determine season based on month and hemisphere
 		$month = intval( $now->format( 'n' ) );
 		if ( $lat > 0 ) {
 			// Northern hemisphere
 			if ( in_array( $month, array( 12, 1, 2 ) ) ) {
-				$season = 'vinter';
+				$season = self::get_template( 'season_winter' ) ?: 'vinter';
 			} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
-				$season = 'forår';
+				$season = self::get_template( 'season_spring' ) ?: 'forår';
 			} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
-				$season = 'sommer';
+				$season = self::get_template( 'season_summer' ) ?: 'sommer';
 			} else {
-				$season = 'efterår';
+				$season = self::get_template( 'season_autumn' ) ?: 'efterår';
 			}
 		} else {
 			// Southern hemisphere (seasons reversed)
 			if ( in_array( $month, array( 12, 1, 2 ) ) ) {
-				$season = 'sommer';
+				$season = self::get_template( 'season_summer' ) ?: 'sommer';
 			} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
-				$season = 'efterår';
+				$season = self::get_template( 'season_autumn' ) ?: 'efterår';
 			} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
-				$season = 'vinter';
+				$season = self::get_template( 'season_winter' ) ?: 'vinter';
 			} else {
-				$season = 'forår';
+				$season = self::get_template( 'season_spring' ) ?: 'forår';
 			}
 		}
-		$season_text = 'Nuværende sæson: ' . ucfirst( $season );
-	} elseif ( ! empty( $lat ) ) {
-			$lat = floatval( $lat );
-			$hemisphere = $lat > 0 ? 'nordlige' : 'sydlige';
-			$hemisphere_text = sprintf( '%s ligger på den %s halvkugle', $name_local, $hemisphere );
-			
-			// Determine season based on month and hemisphere
-			$month = intval( $now->format( 'n' ) );
-			if ( $lat > 0 ) {
-				// Northern hemisphere
-				if ( in_array( $month, array( 12, 1, 2 ) ) ) {
-					$season = 'vinter';
-				} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
-					$season = 'forår';
-				} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
-					$season = 'sommer';
-				} else {
-					$season = 'efterår';
-				}
-			} else {
-				// Southern hemisphere (seasons reversed)
-				if ( in_array( $month, array( 12, 1, 2 ) ) ) {
-					$season = 'sommer';
-				} elseif ( in_array( $month, array( 3, 4, 5 ) ) ) {
-					$season = 'efterår';
-				} elseif ( in_array( $month, array( 6, 7, 8 ) ) ) {
-					$season = 'vinter';
-				} else {
-					$season = 'forår';
-				}
-			}
-		$season_text = 'Nuværende sæson: ' . ucfirst( $season );
-	}
+	$season_text = ( self::get_template( 'current_season' ) ?: 'Nuværende sæson: ' ) . ucfirst( $season );
+}
 	
 	// Calculate sunrise/sunset using PHP's built-in function
 	$sun_text = '';

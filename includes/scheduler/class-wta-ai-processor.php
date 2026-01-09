@@ -579,10 +579,10 @@ class WTA_AI_Processor {
 		
 		$full_content = $intro . "\n\n";
 		$full_content .= $country_list;
-		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
-		$full_content .= '<h2>Hvad er klokken i de største byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
-		$full_content .= '<h2>Geografi og beliggenhed</h2>' . "\n" . $geography_content . "\n\n";
-		$full_content .= '<h2>Interessante fakta om ' . esc_html( $name_local ) . '</h2>' . "\n" . $facts_content;
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_timezones' ) ?: 'Tidszoner i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_major_cities' ) ?: 'Hvad er klokken i de største byer i %s?', esc_html( $name_local ) ) . '</h2>' . "\n" . $cities_content . "\n\n";
+		$full_content .= '<h2>' . ( $this->get_template( 'continent_h2_geography' ) ?: 'Geografi og beliggenhed' ) . '</h2>' . "\n" . $geography_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_facts' ) ?: 'Interessante fakta om %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $facts_content;
 		
 		// Generate Yoast SEO meta
 		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
@@ -793,11 +793,11 @@ class WTA_AI_Processor {
 		
 		$full_content = $intro . "\n\n";
 		$full_content .= $city_list;
-		$full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
-		$full_content .= '<h2>Hvad er klokken i de største byer i ' . esc_html( $name_local ) . '?</h2>' . "\n" . $cities_content . "\n\n";
-		$full_content .= '<h2>Vejr og klima i ' . esc_html( $name_local ) . '</h2>' . "\n" . $weather_content . "\n\n";
-		$full_content .= '<h2>Tidskultur og dagligdag i ' . esc_html( $name_local ) . '</h2>' . "\n" . $culture_content . "\n\n";
-		$full_content .= '<h2>Hvad du skal vide om tid når du rejser til ' . esc_html( $name_local ) . '</h2>' . "\n" . $travel_content;
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'country_h2_timezones' ) ?: 'Tidszoner i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'country_h2_major_cities' ) ?: 'Hvad er klokken i de største byer i %s?', esc_html( $name_local ) ) . '</h2>' . "\n" . $cities_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'country_h2_weather' ) ?: 'Vejr og klima i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $weather_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'country_h2_culture' ) ?: 'Tidskultur og dagligdag i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $culture_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'country_h2_travel' ) ?: 'Hvad du skal vide om tid når du rejser til %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $travel_content;
 		
 		return array(
 			'content'     => $full_content,
@@ -977,24 +977,24 @@ class WTA_AI_Processor {
 		$practical_content = $this->add_paragraph_breaks( $practical_content );
 		
 		$full_content = $intro . "\n\n";
-		$full_content .= '<h2>Tidszone i ' . esc_html( $name_local ) . '</h2>' . "\n" . $timezone_content . "\n\n";
-		$full_content .= '<h2>Seværdigheder og aktiviteter i ' . esc_html( $name_local ) . '</h2>' . "\n" . $attractions_content . "\n\n";
-		$full_content .= '<h2>Praktisk information for besøgende</h2>' . "\n" . $practical_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'city_h2_timezone' ) ?: 'Tidszone i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $timezone_content . "\n\n";
+		$full_content .= '<h2>' . sprintf( $this->get_template( 'city_h2_attractions' ) ?: 'Seværdigheder og aktiviteter i %s', esc_html( $name_local ) ) . '</h2>' . "\n" . $attractions_content . "\n\n";
+		$full_content .= '<h2>' . ( $this->get_template( 'city_h2_practical' ) ?: 'Praktisk information for besøgende' ) . '</h2>' . "\n" . $practical_content . "\n\n";
 		
 		// Nearby cities section with dynamic shortcode
-		$full_content .= '<div id="nearby-cities"><h2>Nærliggende byer værd at besøge</h2>' . "\n";
+		$full_content .= '<div id="nearby-cities"><h2>' . ( $this->get_template( 'city_h2_nearby_cities' ) ?: 'Nærliggende byer værd at besøge' ) . '</h2>' . "\n";
 		if ( ! empty( $nearby_cities_intro ) ) {
 			$full_content .= '<p>' . $nearby_cities_intro . "</p>\n";
 		}
 		$full_content .= '[wta_nearby_cities]' . "\n</div>\n\n";  // Uses default count=60
 		
 		// Regional centres section (v2.35.64) - Dynamic country name
-		$full_content .= '<div id="regional-centres"><h2>Byer i forskellige dele af ' . esc_html( $country_name ) . '</h2>' . "\n";
+		$full_content .= '<div id="regional-centres"><h2>' . sprintf( $this->get_template( 'city_h2_regional_centres' ) ?: 'Byer i forskellige dele af %s', esc_html( $country_name ) ) . '</h2>' . "\n";
 		$full_content .= '<p>Udforsk større byer spredt over hele ' . esc_html( $country_name ) . '.</p>' . "\n";
 		$full_content .= '[wta_regional_centres]' . "\n</div>\n\n";
 		
 		// Nearby countries section with dynamic shortcode
-		$full_content .= '<div id="nearby-countries"><h2>Udforsk nærliggende lande</h2>' . "\n";
+		$full_content .= '<div id="nearby-countries"><h2>' . ( $this->get_template( 'city_h2_nearby_countries' ) ?: 'Udforsk nærliggende lande' ) . '</h2>' . "\n";
 		if ( ! empty( $nearby_countries_intro ) ) {
 			$full_content .= '<p>' . $nearby_countries_intro . "</p>\n";
 		}
@@ -1628,35 +1628,35 @@ class WTA_AI_Processor {
 		// Intro
 		$content .= "<p>Dette er testindhold for {$name_local}. Byen ligger i {$country_name}, {$continent_name}. Tidszonen er {$timezone}. Dette indhold genereres uden brug af AI for at spare omkostninger under test.</p>\n\n";
 		
-		// Timezone section
-		$content .= "<h2>Tidszone i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om tidszoner. {$name_local} følger {$timezone}. Dette er testindhold uden AI-generering.</p>\n\n";
-		
-		// Attractions section
-		$content .= "<h2>Seværdigheder og aktiviteter i {$name_local}</h2>\n";
-		$content .= "<p>Dummy tekst om seværdigheder. Dette er generisk testindhold.</p>\n\n";
-		
-		// Practical info
-		$content .= "<h2>Praktisk information for besøgende</h2>\n";
-		$content .= "<p>Dummy tekst med praktisk information. Test mode aktiveret.</p>\n\n";
-		
-		// Nearby cities (with shortcode)
-		$content .= "<div id=\"nearby-cities\"><h2>Nærliggende byer værd at besøge</h2>\n";
-		$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
-		$content .= "[wta_nearby_cities]\n</div>\n\n";  // Uses default count=60
-		
-		// Regional centres (v2.35.64) - Dynamic country name
-		$content .= "<div id=\"regional-centres\"><h2>Byer i forskellige dele af " . esc_html( $country_name ) . "</h2>\n";
-		$content .= "<p>Udforsk større byer spredt over hele " . esc_html( $country_name ) . ".</p>\n";
-		$content .= "[wta_regional_centres]\n</div>\n\n";
-		
-		// Nearby countries (with shortcode)
-		$content .= "<div id=\"nearby-countries\"><h2>Udforsk nærliggende lande</h2>\n";
-		$content .= "<p>Dummy intro tekst om nærliggende lande.</p>\n";
-		$content .= "[wta_nearby_countries]\n</div>\n\n";  // Uses default count=18
+	// Timezone section
+	$content .= '<h2>' . sprintf( $this->get_template( 'city_h2_timezone' ) ?: 'Tidszone i %s', $name_local ) . "</h2>\n";
+	$content .= "<p>Dummy tekst om tidszoner. {$name_local} følger {$timezone}. Dette er testindhold uden AI-generering.</p>\n\n";
+	
+	// Attractions section
+	$content .= '<h2>' . sprintf( $this->get_template( 'city_h2_attractions' ) ?: 'Seværdigheder og aktiviteter i %s', $name_local ) . "</h2>\n";
+	$content .= "<p>Dummy tekst om seværdigheder. Dette er generisk testindhold.</p>\n\n";
+	
+	// Practical info
+	$content .= '<h2>' . ( $this->get_template( 'city_h2_practical' ) ?: 'Praktisk information for besøgende' ) . "</h2>\n";
+	$content .= "<p>Dummy tekst med praktisk information. Test mode aktiveret.</p>\n\n";
+	
+	// Nearby cities (with shortcode)
+	$content .= '<div id="nearby-cities"><h2>' . ( $this->get_template( 'city_h2_nearby_cities' ) ?: 'Nærliggende byer værd at besøge' ) . "</h2>\n";
+	$content .= "<p>Dummy intro tekst om nærliggende byer.</p>\n";
+	$content .= "[wta_nearby_cities]\n</div>\n\n";  // Uses default count=60
+	
+	// Regional centres (v2.35.64) - Dynamic country name
+	$content .= '<div id="regional-centres"><h2>' . sprintf( $this->get_template( 'city_h2_regional_centres' ) ?: 'Byer i forskellige dele af %s', esc_html( $country_name ) ) . "</h2>\n";
+	$content .= "<p>Udforsk større byer spredt over hele " . esc_html( $country_name ) . ".</p>\n";
+	$content .= "[wta_regional_centres]\n</div>\n\n";
+	
+	// Nearby countries (with shortcode)
+	$content .= '<div id="nearby-countries"><h2>' . ( $this->get_template( 'city_h2_nearby_countries' ) ?: 'Udforsk nærliggende lande' ) . "</h2>\n";
+	$content .= "<p>Dummy intro tekst om nærliggende lande.</p>\n";
+	$content .= "[wta_nearby_countries]\n</div>\n\n";  // Uses default count=18
 		
 	// Global time comparison
-	$content .= "<div id=\"global-time\"><h2>Sammenlign med storbyer rundt om i verden</h2>\n";
+	$content .= '<div id="global-time"><h2>' . ( $this->get_template( 'city_h2_global_time' ) ?: 'Sammenlign med storbyer rundt om i verden' ) . "</h2>\n";
 	$content .= "<p>Dummy tekst om global tidssammenligning.</p>\n";
 	$content .= "[wta_global_time_comparison]\n</div>";
 	
@@ -1710,15 +1710,15 @@ class WTA_AI_Processor {
 	$content .= "[wta_major_cities]\n\n";
 	
 	// Weather section
-	$content .= "<h2>Vejr og klima i {$name_local}</h2>\n";
+	$content .= '<h2>' . sprintf( $this->get_template( 'country_h2_weather' ) ?: 'Vejr og klima i %s', $name_local ) . "</h2>\n";
 	$content .= "<p>Dummy tekst om vejr og klima. Test mode.</p>\n\n";
 	
 	// Culture section
-	$content .= "<h2>Tidskultur og dagligdag i {$name_local}</h2>\n";
+	$content .= '<h2>' . sprintf( $this->get_template( 'country_h2_culture' ) ?: 'Tidskultur og dagligdag i %s', $name_local ) . "</h2>\n";
 	$content .= "<p>Dummy tekst om kultur. Test mode.</p>\n\n";
 	
 	// Travel section
-	$content .= "<h2>Hvad du skal vide om tid når du rejser til {$name_local}</h2>\n";
+	$content .= '<h2>' . sprintf( $this->get_template( 'country_h2_travel' ) ?: 'Hvad du skal vide om tid når du rejser til %s', $name_local ) . "</h2>\n";
 	$content .= "<p>Dummy tekst om rejseinformation. Test mode.</p>\n\n";
 		
 		// v3.0.33: Update H1 directly in template function (ensures it's always set)
@@ -1762,11 +1762,11 @@ class WTA_AI_Processor {
 	$content .= "[wta_major_cities]\n\n";
 	
 	// Geography section
-	$content .= "<h2>Geografi og beliggenhed</h2>\n";
+	$content .= '<h2>' . ( $this->get_template( 'continent_h2_geography' ) ?: 'Geografi og beliggenhed' ) . "</h2>\n";
 	$content .= "<p>Dummy tekst om geografi. Test mode.</p>\n\n";
 	
 	// Facts section
-	$content .= "<h2>Interessante fakta om {$name_local}</h2>\n";
+	$content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_facts' ) ?: 'Interessante fakta om %s', $name_local ) . "</h2>\n";
 	$content .= "<p>Dummy tekst med fakta. Test mode.</p>\n\n";
 		
 		// v3.0.33: Update H1 directly in template function (ensures it's always set)
@@ -1778,6 +1778,18 @@ class WTA_AI_Processor {
 			'yoast_title' => sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name_local ),
 			'yoast_desc' => "Test mode indhold for {$name_local}. Ingen AI-omkostninger."
 		);
+	}
+	
+	/**
+	 * Get translated template string.
+	 *
+	 * @since    3.2.5
+	 * @param    string  $key  Template key.
+	 * @return   string        Template string or empty string if not found.
+	 */
+	private function get_template( $key ) {
+		$templates = get_option( 'wta_templates', array() );
+		return isset( $templates[ $key ] ) ? $templates[ $key ] : '';
 	}
 }
 

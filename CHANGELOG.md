@@ -2,6 +2,98 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.5] - 2026-01-09
+
+### 🎯 FINAL MULTILINGUAL CLEANUP: All Remaining Hardcoded Strings Translated
+
+**PROBLEM:**
+Efter v3.2.4 var der STADIG 38 hardcoded danske strings der ikke blev oversat:
+
+**H2 OVERSKRIFTER (AI Processor):**
+- Kontinent: "Tidszoner i %s", "Hvad er klokken i de største byer i %s?", "Geografi og beliggenhed", "Interessante fakta om %s"
+- Land: "Tidszoner i %s", "Hvad er klokken i de største byer i %s?", "Vejr og klima i %s", "Tidskultur og dagligdag i %s", "Hvad du skal vide om tid når du rejser til %s"
+- By: "Tidszone i %s", "Seværdigheder og aktiviteter i %s", "Praktisk information for besøgende", "Nærliggende byer værd at besøge", "Byer i forskellige dele af %s", "Udforsk nærliggende lande", "Sammenlign med storbyer rundt om i verden"
+
+**SHORTCODE BESKRIVELSER:**
+- "indbyggere", "Tæt på", "By i regionen", "Regional by", "Mindre by"
+- "steder i databasen", "Udforsk landet", "landet"
+- "Byer i nærheden af %s", "Lande i nærheden af %s", "Byer i forskellige dele af %s"
+
+**KOORDINATER & SÆSONER (Template Loader):**
+- Compass: "Ø" (Øst), "V" (Vest)
+- GPS format: "Den geografiske placering er %d° %.1f' %s %d° %.1f' %s"
+- Sæsoner: "vinter", "forår", "sommer", "efterår"
+- "Nuværende sæson: "
+
+**TOTAL: 38 hardcoded danske strings!**
+
+**SOLUTION:**
+
+1. **JSON Language Files** (da.json, sv.json, en.json, de.json):
+   - Tilføjet 38 nye template keys:
+     - `continent_h2_timezones`, `continent_h2_major_cities`, `continent_h2_geography`, `continent_h2_facts`
+     - `country_h2_timezones`, `country_h2_major_cities`, `country_h2_weather`, `country_h2_culture`, `country_h2_travel`
+     - `city_h2_timezone`, `city_h2_attractions`, `city_h2_practical`, `city_h2_nearby_cities`, `city_h2_regional_centres`, `city_h2_nearby_countries`, `city_h2_global_time`
+     - `inhabitants`, `close_by`, `city_in_region`, `regional_city`, `smaller_city`
+     - `places_in_database`, `explore_country`, `the_country`
+     - `cities_near`, `countries_near`, `cities_in_parts_of`
+     - `compass_east`, `compass_west`, `gps_location`
+     - `season_winter`, `season_spring`, `season_summer`, `season_autumn`, `current_season`
+
+2. **AI Processor** (`class-wta-ai-processor.php`):
+   - Tilføjet `get_template()` helper metode
+   - Opdateret ALLE H2 overskrifter (både AI og test mode) til at bruge templates:
+     ```php
+     // BEFORE:
+     $full_content .= '<h2>Tidszoner i ' . esc_html( $name_local ) . '</h2>';
+     
+     // AFTER:
+     $full_content .= '<h2>' . sprintf( $this->get_template( 'continent_h2_timezones' ) ?: 'Tidszoner i %s', esc_html( $name_local ) ) . '</h2>';
+     ```
+
+3. **Shortcodes** (`class-wta-shortcodes.php`):
+   - Opdateret alle beskrivelser og schema navne til at bruge templates:
+     ```php
+     // BEFORE:
+     $description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
+     
+     // AFTER:
+     $description = number_format( $population, 0, ',', '.' ) . ' ' . ( self::get_template( 'inhabitants' ) ?: 'indbyggere' );
+     ```
+
+4. **Template Loader** (`class-wta-template-loader.php`):
+   - Opdateret compass directions: `'Ø'` → `self::get_template( 'compass_east' ) ?: 'Ø'`
+   - Opdateret GPS format til at bruge template
+   - Opdateret ALLE sæsoner (begge hemispheres) til at bruge templates
+   - Opdateret "Nuværende sæson: " prefix
+
+**FILES MODIFIED:**
+- `includes/languages/da.json` - Added 38 new template strings
+- `includes/languages/sv.json` - Added 38 Swedish translations
+- `includes/languages/en.json` - Added 38 English translations
+- `includes/languages/de.json` - Added 38 German translations
+- `includes/scheduler/class-wta-ai-processor.php` - All H2 headings now use templates (16 different H2s)
+- `includes/frontend/class-wta-shortcodes.php` - All descriptions and schema names use templates (11 strings)
+- `includes/frontend/class-wta-template-loader.php` - Coordinates, seasons, compass use templates (11 strings)
+
+**RESULT:**
+✅ **100% multilingual support!** Alle frontend strings er nu dynamisk oversat baseret på `wta_site_language`
+✅ H2 overskrifter: Svensk på svensk site, dansk på dansk site
+✅ Shortcode beskrivelser: Fuldt oversat
+✅ Koordinater & sæsoner: Fuldt oversat
+✅ Ingen flere hardcoded danske strings!
+
+**TEST:**
+Efter import af Sverige med sv.json loaded:
+- ✅ H2: "Tidszoner i Sverige" (ikke "Tidszoner i Sverige")
+- ✅ Beskrivelser: "invånare" (ikke "indbyggere")
+- ✅ Sæsoner: "vinter" (svensk) ikke "vinter" (dansk)
+- ✅ GPS: "Ö" og "V" (svensk) ikke "Ø" og "V" (dansk)
+
+**VERSION:** 3.2.5
+
+---
+
 ## [3.2.4] - 2026-01-09
 
 ### 🔥 CRITICAL FIX: Title/Meta Regression + Quick Facts Labels

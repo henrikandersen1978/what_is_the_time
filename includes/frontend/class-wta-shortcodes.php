@@ -662,11 +662,11 @@ class WTA_Shortcodes {
 			// Build description
 			$description = '';
 			if ( $population && $population > 100000 ) {
-				$description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
+				$description = number_format( $population, 0, ',', '.' ) . ' ' . ( self::get_template( 'inhabitants' ) ?: 'indbyggere' );
 			} elseif ( $distance < 50 ) {
-				$description = 'Tæt på';
+				$description = self::get_template( 'close_by' ) ?: 'Tæt på';
 			} else {
-				$description = 'By i regionen';
+				$description = self::get_template( 'city_in_region' ) ?: 'By i regionen';
 			}
 			
 			$output .= '<div class="wta-nearby-item">' . "\n";
@@ -682,7 +682,7 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $post_id );
-		$schema_name = sprintf( 'Byer i nærheden af %s', $city_name );
+		$schema_name = sprintf( self::get_template( 'cities_near' ) ?: 'Byer i nærheden af %s', $city_name );
 		
 		// Batch fetch city posts for schema (reuse query results)
 		$nearby_posts = get_posts( array(
@@ -813,7 +813,7 @@ class WTA_Shortcodes {
 			// Get city count from batch query
 			$cities_count = isset( $city_counts[ $country_id ] ) ? intval( $city_counts[ $country_id ]->city_count ) : 0;
 			
-			$description = $cities_count > 0 ? $cities_count . ' steder i databasen' : 'Udforsk landet';
+			$description = $cities_count > 0 ? $cities_count . ' ' . ( self::get_template( 'places_in_database' ) ?: 'steder i databasen' ) : ( self::get_template( 'explore_country' ) ?: 'Udforsk landet' );
 			
 			$output .= '<div class="wta-nearby-item">' . "\n";
 			
@@ -835,7 +835,7 @@ class WTA_Shortcodes {
 		
 		// Add ItemList schema
 		$city_name = get_post_field( 'post_title', $post_id );
-		$schema_name = sprintf( 'Lande i nærheden af %s', $city_name );
+		$schema_name = sprintf( self::get_template( 'countries_near' ) ?: 'Lande i nærheden af %s', $city_name );
 		
 		// Batch fetch country posts for schema (reuse query results)
 		$nearby_posts = get_posts( array(
@@ -1022,11 +1022,11 @@ class WTA_Shortcodes {
 			
 			$description = '';
 			if ( $population && $population > 100000 ) {
-				$description = number_format( $population, 0, ',', '.' ) . ' indbyggere';
+				$description = number_format( $population, 0, ',', '.' ) . ' ' . ( self::get_template( 'inhabitants' ) ?: 'indbyggere' );
 			} elseif ( $population && $population > 50000 ) {
-				$description = 'Regional by';
+				$description = self::get_template( 'regional_city' ) ?: 'Regional by';
 		} else {
-			$description = 'Mindre by';
+			$description = self::get_template( 'smaller_city' ) ?: 'Mindre by';
 		}
 			
 			$output .= '<div class="wta-nearby-item">' . "\n";
@@ -1064,8 +1064,8 @@ class WTA_Shortcodes {
 		}
 		
 		// Get country name with fallback
-		$country_name = $country_post_id ? get_post_field( 'post_title', $country_post_id ) : 'landet';
-		$schema_name = sprintf( 'Byer i forskellige dele af %s', $country_name );
+		$country_name = $country_post_id ? get_post_field( 'post_title', $country_post_id ) : ( self::get_template( 'the_country' ) ?: 'landet' );
+		$schema_name = sprintf( self::get_template( 'cities_in_parts_of' ) ?: 'Byer i forskellige dele af %s', $country_name );
 		
 		$output .= $this->generate_item_list_schema( $posts, $schema_name );
 		
