@@ -129,12 +129,7 @@ class WTA_FAQ_Generator {
 	 * @return   string            Intro text.
 	 */
 	private static function generate_template_intro( $city_name ) {
-		$template = self::get_template( 'faq_intro' );
-		if ( empty( $template ) ) {
-			// Fallback to Danish
-			$template = 'Her finder du svar på de mest almindelige spørgsmål om tid i %s. Vi dækker alt fra aktuel tid og tidszone til praktiske rejsetips og tidsforskel til Danmark. Scroll gennem spørgsmålene nedenfor for at finde præcis det du søger.';
-		}
-		return sprintf( $template, $city_name );
+		return self::get_faq_text( 'intro_template', array( 'city_name' => $city_name ) );
 	}
 
 	/**
@@ -180,16 +175,23 @@ class WTA_FAQ_Generator {
 			$utc_offset = '';
 		}
 		
-		$answer = "Klokken i {$city_name} er <strong id=\"faq-live-time\">{$current_time}</strong>. Byen ligger i tidszonen {$timezone}" . 
-		          ( ! empty( $utc_offset ) ? " (UTC{$utc_offset})" : '' ) . 
-		          ". Tiden opdateres automatisk, så du altid ser den aktuelle tid.";
-		
-		return array(
-			'question' => "Hvad er klokken i {$city_name} lige nu?",
-			'answer'   => $answer,
-			'icon'     => '⏰',
-		);
-	}
+	// Format UTC offset for answer
+	$utc_offset_formatted = ! empty( $utc_offset ) ? " (UTC{$utc_offset})" : '';
+	
+	$question = self::get_faq_text( 'faq1_question', array( 'city_name' => $city_name ) );
+	$answer = self::get_faq_text( 'faq1_answer', array(
+		'city_name' => $city_name,
+		'current_time' => $current_time,
+		'timezone' => $timezone,
+		'utc_offset' => $utc_offset_formatted
+	) );
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '⏰',
+	);
+}
 
 	/**
 	 * FAQ 2: Timezone info (template).
@@ -206,21 +208,20 @@ class WTA_FAQ_Generator {
 			$abbr = '';
 		}
 		
-		$answer = "{$city_name} bruger tidszonen <strong>{$timezone}</strong>";
-		if ( ! empty( $utc_offset ) ) {
-			$answer .= " med UTC offset på <strong>{$utc_offset}</strong>";
-		}
-		if ( ! empty( $abbr ) ) {
-			$answer .= " ({$abbr})";
-		}
-		$answer .= ". Dette er den officielle IANA tidszone identifier for byen.";
-		
-		return array(
-			'question' => "Hvad er tidszonen i {$city_name}?",
-			'answer'   => $answer,
-			'icon'     => '🌍',
-		);
-	}
+	$question = self::get_faq_text( 'faq2_question', array( 'city_name' => $city_name ) );
+	$answer = self::get_faq_text( 'faq2_answer', array(
+		'city_name' => $city_name,
+		'timezone' => $timezone,
+		'utc_offset' => $utc_offset,
+		'abbr' => $abbr
+	) );
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '🌍',
+	);
+}
 
 	/**
 	 * FAQ 3: Sun times (template with live data).
@@ -228,34 +229,41 @@ class WTA_FAQ_Generator {
 	 * @since    2.35.0
 	 */
 	private static function generate_sun_times_faq( $city_name, $latitude, $longitude ) {
-		if ( empty( $latitude ) || empty( $longitude ) ) {
-			$answer = "Solopgang og solnedgangstider varierer dagligt i {$city_name} baseret på årstiden og byens geografiske placering.";
-		} else {
-			// Calculate today's sun times
-			$sunrise = date_sunrise( time(), SUNFUNCS_RET_STRING, $latitude, $longitude );
-			$sunset = date_sunset( time(), SUNFUNCS_RET_STRING, $latitude, $longitude );
-			
-			if ( $sunrise && $sunset ) {
-				// Calculate day length
-				$sunrise_ts = strtotime( $sunrise );
-				$sunset_ts = strtotime( $sunset );
-				$day_length_seconds = $sunset_ts - $sunrise_ts;
-				$hours = floor( $day_length_seconds / 3600 );
-				$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
-				$day_length = sprintf( '%02d:%02d', $hours, $minutes );
-				
-				$answer = "I dag går solen op kl. <strong>{$sunrise}</strong> og ned kl. <strong>{$sunset}</strong> i {$city_name}. Dagens længde er <strong>{$day_length}</strong> timer. Disse tider ændrer sig dagligt baseret på årstiden.";
-			} else {
-				$answer = "Solopgang og solnedgangstider varierer dagligt i {$city_name} baseret på årstiden og byens geografiske placering.";
-			}
-		}
+	$question = self::get_faq_text( 'faq3_question', array( 'city_name' => $city_name ) );
+	
+	if ( empty( $latitude ) || empty( $longitude ) ) {
+		$answer = self::get_faq_text( 'faq3_answer_fallback', array( 'city_name' => $city_name ) );
+	} else {
+		// Calculate today's sun times
+		$sunrise = date_sunrise( time(), SUNFUNCS_RET_STRING, $latitude, $longitude );
+		$sunset = date_sunset( time(), SUNFUNCS_RET_STRING, $latitude, $longitude );
 		
-		return array(
-			'question' => "Hvornår går solen op og ned i {$city_name}?",
-			'answer'   => $answer,
-			'icon'     => '🌅',
-		);
+		if ( $sunrise && $sunset ) {
+			// Calculate day length
+			$sunrise_ts = strtotime( $sunrise );
+			$sunset_ts = strtotime( $sunset );
+			$day_length_seconds = $sunset_ts - $sunrise_ts;
+			$hours = floor( $day_length_seconds / 3600 );
+			$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
+			$day_length = sprintf( '%02d:%02d', $hours, $minutes );
+			
+			$answer = self::get_faq_text( 'faq3_answer', array(
+				'sunrise' => $sunrise,
+				'sunset' => $sunset,
+				'city_name' => $city_name,
+				'day_length' => $day_length
+			) );
+		} else {
+			$answer = self::get_faq_text( 'faq3_answer_fallback', array( 'city_name' => $city_name ) );
+		}
 	}
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '🌅',
+	);
+}
 
 	/**
 	 * FAQ 4: Moon phase (template with calculation).
@@ -263,17 +271,22 @@ class WTA_FAQ_Generator {
 	 * @since    2.35.0
 	 */
 	private static function generate_moon_phase_faq( $city_name ) {
-		// Calculate moon phase (simple algorithm)
-		$moon_data = self::calculate_moon_phase();
-		
-		$answer = "Månefasen i {$city_name} er aktuelt <strong>{$moon_data['percentage']}%</strong> ({$moon_data['phase_name']}). Månen er synlig i nattehimlen over byen, og fasen ændrer sig dagligt i løbet af månens 29,5-dages cyklus.";
-		
-		return array(
-			'question' => "Hvad er månefasen i {$city_name}?",
-			'answer'   => $answer,
-			'icon'     => '🌙',
-		);
-	}
+	// Calculate moon phase (simple algorithm)
+	$moon_data = self::calculate_moon_phase();
+	
+	$question = self::get_faq_text( 'faq4_question', array( 'city_name' => $city_name ) );
+	$answer = self::get_faq_text( 'faq4_answer', array(
+		'city_name' => $city_name,
+		'moon_percentage' => $moon_data['percentage'],
+		'moon_phase' => $moon_data['phase_name']
+	) );
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '🌙',
+	);
+}
 
 	/**
 	 * FAQ 5: Geography (template).
@@ -281,23 +294,29 @@ class WTA_FAQ_Generator {
 	 * @since    2.35.0
 	 */
 	private static function generate_geography_faq( $city_name, $latitude, $longitude, $country_name ) {
-		$lat_dir = ( $latitude >= 0 ) ? 'N' : 'S';
-		$lon_dir = ( $longitude >= 0 ) ? 'Ø' : 'V';
-		$hemisphere = ( $latitude >= 0 ) ? 'nordlige' : 'sydlige';
-		
-		$answer = "{$city_name} ligger på koordinaterne <strong>" . number_format( abs( $latitude ), 4 ) . "° {$lat_dir}, " . 
-		          number_format( abs( $longitude ), 4 ) . "° {$lon_dir}</strong>";
-		if ( ! empty( $country_name ) ) {
-			$answer .= " i {$country_name}";
-		}
-		$answer .= ". Byen befinder sig på den {$hemisphere} halvkugle.";
-		
-		return array(
-			'question' => "Hvor ligger {$city_name} geografisk?",
-			'answer'   => $answer,
-			'icon'     => '📍',
-		);
-	}
+	$lat_dir = ( $latitude >= 0 ) ? 'N' : 'S';
+	$lon_dir = ( $longitude >= 0 ) ? 'Ø' : 'V';
+	$hemisphere = ( $latitude >= 0 ) ? 'nordlige' : 'sydlige';
+	
+	$question = self::get_faq_text( 'faq5_question', array( 'city_name' => $city_name ) );
+	
+	$faq_key = ! empty( $country_name ) ? 'faq5_answer' : 'faq5_answer_no_country';
+	$answer = self::get_faq_text( $faq_key, array(
+		'city_name' => $city_name,
+		'latitude' => number_format( abs( $latitude ), 4 ),
+		'lat_dir' => $lat_dir,
+		'longitude' => number_format( abs( $longitude ), 4 ),
+		'lon_dir' => $lon_dir,
+		'country_name' => $country_name,
+		'hemisphere' => $hemisphere
+	) );
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '📍',
+	);
+}
 
 	/**
 	 * FAQ 6: Time difference (light AI + template).
@@ -846,6 +865,49 @@ INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 		}
 		
 		return $content;
+	}
+	
+	/**
+	 * Get FAQ text from language pack with variable replacement.
+	 *
+	 * Retrieves translated FAQ strings from wta_faq_strings option (loaded from JSON)
+	 * and replaces placeholders with actual values.
+	 *
+	 * @since    3.2.6
+	 * @param    string  $key   FAQ text key (e.g. 'faq1_question').
+	 * @param    array   $vars  Associative array of variables to replace (e.g. ['city_name' => 'Stockholm']).
+	 * @return   string         Translated text with variables replaced, or Danish fallback.
+	 */
+	private static function get_faq_text( $key, $vars = array() ) {
+		// Get FAQ strings from language pack
+		$faq_strings = get_option( 'wta_faq_strings', array() );
+		
+		// Fallback to hardcoded Danish if option is empty or key not found
+		$fallback_strings = array(
+			'faq1_question' => 'Hvad er klokken i {city_name} lige nu?',
+			'faq1_answer' => 'Klokken i {city_name} er <strong id="faq-live-time">{current_time}</strong>. Byen ligger i tidszonen {timezone}{utc_offset}.',
+			'faq2_question' => 'Hvad er tidszonen i {city_name}?',
+			'faq2_answer' => '{city_name} bruger tidszonen <strong>{timezone}</strong> med UTC offset på <strong>{utc_offset}</strong> ({abbr}).',
+			'faq3_question' => 'Hvornår går solen op og ned i {city_name}?',
+			'faq3_answer' => 'I dag går solen op kl. <strong>{sunrise}</strong> og ned kl. <strong>{sunset}</strong> i {city_name}. Dagens længde er <strong>{day_length}</strong> timer.',
+			'faq3_answer_fallback' => 'Solopgang og solnedgangstider varierer dagligt i {city_name} baseret på årstiden.',
+			'faq4_question' => 'Hvad er månefasen i {city_name}?',
+			'faq4_answer' => 'Månefasen i {city_name} er aktuelt <strong>{moon_percentage}%</strong> ({moon_phase}).',
+			'faq5_question' => 'Hvor ligger {city_name} geografisk?',
+			'faq5_answer' => '{city_name} ligger på koordinaterne <strong>{latitude}° {lat_dir}, {longitude}° {lon_dir}</strong> i {country_name}. Byen befinder sig på den {hemisphere} halvkugle.',
+			'faq5_answer_no_country' => '{city_name} ligger på koordinaterne <strong>{latitude}° {lat_dir}, {longitude}° {lon_dir}</strong>. Byen befinder sig på den {hemisphere} halvkugle.',
+			'intro_template' => 'Her finder du svar på de mest almindelige spørgsmål om tid i {city_name}.'
+		);
+		
+		// Get text from option or fallback
+		$text = isset( $faq_strings[ $key ] ) ? $faq_strings[ $key ] : ( isset( $fallback_strings[ $key ] ) ? $fallback_strings[ $key ] : '' );
+		
+		// Replace variables in text
+		foreach ( $vars as $var_name => $var_value ) {
+			$text = str_replace( '{' . $var_name . '}', $var_value, $text );
+		}
+		
+		return $text;
 	}
 }
 

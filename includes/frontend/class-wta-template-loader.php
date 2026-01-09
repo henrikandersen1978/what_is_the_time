@@ -346,10 +346,13 @@ class WTA_Template_Loader {
 					$hours = floor( $day_length_seconds / 3600 );
 					$minutes = floor( ( $day_length_seconds % 3600 ) / 60 );
 					
-					$sun_text = sprintf(
-						'Solopgang: %s, Solnedgang: %s, Dagens længde: %02d:%02d',
-						$sunrise_time->format( 'H:i' ),
-						$sunset_time->format( 'H:i' ),
+				$sun_text = sprintf(
+					'%s: %s, %s: %s, %s: %02d:%02d',
+					self::get_template( 'sun_rise_label' ) ?: 'Solopgang',
+					$sunrise_time->format( 'H:i' ),
+					self::get_template( 'sun_set_label' ) ?: 'Solnedgang',
+					$sunset_time->format( 'H:i' ),
+					self::get_template( 'day_length_label' ) ?: 'Dagens længde',
 						$hours,
 						$minutes
 					);
@@ -436,13 +439,13 @@ class WTA_Template_Loader {
 			esc_attr( $timezone ),
 			$now->format( 'H:i:s' )
 		);
-		$date_label = self::get_template( 'date_is' ) ?: 'Datoen er';
-		$navigation_html .= sprintf(
-			'<p class="wta-current-date-statement">%s <span class="wta-live-date" data-timezone="%s">%s</span></p>',
-			esc_html( $date_label ),
-			esc_attr( $timezone ),
-			$now->format( 'l j. F Y' )
-		);
+	$date_label = self::get_template( 'date_is' ) ?: 'Datoen er';
+	$navigation_html .= sprintf(
+		'<p class="wta-current-date-statement">%s <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+		esc_html( $date_label ),
+		esc_attr( $timezone ),
+		date_i18n( 'l j. F Y', $now->getTimestamp() )
+	);
 		$timezone_label = self::get_template( 'timezone_label' ) ?: 'Tidszone:';
 		$navigation_html .= sprintf(
 			'<p class="wta-timezone-statement">%s <span class="wta-timezone-name">%s (%s)</span></p>',
@@ -726,14 +729,14 @@ class WTA_Template_Loader {
 				$navigation_html .= '</a>';
 			}
 			
-			if ( $has_nearby_sections ) {
-				$navigation_html .= '<a href="#nearby-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
-				$navigation_html .= '🏙️ Nærliggende byer';
-				$navigation_html .= '</a>';
-				$navigation_html .= '<a href="#nearby-countries" class="wta-quick-nav-btn wta-smooth-scroll">';
-				$navigation_html .= '🌍 Nærliggende lande';
-				$navigation_html .= '</a>';
-			}
+		if ( $has_nearby_sections ) {
+			$navigation_html .= '<a href="#nearby-cities" class="wta-quick-nav-btn wta-smooth-scroll">';
+			$navigation_html .= '🏙️ ' . esc_html( self::get_template( 'btn_nearby_cities' ) ?: 'Nærliggende byer' );
+			$navigation_html .= '</a>';
+			$navigation_html .= '<a href="#nearby-countries" class="wta-quick-nav-btn wta-smooth-scroll">';
+			$navigation_html .= '🌍 ' . esc_html( self::get_template( 'btn_nearby_countries' ) ?: 'Nærliggende lande' );
+			$navigation_html .= '</a>';
+		}
 			
 			$navigation_html .= '</div>';
 		}

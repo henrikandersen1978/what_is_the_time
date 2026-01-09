@@ -166,7 +166,17 @@
     "season_spring": "spring",
     "season_summer": "summer",
     "season_autumn": "autumn",
-    "current_season": "Current season: "
+    "current_season": "Current season: ",
+    "sun_rise_label": "Sunrise",
+    "sun_set_label": "Sunset",
+    "day_length_label": "Day length",
+    "child_locations_continent_intro": "In %s there are %d %s and %s time zones. Click on a country to see current time and time zones.",
+    "child_locations_country_intro": "In %s you can see what time it is in the following %d %s:",
+    "child_locations_default_intro": "%s has %d %s. Click to see more information.",
+    "btn_nearby_cities": "Nearby Cities",
+    "btn_nearby_countries": "Nearby Countries",
+    "regional_centres_intro": "Explore major cities spread across %s.",
+    "nearby_countries_empty": "There are no other countries in the database yet."
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",

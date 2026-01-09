@@ -166,7 +166,17 @@
     "season_spring": "vår",
     "season_summer": "sommar",
     "season_autumn": "höst",
-    "current_season": "Aktuell årstid: "
+    "current_season": "Aktuell årstid: ",
+    "sun_rise_label": "Soluppgång",
+    "sun_set_label": "Solnedgång",
+    "day_length_label": "Dagens längd",
+    "child_locations_continent_intro": "I %s finns det %d %s och %s tidszoner. Klicka på ett land för att se aktuell tid och tidszoner.",
+    "child_locations_country_intro": "I %s kan du se vad klockan är i följande %d %s:",
+    "child_locations_default_intro": "%s har %d %s. Klicka för att se mer information.",
+    "btn_nearby_cities": "Närliggande städer",
+    "btn_nearby_countries": "Närliggande länder",
+    "regional_centres_intro": "Utforska större städer spridda över hela %s.",
+    "nearby_countries_empty": "Det finns inga andra länder i databasen ännu."
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",

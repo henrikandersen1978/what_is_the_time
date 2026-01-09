@@ -166,7 +166,17 @@
     "season_spring": "Frühling",
     "season_summer": "Sommer",
     "season_autumn": "Herbst",
-    "current_season": "Aktuelle Jahreszeit: "
+    "current_season": "Aktuelle Jahreszeit: ",
+    "sun_rise_label": "Sonnenaufgang",
+    "sun_set_label": "Sonnenuntergang",
+    "day_length_label": "Tageslänge",
+    "child_locations_continent_intro": "In %s gibt es %d %s und %s Zeitzonen. Klicken Sie auf ein Land, um die aktuelle Zeit und Zeitzonen zu sehen.",
+    "child_locations_country_intro": "In %s können Sie sehen, wie spät es in den folgenden %d %s ist:",
+    "child_locations_default_intro": "%s hat %d %s. Klicken Sie hier für weitere Informationen.",
+    "btn_nearby_cities": "Nahe gelegene Städte",
+    "btn_nearby_countries": "Nahe gelegene Länder",
+    "regional_centres_intro": "Erkunden Sie größere Städte verteilt über ganz %s.",
+    "nearby_countries_empty": "Es gibt noch keine anderen Länder in der Datenbank."
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

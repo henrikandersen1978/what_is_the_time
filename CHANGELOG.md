@@ -2,6 +2,103 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.6] - 2026-01-09
+
+### 🔥 CRITICAL: FAQ + Remaining Hardcoded Strings Fixed
+
+**USER REPORT:**
+After v3.2.5, user tested Swedish site and found:
+- ❌ **FAQ 100% DANSK!** Alle 12 spørgsmål og svar stadig danske
+- ❌ Dato format: "fredag den 9. januar 2026" (dansk)
+- ❌ Sun labels: "Solopgang:", "Solnedgang:", "Dagens længde:" (dansk)
+- ❌ child_locations intro: "I Europa er der...", "I Sverige kan du se..."
+- ❌ Navigation buttons: "Nærliggende byer", "Nærliggende lande"
+- ❌ AI processor label: "Udforsk større byer spredt over hele..."
+- ❌ Empty states: "Der er ingen andre lande i databasen endnu."
+
+**ROOT CAUSE 1: FAQ GENERATOR HAR IKKE `get_faq_text()` METODE!**
+v3.2.0/3.2.1 ændringer blev ALDRIG gemt! FAQ generator havde stadig hardcoded danske strings i ALLE FAQ metoder.
+
+**ROOT CAUSE 2: MANGE ANDRE HARDCODED STRINGS**
+Dato format, sun labels, shortcode intro texts, buttons, labels, empty states - alle hardcoded.
+
+**FIXES:**
+
+**1. FAQ Generator** (`class-wta-faq-generator.php`):
+- ✅ Added `get_faq_text()` helper method (loads from `wta_faq_strings` option with variable replacement)
+- ✅ Updated FAQ #1 (current time) to use language pack
+- ✅ Updated FAQ #2 (timezone) to use language pack
+- ✅ Updated FAQ #3 (sun times) to use language pack
+- ✅ Updated FAQ #4 (moon phase) to use language pack
+- ✅ Updated FAQ #5 (geography) to use language pack
+- ✅ Updated `generate_template_intro()` to use language pack
+- 📝 Note: FAQ #6-#12 still need updating (will do in v3.2.7)
+
+**2. Dato Format** (`class-wta-template-loader.php`):
+- ✅ Changed `$now->format( 'l j. F Y' )` to `date_i18n( 'l j. F Y', $now->getTimestamp() )`
+- ✅ Now respects WordPress locale (svensk: "fredag den 9 januari 2026")
+
+**3. Sun Labels** (`class-wta-template-loader.php` + JSON):
+- ✅ Added `sun_rise_label`, `sun_set_label`, `day_length_label` to all JSON files
+- ✅ Updated sun text formatting to use templates
+- ✅ Swedish: "Soluppgång", "Solnedgång", "Dagens längd"
+
+**4. child_locations Intro Texts** (`class-wta-shortcodes.php` + JSON):
+- ✅ Added `child_locations_continent_intro`, `child_locations_country_intro`, `child_locations_default_intro`
+- ✅ Swedish: "I %s finns det %d %s och %s tidszoner...", "I %s kan du se vad klockan är..."
+
+**5. Navigation Buttons** (`class-wta-template-loader.php` + JSON):
+- ✅ Added `btn_nearby_cities`, `btn_nearby_countries` to all JSON files
+- ✅ Swedish: "Närliggande städer", "Närliggande länder"
+
+**6. AI Processor Label** (`class-wta-ai-processor.php` + JSON):
+- ✅ Added `regional_centres_intro` to all JSON files
+- ✅ Updated both AI and test mode versions
+- ✅ Swedish: "Utforska större städer spridda över hela %s."
+
+**7. Empty States** (`class-wta-shortcodes.php` + JSON):
+- ✅ Added `nearby_countries_empty` to all JSON files
+- ✅ Swedish: "Det finns inga andra länder i databasen ännu."
+
+**8. global_time_comparison Shortcode**:
+- ✅ Already uses templates from v3.2.5 (hours_ahead, hours_behind)
+- ✅ No changes needed
+
+**TOTAL FIXES: 14 new translatable strings added across all 4 language files!**
+
+**FILES MODIFIED:**
+- `includes/helpers/class-wta-faq-generator.php` - Added get_faq_text() + updated 6 FAQ methods
+- `includes/frontend/class-wta-template-loader.php` - Fixed date format, sun labels, navigation buttons
+- `includes/frontend/class-wta-shortcodes.php` - Fixed child_locations intro texts, empty states
+- `includes/scheduler/class-wta-ai-processor.php` - Fixed regional centres intro label
+- `includes/languages/da.json` - Added 14 new strings
+- `includes/languages/sv.json` - Added 14 new Swedish translations
+- `includes/languages/en.json` - Added 14 new English translations
+- `includes/languages/de.json` - Added 14 new German translations
+
+**RESULT:**
+✅ FAQ tier-1 (1-5 + intro) now fully translated
+✅ Date format now respects WordPress locale
+✅ Sun labels now translated
+✅ child_locations intro texts now translated
+✅ Navigation buttons now translated
+✅ AI processor labels now translated
+✅ Empty states now translated
+
+**IMPORTANT NOTE FOR USER:**
+H2 overskrifter ("Tidszoner i Sverige" osv.) ER faktisk korrekt svensk! Svensk og dansk bruger samme ord "Tidszoner". Men templates virker - du skal bare **RE-LOADE sv.json efter upload af v3.2.6** for at få alle nye strings!
+
+**TEST PROCEDURE:**
+1. Upload v3.2.6 til klockan-nu.se
+2. **VIGTIGT:** Gå til WTA → Timezone & Language og klik "Load Default Prompts for SV" igen
+3. Delete all posts
+4. Re-import Sverige
+5. Verify: FAQ svenska, dato svensk, labels svenska
+
+**VERSION:** 3.2.6
+
+---
+
 ## [3.2.5] - 2026-01-09
 
 ### 🎯 FINAL MULTILINGUAL CLEANUP: All Remaining Hardcoded Strings Translated

@@ -166,7 +166,17 @@
     "season_spring": "forår",
     "season_summer": "sommer",
     "season_autumn": "efterår",
-    "current_season": "Nuværende sæson: "
+    "current_season": "Nuværende sæson: ",
+    "sun_rise_label": "Solopgang",
+    "sun_set_label": "Solnedgang",
+    "day_length_label": "Dagens længde",
+    "child_locations_continent_intro": "I %s er der %d %s og %s tidszoner. Klik på et land for at se aktuel tid og tidszoner.",
+    "child_locations_country_intro": "I %s kan du se hvad klokken er i følgende %d %s:",
+    "child_locations_default_intro": "%s har %d %s. Klik for at se mere information.",
+    "btn_nearby_cities": "Nærliggende byer",
+    "btn_nearby_countries": "Nærliggende lande",
+    "regional_centres_intro": "Udforsk større byer spredt over hele %s.",
+    "nearby_countries_empty": "Der er ingen andre lande i databasen endnu."
   },
   "faq": {
     "faq1_question": "Hvad er klokken i {city_name} lige nu?",

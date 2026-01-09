@@ -484,30 +484,33 @@ class WTA_Shortcodes {
 			$output .= '<h2>' . ucfirst( $child_type_plural ) . ' i ' . esc_html( $parent_name ) . '</h2>' . "\n";
 		}
 		
-		// Intro text
-		if ( 'continent' === $parent_type ) {
-			$intro = sprintf(
-				'I %s er der %d %s og %s tidszoner. Klik på et land for at se aktuel tid og tidszoner.',
-				$parent_name,
-				$count,
-				$child_type_plural,
-				$timezone_count
-			);
-		} elseif ( 'country' === $parent_type ) {
-			$intro = sprintf(
-				'I %s kan du se hvad klokken er i følgende %d %s:',
-				$parent_name,
-				$count,
-				$child_type_plural
-			);
-		} else {
-			$intro = sprintf(
-				'%s har %d %s. Klik for at se mere information.',
-				$parent_name,
-				$count,
-				$child_type_plural
-			);
-		}
+	// Intro text
+	if ( 'continent' === $parent_type ) {
+		$intro_template = self::get_template( 'child_locations_continent_intro' ) ?: 'I %s er der %d %s og %s tidszoner. Klik på et land for at se aktuel tid og tidszoner.';
+		$intro = sprintf(
+			$intro_template,
+			$parent_name,
+			$count,
+			$child_type_plural,
+			$timezone_count
+		);
+	} elseif ( 'country' === $parent_type ) {
+		$intro_template = self::get_template( 'child_locations_country_intro' ) ?: 'I %s kan du se hvad klokken er i følgende %d %s:';
+		$intro = sprintf(
+			$intro_template,
+			$parent_name,
+			$count,
+			$child_type_plural
+		);
+	} else {
+		$intro_template = self::get_template( 'child_locations_default_intro' ) ?: '%s har %d %s. Klik for at se mere information.';
+		$intro = sprintf(
+			$intro_template,
+			$parent_name,
+			$count,
+			$child_type_plural
+		);
+	}
 		
 		$output .= '<p>' . esc_html( $intro ) . '</p>' . "\n";
 		
@@ -775,9 +778,9 @@ class WTA_Shortcodes {
 			$nearby_countries = array_slice( $nearby_countries, 0, intval( $atts['count'] ) );
 		}
 		
-		if ( empty( $nearby_countries ) ) {
-			return '<p class="wta-no-nearby">Der er ingen andre lande i databasen endnu.</p>';
-		}
+	if ( empty( $nearby_countries ) ) {
+		return '<p class="wta-no-nearby">' . esc_html( self::get_template( 'nearby_countries_empty' ) ?: 'Der er ingen andre lande i databasen endnu.' ) . '</p>';
+	}
 		
 		// Batch prefetch post meta for all countries (1 query instead of N×2)
 		update_meta_cache( 'post', $nearby_countries );
