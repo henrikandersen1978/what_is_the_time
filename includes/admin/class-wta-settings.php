@@ -48,18 +48,12 @@ class WTA_Settings {
 			'sanitize_callback' => 'intval',
 			'default' => 5
 		) );
-	register_setting( 'wta_data_import_settings_group', 'wta_concurrent_structure', array( 
-		'sanitize_callback' => 'intval',
-		'default' => 2
-	) );
+		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_structure', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 2
+		) );
 
-	// City processing toggle (v3.0.72)
-	register_setting( 'wta_data_import_settings_group', 'wta_enable_city_processing', array( 
-		'sanitize_callback' => array( $this, 'sanitize_city_processing_toggle' ),
-		'default' => '0'
-	) );
-
-	// AI Prompts
+		// AI Prompts
 		$prompt_types = array(
 			'translate_name', 'city_title', 'city_content', 'country_title', 'country_content',
 			// Country page template (6 sections)
@@ -74,51 +68,6 @@ class WTA_Settings {
 			register_setting( 'wta_prompts', "wta_prompt_{$type}_system", array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 			register_setting( 'wta_prompts', "wta_prompt_{$type}_user", array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 		}
-	}
-
-	/**
-	 * Sanitize city processing toggle and trigger bulk processing if enabled.
-	 *
-	 * @since 3.0.72
-	 * @param string $value The toggle value ('1' or '0').
-	 * @return string Sanitized value.
-	 */
-	public function sanitize_city_processing_toggle( $value ) {
-		$old_value = get_option( 'wta_enable_city_processing', '0' );
-		$new_value = $value === '1' ? '1' : '0';
-		
-		// If toggle was just enabled (0 → 1), start processing waiting cities
-		if ( $old_value === '0' && $new_value === '1' ) {
-			// Schedule bulk processing job (runs immediately)
-			as_schedule_single_action(
-				time(),
-				'wta_start_waiting_city_processing',
-				array(),
-				'wta_coordinator'
-			);
-			
-			WTA_Logger::info( '🚀 City processing toggle enabled - bulk processing scheduled' );
-			
-			// Add admin notice
-			add_settings_error(
-				'wta_enable_city_processing',
-				'city_processing_started',
-				__( '✅ City processing enabled! Waiting cities will start processing immediately. Check Action Scheduler to monitor progress.', 'world-time-ai' ),
-				'success'
-			);
-		} elseif ( $old_value === '1' && $new_value === '0' ) {
-			// Toggle disabled
-			WTA_Logger::info( '⛔ City processing toggle disabled - new cities will wait' );
-			
-			add_settings_error(
-				'wta_enable_city_processing',
-				'city_processing_disabled',
-				__( '⛔ City processing disabled. New cities will be created but NOT processed until you re-enable this toggle.', 'world-time-ai' ),
-				'warning'
-			);
-		}
-		
-		return $new_value;
 	}
 }
 
