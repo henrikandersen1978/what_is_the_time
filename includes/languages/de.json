@@ -112,7 +112,12 @@
     "same_time": "Gleiche Zeit",
     "world_clock_intro_placeholder": "Dummy-Text über Zeitunterschiede und Weltzeituhr. Testmodus aktiviert.",
     "world_timezones_by_continent": "Weltzeitzonen nach Kontinent",
-    "geographic_location": "Die geografische Lage ist %d° %.1f' %s %d° %.1f' %s"
+    "geographic_location": "Die geografische Lage ist %d° %.1f' %s %d° %.1f' %s",
+    "faq_heading": "Häufig gestellte Fragen zur Uhrzeit",
+    "faq_heading_with_city": "Häufig gestellte Fragen zur Uhrzeit in %s",
+    "faq_schema_name": "Häufig gestellte Fragen zur Uhrzeit in %s",
+    "hours_ahead": "%s Stunden vor %s",
+    "hours_behind": "%s Stunden hinter %s"
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

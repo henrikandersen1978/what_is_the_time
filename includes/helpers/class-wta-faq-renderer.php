@@ -10,6 +10,29 @@
 class WTA_FAQ_Renderer {
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.2
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.2
+	 * @param    string $key Template key
+	 * @return   string Template string
+	 */
+	private static function get_template( $key ) {
+		if ( self::$templates_cache === null ) {
+			$templates = get_option( 'wta_templates', array() );
+			self::$templates_cache = is_array( $templates ) ? $templates : array();
+		}
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+	}
+
+	/**
 	 * Render FAQ section HTML.
 	 *
 	 * @since    2.35.0
@@ -37,7 +60,14 @@ class WTA_FAQ_Renderer {
 		
 		<!-- FAQ Section (v2.35.0) -->
 		<section class="wta-faq-section" id="faq">
-			<h2 class="wta-faq-heading">Ofte stillede spørgsmål om tid<?php echo ! empty( $city_name ) ? ' i ' . esc_html( $city_name ) : ''; ?></h2>
+			<h2 class="wta-faq-heading"><?php 
+				if ( ! empty( $city_name ) ) {
+					$heading = self::get_template( 'faq_heading_with_city' ) ?: 'Ofte stillede spørgsmål om tid i %s';
+					echo esc_html( sprintf( $heading, $city_name ) );
+				} else {
+					echo esc_html( self::get_template( 'faq_heading' ) ?: 'Ofte stillede spørgsmål om tid' );
+				}
+			?></h2>
 			
 			<?php if ( ! empty( $intro ) ) : ?>
 			<div class="wta-faq-intro">
@@ -361,8 +391,8 @@ class WTA_FAQ_Renderer {
 		}
 		
 		$schema_name = ! empty( $city_name ) 
-			? sprintf( 'Ofte stillede spørgsmål om tid i %s', $city_name )
-			: 'Ofte stillede spørgsmål om tid';
+			? sprintf( self::get_template( 'faq_schema_name' ) ?: 'Ofte stillede spørgsmål om tid i %s', $city_name )
+			: ( self::get_template( 'faq_heading' ) ?: 'Ofte stillede spørgsmål om tid' );
 		
 		$schema = array(
 			'@context'   => 'https://schema.org',

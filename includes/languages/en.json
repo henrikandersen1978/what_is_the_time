@@ -112,7 +112,12 @@
     "same_time": "Same time",
     "world_clock_intro_placeholder": "Dummy text about time differences and world clock. Test mode activated.",
     "world_timezones_by_continent": "World time zones by continent",
-    "geographic_location": "The geographic location is %d° %.1f' %s %d° %.1f' %s"
+    "geographic_location": "The geographic location is %d° %.1f' %s %d° %.1f' %s",
+    "faq_heading": "Frequently asked questions about time",
+    "faq_heading_with_city": "Frequently asked questions about time in %s",
+    "faq_schema_name": "Frequently asked questions about time in %s",
+    "hours_ahead": "%s hours ahead of %s",
+    "hours_behind": "%s hours behind %s"
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",

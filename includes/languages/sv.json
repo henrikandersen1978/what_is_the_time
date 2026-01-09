@@ -112,7 +112,12 @@
     "same_time": "Samma tid",
     "world_clock_intro_placeholder": "Dummytext om tidsskillnader och världsklocka. Testläge aktiverat.",
     "world_timezones_by_continent": "Världens tidszoner per kontinent",
-    "geographic_location": "Den geografiska platsen är %d° %.1f' %s %d° %.1f' %s"
+    "geographic_location": "Den geografiska platsen är %d° %.1f' %s %d° %.1f' %s",
+    "faq_heading": "Vanliga frågor om tid",
+    "faq_heading_with_city": "Vanliga frågor om tid i %s",
+    "faq_schema_name": "Vanliga frågor om tid i %s",
+    "hours_ahead": "%s timmar före %s",
+    "hours_behind": "%s timmar efter %s"
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",

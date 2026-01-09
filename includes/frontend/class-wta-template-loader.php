@@ -191,9 +191,9 @@ class WTA_Template_Loader {
 			
 		$diff_text = '';
 		if ( $hours_diff > 0 ) {
-			$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
+			$diff_text = sprintf( self::get_template( 'hours_ahead' ) ?: '%s timer foran %s', $hours_formatted, $base_country );
 		} elseif ( $hours_diff < 0 ) {
-			$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
+			$diff_text = sprintf( self::get_template( 'hours_behind' ) ?: '%s timer bagud for %s', $hours_formatted, $base_country );
 		} else {
 			$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 		}
@@ -630,9 +630,9 @@ class WTA_Template_Loader {
 				
 			$diff_text = '';
 			if ( $hours_diff > 0 ) {
-				$diff_text = sprintf( '%s timer foran %s', $hours_formatted, $base_country );
+				$diff_text = sprintf( self::get_template( 'hours_ahead' ) ?: '%s timer foran %s', $hours_formatted, $base_country );
 			} elseif ( $hours_diff < 0 ) {
-				$diff_text = sprintf( '%s timer bagud for %s', $hours_formatted, $base_country );
+				$diff_text = sprintf( self::get_template( 'hours_behind' ) ?: '%s timer bagud for %s', $hours_formatted, $base_country );
 			} else {
 				$diff_text = sprintf( self::get_template( 'same_time_as' ) ?: 'Samme tid som %s', $base_country );
 			}
