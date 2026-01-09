@@ -2,6 +2,109 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.15] - 2026-01-09
+
+### 🐛 BUG FIX - Hardcoded Base Timezone in FAQ Generator
+
+**USER DISCOVERY:**
+Brugeren opdagede at `Europe/Copenhagen` var hardcoded i FAQ generator, hvilket gav forkerte tidsforskelle på svenske sitet hvor timezone var sat til `Europe/Stockholm` i base settings.
+
+**ROOT CAUSE:**
+
+`class-wta-faq-generator.php` havde **5 HARDCODED** `Europe/Copenhagen` referencer:
+
+```php
+// BEFORE v3.2.15 - ❌ HARDCODED!
+$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+```
+
+**PROBLEM:**
+- På danske site (timezone: `Europe/Copenhagen`): Intet problem ✅
+- På svenske site (timezone: `Europe/Stockholm`): **FORKERTE tidsforskelle!** ❌
+- FAQ generator brugte altid København timezone i stedet for base timezone fra settings
+
+**IMPACT:**
+- FAQ #6: "Hvad er tidsforskellen mellem..." → Forkert tidsforskel
+- FAQ #9: "Hvornår skal jeg ringe til..." → Forkert anbefaling
+- FAQ #11: "Hvordan undgår jeg jetlag..." → Forkert tidsforskel
+- FAQ AI batch: "Tidsforskel: X timer" → Forkert værdi i AI prompt
+
+---
+
+### **SOLUTION v3.2.15:**
+
+**BEFORE v3.2.15:**
+```php
+// ❌ HARDCODED - Always uses Copenhagen timezone!
+$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+```
+
+**AFTER v3.2.15:**
+```php
+// ✅ DYNAMIC - Uses base timezone from settings!
+// v3.2.15: Use base timezone from settings (not hardcoded)
+$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
+```
+
+---
+
+### **📋 FILES MODIFIED:**
+
+**`includes/helpers/class-wta-faq-generator.php`:**
+Fixed 5 hardcoded `Europe/Copenhagen` references:
+1. `generate_time_difference_faq()` - FAQ #6 (linje ~331)
+2. `generate_time_difference_faq_template()` - FAQ #6 template (linje ~374)
+3. `generate_ai_faqs_batch()` - AI batch prompt context (linje ~546)
+4. `generate_calling_hours_faq_template()` - FAQ #9 template (linje ~607)
+5. `generate_jetlag_faq_template()` - FAQ #11 template (linje ~623)
+
+All now use `get_option( 'wta_base_timezone', 'Europe/Copenhagen' )` to respect base settings.
+
+---
+
+### **✅ VERIFICATION:**
+
+**Other files already correct:**
+- ✅ `class-wta-template-loader.php` - Already uses `get_option( 'wta_base_timezone', 'Europe/Copenhagen' )`
+- ✅ `class-wta-shortcodes.php` - Already uses `get_option( 'wta_base_timezone', 'Europe/Copenhagen' )`
+
+**Only FAQ generator had hardcoded timezone!**
+
+---
+
+### **🎯 RESULT:**
+
+**On Swedish site (timezone: `Europe/Stockholm`):**
+- **BEFORE v3.2.15:** FAQ time differences calculated from Copenhagen ❌
+- **AFTER v3.2.15:** FAQ time differences calculated from Stockholm ✅
+
+**On Danish site (timezone: `Europe/Copenhagen`):**
+- No change (works same as before) ✅
+
+---
+
+### **🔍 HOW THIS WAS DISCOVERED:**
+
+User spotted this code:
+```php
+private static function generate_time_difference_faq_template( $city_name, $timezone ) {
+    $diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+    // ...
+}
+```
+
+And correctly identified:
+> "Nu er vi jo i sverige i dette tilfælde og vi sætter jo timezone i basic settings i plugin (hvor der er valgt stockholm timezone. Denne funktion bør vel læse det derfra, så det bliver dynamisk?"
+
+**Excellent catch!** 🎯
+
+---
+
+**VERSION:** 3.2.15
+
+**NOTE:** No need to re-process posts - this only affects FAQ generation timing calculations, which are recalculated on page load.
+
 ## [3.2.14] - 2026-01-09
 
 ### 🔥 CRITICAL FIX - 2 More Hardcoded Danish AI Prompts!

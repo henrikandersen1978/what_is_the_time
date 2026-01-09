@@ -328,9 +328,10 @@ class WTA_FAQ_Generator {
 	 *
 	 * @since    2.35.0
 	 */
-	private static function generate_time_difference_faq( $city_name, $timezone, $test_mode = false ) {
-		// Calculate time difference to Denmark
-		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+private static function generate_time_difference_faq( $city_name, $timezone, $test_mode = false ) {
+	// v3.2.15: Calculate time difference to base timezone (from settings, not hardcoded)
+	$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+	$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
 		$example_time = self::format_time_with_offset( 12, 0, $diff_hours );
 		
 		// Get question and answer from language pack
@@ -371,8 +372,10 @@ class WTA_FAQ_Generator {
 	 *
 	 * @since    2.35.0
 	 */
-	private static function generate_time_difference_faq_template( $city_name, $timezone ) {
-		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+private static function generate_time_difference_faq_template( $city_name, $timezone ) {
+	// v3.2.15: Use base timezone from settings (not hardcoded)
+	$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+	$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
 		$example_time = self::format_time_with_offset( 12, 0, $diff_hours );
 		
 		$question = self::get_faq_text( 'faq6_question', array( 'city_name' => $city_name ) );
@@ -541,12 +544,13 @@ class WTA_FAQ_Generator {
 			return array();
 		}
 		
-	$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-	
-	// Calculate time difference for context
-	$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
-	
-	// v3.2.14: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
+$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+
+// v3.2.15: Calculate time difference to base timezone (from settings, not hardcoded)
+$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
+
+// v3.2.14: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
 	$system = get_option( 'wta_prompt_faq_ai_batch_system', 'Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.' );
 	$user = get_option( 'wta_prompt_faq_ai_batch_user', 'Skriv FAQ svar for {city_name}, {country_name}...' );
 	
@@ -603,10 +607,12 @@ class WTA_FAQ_Generator {
 	 *
 	 * @since    2.35.0
 	 */
-	private static function generate_calling_hours_faq_template( $city_name, $timezone ) {
-		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
-		
-		$question = self::get_faq_text( 'faq9_question', array( 'city_name' => $city_name ) );
+private static function generate_calling_hours_faq_template( $city_name, $timezone ) {
+	// v3.2.15: Use base timezone from settings (not hardcoded)
+	$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+	$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
+	
+	$question = self::get_faq_text( 'faq9_question', array( 'city_name' => $city_name ) );
 		$answer = self::get_faq_text( 'faq9_answer_template', array(
 			'city_name' => $city_name,
 			'diff_hours' => $diff_hours
@@ -619,10 +625,12 @@ class WTA_FAQ_Generator {
 		);
 	}
 
-	private static function generate_jetlag_faq_template( $city_name, $timezone ) {
-		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
-		
-		$question = self::get_faq_text( 'faq11_question', array( 'city_name' => $city_name ) );
+private static function generate_jetlag_faq_template( $city_name, $timezone ) {
+	// v3.2.15: Use base timezone from settings (not hardcoded)
+	$base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
+	$diff_hours = self::calculate_time_difference( $timezone, $base_timezone );
+	
+	$question = self::get_faq_text( 'faq11_question', array( 'city_name' => $city_name ) );
 		$answer = self::get_faq_text( 'faq11_answer_template', array(
 			'city_name' => $city_name,
 			'diff_hours' => $diff_hours
