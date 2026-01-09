@@ -2,6 +2,122 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.10] - 2026-01-09
+
+### 🔍 SCHEMA DEBUG VERSION - Critical Issue Investigation
+
+**USER REPORT:**
+"Schema manglede det hele jo for alle 3 landingssidetyper. Se screenshot for hvordan det så ud for kontinenter tidligere. Samme historie for alle 3 typer landingssider nu. Intet schema genereres. Ikke engang yoast standard 'webpage'."
+
+**PROBLEM:**
+User reports **INGEN schema overhovedet** on landing pages:
+- ❌ No Place/City/Country/Continent schema
+- ❌ No ItemList schema (shortcodes)
+- ❌ No FAQPage schema
+- ❌ No BreadcrumbList schema
+- ❌ Not even Yoast's standard WebPage schema!
+
+This is WORSE than expected - ALL schema types are missing!
+
+**THEORY:**
+Schema code EXISTS in `class-wta-template-loader.php` (linje 611-622):
+```php
+$navigation_html .= '<script type="application/ld+json">';
+$navigation_html .= wp_json_encode( $place_schema, ... );
+$navigation_html .= '</script>';
+```
+
+And is returned:
+```php
+return $navigation_html . $remaining_content;  // linje 750
+```
+
+**POSSIBLE ROOT CAUSES:**
+1. **Pilanto theme strips `<script>` tags** from content?
+2. **Yoast SEO disabled or conflict** prevents ALL schema output?
+3. **Filter priority issue** - another plugin overwrites `the_content`?
+4. **`inject_navigation()` filter not triggered** - checks fail?
+5. **Content caching** strips schema tags?
+
+**SOLUTION v3.2.10: DEBUG LOGGING**
+
+Added comprehensive logging to trace schema generation:
+
+**1. inject_navigation() Entry:**
+```php
+WTA_Logger::info( '[SCHEMA DEBUG] inject_navigation() triggered', array(
+    'is_singular' => is_singular( WTA_POST_TYPE ),
+    'in_the_loop' => in_the_loop(),
+    'is_main_query' => is_main_query(),
+    'post_id' => get_the_ID()
+) );
+```
+
+**2. Place Schema Generation:**
+```php
+WTA_Logger::info( '[SCHEMA DEBUG] Place schema generated', array(
+    'post_id' => $post_id,
+    'type' => $type,
+    'schema_type' => $schema_type,
+    'has_gps' => ! empty( $lat ) && ! empty( $lng ),
+    'schema_size' => strlen( wp_json_encode( $place_schema ) )
+) );
+```
+
+**3. Final Output:**
+```php
+WTA_Logger::info( '[SCHEMA DEBUG] inject_navigation() returning content', array(
+    'post_id' => $post_id,
+    'nav_html_size' => strlen( $navigation_html ),
+    'has_schema_tag' => strpos( $navigation_html, '<script type="application/ld+json">' ) !== false,
+    'schema_count' => substr_count( $navigation_html, '<script type="application/ld+json">' ),
+    'final_output_size' => strlen( $final_output )
+) );
+```
+
+**4. FAQ Schema:**
+```php
+WTA_Logger::info( '[SCHEMA DEBUG] FAQ schema generated and appended', array(
+    'post_id' => $post_id,
+    'type' => $type,
+    'faq_count' => count( $faq_data['faqs'] ),
+    'schema_tag_size' => strlen( $faq_schema_tag ),
+    'has_script_tag' => strpos( $faq_schema_tag, '<script type="application/ld+json">' ) !== false
+) );
+```
+
+**TEST PROCEDURE:**
+
+1. Upload v3.2.10 ZIP
+2. Load any landing page (continent, country, city)
+3. View log file: `wp-content/uploads/world-time-ai-data/logs/2026-01-09-log.txt`
+4. Search for `[SCHEMA DEBUG]` entries
+5. **Analyze logs to determine:**
+   - ✅ Is `inject_navigation()` triggered?
+   - ✅ Does `is_singular()`, `in_the_loop()`, `is_main_query()` pass?
+   - ✅ Is Place schema generated? (check `schema_size > 0`)
+   - ✅ Is `has_schema_tag` true in final output?
+   - ✅ If ALL checks pass but HTML source has no schema → THEME/PLUGIN STRIPS IT!
+
+**EXPECTED LOG OUTPUT (if working):**
+```
+[2026-01-09 14:30:00] INFO: [SCHEMA DEBUG] inject_navigation() triggered {"is_singular":true,"in_the_loop":true,"is_main_query":true,"post_id":123}
+[2026-01-09 14:30:00] INFO: [SCHEMA DEBUG] Place schema generated {"post_id":123,"type":"city","schema_type":"Place","has_gps":true,"schema_size":456}
+[2026-01-09 14:30:00] INFO: [SCHEMA DEBUG] inject_navigation() returning content {"post_id":123,"nav_html_size":2345,"has_schema_tag":true,"schema_count":1,"final_output_size":5678}
+[2026-01-09 14:30:00] INFO: [SCHEMA DEBUG] FAQ schema generated and appended {"post_id":123,"type":"city","faq_count":12,"schema_tag_size":890,"has_script_tag":true}
+```
+
+**If logs show schema IS generated but HTML source has NONE:**
+→ **Pilanto theme or plugin is stripping `<script>` tags!**
+→ Need to investigate theme's content filters or use alternative schema output method
+
+**FILES MODIFIED:**
+- `includes/frontend/class-wta-template-loader.php`: Added 4 debug log points
+
+**VERSION:** 3.2.10 (DEBUG)
+
+---
+
 ## [3.2.9] - 2026-01-09
 
 ### ✅ FAQ SCHEMA & TITLE CONSISTENCY FIX

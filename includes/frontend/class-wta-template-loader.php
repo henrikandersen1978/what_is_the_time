@@ -86,8 +86,17 @@ class WTA_Template_Loader {
 	 * @return   string          Modified content with navigation.
 	 */
 	public function inject_navigation( $content ) {
+		// v3.2.10 DEBUG: Log filter trigger
+		WTA_Logger::info( '[SCHEMA DEBUG] inject_navigation() triggered', array(
+			'is_singular' => is_singular( WTA_POST_TYPE ),
+			'in_the_loop' => in_the_loop(),
+			'is_main_query' => is_main_query(),
+			'post_id' => get_the_ID()
+		) );
+		
 		// Only for location posts in singular view
 		if ( ! is_singular( WTA_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+			WTA_Logger::info( '[SCHEMA DEBUG] inject_navigation() early return - checks failed' );
 			return $content;
 		}
 		
@@ -608,10 +617,19 @@ class WTA_Template_Loader {
 			);
 		}
 		
-		$navigation_html .= '<script type="application/ld+json">';
-		$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
-		$navigation_html .= '</script>';
-	}
+	// v3.2.10 DEBUG: Log schema generation
+	WTA_Logger::info( '[SCHEMA DEBUG] Place schema generated', array(
+		'post_id' => $post_id,
+		'type' => $type,
+		'schema_type' => $schema_type,
+		'has_gps' => ! empty( $lat ) && ! empty( $lng ),
+		'schema_size' => strlen( wp_json_encode( $place_schema ) )
+	) );
+	
+	$navigation_html .= '<script type="application/ld+json">';
+	$navigation_html .= wp_json_encode( $place_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+	$navigation_html .= '</script>';
+}
 
 // Note: Large purple clock removed - all info now in Direct Answer box
 	
@@ -738,9 +756,19 @@ class WTA_Template_Loader {
 			$navigation_html .= '</div>';
 		}
 		
-		// Build final output: breadcrumb + intro + buttons + remaining content
-		return $navigation_html . $remaining_content;
-	}
+	// v3.2.10 DEBUG: Log final output
+	$final_output = $navigation_html . $remaining_content;
+	WTA_Logger::info( '[SCHEMA DEBUG] inject_navigation() returning content', array(
+		'post_id' => $post_id,
+		'nav_html_size' => strlen( $navigation_html ),
+		'has_schema_tag' => strpos( $navigation_html, '<script type="application/ld+json">' ) !== false,
+		'schema_count' => substr_count( $navigation_html, '<script type="application/ld+json">' ),
+		'final_output_size' => strlen( $final_output )
+	) );
+	
+	// Build final output: breadcrumb + intro + buttons + remaining content
+	return $final_output;
+}
 
 	/**
 	 * Load custom template for location posts.
@@ -846,17 +874,25 @@ class WTA_Template_Loader {
 	 * @param    string $content Post content.
 	 * @return   string          Content with FAQ schema appended.
 	 */
-	public function append_faq_schema( $content ) {
-		// Only on single location pages (simplified check for theme template compatibility)
-		// v3.0.27: Removed in_the_loop() and is_main_query() checks for theme template compatibility
-		if ( ! is_singular( WTA_POST_TYPE ) ) {
-			return $content;
-		}
-		
-	$post_id = get_the_ID();
-	if ( ! $post_id ) {
+public function append_faq_schema( $content ) {
+	// v3.2.10 DEBUG: Log FAQ schema filter trigger
+	WTA_Logger::info( '[SCHEMA DEBUG] append_faq_schema() triggered', array(
+		'is_singular' => is_singular( WTA_POST_TYPE ),
+		'post_id' => get_the_ID()
+	) );
+	
+	// Only on single location pages (simplified check for theme template compatibility)
+	// v3.0.27: Removed in_the_loop() and is_main_query() checks for theme template compatibility
+	if ( ! is_singular( WTA_POST_TYPE ) ) {
+		WTA_Logger::info( '[SCHEMA DEBUG] append_faq_schema() early return - not singular' );
 		return $content;
 	}
+	
+$post_id = get_the_ID();
+if ( ! $post_id ) {
+	WTA_Logger::info( '[SCHEMA DEBUG] append_faq_schema() early return - no post_id' );
+	return $content;
+}
 	
 	$type = get_post_meta( $post_id, 'wta_type', true );
 	
@@ -873,14 +909,25 @@ class WTA_Template_Loader {
 		return $content;
 	}
 	
-	// Generate and append FAQ schema
-	// v3.0.20: Use get_post_field() to bypass the_title filter
-	// This ensures FAQ schema uses page title (e.g., "København")
-	// not H1 title (e.g., "Hvad er klokken i København, Danmark?")
-	$location_name = get_post_field( 'post_title', $post_id );
-	$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $location_name );
-	
-	return $content;
+// Generate and append FAQ schema
+// v3.0.20: Use get_post_field() to bypass the_title filter
+// This ensures FAQ schema uses page title (e.g., "København")
+// not H1 title (e.g., "Hvad er klokken i København, Danmark?")
+$location_name = get_post_field( 'post_title', $post_id );
+$faq_schema_tag = WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $location_name );
+
+// v3.2.10 DEBUG: Log FAQ schema generation
+WTA_Logger::info( '[SCHEMA DEBUG] FAQ schema generated and appended', array(
+	'post_id' => $post_id,
+	'type' => $type,
+	'faq_count' => count( $faq_data['faqs'] ),
+	'schema_tag_size' => strlen( $faq_schema_tag ),
+	'has_script_tag' => strpos( $faq_schema_tag, '<script type="application/ld+json">' ) !== false
+) );
+
+$content .= $faq_schema_tag;
+
+return $content;
 	}
 
 	/**
