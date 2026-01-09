@@ -129,7 +129,9 @@
     "moon_phase_label": "Mondphase:",
     "northern_hemisphere": "nördlichen",
     "southern_hemisphere": "südlichen",
-    "location_on_hemisphere": "%s liegt auf der %s Hemisphäre"
+    "location_on_hemisphere": "%s liegt auf der %s Hemisphäre",
+    "current_time_in": "Die aktuelle Zeit in %s ist",
+    "date_is": "Das Datum ist"
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

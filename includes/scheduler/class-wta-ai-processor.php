@@ -1266,35 +1266,43 @@ class WTA_AI_Processor {
 	 * @return   string|false    Generated title or false.
 	 */
 	private function generate_yoast_title( $post_id, $name, $type ) {
-		// For continents, use SEO-friendly template
+		// Get templates from language pack
+		$templates = get_option( 'wta_templates', array() );
+		
+		// For continents, use language-aware template
 		if ( 'continent' === $type ) {
-			return sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name );
+			$template = isset( $templates['continent_title'] ) ? $templates['continent_title'] : 'Hvad er klokken i %s? Tidszoner og aktuel tid';
+			return sprintf( $template, $name );
 		}
 		
 		// v3.0.24: For cities, use question-based template (no AI needed, no year)
-		// Matches search intent perfectly
+		// v3.2.4: Now language-aware!
 		if ( 'city' === $type ) {
 			$parent_id = wp_get_post_parent_id( $post_id );
 			if ( $parent_id ) {
 				$country_name = get_post_field( 'post_title', $parent_id );
-				return sprintf( 'Hvad er klokken i %s, %s?', $name, $country_name );
+				$template = isset( $templates['city_title'] ) ? $templates['city_title'] : 'Hvad er klokken i %s, %s?';
+				return sprintf( $template, $name, $country_name );
 			} else {
-				return sprintf( 'Hvad er klokken i %s?', $name );
+				$template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+				return sprintf( $template, $name );
 			}
 		}
 		
-		// For countries, use AI generation
+		// For countries, use AI generation with language-aware prompts
 		$api_key = get_option( 'wta_openai_api_key', '' );
 		if ( empty( $api_key ) ) {
-			return false;
+			// Fallback to template if no API key
+			$template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+			return sprintf( $template, $name );
 		}
 
 		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		$system = 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.';
-		$user = sprintf(
-			'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i %s. Inkluder "Hvad er klokken" eller "Tidszoner". KUN titlen.',
-			$name
-		);
+		$system = get_option( 'wta_prompt_yoast_title_system', 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.' );
+		$user = get_option( 'wta_prompt_yoast_title_user', 'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i {location_name_local}.' );
+		
+		// Replace placeholders
+		$user = str_replace( '{location_name_local}', $name, $user );
 		
 		return $this->call_openai_api( $api_key, $model, 0.7, 100, $system, $user );
 	}
@@ -1315,11 +1323,11 @@ class WTA_AI_Processor {
 		}
 
 		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		$system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
-		$user = sprintf(
-			'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
-			$name
-		);
+		$system = get_option( 'wta_prompt_yoast_desc_system', 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.' );
+		$user = get_option( 'wta_prompt_yoast_desc_user', 'Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.' );
+		
+		// Replace placeholders
+		$user = str_replace( '{location_name_local}', $name, $user );
 		
 		return $this->call_openai_api( $api_key, $model, 0.7, 200, $system, $user );
 	}

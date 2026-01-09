@@ -2,6 +2,58 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.4] - 2026-01-09
+
+### 🔥 CRITICAL FIX: Title/Meta Regression + Quick Facts Labels
+
+**PROBLEM 1: Title Tags Blev Danske (Regression!)**
+Efter v3.2.3, selvom user havde loaded sv.json, blev title tags og meta descriptions DANSKE igen!
+
+**ROOT CAUSE:**
+`class-wta-ai-processor.php` havde HARDCODED danske strings i `generate_yoast_title()` og `generate_yoast_description()`:
+```php
+// Linje 1271 - HARDCODED DANSK:
+return sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $name );
+
+// Linje 1280 - HARDCODED DANSK:
+return sprintf( 'Hvad er klokken i %s, %s?', $name, $country_name );
+
+// Linje 1293-1295 - HARDCODED DANSKE PROMPTS:
+$system = 'Du er SEO ekspert...';
+$user = 'Skriv en SEO meta title... hvad klokken er i %s...';
+```
+
+Disse overskrev de korrekte svenske templates fra structure processor!
+
+**SOLUTION:**
+Opdateret `generate_yoast_title()` og `generate_yoast_description()` til at bruge:
+1. **Templates** fra language pack (continent_title, city_title, country_title)
+2. **AI Prompts** fra options (wta_prompt_yoast_title_system/user)
+
+Nu respekterer AI processor det valgte sprog! ✅
+
+**PROBLEM 2: Quick Facts Box Havde Danske Labels**
+"Den aktuelle tid i %s er" og "Datoen er" var hardcoded i template-loader.
+
+**SOLUTION:**
+- Added `current_time_in` og `date_is` til alle 4 language JSON files
+- Updated template-loader.php til at bruge disse templates
+
+**FILES UPDATED:**
+- `includes/languages/*.json` - Added current_time_in, date_is labels
+- `includes/frontend/class-wta-template-loader.php` - Use language-aware labels for time/date
+- `includes/scheduler/class-wta-ai-processor.php` - Use templates + prompts instead of hardcoded strings
+
+**RESULT:**
+✅ Title tags now respect language (no more Danish regression!)
+✅ Meta descriptions now respect language
+✅ Quick Facts box labels translated
+✅ AI-generated SEO metadata uses correct language prompts
+
+**REMAINING ISSUES (low priority):**
+⚠️ Date formatting still uses PHP default locale (shows English day/month names)
+⚠️ Will be fixed in future version if needed
+
 ## [3.2.3] - 2026-01-09
 
 ### 🔧 CRITICAL FIX: Slug Translation Now Works

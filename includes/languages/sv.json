@@ -129,7 +129,9 @@
     "moon_phase_label": "Månfas:",
     "northern_hemisphere": "norra",
     "southern_hemisphere": "södra",
-    "location_on_hemisphere": "%s ligger på %s halvklotet"
+    "location_on_hemisphere": "%s ligger på %s halvklotet",
+    "current_time_in": "Den aktuella tid i %s är",
+    "date_is": "Datum är"
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",

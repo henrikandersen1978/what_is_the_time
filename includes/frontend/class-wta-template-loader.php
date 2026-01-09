@@ -429,14 +429,17 @@ class WTA_Template_Loader {
 	
 	// Build Direct Answer HTML
 	$navigation_html .= '<div class="wta-seo-direct-answer">';
+		$current_time_label = self::get_template( 'current_time_in' ) ?: 'Den aktuelle tid i %s er';
 		$navigation_html .= sprintf(
-			'<p class="wta-current-time-statement"><strong>Den aktuelle tid i %s er <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
+			'<p class="wta-current-time-statement"><strong>' . esc_html( $current_time_label ) . ' <span class="wta-live-time" data-timezone="%s">%s</span></strong></p>',
 			esc_html( $name_local ),
 			esc_attr( $timezone ),
 			$now->format( 'H:i:s' )
 		);
+		$date_label = self::get_template( 'date_is' ) ?: 'Datoen er';
 		$navigation_html .= sprintf(
-			'<p class="wta-current-date-statement">Datoen er <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+			'<p class="wta-current-date-statement">%s <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+			esc_html( $date_label ),
 			esc_attr( $timezone ),
 			$now->format( 'l j. F Y' )
 		);

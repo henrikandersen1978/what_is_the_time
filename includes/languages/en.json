@@ -129,7 +129,9 @@
     "moon_phase_label": "Moon phase:",
     "northern_hemisphere": "northern",
     "southern_hemisphere": "southern",
-    "location_on_hemisphere": "%s is located in the %s hemisphere"
+    "location_on_hemisphere": "%s is located in the %s hemisphere",
+    "current_time_in": "The current time in %s is",
+    "date_is": "The date is"
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",
