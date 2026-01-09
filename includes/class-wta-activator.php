@@ -468,5 +468,114 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			}
 		}
 	}
+
+	/**
+	 * Load language defaults from JSON file.
+	 * 
+	 * Reads a language pack JSON file and updates all WordPress options
+	 * with the translated prompts, FAQ strings, and base settings.
+	 * 
+	 * @since 3.2.0
+	 * @param string $lang Language code (da, en, de, sv, etc.)
+	 * @return bool True on success, false on failure
+	 */
+	public static function load_language_defaults( $lang ) {
+		$defaults = self::load_language_json( $lang );
+		
+		if ( empty( $defaults ) ) {
+			return false;
+		}
+
+		// Update all options from the flattened array
+		foreach ( $defaults as $option_key => $value ) {
+			update_option( $option_key, $value );
+		}
+
+		// Update site language
+		update_option( 'wta_site_language', $lang );
+
+		return true;
+	}
+
+	/**
+	 * Load and parse language JSON file.
+	 * 
+	 * Reads the JSON language pack, validates it, and returns a flattened
+	 * array of option_key => value pairs ready for WordPress options.
+	 * 
+	 * @since 3.2.0
+	 * @param string $lang Language code (da, en, de, sv, etc.)
+	 * @return array Flattened array of options, or empty array on failure
+	 */
+	private static function load_language_json( $lang ) {
+		// Security: Whitelist allowed languages
+		$allowed_langs = array( 'da', 'en', 'de', 'sv', 'no', 'fi', 'nl' );
+		if ( ! in_array( $lang, $allowed_langs, true ) ) {
+			return self::get_fallback_defaults();
+		}
+
+		// Build file path
+		$json_file = plugin_dir_path( dirname( __FILE__ ) ) . 'languages/' . $lang . '.json';
+
+		// Check file exists
+		if ( ! file_exists( $json_file ) ) {
+			return self::get_fallback_defaults();
+		}
+
+		// Read and parse JSON
+		$json_content = file_get_contents( $json_file );
+		if ( $json_content === false ) {
+			return self::get_fallback_defaults();
+		}
+
+		$data = json_decode( $json_content, true );
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			return self::get_fallback_defaults();
+		}
+
+		// Validate structure
+		if ( ! isset( $data['base_settings'] ) || ! isset( $data['prompts'] ) || ! isset( $data['faq'] ) ) {
+			return self::get_fallback_defaults();
+		}
+
+		// Flatten to option_key => value format
+		$options = array();
+
+		// Base settings
+		foreach ( $data['base_settings'] as $key => $value ) {
+			$options[ 'wta_' . $key ] = $value;
+		}
+
+		// AI Prompts
+		foreach ( $data['prompts'] as $key => $value ) {
+			$options[ 'wta_' . $key ] = $value;
+		}
+
+		// FAQ strings (store as serialized array for easy retrieval)
+		$options['wta_faq_strings'] = $data['faq'];
+
+		return $options;
+	}
+
+	/**
+	 * Get fallback defaults if JSON loading fails.
+	 * 
+	 * Provides minimal Danish defaults to prevent fatal errors.
+	 * 
+	 * @since 3.2.0
+	 * @return array Minimal Danish defaults
+	 */
+	private static function get_fallback_defaults() {
+		return array(
+			'wta_base_country_name' => 'Danmark',
+			'wta_base_timezone' => 'Europe/Copenhagen',
+			'wta_base_language' => 'da-DK',
+			'wta_base_language_description' => 'Skriv på flydende dansk til danske brugere',
+			'wta_faq_strings' => array(
+				'faq1_question' => 'Hvad er klokken i {city_name} lige nu?',
+				'faq1_answer' => 'Klokken i {city_name} er <strong id="faq-live-time">{current_time}</strong>.',
+			),
+		);
+	}
 }
 
