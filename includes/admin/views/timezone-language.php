@@ -10,9 +10,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Handle Load Language Defaults action
+if ( isset( $_GET['action'] ) && $_GET['action'] === 'load_language_defaults' && isset( $_GET['lang'] ) && check_admin_referer( 'wta_load_language_' . sanitize_text_field( $_GET['lang'] ) ) ) {
+	$lang = sanitize_text_field( $_GET['lang'] );
+	WTA_Activator::load_language_defaults( $lang );
+	echo '<div class="notice notice-success"><p>✅ ' . sprintf( esc_html__( 'Language defaults loaded for %s', WTA_TEXT_DOMAIN ), $lang ) . '</p></div>';
+}
+
 // Handle form submission
 if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_timezone_language' ) ) {
 	update_option( 'wta_timezonedb_api_key', sanitize_text_field( $_POST['wta_timezonedb_api_key'] ) );
+	update_option( 'wta_site_language', sanitize_text_field( $_POST['wta_site_language'] ) );
 	update_option( 'wta_base_country_name', sanitize_text_field( $_POST['wta_base_country_name'] ) );
 	update_option( 'wta_base_timezone', sanitize_text_field( $_POST['wta_base_timezone'] ) );
 	update_option( 'wta_base_language', sanitize_text_field( $_POST['wta_base_language'] ) );
@@ -23,6 +31,7 @@ if ( isset( $_POST['submit'] ) && check_admin_referer( 'wta_timezone_language' )
 }
 
 $timezonedb_key = get_option( 'wta_timezonedb_api_key', '' );
+$site_language = get_option( 'wta_site_language', 'da' );
 $base_country = get_option( 'wta_base_country_name', 'Danmark' );
 $base_timezone = get_option( 'wta_base_timezone', 'Europe/Copenhagen' );
 $base_language = get_option( 'wta_base_language', 'da-DK' );
@@ -61,6 +70,45 @@ $complex_countries = get_option( 'wta_complex_countries', 'US,CA,BR,RU,AU,MX,ID,
 								<span class="spinner"></span>
 							</p>
 							<div id="wta-timezone-test-result"></div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<!-- Site Language -->
+			<div class="wta-card">
+				<h2><?php esc_html_e( 'Site Language / Webstedssprog', WTA_TEXT_DOMAIN ); ?></h2>
+				<table class="form-table">
+					<tr>
+						<th scope="row">
+							<label for="wta_site_language"><?php esc_html_e( 'Language', WTA_TEXT_DOMAIN ); ?></label>
+						</th>
+						<td>
+							<select id="wta_site_language" name="wta_site_language" class="regular-text">
+								<option value="da" <?php selected( $site_language, 'da' ); ?>>🇩🇰 Dansk</option>
+								<option value="en" <?php selected( $site_language, 'en' ); ?>>🇬🇧 English</option>
+								<option value="de" <?php selected( $site_language, 'de' ); ?>>🇩🇪 Deutsch</option>
+								<option value="sv" <?php selected( $site_language, 'sv' ); ?>>🇸🇪 Svenska</option>
+							</select>
+							<p class="description"><?php esc_html_e( 'Select your site language for AI prompts and FAQ strings.', WTA_TEXT_DOMAIN ); ?></p>
+							<p class="description"><strong><?php echo sprintf( esc_html__( 'Current language: %s', WTA_TEXT_DOMAIN ), $site_language ); ?></strong></p>
+							<p>
+								<?php
+								$load_lang_nonce = wp_create_nonce( 'wta_load_language_' . $site_language );
+								$load_lang_url = add_query_arg(
+									array(
+										'page'   => 'wta-timezone-language',
+										'action' => 'load_language_defaults',
+										'lang'   => $site_language,
+										'_wpnonce' => $load_lang_nonce,
+									),
+									admin_url( 'admin.php' )
+								);
+								?>
+								<a href="<?php echo esc_url( $load_lang_url ); ?>" class="button button-secondary" onclick="return confirm('<?php echo esc_js( sprintf( __( 'Load default prompts and FAQ strings for %s? This will overwrite your AI Prompts settings.', WTA_TEXT_DOMAIN ), $site_language ) ); ?>');">
+									🔄 <?php echo sprintf( esc_html__( 'Load Default Prompts for %s', WTA_TEXT_DOMAIN ), strtoupper( $site_language ) ); ?>
+								</a>
+							</p>
 						</td>
 					</tr>
 				</table>
