@@ -123,10 +123,29 @@ class WTA_Template_Loader {
 		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
 	}
 		
-		$navigation_html = '';
-		
-		// Build breadcrumb
-		$breadcrumb_items = array();
+	$navigation_html = '';
+	
+	// v3.2.19: Set global JavaScript locale for date/time formatting
+	// Maps plugin language to browser locale (da → da-DK, sv → sv-SE, etc.)
+	static $locale_injected = false;
+	if ( ! $locale_injected ) {
+		$site_lang = get_option( 'wta_site_language', 'da' );
+		$locale_map = array(
+			'da' => 'da-DK',
+			'sv' => 'sv-SE',
+			'en' => 'en-GB',
+			'de' => 'de-DE',
+			'no' => 'nb-NO',
+			'fi' => 'fi-FI',
+			'nl' => 'nl-NL',
+		);
+		$js_locale = isset( $locale_map[ $site_lang ] ) ? $locale_map[ $site_lang ] : 'da-DK';
+		$navigation_html .= '<script>window.wtaLocale = "' . esc_js( $js_locale ) . '";</script>' . "\n";
+		$locale_injected = true;
+	}
+	
+	// Build breadcrumb
+	$breadcrumb_items = array();
 		$breadcrumb_items[] = array(
 			'name' => self::get_template( 'breadcrumb_home' ) ?: 'Forside',
 			'url'  => home_url( '/' ),
@@ -452,10 +471,11 @@ class WTA_Template_Loader {
 		);
 	$date_label = self::get_template( 'date_is' ) ?: 'Datoen er';
 	$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';  // Danish default with "den"
+	// v3.2.19: Date is STATIC (no JS update needed - only changes at midnight on page reload)
+	// Removed data-timezone to prevent unnecessary JS updates every second
 	$navigation_html .= sprintf(
-		'<p class="wta-current-date-statement">%s <span class="wta-live-date" data-timezone="%s">%s</span></p>',
+		'<p class="wta-current-date-statement">%s <span class="wta-live-date">%s</span></p>',
 		esc_html( $date_label ),
-		esc_attr( $timezone ),
 		date_i18n( $date_format, $now->getTimestamp() )
 	);
 		$timezone_label = self::get_template( 'timezone_label' ) ?: 'Tidszone:';

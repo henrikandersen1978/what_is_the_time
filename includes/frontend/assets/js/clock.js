@@ -32,42 +32,31 @@
 		updateComparisonTimes();
 	}
 	
-	// Update SEO Direct Answer section
+	// Update SEO Direct Answer section (TIME ONLY - date is static from PHP!)
+	// v3.2.19: Date removed - it only changes at midnight, no need for JS updates every second!
 	function updateDirectAnswer() {
 		const timeEl = document.querySelector('.wta-live-time[data-timezone]');
-		const dateEl = document.querySelector('.wta-live-date[data-timezone]');
+		if (!timeEl) return;
 		
-		if (!timeEl && !dateEl) return;
-		
-		const timezone = timeEl ? timeEl.getAttribute('data-timezone') : dateEl.getAttribute('data-timezone');
+		const timezone = timeEl.getAttribute('data-timezone');
 		if (!timezone) return;
 		
 		try {
 			const now = new Date();
 			
-			if (timeEl) {
-				const timeFormatter = new Intl.DateTimeFormat('da-DK', {
-					timeZone: timezone,
-					hour: '2-digit',
-					minute: '2-digit',
-					second: '2-digit',
-					hour12: false
-				});
-				timeEl.textContent = timeFormatter.format(now);
-			}
+			// Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+			const locale = window.wtaLocale || 'da-DK';
 			
-			if (dateEl) {
-				const dateFormatter = new Intl.DateTimeFormat('da-DK', {
-					timeZone: timezone,
-					weekday: 'long',
-					day: 'numeric',
-					month: 'long',
-					year: 'numeric'
-				});
-				dateEl.textContent = dateFormatter.format(now);
-			}
+			const timeFormatter = new Intl.DateTimeFormat(locale, {
+				timeZone: timezone,
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false
+			});
+			timeEl.textContent = timeFormatter.format(now);
 		} catch (error) {
-			console.error('Error updating direct answer:', error);
+			console.error('Error updating time:', error);
 		}
 	}
 
@@ -78,8 +67,11 @@
 		try {
 			const now = new Date();
 			
+			// v3.2.19: Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+			const locale = window.wtaLocale || 'da-DK';
+			
 			// Format time
-			const timeFormatter = new Intl.DateTimeFormat('da-DK', {
+			const timeFormatter = new Intl.DateTimeFormat(locale, {
 				timeZone: timezone,
 				hour: '2-digit',
 				minute: '2-digit',
@@ -89,7 +81,7 @@
 			const timeString = timeFormatter.format(now);
 			
 			// Format date
-			const dateFormatter = new Intl.DateTimeFormat('da-DK', {
+			const dateFormatter = new Intl.DateTimeFormat(locale, {
 				timeZone: timezone,
 				weekday: 'long',
 				year: 'numeric',
@@ -120,8 +112,11 @@
 		try {
 			const now = new Date();
 			
+			// v3.2.19: Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+			const locale = window.wtaLocale || 'da-DK';
+			
 			// Format time
-			const timeFormatter = new Intl.DateTimeFormat('da-DK', {
+			const timeFormatter = new Intl.DateTimeFormat(locale, {
 				timeZone: timezone,
 				hour: '2-digit',
 				minute: '2-digit',
@@ -133,7 +128,7 @@
 			// Format date based on format option
 			let dateFormatter;
 			if (format === 'short') {
-				dateFormatter = new Intl.DateTimeFormat('da-DK', {
+				dateFormatter = new Intl.DateTimeFormat(locale, {
 					timeZone: timezone,
 					day: 'numeric',
 					month: 'short',
@@ -142,7 +137,7 @@
 			} else if (format === 'time-only') {
 				dateFormatter = null;
 			} else {
-				dateFormatter = new Intl.DateTimeFormat('da-DK', {
+				dateFormatter = new Intl.DateTimeFormat(locale, {
 					timeZone: timezone,
 					weekday: 'long',
 					day: 'numeric',
@@ -181,8 +176,11 @@
 		try {
 			const now = new Date();
 			
+			// v3.2.19: Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+			const locale = window.wtaLocale || 'da-DK';
+			
 			// Format time with seconds
-			const timeFormatter = new Intl.DateTimeFormat('da-DK', {
+			const timeFormatter = new Intl.DateTimeFormat(locale, {
 				timeZone: timezone,
 				hour: '2-digit',
 				minute: '2-digit',
@@ -208,12 +206,15 @@
 	function updateComparisonTimes() {
 		const comparisonTimes = document.querySelectorAll('.wta-live-comparison-time[data-timezone]');
 		
+		// v3.2.19: Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+		const locale = window.wtaLocale || 'da-DK';
+		
 		comparisonTimes.forEach(function(timeEl) {
 			const timezone = timeEl.getAttribute('data-timezone');
 			
 			try {
 				const now = new Date();
-				const formatter = new Intl.DateTimeFormat('da-DK', {
+				const formatter = new Intl.DateTimeFormat(locale, {
 					timeZone: timezone,
 					hour: '2-digit',
 					minute: '2-digit',
