@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Load WTA_Activator class if not already loaded
+if ( ! class_exists( 'WTA_Activator' ) ) {
+	require_once plugin_dir_path( dirname( dirname( __FILE__ ) ) ) . 'class-wta-activator.php';
+}
+
 // Handle Load Language Defaults action
 if ( isset( $_GET['action'] ) && $_GET['action'] === 'load_language_defaults' && isset( $_GET['lang'] ) && check_admin_referer( 'wta_load_language_' . sanitize_text_field( $_GET['lang'] ) ) ) {
 	$lang = sanitize_text_field( $_GET['lang'] );
