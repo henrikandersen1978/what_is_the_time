@@ -31,7 +31,7 @@ class WTA_Importer {
 			'clear_queue'         => true,
 		);
 
-		$options = wp_parse_args( $options, $defaults );
+	$options = wp_parse_args( $options, $defaults );
 
 	// Clear existing Action Scheduler actions if requested
 	if ( $options['clear_queue'] ) {
@@ -45,14 +45,38 @@ class WTA_Importer {
 		WTA_Logger::info( 'All pending actions cleared before import' );
 	}
 
-		$stats = array(
-			'continents' => 0,
-			'countries'  => 0,
-			'cities'     => 0,
-		);
+	// v3.2.20: CRITICAL FIX - Pre-cache GeoNames translations BEFORE import!
+	// This prevents timeout issues where first location triggers 2-5 min parsing
+	// which may fail, leaving all subsequent locations with English names instead of translated ones.
+	// On Danish site, this worked by luck (parsing completed before timeout).
+	// On Swedish site, this failed (parsing timeout → no fallback → "copenhagen" instead of "köpenhamn").
+	$lang_code = get_option( 'wta_base_language', 'da-DK' );
+	WTA_Logger::info( 'Pre-caching GeoNames translations before import (may take 2-5 minutes)...', array(
+		'language' => $lang_code,
+		'file_size' => '~745 MB alternateNamesV2.txt',
+	) );
+	
+	$prepare_success = WTA_GeoNames_Translator::prepare_for_import( $lang_code );
+	
+	if ( ! $prepare_success ) {
+		WTA_Logger::error( 'Failed to prepare GeoNames translations - import may have issues with city names' );
+		// Don't abort - parsing will be attempted on-demand (but may timeout)
+	} else {
+		WTA_Logger::info( 'GeoNames translations ready for import!', array(
+			'language' => $lang_code,
+			'cache_key' => 'wta_geonames_translations_' . strtok( $lang_code, '-' ),
+			'expires' => '24 hours',
+		) );
+	}
 
-		// Fetch countries data from GeoNames countryInfo.txt
-		$countries = WTA_GeoNames_Parser::parse_countryInfo();
+	$stats = array(
+		'continents' => 0,
+		'countries'  => 0,
+		'cities'     => 0,
+	);
+
+	// Fetch countries data from GeoNames countryInfo.txt
+	$countries = WTA_GeoNames_Parser::parse_countryInfo();
 		if ( false === $countries ) {
 			WTA_Logger::error( 'Failed to parse countryInfo.txt' );
 			return $stats;
