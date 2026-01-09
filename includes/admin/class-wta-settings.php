@@ -18,6 +18,10 @@ class WTA_Settings {
 		register_setting( 'wta_data_import_settings_group', 'wta_github_countries_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
 		register_setting( 'wta_data_import_settings_group', 'wta_github_states_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
 		register_setting( 'wta_data_import_settings_group', 'wta_github_cities_url', array( 'sanitize_callback' => 'esc_url_raw' ) );
+		register_setting( 'wta_data_import_settings_group', 'wta_enable_city_processing', array( 
+			'sanitize_callback' => 'intval',
+			'default' => 0
+		) );
 
 		// AI Settings
 		register_setting( 'wta_ai_settings', 'wta_openai_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
@@ -27,6 +31,7 @@ class WTA_Settings {
 
 		// Timezone & Language Settings
 		register_setting( 'wta_timezone_language', 'wta_timezonedb_api_key', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'wta_timezone_language', 'wta_site_language', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'wta_timezone_language', 'wta_base_country_name', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'wta_timezone_language', 'wta_base_timezone', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'wta_timezone_language', 'wta_base_language', array( 'sanitize_callback' => 'sanitize_text_field' ) );
