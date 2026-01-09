@@ -2,6 +2,124 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.13] - 2026-01-09
+
+### 🐛 CRITICAL FIX - Hardcoded Danish AI Prompts
+
+**USER REPORT:**
+"Meta description er stadig dansk. FAQ intro er dansk."
+
+**ROOT CAUSE IDENTIFIED:**
+
+2 AI features havde **HARDCODED DANSK PROMPTS** som ALDRIG blev oversat til andre sprog:
+
+### **1. Meta Description (AI-generated)**
+
+**BEFORE v3.2.13 - PROBLEM:**
+```php
+// class-wta-ai-processor.php, linje 1323-1324
+$system = get_option( 'wta_prompt_yoast_desc_system', 
+    'Du er SEO ekspert. Skriv KUN beskrivelsen...' ); // ❌ DANSK FALLBACK!
+$user = get_option( 'wta_prompt_yoast_desc_user', 
+    'Skriv en SEO meta description (140-160 tegn)...' ); // ❌ DANSK FALLBACK!
+```
+
+**Problem:** Hvis brugeren IKKE havde loaded prompts via "Load Default Prompts", ville meta descriptions ALTID være danske (fallback)!
+
+**AFTER v3.2.13 - FIXED:**
+Prompts var ALLEREDE i JSON siden v3.2.0! Men brugeren havde ikke loaded dem efter updates.
+
+**Løsning:** Brugeren SKAL klikke "Load Default Prompts for SV" efter hver plugin update for at få de nyeste prompts ind i WordPress options!
+
+---
+
+### **2. FAQ Intro (AI-generated)**
+
+**BEFORE v3.2.13 - PROBLEM:**
+```php
+// class-wta-faq-generator.php, linje 110-111
+$system = 'Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.'; // ❌ HARDCODED DANSK!
+$user = "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {$city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders."; // ❌ HARDCODED DANSK!
+```
+
+**Problem:** Disse prompts var ALDRIG tilføjet til JSON files! De var hardcoded direkte i PHP koden!
+
+**AFTER v3.2.13 - FIXED:**
+```php
+// v3.2.13: Use language-aware prompts from JSON
+$system = get_option( 'wta_prompt_faq_intro_system', 'Du skriver korte...' );
+$user = get_option( 'wta_prompt_faq_intro_user', 'Skriv 2-3 korte sætninger...' );
+
+// Replace {city_name} placeholder
+$user = str_replace( '{city_name}', $city_name, $user );
+```
+
+**Nye prompts tilføjet til alle 4 JSON files:**
+- `prompts.faq_intro_system` - System prompt
+- `prompts.faq_intro_user` - User prompt (med {city_name} placeholder)
+
+**TRANSLATIONS:**
+- **Danish:** "Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk..."
+- **English:** "You write short, helpful introductions to FAQ sections in English..."
+- **Swedish:** "Du skriver korta, hjälpsamma introduktioner till FAQ-sektioner på svenska..."
+- **German:** "Sie schreiben kurze, hilfreiche Einleitungen zu FAQ-Bereichen auf Deutsch..."
+
+---
+
+### **📋 FILES MODIFIED:**
+
+1. **`includes/languages/da.json`** - Added `faq_intro_system` + `faq_intro_user`
+2. **`includes/languages/en.json`** - Added `faq_intro_system` + `faq_intro_user`
+3. **`includes/languages/sv.json`** - Added `faq_intro_system` + `faq_intro_user`
+4. **`includes/languages/de.json`** - Added `faq_intro_system` + `faq_intro_user`
+5. **`includes/helpers/class-wta-faq-generator.php`** - Updated `generate_ai_intro()` to use language-aware prompts
+
+---
+
+### **🎯 HOW TO FIX ON EXISTING SITES:**
+
+**CRITICAL:** Efter hver plugin update SKAL du:
+
+1. Gå til **WP Admin → World Time AI → Language/Base Settings**
+2. Klik **"Load Default Prompts for [SPROG]"** (fx "Load Default Prompts for SV")
+3. Dette loader ALLE de nyeste prompts og templates fra JSON filen
+4. Vent 3-5 sekunder til siden reloader
+5. Verificer at prompts er updated under **WP Admin → World Time AI → Prompts**
+
+**Hvorfor?** 
+- JSON files opdateres med hver version
+- WordPress options opdateres KUN når du klikker "Load Default Prompts"
+- Fallback prompts i PHP kode er ALTID danske (for bagudkompatibilitet)
+
+---
+
+### **🔍 DIAGNOSIS - HVAD SKETE DER?**
+
+**Timeline:**
+- **v3.2.0:** Multilingual system implementeret med JSON files
+- **v3.2.0-v3.2.8:** Meta description prompts var i JSON, men FAQ intro prompts manglede!
+- **Problem:** Hvis brugeren ikke klikker "Load Default Prompts" efter update, får de IKKE de nyeste prompts!
+- **v3.2.13:** FAQ intro prompts tilføjet, og dokumentation forbedret
+
+**Lesson Learned:**
+- ALDRIG hardcode AI prompts i PHP
+- ALLE prompts skal være i JSON files
+- Brugeren SKAL loades prompts efter hver update
+
+---
+
+### **✅ VERIFICATION CHECKLIST:**
+
+Efter du har loaded sv.json:
+- [ ] Meta descriptions på svensk (ikke dansk)
+- [ ] FAQ intro på svensk (ikke dansk)
+- [ ] FAQ #1-#12 på svensk (fixed i v3.2.6-v3.2.7)
+- [ ] Title tags på svensk (fixed i v3.2.11)
+
+---
+
+**VERSION:** 3.2.13
+
 ## [3.2.12] - 2026-01-09
 
 ### 🚀 PERFORMANCE OPTIMIZATION - Eliminate Duplicate Title Generation

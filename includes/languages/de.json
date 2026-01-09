@@ -59,7 +59,9 @@
     "yoast_title_system": "Sie sind ein SEO-Experte, der Meta-Titel auf Deutsch schreibt.",
     "yoast_title_user": "Schreiben Sie einen SEO-Meta-Titel (50-60 Zeichen) für eine Seite darüber, wie spät es in {location_name_local} ist.",
     "yoast_desc_system": "Sie sind ein SEO-Experte, der Meta-Beschreibungen auf Deutsch schreibt.",
-    "yoast_desc_user": "Schreiben Sie eine SEO-Meta-Beschreibung (140-160 Zeichen) für eine Seite darüber, wie spät es in {location_name_local} ist."
+    "yoast_desc_user": "Schreiben Sie eine SEO-Meta-Beschreibung (140-160 Zeichen) für eine Seite darüber, wie spät es in {location_name_local} ist.",
+    "faq_intro_system": "Sie schreiben kurze, hilfreiche Einleitungen zu FAQ-Bereichen auf Deutsch. Keine Platzhalter.",
+    "faq_intro_user": "Schreiben Sie 2-3 kurze Sätze, die den FAQ-Bereich über die Zeit in {city_name} vorstellen. Erklären Sie kurz, worauf Benutzer Antworten finden können (Zeitzone, Zeitunterschied, praktische Tipps). Ton: Hilfreich und direkt. Max 50 Wörter. KEINE Platzhalter."
   },
   "templates": {
     "continent_h1": "Aktuelle Uhrzeit in Ländern und Städten in %s",

@@ -106,11 +106,16 @@ class WTA_FAQ_Generator {
 			return self::generate_template_intro( $city_name );
 		}
 		
-		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		$system = 'Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.';
-		$user = "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {$city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders.";
-		
-		$intro = self::call_openai_simple( $api_key, $model, $system, $user, 80 );
+	$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+	
+	// v3.2.13: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
+	$system = get_option( 'wta_prompt_faq_intro_system', 'Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.' );
+	$user = get_option( 'wta_prompt_faq_intro_user', 'Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders.' );
+	
+	// Replace {city_name} placeholder
+	$user = str_replace( '{city_name}', $city_name, $user );
+	
+	$intro = self::call_openai_simple( $api_key, $model, $system, $user, 80 );
 		
 		// Fallback to template if AI fails
 		if ( false === $intro || empty( $intro ) ) {

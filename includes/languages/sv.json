@@ -59,7 +59,9 @@
     "yoast_title_system": "Du är en SEO-expert som skriver meta-titlar på svenska.",
     "yoast_title_user": "Skriv en SEO meta-titel (50-60 tecken) för en sida om vad klockan är i {location_name_local}.",
     "yoast_desc_system": "Du är en SEO-expert som skriver meta-beskrivningar på svenska.",
-    "yoast_desc_user": "Skriv en SEO meta-beskrivning (140-160 tecken) för en sida om vad klockan är i {location_name_local}."
+    "yoast_desc_user": "Skriv en SEO meta-beskrivning (140-160 tecken) för en sida om vad klockan är i {location_name_local}.",
+    "faq_intro_system": "Du skriver korta, hjälpsamma introduktioner till FAQ-sektioner på svenska. Inga platshållare.",
+    "faq_intro_user": "Skriv 2-3 korta meningar som introducerar FAQ-sektionen om tid i {city_name}. Förklara kort vad användare kan hitta svar på (tidszon, tidsskillnad, praktiska tips). Ton: Hjälpsam och direkt. Max 50 ord. INGA platshållare."
   },
   "templates": {
     "continent_h1": "Aktuell tid i länder och städer i %s",

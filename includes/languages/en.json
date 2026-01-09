@@ -59,7 +59,9 @@
     "yoast_title_system": "You are an SEO expert writing meta titles in English.",
     "yoast_title_user": "Write an SEO meta title (50-60 characters) for a page about what time it is in {location_name_local}.",
     "yoast_desc_system": "You are an SEO expert writing meta descriptions in English.",
-    "yoast_desc_user": "Write an SEO meta description (140-160 characters) for a page about what time it is in {location_name_local}."
+    "yoast_desc_user": "Write an SEO meta description (140-160 characters) for a page about what time it is in {location_name_local}.",
+    "faq_intro_system": "You write short, helpful introductions to FAQ sections in English. No placeholders.",
+    "faq_intro_user": "Write 2-3 short sentences introducing the FAQ section about time in {city_name}. Briefly explain what users can find answers to (timezone, time difference, practical tips). Tone: Helpful and direct. Max 50 words. NO placeholders."
   },
   "templates": {
     "continent_h1": "Current time in countries and cities in %s",

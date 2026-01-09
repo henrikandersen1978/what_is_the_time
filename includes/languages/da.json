@@ -59,7 +59,9 @@
     "yoast_title_system": "Du er en SEO ekspert der skriver meta titles på dansk.",
     "yoast_title_user": "Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i {location_name_local}.",
     "yoast_desc_system": "Du er en SEO ekspert der skriver meta descriptions på dansk.",
-    "yoast_desc_user": "Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}."
+    "yoast_desc_user": "Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.",
+    "faq_intro_system": "Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.",
+    "faq_intro_user": "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders."
   },
   "templates": {
     "continent_h1": "Aktuel tid i lande og byer i %s",
