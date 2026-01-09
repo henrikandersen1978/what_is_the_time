@@ -21,6 +21,53 @@ class WTA_Single_Structure_Processor {
 	private static $admin_user_id = null;
 
 	/**
+	 * Cached language templates.
+	 *
+	 * @since    3.2.0
+	 * @var      array|null
+	 */
+	private static $templates_cache = null;
+
+	/**
+	 * Get language template string.
+	 *
+	 * @since    3.2.0
+	 * @param    string $key Template key (e.g., 'continent_h1', 'city_title')
+	 * @return   string Template string with %s placeholders
+	 */
+	private static function get_template( $key ) {
+		// Load templates once
+		if ( self::$templates_cache === null ) {
+			$lang = get_option( 'wta_site_language', 'da' );
+			$json_file = plugin_dir_path( dirname( __FILE__ ) ) . 'languages/' . $lang . '.json';
+			
+			if ( file_exists( $json_file ) ) {
+				$json_content = file_get_contents( $json_file );
+				$data = json_decode( $json_content, true );
+				
+				if ( isset( $data['templates'] ) ) {
+					self::$templates_cache = $data['templates'];
+				}
+			}
+			
+			// Fallback to Danish templates if loading fails
+			if ( empty( self::$templates_cache ) ) {
+				self::$templates_cache = array(
+					'continent_h1'    => 'Aktuel tid i lande og byer i %s',
+					'continent_title' => 'Hvad er klokken i %s? Tidszoner og aktuel tid',
+					'country_h1'      => 'Aktuel tid i byer i %s',
+					'country_title'   => 'Hvad er klokken i %s?',
+					'city_h1'         => 'Aktuel tid i %s, %s',
+					'city_title'      => 'Hvad er klokken i %s, %s?',
+					'faq_intro'       => 'Her finder du svar på de mest almindelige spørgsmål om tid i %s.',
+				);
+			}
+		}
+		
+		return isset( self::$templates_cache[ $key ] ) ? self::$templates_cache[ $key ] : '';
+	}
+
+	/**
 	 * Create continent post.
 	 *
 	 * @since    3.0.43
@@ -76,10 +123,10 @@ class WTA_Single_Structure_Processor {
 			update_post_meta( $post_id, 'wta_ai_status', 'pending' );
 			
 			// SEO metadata
-			$seo_h1 = sprintf( 'Aktuel tid i lande og byer i %s', $data['name_local'] );
+			$seo_h1 = sprintf( self::get_template( 'continent_h1' ), $data['name_local'] );
 			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 			
-			$yoast_title = sprintf( 'Hvad er klokken i %s? Tidszoner og aktuel tid', $data['name_local'] );
+			$yoast_title = sprintf( self::get_template( 'continent_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 			// Schedule AI content generation
@@ -240,10 +287,10 @@ class WTA_Single_Structure_Processor {
 			}
 
 			// SEO metadata
-			$seo_h1 = sprintf( 'Aktuel tid i byer i %s', $data['name_local'] );
+			$seo_h1 = sprintf( self::get_template( 'country_h1' ), $data['name_local'] );
 			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 			
-			$yoast_title = sprintf( 'Hvad er klokken i %s?', $data['name_local'] );
+			$yoast_title = sprintf( self::get_template( 'country_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
 			// Schedule AI content generation
@@ -435,10 +482,10 @@ class WTA_Single_Structure_Processor {
 		
 		// SEO metadata (still add this even when waiting)
 		$parent_country_name = get_post_field( 'post_title', $parent_id );
-		$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
+		$seo_h1 = sprintf( self::get_template( 'city_h1' ), $data['name_local'], $parent_country_name );
 		update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 		
-		$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+		$seo_title = sprintf( self::get_template( 'city_title' ), $data['name_local'], $parent_country_name );
 		update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 		
 		$execution_time = round( microtime( true ) - $start_time, 3 );
@@ -502,10 +549,10 @@ class WTA_Single_Structure_Processor {
 
 			// SEO metadata
 			$parent_country_name = get_post_field( 'post_title', $parent_id );
-			$seo_h1 = sprintf( 'Aktuel tid i %s, %s', $data['name_local'], $parent_country_name );
+			$seo_h1 = sprintf( self::get_template( 'city_h1' ), $data['name_local'], $parent_country_name );
 			update_post_meta( $post_id, '_pilanto_page_h1', $seo_h1 );
 			
-			$seo_title = sprintf( 'Hvad er klokken i %s, %s?', $data['name_local'], $parent_country_name );
+			$seo_title = sprintf( self::get_template( 'city_title' ), $data['name_local'], $parent_country_name );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );

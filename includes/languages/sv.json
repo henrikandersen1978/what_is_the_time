@@ -61,6 +61,15 @@
     "yoast_desc_system": "Du är en SEO-expert som skriver meta-beskrivningar på svenska.",
     "yoast_desc_user": "Skriv en SEO meta-beskrivning (140-160 tecken) för en sida om vad klockan är i {location_name_local}."
   },
+  "templates": {
+    "continent_h1": "Aktuell tid i länder och städer i %s",
+    "continent_title": "Vad är klockan i %s? Tidszoner och aktuell tid",
+    "country_h1": "Aktuell tid i städer i %s",
+    "country_title": "Vad är klockan i %s?",
+    "city_h1": "Aktuell tid i %s, %s",
+    "city_title": "Vad är klockan i %s, %s?",
+    "faq_intro": "Här hittar du svar på de vanligaste frågorna om tid i %s. Vi täcker allt från aktuell tid och tidszon till praktiska resetips och tidsskillnad till Sverige. Scrolla genom frågorna nedan för att hitta precis det du söker."
+  },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",
     "faq1_answer": "Klockan i {city_name} är <strong id=\"faq-live-time\">{current_time}</strong>. Staden ligger i tidszonen {timezone}{utc_offset}.",

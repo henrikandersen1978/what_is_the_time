@@ -61,6 +61,15 @@
     "yoast_desc_system": "Sie sind ein SEO-Experte, der Meta-Beschreibungen auf Deutsch schreibt.",
     "yoast_desc_user": "Schreiben Sie eine SEO-Meta-Beschreibung (140-160 Zeichen) für eine Seite darüber, wie spät es in {location_name_local} ist."
   },
+  "templates": {
+    "continent_h1": "Aktuelle Uhrzeit in Ländern und Städten in %s",
+    "continent_title": "Wie spät ist es in %s? Zeitzonen und aktuelle Zeit",
+    "country_h1": "Aktuelle Uhrzeit in Städten in %s",
+    "country_title": "Wie spät ist es in %s?",
+    "city_h1": "Aktuelle Uhrzeit in %s, %s",
+    "city_title": "Wie spät ist es in %s, %s?",
+    "faq_intro": "Hier finden Sie Antworten auf die häufigsten Fragen über die Uhrzeit in %s. Wir decken alles ab, von der aktuellen Uhrzeit und Zeitzone bis hin zu praktischen Reisetipps und Zeitunterschied zu Deutschland. Scrollen Sie durch die Fragen unten, um genau das zu finden, was Sie suchen."
+  },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",
     "faq1_answer": "Die Uhrzeit in {city_name} ist <strong id=\"faq-live-time\">{current_time}</strong>. Die Stadt liegt in der Zeitzone {timezone}{utc_offset}.",

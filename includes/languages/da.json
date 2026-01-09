@@ -61,6 +61,15 @@
     "yoast_desc_system": "Du er en SEO ekspert der skriver meta descriptions på dansk.",
     "yoast_desc_user": "Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}."
   },
+  "templates": {
+    "continent_h1": "Aktuel tid i lande og byer i %s",
+    "continent_title": "Hvad er klokken i %s? Tidszoner og aktuel tid",
+    "country_h1": "Aktuel tid i byer i %s",
+    "country_title": "Hvad er klokken i %s?",
+    "city_h1": "Aktuel tid i %s, %s",
+    "city_title": "Hvad er klokken i %s, %s?",
+    "faq_intro": "Her finder du svar på de mest almindelige spørgsmål om tid i %s. Vi dækker alt fra aktuel tid og tidszone til praktiske rejsetips og tidsforskel til Danmark. Scroll gennem spørgsmålene nedenfor for at finde præcis det du søger."
+  },
   "faq": {
     "faq1_question": "Hvad er klokken i {city_name} lige nu?",
     "faq1_answer": "Klokken i {city_name} er <strong id=\"faq-live-time\">{current_time}</strong>. Byen ligger i tidszonen {timezone}{utc_offset}.",

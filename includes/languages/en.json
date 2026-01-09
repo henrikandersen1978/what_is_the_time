@@ -61,6 +61,15 @@
     "yoast_desc_system": "You are an SEO expert writing meta descriptions in English.",
     "yoast_desc_user": "Write an SEO meta description (140-160 characters) for a page about what time it is in {location_name_local}."
   },
+  "templates": {
+    "continent_h1": "Current time in countries and cities in %s",
+    "continent_title": "What time is it in %s? Time zones and current time",
+    "country_h1": "Current time in cities in %s",
+    "country_title": "What time is it in %s?",
+    "city_h1": "Current time in %s, %s",
+    "city_title": "What time is it in %s, %s?",
+    "faq_intro": "Here you will find answers to the most common questions about time in %s. We cover everything from current time and timezone to practical travel tips and time difference to the UK. Scroll through the questions below to find exactly what you're looking for."
+  },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",
     "faq1_answer": "The time in {city_name} is <strong id=\"faq-live-time\">{current_time}</strong>. The city is in the {timezone} timezone{utc_offset}.",
