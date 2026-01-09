@@ -61,7 +61,9 @@
     "yoast_desc_system": "You are an SEO expert writing meta descriptions in English.",
     "yoast_desc_user": "Write an SEO meta description (140-160 characters) for a page about what time it is in {location_name_local}.",
     "faq_intro_system": "You write short, helpful introductions to FAQ sections in English. No placeholders.",
-    "faq_intro_user": "Write 2-3 short sentences introducing the FAQ section about time in {city_name}. Briefly explain what users can find answers to (timezone, time difference, practical tips). Tone: Helpful and direct. Max 50 words. NO placeholders."
+    "faq_intro_user": "Write 2-3 short sentences introducing the FAQ section about time in {city_name}. Briefly explain what users can find answers to (timezone, time difference, practical tips). Tone: Helpful and direct. Max 50 words. NO placeholders.",
+    "faq_ai_batch_system": "You are an expert at writing FAQ answers in English. Answers should be practical and helpful. NO placeholders. Return ONLY pure JSON, no markdown code blocks.",
+    "faq_ai_batch_user": "Write FAQ answers for {city_name}, {country_name}.\\n\\nFAQ 1: When should I call {city_name} from the UK?\\nTime difference: {diff_hours} hours. Write 2-3 practical sentences (max 60 words).\\n\\nFAQ 2: What should I know about time culture in {city_name}?\\nWrite 2-3 sentences about working hours, meal times, local time customs (max 60 words).\\n\\nFAQ 3: How do I avoid jetlag to {city_name}?\\nTime difference: {diff_hours} hours. Write 2 jetlag tips (max 50 words).\\n\\nFAQ 4: What is the best time to visit {city_name}?\\nWrite 2 sentences about weather and tourist season (max 50 words).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nNO placeholders. ONLY actual content. NO markdown formatting."
   },
   "templates": {
     "continent_h1": "Current time in countries and cities in %s",

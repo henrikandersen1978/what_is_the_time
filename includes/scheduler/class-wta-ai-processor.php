@@ -745,11 +745,11 @@ if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
 	// This avoids duplicate work since Structure Processor already set it with language-aware template
 	
 	// 7. YOAST DESCRIPTION
-	$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
-	$yoast_desc_user = sprintf(
-		'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
-		$name_local
-	);
+	// v3.2.14: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
+	$yoast_desc_system = get_option( 'wta_prompt_yoast_desc_system', 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.' );
+	$yoast_desc_user = get_option( 'wta_prompt_yoast_desc_user', 'Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.' );
+	// Replace {location_name_local} placeholder
+	$yoast_desc_user = str_replace( '{location_name_local}', $name_local, $yoast_desc_user );
 	$batch_requests['yoast_desc'] = array(
 		'system'      => $yoast_desc_system,
 		'user'        => $yoast_desc_user,
@@ -934,11 +934,11 @@ if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
 	// This avoids duplicate work since Structure Processor already set it with language-aware template
 	
 	// 7. YOAST DESCRIPTION
-	$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.';
-	$yoast_desc_user = sprintf(
-		'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner. KUN beskrivelsen.',
-		$name_local
-	);
+	// v3.2.14: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
+	$yoast_desc_system = get_option( 'wta_prompt_yoast_desc_system', 'Du er SEO ekspert. Skriv KUN beskrivelsen, ingen citationstegn, ingen ekstra tekst.' );
+	$yoast_desc_user = get_option( 'wta_prompt_yoast_desc_user', 'Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.' );
+	// Replace {location_name_local} placeholder
+	$yoast_desc_user = str_replace( '{location_name_local}', $name_local, $yoast_desc_user );
 	$batch_requests['yoast_desc'] = array(
 		'system'      => $yoast_desc_system,
 		'user'        => $yoast_desc_user,

@@ -61,7 +61,9 @@
     "yoast_desc_system": "Du er en SEO ekspert der skriver meta descriptions på dansk.",
     "yoast_desc_user": "Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.",
     "faq_intro_system": "Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.",
-    "faq_intro_user": "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders."
+    "faq_intro_user": "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders.",
+    "faq_ai_batch_system": "Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.",
+    "faq_ai_batch_user": "Skriv FAQ svar for {city_name}, {country_name}.\\n\\nFAQ 1: Hvornår skal jeg ringe til {city_name} fra Danmark?\\nTidsforskel: {diff_hours} timer. Skriv 2-3 praktiske sætninger (max 60 ord).\\n\\nFAQ 2: Hvad skal jeg vide om tidskultur i {city_name}?\\nSkriv 2-3 sætninger om arbejdstider, måltider, lokale tidsvaner (max 60 ord).\\n\\nFAQ 3: Hvordan undgår jeg jetlag til {city_name}?\\nTidsforskel: {diff_hours} timer. Skriv 2 jetlag-tips (max 50 ord).\\n\\nFAQ 4: Hvad er bedste tidspunkt at besøge {city_name}?\\nSkriv 2 sætninger om vejr og turistsæson (max 50 ord).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nINGEN placeholders. KUN faktisk indhold. NO markdown formatting."
   },
   "templates": {
     "continent_h1": "Aktuel tid i lande og byer i %s",

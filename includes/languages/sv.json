@@ -61,7 +61,9 @@
     "yoast_desc_system": "Du är en SEO-expert som skriver meta-beskrivningar på svenska.",
     "yoast_desc_user": "Skriv en SEO meta-beskrivning (140-160 tecken) för en sida om vad klockan är i {location_name_local}.",
     "faq_intro_system": "Du skriver korta, hjälpsamma introduktioner till FAQ-sektioner på svenska. Inga platshållare.",
-    "faq_intro_user": "Skriv 2-3 korta meningar som introducerar FAQ-sektionen om tid i {city_name}. Förklara kort vad användare kan hitta svar på (tidszon, tidsskillnad, praktiska tips). Ton: Hjälpsam och direkt. Max 50 ord. INGA platshållare."
+    "faq_intro_user": "Skriv 2-3 korta meningar som introducerar FAQ-sektionen om tid i {city_name}. Förklara kort vad användare kan hitta svar på (tidszon, tidsskillnad, praktiska tips). Ton: Hjälpsam och direkt. Max 50 ord. INGA platshållare.",
+    "faq_ai_batch_system": "Du är expert på att skriva FAQ-svar på svenska. Svar ska vara praktiska och hjälpsamma. INGA platshållare. Return ONLY pure JSON, no markdown code blocks.",
+    "faq_ai_batch_user": "Skriv FAQ-svar för {city_name}, {country_name}.\\n\\nFAQ 1: När ska jag ringa till {city_name} från Sverige?\\nTidsskillnad: {diff_hours} timmar. Skriv 2-3 praktiska meningar (max 60 ord).\\n\\nFAQ 2: Vad ska jag veta om tidskultur i {city_name}?\\nSkriv 2-3 meningar om arbetstider, måltider, lokala tidsvanor (max 60 ord).\\n\\nFAQ 3: Hur undviker jag jetlag till {city_name}?\\nTidsskillnad: {diff_hours} timmar. Skriv 2 jetlag-tips (max 50 ord).\\n\\nFAQ 4: Vad är bästa tid att besöka {city_name}?\\nSkriv 2 meningar om väder och turistsäsong (max 50 ord).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nINGA platshållare. BARA faktiskt innehåll. NO markdown formatting."
   },
   "templates": {
     "continent_h1": "Aktuell tid i länder och städer i %s",

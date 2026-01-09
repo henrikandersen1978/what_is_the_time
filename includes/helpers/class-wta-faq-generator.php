@@ -541,37 +541,20 @@ class WTA_FAQ_Generator {
 			return array();
 		}
 		
-		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		
-		// Calculate time difference for context
-		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
-		
-	// Batched prompt for all 4 AI FAQ (v3.0.68: Improved prompt for clean JSON)
-	$system = 'Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.';
-	$user = "Skriv FAQ svar for {$city_name}, {$country_name}.
-
-FAQ 1: Hvornår skal jeg ringe til {$city_name} fra Danmark?
-Tidsforskel: {$diff_hours} timer. Skriv 2-3 praktiske sætninger (max 60 ord).
-
-FAQ 2: Hvad skal jeg vide om tidskultur i {$city_name}?
-Skriv 2-3 sætninger om arbejdstider, måltider, lokale tidsvaner (max 60 ord).
-
-FAQ 3: Hvordan undgår jeg jetlag til {$city_name}?
-Tidsforskel: {$diff_hours} timer. Skriv 2 jetlag-tips (max 50 ord).
-
-FAQ 4: Hvad er bedste rejsetidspunkt til {$city_name}?
-Skriv 2 sætninger om vejr og turistsæson (max 50 ord).
-
-IMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:
-{
-  \"faq1\": \"...\",
-  \"faq2\": \"...\",
-  \"faq3\": \"...\",
-  \"faq4\": \"...\"
-}
-
-INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
-		
+	$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+	
+	// Calculate time difference for context
+	$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+	
+	// v3.2.14: Use language-aware prompts from JSON (loaded via "Load Default Prompts")
+	$system = get_option( 'wta_prompt_faq_ai_batch_system', 'Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.' );
+	$user = get_option( 'wta_prompt_faq_ai_batch_user', 'Skriv FAQ svar for {city_name}, {country_name}...' );
+	
+	// Replace placeholders
+	$user = str_replace( '{city_name}', $city_name, $user );
+	$user = str_replace( '{country_name}', $country_name, $user );
+	$user = str_replace( '{diff_hours}', $diff_hours, $user );
+	
 	$response = self::call_openai_simple( $api_key, $model, $system, $user, 500 );
 	
 	if ( false === $response || empty( $response ) ) {
@@ -590,28 +573,29 @@ INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 		return array();
 	}
 		
-		return array(
-			array(
-				'question' => "Hvornår skal jeg ringe til {$city_name} fra Danmark?",
-				'answer'   => $json_data['faq1'],
-				'icon'     => '📞',
-			),
-			array(
-				'question' => "Hvad skal jeg vide om tidskultur i {$city_name}?",
-				'answer'   => $json_data['faq2'],
-				'icon'     => '🕐',
-			),
-			array(
-				'question' => "Hvordan undgår jeg jetlag til {$city_name}?",
-				'answer'   => $json_data['faq3'],
-				'icon'     => '🌐',
-			),
-			array(
-				'question' => "Hvad er bedste tidspunkt at besøge {$city_name}?",
-				'answer'   => $json_data['faq4'],
-				'icon'     => '✈️',
-			),
-		);
+	// v3.2.14: Use language-aware questions from FAQ strings
+	return array(
+		array(
+			'question' => self::get_faq_text( 'faq9_question', array( 'city_name' => $city_name ) ),
+			'answer'   => $json_data['faq1'],
+			'icon'     => '📞',
+		),
+		array(
+			'question' => self::get_faq_text( 'faq10_question', array( 'city_name' => $city_name ) ),
+			'answer'   => $json_data['faq2'],
+			'icon'     => '🕐',
+		),
+		array(
+			'question' => self::get_faq_text( 'faq11_question', array( 'city_name' => $city_name ) ),
+			'answer'   => $json_data['faq3'],
+			'icon'     => '🌐',
+		),
+		array(
+			'question' => self::get_faq_text( 'faq12_question', array( 'city_name' => $city_name ) ),
+			'answer'   => $json_data['faq4'],
+			'icon'     => '✈️',
+		),
+	);
 	}
 
 	/**

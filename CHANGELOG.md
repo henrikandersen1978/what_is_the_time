@@ -2,6 +2,180 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.14] - 2026-01-09
+
+### 🔥 CRITICAL FIX - 2 More Hardcoded Danish AI Prompts!
+
+**USER REPORT:**
+"Meta description på dansk for både land og bysider. De sidste 4 faq elementer er nu danske igen."
+
+**ROOT CAUSE DISCOVERED:**
+
+v3.2.13 fixede FAQ intro prompts, men der var STADIG 2 HARDCODED DANSKE PROMPTS:
+
+---
+
+### **1. FAQ #9-#12 AI BATCH PROMPTS**
+
+**BEFORE v3.2.14 - PROBLEM:**
+
+```php
+// class-wta-faq-generator.php, linje 550-573 + 595-610
+$system = 'Du er ekspert i at skrive FAQ svar på dansk...'; // ❌ HARDCODED!
+$user = "Skriv FAQ svar for {$city_name}, {$country_name}.
+
+FAQ 1: Hvornår skal jeg ringe til {$city_name} fra Danmark?  // ❌ HARDCODED DANSK!
+FAQ 2: Hvad skal jeg vide om tidskultur i {$city_name}?       // ❌ HARDCODED DANSK!
+FAQ 3: Hvordan undgår jeg jetlag til {$city_name}?           // ❌ HARDCODED DANSK!
+FAQ 4: Hvad er bedste tidspunkt at besøge {$city_name}?      // ❌ HARDCODED DANSK!
+...";
+
+return array(
+    array( 'question' => "Hvornår skal jeg ringe til {$city_name} fra Danmark?", ...), // ❌ HARDCODED!
+    array( 'question' => "Hvad skal jeg vide om tidskultur i {$city_name}?", ...),     // ❌ HARDCODED!
+    array( 'question' => "Hvordan undgår jeg jetlag til {$city_name}?", ...),          // ❌ HARDCODED!
+    array( 'question' => "Hvad er bedste tidspunkt at besøge {$city_name}?", ...),     // ❌ HARDCODED!
+);
+```
+
+**AFTER v3.2.14 - FIXED:**
+
+```php
+// v3.2.14: Use language-aware prompts from JSON
+$system = get_option( 'wta_prompt_faq_ai_batch_system', '...' );
+$user = get_option( 'wta_prompt_faq_ai_batch_user', '...' );
+
+// Replace placeholders
+$user = str_replace( '{city_name}', $city_name, $user );
+$user = str_replace( '{country_name}', $country_name, $user );
+$user = str_replace( '{diff_hours}', $diff_hours, $user );
+
+// Questions now use get_faq_text()
+return array(
+    array( 'question' => self::get_faq_text( 'faq9_question', ... ), ...),
+    array( 'question' => self::get_faq_text( 'faq10_question', ... ), ...),
+    array( 'question' => self::get_faq_text( 'faq11_question', ... ), ...),
+    array( 'question' => self::get_faq_text( 'faq12_question', ... ), ...),
+);
+```
+
+**Nye prompts tilføjet til JSON:**
+- `prompts.faq_ai_batch_system` - System prompt for batch FAQ generation
+- `prompts.faq_ai_batch_user` - User prompt with {city_name}, {country_name}, {diff_hours} placeholders
+
+**TRANSLATIONS:**
+- **Danish:** "Du er ekspert i at skrive FAQ svar på dansk..."
+- **Swedish:** "Du är expert på att skriva FAQ-svar på svenska..."
+- **English:** "You are an expert at writing FAQ answers in English..."
+- **German:** "Sie sind Experte im Schreiben von FAQ-Antworten auf Deutsch..."
+
+---
+
+### **2. META DESCRIPTION PROMPTS (Country + City Batch)**
+
+**BEFORE v3.2.14 - PROBLEM:**
+
+```php
+// class-wta-ai-processor.php, linje 748-749 (country) + 937-938 (city)
+$yoast_desc_system = 'Du er SEO ekspert. Skriv KUN beskrivelsen...'; // ❌ HARDCODED DANSK!
+$yoast_desc_user = sprintf(
+    'Skriv en SEO meta description (140-160 tegn) om hvad klokken er i %s og tidszoner...',  // ❌ HARDCODED DANSK!
+    $name_local
+);
+```
+
+**Problem:** Disse prompts blev brugt i country og city BATCH generation. Continents brugte allerede language-aware prompts (fra v3.2.4), men countries og cities havde STADIG hardcoded dansk!
+
+**AFTER v3.2.14 - FIXED:**
+
+```php
+// v3.2.14: Use language-aware prompts from JSON
+$yoast_desc_system = get_option( 'wta_prompt_yoast_desc_system', 'Du er SEO ekspert...' );
+$yoast_desc_user = get_option( 'wta_prompt_yoast_desc_user', 'Skriv en SEO meta description (140-160 tegn) for en side om hvad klokken er i {location_name_local}.' );
+
+// Replace {location_name_local} placeholder
+$yoast_desc_user = str_replace( '{location_name_local}', $name_local, $yoast_desc_user );
+```
+
+**Prompts var ALLEREDE i JSON siden v3.2.0:**
+- `prompts.yoast_desc_system` - System prompt for meta descriptions
+- `prompts.yoast_desc_user` - User prompt with {location_name_local} placeholder
+
+Men de blev IKKE brugt i country/city batch generation før v3.2.14!
+
+---
+
+### **📋 FILES MODIFIED:**
+
+**JSON Files (alle 4):**
+1. `includes/languages/da.json` - Added `faq_ai_batch_system` + `faq_ai_batch_user`
+2. `includes/languages/en.json` - Added `faq_ai_batch_system` + `faq_ai_batch_user`
+3. `includes/languages/sv.json` - Added `faq_ai_batch_system` + `faq_ai_batch_user`
+4. `includes/languages/de.json` - Added `faq_ai_batch_system` + `faq_ai_batch_user`
+
+**PHP Files:**
+5. `includes/helpers/class-wta-faq-generator.php`:
+   - Updated `generate_ai_faqs_batch()` to use language-aware prompts (linje ~544-556)
+   - Updated return array to use `get_faq_text()` for questions (linje ~593-614)
+
+6. `includes/scheduler/class-wta-ai-processor.php`:
+   - Country batch: Updated meta description prompts to use language-aware (linje ~747-759)
+   - City batch: Updated meta description prompts to use language-aware (linje ~936-948)
+
+---
+
+### **🎯 HOW TO FIX ON EXISTING SITES:**
+
+**CRITICAL:** Efter hver plugin update SKAL du:
+
+1. Gå til **WP Admin → World Time AI → Language/Base Settings**
+2. Klik **"Load Default Prompts for [SPROG]"** (fx "Load Default Prompts for SV")
+3. Dette loader ALLE de nyeste prompts og templates fra JSON filen
+4. Vent 3-5 sekunder til siden reloader
+5. Verificer at prompts er updated under **WP Admin → World Time AI → Prompts**
+6. **VIGTIGT:** Re-process ALLE posts for at få nye meta descriptions!
+   - Slet alle posts (eller brug bulk delete)
+   - Re-import data
+
+**Hvorfor re-process?**
+- Meta descriptions er ALLEREDE genereret med danske prompts
+- De er gemt i databasen (`_yoast_wpseo_metadesc`)
+- Kun re-processing vil regenerere dem med svenske prompts
+
+---
+
+### **✅ VERIFICATION CHECKLIST:**
+
+Efter du har loaded sv.json OG re-processed:
+- [ ] Meta descriptions på svensk (BÅDE lande og byer)
+- [ ] FAQ #9-#12 spørgsmål på svensk
+- [ ] FAQ #9-#12 svar på svensk (AI-generated)
+- [ ] FAQ intro på svensk (fixed i v3.2.13)
+- [ ] FAQ #1-#8 på svensk (fixed i v3.2.6-v3.2.7)
+- [ ] Title tags på svensk (fixed i v3.2.11)
+
+---
+
+### **📊 HARDCODED DANSK PROMPTS - COMPLETE AUDIT:**
+
+**v3.2.0-v3.2.12:**
+- ❌ FAQ intro prompts (fixed v3.2.13)
+- ❌ FAQ #9-#12 AI batch prompts (fixed v3.2.14)
+- ❌ FAQ #9-#12 questions (fixed v3.2.14)
+- ❌ Meta description prompts for countries (fixed v3.2.14)
+- ❌ Meta description prompts for cities (fixed v3.2.14)
+
+**v3.2.14:**
+- ✅ ALL AI prompts now language-aware!
+- ✅ ALL templates now language-aware!
+- ✅ ALL frontend strings now language-aware!
+
+---
+
+**VERSION:** 3.2.14
+
+**NEXT:** v3.2.15 will audit for ANY remaining hardcoded strings (unlikely!)
+
 ## [3.2.13] - 2026-01-09
 
 ### 🐛 CRITICAL FIX - Hardcoded Danish AI Prompts
