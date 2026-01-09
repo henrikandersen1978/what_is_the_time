@@ -2,6 +2,186 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.21] - 2026-01-09
+
+### 🐛 FIX - DST Time Display Escaping Issue
+
+**USER DISCOVERY:**
+"Tror det virker, men vi har et problem med visningen af dato ved den røde pil (både på lande og byer)"
+
+**Screenshot viste:** "Sommartid börjar: söndag 29 mars 2026 **\kl.** 01:00"
+
+---
+
+## **PROBLEMET:**
+
+På DST (sommartid/vintertid) visning stod der:
+- ❌ "**\kl.** 01:00" (escaped backslash synlig!)
+- ✅ Burde være: "**kl.** 01:00" (svensk for "klokken")
+
+---
+
+## **ROOT CAUSE:**
+
+```php
+// includes/frontend/class-wta-template-loader.php (linje 249)
+
+$next_dst_text = sprintf(
+    '%s: %s \k\l. %s',  // ← PROBLEMET!
+    $change_type,
+    date_i18n( $date_format, $next_transition['ts'] ),
+    date_i18n( 'H:i', $next_transition['ts'] )
+);
+```
+
+**HVORFOR `\k\l.`?**
+- PHP's `date()` funktion bruger 'k' og 'l' som format characters
+- Vi escaped dem med backslash for at få literal "kl."
+- **MEN:** Efter escaping + `esc_html()` blev det til "\kl." i output! ❌
+
+**HVORFOR IKKE OPDAGET FØR?**
+- Kun synligt i DST-visningen (sommartid/vintertid skift)
+- Kun visible ~6 måneder af året (når næste DST skift er indenfor 180 dage)
+- Dansk site havde samme problem! (men ikke rapporteret endnu)
+
+---
+
+## ✅ **LØSNINGEN:**
+
+### **Tilføjet sprog-specifik template:**
+
+**JSON filer (alle 4 sprog):**
+```json
+// includes/languages/sv.json
+{
+  "templates": {
+    "date_format": "l j F Y",
+    "time_at": "kl.",  // ← NY! Svensk
+    // ...
+  }
+}
+
+// includes/languages/da.json
+"time_at": "kl.",  // ← Dansk
+
+// includes/languages/en.json
+"time_at": "at",   // ← Engelsk ("at 01:00")
+
+// includes/languages/de.json
+"time_at": "um",   // ← Tysk ("um 01:00")
+```
+
+### **PHP Code Fix:**
+
+```php
+// includes/frontend/class-wta-template-loader.php (linje ~247-255)
+
+$change_type = $dst_active ? 
+    ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : 
+    ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
+    
+$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';
+
+// v3.2.21: Use language-aware template for "kl." / "at" / "um"
+$time_at = self::get_template( 'time_at' ) ?: 'kl.';
+
+$next_dst_text = sprintf(
+    '%s: %s %s %s',  // ← NY FORMAT! No escaping needed
+    $change_type,
+    date_i18n( $date_format, $next_transition['ts'] ),
+    $time_at,  // ← Sprog-specifik!
+    date_i18n( 'H:i', $next_transition['ts'] )
+);
+```
+
+---
+
+## 📊 **BEFORE vs AFTER:**
+
+### **BEFORE v3.2.21 (broken):**
+```
+🇸🇪 Svensk: "Sommartid börjar: söndag 29 mars 2026 \kl. 01:00" ❌
+🇩🇰 Dansk:   "Sommertid starter: søndag den 29. marts 2026 \kl. 01:00" ❌
+🇬🇧 Engelsk: "DST starts: Sunday, March 29th, 2026 \kl. 01:00" ❌ (forkert ord!)
+🇩🇪 Tysk:    "Sommerzeit beginnt: Sonntag, 29. März 2026 \kl. 01:00" ❌ (forkert ord!)
+```
+
+### **AFTER v3.2.21 (fixed):**
+```
+🇸🇪 Svensk: "Sommartid börjar: söndag 29 mars 2026 kl. 01:00" ✅
+🇩🇰 Dansk:   "Sommertid starter: søndag den 29. marts 2026 kl. 01:00" ✅
+🇬🇧 Engelsk: "DST starts: Sunday, March 29th, 2026 at 01:00" ✅
+🇩🇪 Tysk:    "Sommerzeit beginnt: Sonntag, 29. März 2026 um 01:00" ✅
+```
+
+**Perfekt sprog-aware formatering! 🎯**
+
+---
+
+## 📋 **FILES MODIFIED:**
+
+**JSON Language Packs:**
+1. `includes/languages/sv.json` - Added `"time_at": "kl."`
+2. `includes/languages/da.json` - Added `"time_at": "kl."`
+3. `includes/languages/en.json` - Added `"time_at": "at"`
+4. `includes/languages/de.json` - Added `"time_at": "um"`
+
+**PHP Code:**
+5. `includes/frontend/class-wta-template-loader.php`:
+   - Added `$time_at = self::get_template( 'time_at' ) ?: 'kl.';` (linje ~249)
+   - Changed format from `'%s: %s \k\l. %s'` to `'%s: %s %s %s'` (linje ~250-255)
+
+**Version:**
+6. `time-zone-clock.php` - Version 3.2.21
+
+---
+
+## 🚀 **DEPLOYMENT:**
+
+**FOR SVENSK SITE:**
+1. ✅ Installer v3.2.21
+2. ✅ Klik "Load Default Prompts for SV" (for at loade `time_at` template!)
+3. ✅ **INGEN re-import nødvendig!** (kun template opdatering)
+4. ✅ Refresh en bylandingsside → DST tekst fixed!
+
+**FOR DANSK SITE:**
+1. ✅ Installer v3.2.21
+2. ✅ Klik "Load Default Prompts for DA" (hvis ikke allerede gjort)
+3. ✅ DST tekst fixed!
+
+---
+
+## 💡 **HVORNÅR ER DETTE SYNLIGT?**
+
+DST-visningen vises kun når:
+- ✅ Næste DST skift er indenfor 180 dage
+- ✅ Location bruger sommartid/vintertid (ikke alle gør!)
+
+**I Sverige:**
+- Sommartid starter: Sidste søndag i marts kl. 02:00 → 03:00
+- Vintertid starter: Sidste søndag i oktober kl. 03:00 → 02:00
+
+**Synligt nu (januar 2026):**
+- ✅ Vinter → "Sommartid börjar: söndag 29 mars 2026 kl. 01:00" ✅
+
+---
+
+## 🎯 **KONKLUSION:**
+
+**LILLE FIX, STOR VISUELL FORSKEL!**
+- ✅ Fjernet escaping artifact (`\kl.` → `kl.`)
+- ✅ Sprog-aware formatering (kl./at/um)
+- ✅ Gælder alle sprog og alle locations
+- ✅ Ingen re-import nødvendig!
+
+**Perfekt polish til multilingual sites! ✨**
+
+---
+
+**VERSION:** 3.2.21
+
+**REMINDER:** Klik "Load Default Prompts" efter installation for at loade nye templates!
+
 ## [3.2.20] - 2026-01-09
 
 ### 🚨 CRITICAL FIX - Auto GeoNames Pre-Cache for Multilingual Sites

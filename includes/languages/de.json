@@ -182,6 +182,7 @@
     "regional_centres_intro": "Erkunden Sie größere Städte verteilt über ganz %s.",
     "nearby_countries_empty": "Es gibt noch keine anderen Länder in der Datenbank.",
     "date_format": "l, j. F Y",
+    "time_at": "um",
     "schema_time_city": "Aktuelle Uhrzeit und Zeitzone für %s",
     "schema_time_city_country": "Aktuelle Uhrzeit und Zeitzone für %s, %s",
     "schema_time_continent": "Zeitzonen und aktuelle Uhrzeit in %s"

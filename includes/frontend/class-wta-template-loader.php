@@ -243,14 +243,17 @@ class WTA_Template_Loader {
 				
 				// Next transition
 				$next_transition = $transitions[1];
-			$change_type = $dst_active ? ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
-			$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';
-			$next_dst_text = sprintf(
-				'%s: %s \k\l. %s',
-				$change_type,
-				date_i18n( $date_format, $next_transition['ts'] ),
-				date_i18n( 'H:i', $next_transition['ts'] )
-			);
+		$change_type = $dst_active ? ( self::get_template( 'standard_time_starts' ) ?: 'Vintertid starter' ) : ( self::get_template( 'dst_starts' ) ?: 'Sommertid starter' );
+		$date_format = self::get_template( 'date_format' ) ?: 'l \\d\\e\\n j. F Y';
+		// v3.2.21: Use language-aware template for "kl." / "at" / "um" instead of escaped \k\l.
+		$time_at = self::get_template( 'time_at' ) ?: 'kl.';
+		$next_dst_text = sprintf(
+			'%s: %s %s %s',
+			$change_type,
+			date_i18n( $date_format, $next_transition['ts'] ),
+			$time_at,
+			date_i18n( 'H:i', $next_transition['ts'] )
+		);
 			}
 		} catch ( Exception $e ) {
 			// Ignore if DST info not available

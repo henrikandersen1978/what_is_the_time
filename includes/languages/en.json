@@ -182,6 +182,7 @@
     "regional_centres_intro": "Explore major cities spread across %s.",
     "nearby_countries_empty": "There are no other countries in the database yet.",
     "date_format": "l, F jS, Y",
+    "time_at": "at",
     "schema_time_city": "Current time and timezone for %s",
     "schema_time_city_country": "Current time and timezone for %s, %s",
     "schema_time_continent": "Timezones and current time in %s"
