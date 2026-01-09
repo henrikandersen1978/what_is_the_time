@@ -118,18 +118,61 @@ class WTA_GeoNames_Translator {
 		$elapsed = round( microtime( true ) - $start_time, 2 );
 		$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
 
-		WTA_Logger::info( 'Finished parsing alternateNamesV2.txt', array(
-			'language'        => $lang,
+	// v3.2.23: Validate parsing results BEFORE caching
+	if ( $matched_count === 0 ) {
+		WTA_Logger::error( 'FATAL: No translations found in alternateNamesV2.txt!', array(
+			'language' => $lang,
 			'lines_processed' => number_format( $line_count ),
-			'translations'    => number_format( $matched_count ),
-			'elapsed_seconds' => $elapsed,
-			'memory_mb'       => $memory_mb,
+			'file_size' => size_format( filesize( $file_path ) ),
 		) );
+		return array(); // Return empty array = parsing failed
+	}
+	
+	if ( $matched_count < 1000 ) {
+		WTA_Logger::warning( 'Very few translations found - file may be corrupted', array(
+			'language' => $lang,
+			'translations' => number_format( $matched_count ),
+			'expected' => '> 1000 for major languages',
+		) );
+	}
+	
+	WTA_Logger::info( 'Finished parsing alternateNamesV2.txt', array(
+		'language'        => $lang,
+		'lines_processed' => number_format( $line_count ),
+		'translations'    => number_format( $matched_count ),
+		'elapsed_seconds' => $elapsed,
+		'memory_mb'       => $memory_mb,
+	) );
 
-		// Cache for 24 hours
-		set_transient( $cache_key, $translations, 24 * HOUR_IN_SECONDS );
+	// Cache for 24 hours
+	$cache_set = set_transient( $cache_key, $translations, 24 * HOUR_IN_SECONDS );
+	
+	// v3.2.23: Verify transient was actually set (can fail if DB issue)
+	if ( ! $cache_set ) {
+		WTA_Logger::error( 'FATAL: Failed to set GeoNames transient cache!', array(
+			'cache_key' => $cache_key,
+			'translations' => count( $translations ),
+			'possible_causes' => array(
+				'Database write error',
+				'wp_options table locked',
+				'Insufficient disk space',
+			),
+		) );
+		return array(); // Return empty array = caching failed
+	}
+	
+	// Double-verify cache was set correctly
+	$verify_cache = get_transient( $cache_key );
+	if ( false === $verify_cache || count( $verify_cache ) !== count( $translations ) ) {
+		WTA_Logger::error( 'FATAL: GeoNames cache verification failed!', array(
+			'cache_key' => $cache_key,
+			'expected_count' => count( $translations ),
+			'actual_count' => $verify_cache ? count( $verify_cache ) : 0,
+		) );
+		return array(); // Return empty array = verification failed
+	}
 
-		return $translations;
+	return $translations;
 	}
 
 	/**
@@ -246,24 +289,39 @@ class WTA_GeoNames_Translator {
 			$lang_code = get_option( 'wta_base_language', 'da-DK' );
 		}
 
-		WTA_Logger::info( 'Preparing GeoNames translations for import', array(
+	WTA_Logger::info( 'Preparing GeoNames translations for import (may take 2-5 minutes)...', array(
+		'language' => $lang_code,
+		'file' => 'alternateNamesV2.txt (~745 MB)',
+	) );
+
+	// Parse and cache translations
+	$translations = self::parse_alternate_names( $lang_code );
+
+	// v3.2.23: Strict validation - empty array means parsing/caching FAILED
+	if ( empty( $translations ) ) {
+		WTA_Logger::error( 'FATAL: Failed to prepare GeoNames translations - import CANNOT proceed!', array(
 			'language' => $lang_code,
+			'result' => 'empty array',
 		) );
-
-		// Parse and cache translations
-		$translations = self::parse_alternate_names( $lang_code );
-
-		if ( empty( $translations ) ) {
-			WTA_Logger::error( 'Failed to prepare GeoNames translations' );
-			return false;
-		}
-
-		WTA_Logger::info( 'GeoNames translations ready for import', array(
-			'language'     => $lang_code,
+		return false;
+	}
+	
+	if ( count( $translations ) < 1000 ) {
+		WTA_Logger::warning( 'GeoNames translations seems incomplete', array(
+			'language' => $lang_code,
 			'translations' => count( $translations ),
+			'expected' => '> 1000 for major languages',
 		) );
+	}
 
-		return true;
+	WTA_Logger::info( 'GeoNames translations ready for import!', array(
+		'language'     => $lang_code,
+		'translations' => number_format( count( $translations ) ),
+		'cache_key'    => 'wta_geonames_translations_' . strtok( $lang_code, '-' ),
+		'expires'      => '24 hours',
+	) );
+
+	return true;
 	}
 }
 

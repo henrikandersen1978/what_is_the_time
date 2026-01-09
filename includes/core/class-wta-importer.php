@@ -59,15 +59,33 @@ class WTA_Importer {
 	$prepare_success = WTA_GeoNames_Translator::prepare_for_import( $lang_code );
 	
 	if ( ! $prepare_success ) {
-		WTA_Logger::error( 'Failed to prepare GeoNames translations - import may have issues with city names' );
-		// Don't abort - parsing will be attempted on-demand (but may timeout)
-	} else {
-		WTA_Logger::info( 'GeoNames translations ready for import!', array(
+		// v3.2.23: CRITICAL FIX - ABORT import if GeoNames parsing fails!
+		// Without translations, all cities get English names (copenhagen vs köpenhamn)
+		WTA_Logger::error( 'FATAL: GeoNames translations failed - ABORTING import to prevent incorrect city names!', array(
 			'language' => $lang_code,
-			'cache_key' => 'wta_geonames_translations_' . strtok( $lang_code, '-' ),
-			'expires' => '24 hours',
+			'file' => 'alternateNamesV2.txt',
+			'possible_causes' => array(
+				'File missing or corrupted',
+				'PHP timeout (needs 2-5 minutes)',
+				'Memory limit exceeded',
+				'Disk space issue',
+			),
+			'solution' => 'Fix issue, then click "Clear Translation Cache" and retry import',
 		) );
+		
+		return array(
+			'continents' => 0,
+			'countries' => 0,
+			'cities' => 0,
+			'error' => 'GeoNames translation parsing failed - import aborted',
+		);
 	}
+	
+	WTA_Logger::info( 'GeoNames translations ready for import!', array(
+		'language' => $lang_code,
+		'cache_key' => 'wta_geonames_translations_' . strtok( $lang_code, '-' ),
+		'expires' => '24 hours',
+	) );
 
 	$stats = array(
 		'continents' => 0,

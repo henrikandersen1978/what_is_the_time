@@ -2,6 +2,190 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.23] - 2026-01-09
+
+### 🐛 CRITICAL FIX - Abort Import If GeoNames Parsing Fails
+
+**USER DISCOVERY:**
+"Denne https://klockan-nu.se/europa/danmark/copenhagen/ kommer stadig forkert ind. Tjek venligst hvorfor."
+
+After v3.2.22 (which added cache clearing), user STILL got "copenhagen" instead of "köpenhamn"!
+
+Scheduled Actions showed: **"Copenhagen"** was being queued (not "Köpenhamn")!
+
+---
+
+## **PROBLEMET:**
+
+Even after v3.2.20 (GeoNames pre-cache) and v3.2.22 (cache clearing), cities STILL imported with English names!
+
+**ROOT CAUSE:**
+
+```php
+// includes/core/class-wta-importer.php (OLD linje 59-70)
+
+$prepare_success = WTA_GeoNames_Translator::prepare_for_import( $lang_code );
+
+if ( ! $prepare_success ) {
+    WTA_Logger::error( 'Failed to prepare GeoNames translations...' );
+    // Don't abort - parsing will be attempted on-demand (but may timeout) ← BAD!
+}
+
+// IMPORT FORTSÆTTER ALLIGEVEL! ❌
+// Linje 106: WTA_AI_Translator::translate( $continent, 'continent' );
+// → GeoNames cache EMPTY → fallback til engelsk!
+```
+
+**HVIS PARSING FEJLER** (timeout, file missing, memory limit), importeres ALT med engelske navne!
+
+**HVORFOR KAN PARSING FEJLE:**
+1. ❌ **File missing/corrupted:** `alternateNamesV2.txt` ikke uploadet eller skadet
+2. ❌ **PHP timeout:** Server max_execution_time < 300s (parsing tager 2-5 min)
+3. ❌ **Memory limit:** PHP memory_limit for lav til 745 MB fil
+4. ❌ **Database issue:** `set_transient()` fejler (disk full, table locked)
+5. ❌ **Incomplete parsing:** File læst, men ingen matches (sprog ikke i fil)
+
+---
+
+## **LØSNING:**
+
+### **1. ABORT IMPORT IF PARSING FAILS** (`class-wta-importer.php`):
+
+```php
+// v3.2.23: CRITICAL FIX - ABORT import if GeoNames parsing fails!
+if ( ! $prepare_success ) {
+    WTA_Logger::error( 'FATAL: GeoNames translations failed - ABORTING import!', array(
+        'language' => $lang_code,
+        'possible_causes' => array(
+            'File missing or corrupted',
+            'PHP timeout (needs 2-5 minutes)',
+            'Memory limit exceeded',
+            'Disk space issue',
+        ),
+        'solution' => 'Fix issue, then click "Clear Translation Cache" and retry import',
+    ) );
+    
+    return array(
+        'continents' => 0,
+        'countries' => 0,
+        'cities' => 0,
+        'error' => 'GeoNames translation parsing failed - import aborted',
+    );
+}
+```
+
+### **2. VALIDATE PARSING RESULTS** (`class-wta-geonames-translator.php`):
+
+```php
+// v3.2.23: Validate parsing results BEFORE caching
+if ( $matched_count === 0 ) {
+    WTA_Logger::error( 'FATAL: No translations found!', ... );
+    return array(); // = parsing failed
+}
+
+// Cache for 24 hours
+$cache_set = set_transient( $cache_key, $translations, 24 * HOUR_IN_SECONDS );
+
+// v3.2.23: Verify transient was actually set
+if ( ! $cache_set ) {
+    WTA_Logger::error( 'FATAL: Failed to set GeoNames transient!', ... );
+    return array(); // = caching failed
+}
+
+// Double-verify cache
+$verify_cache = get_transient( $cache_key );
+if ( false === $verify_cache || count( $verify_cache ) !== count( $translations ) ) {
+    WTA_Logger::error( 'FATAL: Cache verification failed!', ... );
+    return array(); // = verification failed
+}
+```
+
+### **3. BETTER ERROR MESSAGES**:
+
+Logs now show:
+- ✅ FATAL errors hvis parsing fejler
+- ✅ Possible causes (file, timeout, memory, disk)
+- ✅ Solution (fix + clear cache + retry)
+- ✅ Translation count validation (< 1000 = warning)
+- ✅ Cache set/verify status
+
+---
+
+## **RESULTAT:**
+
+```
+FØR v3.2.23: ❌
+1. GeoNames parsing fejler (timeout/file error)
+2. Import FORTSÆTTER alligevel
+3. Alle WTA_AI_Translator::translate() får tomt cache
+4. Fallback til engelsk: "Copenhagen" ❌
+
+EFTER v3.2.23: ✅
+1. GeoNames parsing fejler
+2. prepare_for_import() returnerer FALSE
+3. prepare_import() AFBRYDER med fejlbesked ✅
+4. INGEN posts oprettes (ingen engelske navne!) ✅
+5. User ser fejl i log
+6. User fikser problem (upload fil, øg timeout, etc.)
+7. User klikker "Clear Translation Cache"
+8. User retry import → SUCCESS! ✅
+```
+
+---
+
+## **TEST PROCEDURE:**
+
+### **SCENARIO 1: Normal import (success):**
+
+```
+1. Reset All Data (clears cache + posts)
+2. Load Default Prompts for SV
+3. Prepare Import Queue
+   └─ Log: "Pre-caching GeoNames translations..."
+   └─ Log: "1M lines processed..."
+   └─ Log: "GeoNames translations ready! (~50k translations)"
+4. Import starter → SVENSK navne! ✅
+   └─ "/europa/danmark/kopenhamn/" ✅
+```
+
+### **SCENARIO 2: Parsing fails (new behavior):**
+
+```
+1. Reset All Data
+2. Load Default Prompts for SV
+3. (SIMULATE FAILURE: rename alternateNamesV2.txt)
+4. Prepare Import Queue
+   └─ Log: "Pre-caching GeoNames translations..."
+   └─ Log: "FATAL: alternateNamesV2.txt not found!"
+   └─ Log: "FATAL: GeoNames translations failed - ABORTING import!"
+5. Import AFBRYDES ✅
+6. INGEN scheduled actions! ✅
+7. User ser fejl → fikser problem → retry ✅
+```
+
+---
+
+## **FILER ÆNDRET:**
+
+- `includes/core/class-wta-importer.php` (linje 59-86): Abort import if `prepare_for_import()` fails
+- `includes/helpers/class-wta-geonames-translator.php` (linje 121-174): Validate parsing results, verify cache set/read
+- `includes/helpers/class-wta-geonames-translator.php` (linje 249-279): Better logging in `prepare_for_import()`
+
+---
+
+## **IMPORTANCE:**
+
+⭐⭐⭐⭐⭐ **MOST CRITICAL FIX YET!**
+
+This fix PREVENTS the core issue that caused all previous problems:
+- v3.2.20 added pre-caching (but didn't abort on failure)
+- v3.2.22 added cache clearing (but didn't abort on failure)
+- **v3.2.23 ABORTS import if parsing fails!** ✅
+
+**No more silent failures → No more English city names!**
+
+---
+
 ## [3.2.22] - 2026-01-09
 
 ### 🐛 CRITICAL FIX - GeoNames Translation Cache Not Cleared on Reset
