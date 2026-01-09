@@ -2,6 +2,226 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.16] - 2026-01-09
+
+### 🎯 FEATURE - AI-Generated Title Tags for Countries & Cities
+
+**USER REQUEST:**
+"Title tags for lande og byer er for dårlige. Vi skal bruge prompts til title tags og meta descriptions for lande og byer (men uden at røre ved h1)"
+
+**PROBLEM IDENTIFIED:**
+
+Title tags (`<title>` i HTML head) for countries og cities brugte simple templates siden v3.2.9, hvilket resulterede i kedelige, ikke-SEO-optimerede titles:
+
+**BEFORE v3.2.16:**
+- 🇸🇪 Land: `Vad är klockan i Sverige?` ❌ (for simpel)
+- 🇸🇪 By: `Vad är klockan i Stockholm, Sverige?` ❌ (for simpel)
+
+**H1 overskrifter (på siden) var fine!** ✅
+- De brugte allerede templates og skulle ikke ændres
+
+---
+
+### **SOLUTION v3.2.16:**
+
+**Reverted v3.2.9 decision:** AI-genererede title tags er værdien værd for bedre SEO!
+
+**Changed from templates to AI generation for:**
+1. ✅ Country title tags
+2. ✅ City title tags
+
+**UNCHANGED:**
+- ✅ H1 overskrifter (forbliver template-baserede)
+- ✅ Continent title tags (forbliver template-baserede)
+- ✅ Meta descriptions (allerede AI-genererede)
+
+---
+
+### **CODE CHANGES:**
+
+**`class-wta-ai-processor.php` - `generate_yoast_title()` metoden:**
+
+#### **1. Countries (linje ~1296):**
+
+**BEFORE v3.2.16:**
+```php
+// v3.2.9: For countries, use template (no AI needed - saves costs and time!)
+if ( 'country' === $type ) {
+    $template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+    return sprintf( $template, $name );
+}
+```
+
+**AFTER v3.2.16:**
+```php
+// v3.2.16: For countries, use AI with language-aware prompts for engaging titles
+if ( 'country' === $type ) {
+    $api_key = get_option( 'wta_openai_api_key', '' );
+    if ( empty( $api_key ) ) {
+        // Fallback to template if no API key
+        $template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+        return sprintf( $template, $name );
+    }
+    
+    $model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+    $system = get_option( 'wta_prompt_country_title_system', '...' );
+    $user = get_option( 'wta_prompt_country_title_user', '...' );
+    
+    // Replace placeholder
+    $user = str_replace( '{location_name_local}', $name, $user );
+    
+    return $this->call_openai_api( $api_key, $model, 0.7, 80, $system, $user );
+}
+```
+
+#### **2. Cities (linje ~1280):**
+
+**BEFORE v3.2.16:**
+```php
+// v3.0.24: For cities, use question-based template (no AI needed, no year)
+if ( 'city' === $type ) {
+    $parent_id = wp_get_post_parent_id( $post_id );
+    if ( $parent_id ) {
+        $country_name = get_post_field( 'post_title', $parent_id );
+        $template = isset( $templates['city_title'] ) ? $templates['city_title'] : 'Hvad er klokken i %s, %s?';
+        return sprintf( $template, $name, $country_name );
+    } else {
+        $template = isset( $templates['city_title_no_country'] ) ? $templates['city_title_no_country'] : 'Hvad er klokken i %s?';
+        return sprintf( $template, $name );
+    }
+}
+```
+
+**AFTER v3.2.16:**
+```php
+// v3.2.16: For cities, use AI with language-aware prompts for engaging titles
+if ( 'city' === $type ) {
+    $api_key = get_option( 'wta_openai_api_key', '' );
+    if ( empty( $api_key ) ) {
+        // Fallback to template if no API key
+        [... template fallback code ...]
+    }
+    
+    $model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+    $system = get_option( 'wta_prompt_city_title_system', '...' );
+    $user = get_option( 'wta_prompt_city_title_user', '...' );
+    
+    // Replace placeholder
+    $user = str_replace( '{location_name_local}', $name, $user );
+    
+    return $this->call_openai_api( $api_key, $model, 0.7, 80, $system, $user );
+}
+```
+
+---
+
+### **PROMPTS USED (from JSON files):**
+
+**Swedish (sv.json):**
+```json
+"country_title_system": "Du är en SEO-expert som skriver engagerande sidor på svenska.",
+"country_title_user": "Skriv en fängslande H1-titel för en sida om vad klockan är i {location_name_local}.",
+
+"city_title_system": "Du är en SEO-expert som skriver engagerande sidor på svenska.",
+"city_title_user": "Skriv en fängslande H1-titel för en sida om vad klockan är i {location_name_local}. Använd formatet \"Vad är klockan i [stad]?\""
+```
+
+**Danish (da.json):**
+```json
+"country_title_system": "Du er en SEO ekspert der skriver fængende sider på dansk.",
+"country_title_user": "Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.",
+
+"city_title_system": "Du er en SEO ekspert der skriver fængende sider på dansk.",
+"city_title_user": "Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}. Brug formatet \"Hvad er klokken i [by]?\""
+```
+
+---
+
+### **📊 EXPECTED RESULTS:**
+
+**AFTER v3.2.16 (AI-generated, engaging):**
+- 🇸🇪 Land: `Vad är klockan i Sverige? Aktuell tid och tidszoner` ✅
+- 🇸🇪 By: `Vad är klockan i Stockholm just nu? Aktuell tid och tidszoner` ✅
+- 🇩🇰 Land: `Hvad er klokken i Danmark lige nu? Tidszoner og aktuel tid` ✅
+- 🇩🇰 By: `Hvad er klokken i København? Aktuel tid og tidszone` ✅
+
+(Eksempler - faktiske titles vil variere baseret på AI output)
+
+---
+
+### **💰 COST IMPACT:**
+
+**Per post:**
+- Title tag generation: ~20 tokens = ~$0.00003
+- Total new cost per post: ~$0.00003
+
+**For 1000 posts:**
+- New cost: ~$0.03 (3 cents!)
+
+**Trade-off:**
+- ✅ Much better SEO-optimized titles
+- ✅ More variation and engagement
+- ✅ Language-aware and culturally appropriate
+- 💰 Minimal extra cost (~$0.03 per 1000 posts)
+
+**Worth it:** Absolutely! Better SEO can drive significant more traffic.
+
+---
+
+### **🔄 WHAT CHANGED & WHAT DIDN'T:**
+
+**CHANGED (now AI-generated):**
+- ✅ `<title>` tags for countries (HTML head)
+- ✅ `<title>` tags for cities (HTML head)
+- ✅ `_yoast_wpseo_title` meta field for countries
+- ✅ `_yoast_wpseo_title` meta field for cities
+
+**UNCHANGED (still template-based):**
+- ✅ H1 overskrifter for countries (on page)
+- ✅ H1 overskrifter for cities (on page)
+- ✅ `_pilanto_page_h1` meta field for countries
+- ✅ `_pilanto_page_h1` meta field for cities
+- ✅ `<title>` tags for continents (template is good enough)
+- ✅ H1 overskrifter for continents (template is good enough)
+
+---
+
+### **🎯 WHY THIS CHANGE?**
+
+**Original v3.2.9 reasoning (September 2025):**
+> "For countries, use template (no AI needed - saves costs and time!)"
+
+**NEW v3.2.16 reasoning (January 2026):**
+- 💰 Cost savings were minimal (~$0.03 per 1000 posts)
+- 📈 SEO benefit of engaging titles is MUCH higher
+- 🎯 Simple templates like "Vad är klockan i Sverige?" are boring
+- ✨ AI can create variation and engagement
+- 🌍 Language-aware prompts ensure culturally appropriate titles
+
+**Bottom line:** The ~3 cents per 1000 posts is worth the SEO benefit!
+
+---
+
+### **🚀 DEPLOYMENT NOTES:**
+
+**After installing v3.2.16:**
+1. ✅ Load "Default Prompts for [SPROG]" (already done in v3.2.14)
+2. ✅ Re-process countries and cities to get new AI-generated titles
+3. ✅ H1 overskrifter remain unchanged (template-based)
+4. ✅ Only `<title>` tags will change
+
+**No breaking changes!**
+- ❌ No template changes needed
+- ❌ No JSON file changes needed
+- ✅ Prompts already exist in JSON files (since v3.2.0)
+
+---
+
+**VERSION:** 3.2.16
+
+**FILES MODIFIED:**
+- `includes/scheduler/class-wta-ai-processor.php` - Updated `generate_yoast_title()` method
+
 ## [3.2.15] - 2026-01-09
 
 ### 🐛 BUG FIX - Hardcoded Base Timezone in FAQ Generator
