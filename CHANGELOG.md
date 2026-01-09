@@ -2,6 +2,132 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.25] - 2026-01-09
+
+### 🐛 FIX - Change Validations from FATAL to WARNING (Debug Mode)
+
+**USER REPORT:**
+"Nu er der sket et eller andet skidt. Der importeres slet ikke noget længere nu. Intet kommer til schedularen"
+
+---
+
+## **PROBLEMET:**
+
+v3.2.23 og v3.2.24 tilføjede **streng validation** med **ABORT på fejl**:
+
+1. ❌ Hvis `prepare_for_import()` fejler → ABORT
+2. ❌ Hvis Copenhagen cache test fejler → ABORT
+
+**RESULTAT:** Import abort'ede ALTID, ingen scheduled actions! ❌
+
+**HVORFOR?**
+- Måske parsing timeout
+- Måske cache ikke læsbar umiddelbart
+- Måske København ikke i alternateNamesV2.txt
+- **VI VED DET IKKE - fordi import aldrig kommer så langt!**
+
+---
+
+## **LØSNING: DEBUG MODE**
+
+Change **FATAL errors** to **WARNINGS** - continue import anyway!
+
+### **BEFORE v3.2.25:** ❌
+```php
+if ( ! $prepare_success ) {
+    WTA_Logger::error( 'FATAL: ...' );
+    return array( 'error' => '...' ); // ← ABORT!
+}
+```
+
+### **AFTER v3.2.25:** ✅
+```php
+if ( ! $prepare_success ) {
+    WTA_Logger::warning( 'WARNING: ... proceeding anyway for debugging!' );
+    // Continue - let user see actual behavior
+}
+```
+
+---
+
+## **HVAD SKER DER NU:**
+
+1. ✅ **Import FORTSÆTTER** altid (ingen abort)
+2. ✅ **Logs viser** om parsing/cache lykkes eller fejler
+3. ✅ **Scheduled Actions viser** om byer får danske/svenske/engelske navne
+4. ✅ **Vi kan SE** præcist hvad der går galt!
+
+---
+
+## **TEST PROCEDURE:**
+
+### **1. Upload v3.2.25**
+
+### **2. Reset All Data**
+
+### **3. Load Default Prompts for SV**
+
+### **4. Prepare Import Queue**
+
+### **5. CHECK LOGS** (alle logs er nu INFORMATIVE, ikke FATAL):
+
+```
+✅ "Pre-caching GeoNames translations..."
+✅ "Parsing alternateNamesV2.txt..."
+✅ "Finished parsing (~50k translations)" ← Eller timeout?
+
+⚠️ "WARNING: GeoNames translations failed - proceeding anyway!"
+ELLER
+✅ "GeoNames translations ready for import!"
+
+⚠️ "WARNING: GeoNames cache verification FAILED - proceeding anyway!"
+ELLER
+✅ "GeoNames cache verified working! test_result: Köpenhamn"
+```
+
+### **6. CHECK SCHEDULED ACTIONS** (det vigtigste!):
+
+```
+Dashboard → Tools → Scheduled Actions → Pending
+
+SE HVAD DER FAKTISK BLEV QUEUED:
+✅ wta_create_city → "Köpenhamn" ← Parsing + cache virkede! ✅
+❌ wta_create_city → "Copenhagen" ← Parsing eller cache fejlede! ❌
+❌ wta_create_city → "København" ← Dansk original (GeoNames timeout?) ❌
+```
+
+---
+
+## **NEXT STEPS:**
+
+**EFTER du har set logs + scheduled actions, så ved vi:**
+
+1. **Hvis "Köpenhamn":** Alt virker! ✅ (kan reverter til FATAL errors)
+2. **Hvis "Copenhagen":** Parsing fejler ❌ → fikser fil/timeout/memory
+3. **Hvis "København":** Cache fejler ❌ → fikser race condition/DB lag
+
+---
+
+## **IMPORTANCE:**
+
+⭐⭐⭐⭐⭐ **DEBUGGING VERSION**
+
+This is NOT the final version - it's a **diagnostic tool**!
+
+Once we see what actually happens, we can:
+- Fix the root cause
+- Re-enable FATAL errors (if validations are correct)
+- Or adjust validations (if they're too strict)
+
+---
+
+## **FILER ÆNDRET:**
+
+- `includes/core/class-wta-importer.php` (linje 59-80): Changed parsing failure from FATAL to WARNING
+- `includes/core/class-wta-importer.php` (linje 90-121): Changed cache verification failure from FATAL to WARNING
+
+---
+
 ## [3.2.24] - 2026-01-09
 
 ### 🐛 CRITICAL FIX - Verify GeoNames Cache Is Readable Before Scheduling

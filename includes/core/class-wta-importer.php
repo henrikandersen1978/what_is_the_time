@@ -59,11 +59,12 @@ class WTA_Importer {
 	$prepare_success = WTA_GeoNames_Translator::prepare_for_import( $lang_code );
 	
 	if ( ! $prepare_success ) {
-		// v3.2.23: CRITICAL FIX - ABORT import if GeoNames parsing fails!
-		// Without translations, all cities get English names (copenhagen vs köpenhamn)
-		WTA_Logger::error( 'FATAL: GeoNames translations failed - ABORTING import to prevent incorrect city names!', array(
+		// v3.2.25: LOG ERROR but DON'T ABORT (for debugging)
+		// User can see in logs + scheduled actions what actually happens
+		WTA_Logger::warning( 'WARNING: GeoNames translations failed - proceeding anyway for debugging!', array(
 			'language' => $lang_code,
 			'file' => 'alternateNamesV2.txt',
+			'impact' => 'All cities will get English names instead of translated names',
 			'possible_causes' => array(
 				'File missing or corrupted',
 				'PHP timeout (needs 2-5 minutes)',
@@ -72,13 +73,7 @@ class WTA_Importer {
 			),
 			'solution' => 'Fix issue, then click "Clear Translation Cache" and retry import',
 		) );
-		
-		return array(
-			'continents' => 0,
-			'countries' => 0,
-			'cities' => 0,
-			'error' => 'GeoNames translation parsing failed - import aborted',
-		);
+		// v3.2.25: Continue anyway - let user see actual behavior
 	}
 	
 	WTA_Logger::info( 'GeoNames translations ready for import!', array(
@@ -87,39 +82,35 @@ class WTA_Importer {
 		'expires' => '24 hours',
 	) );
 	
-	// v3.2.24: CRITICAL VERIFICATION - Double-check cache is readable!
-	// Sometimes set_transient succeeds but get_transient immediately fails (race condition, DB replication lag, etc.)
+	// v3.2.25: DEBUG MODE - Test cache but DON'T ABORT (just log results)
+	// This helps diagnose why cities get English names without blocking import
 	$test_geonameid = 2618425; // Copenhagen
 	$test_translation = WTA_GeoNames_Translator::get_name( $test_geonameid, $lang_code );
 	
 	if ( false === $test_translation ) {
-		WTA_Logger::error( 'FATAL: GeoNames cache verification FAILED - cache set but not readable!', array(
+		WTA_Logger::warning( 'WARNING: GeoNames cache verification FAILED - proceeding anyway for debugging!', array(
 			'language' => $lang_code,
 			'test_geonameid' => $test_geonameid,
 			'test_name' => 'Copenhagen',
 			'expected_sv' => 'Köpenhamn',
 			'actual' => 'false (not found)',
+			'impact' => 'Cities will likely get English names instead of translated names',
 			'possible_causes' => array(
 				'Database replication lag',
 				'Cache race condition',
 				'Transient corruption',
+				'alternateNamesV2.txt does not contain this city',
 			),
 		) );
-		
-		return array(
-			'continents' => 0,
-			'countries' => 0,
-			'cities' => 0,
-			'error' => 'GeoNames cache not readable - import aborted',
-		);
+		// v3.2.25: Continue anyway (don't abort) - let user see actual behavior in scheduled actions
+	} else {
+		WTA_Logger::info( 'GeoNames cache verified working!', array(
+			'test_geonameid' => $test_geonameid,
+			'test_result' => $test_translation,
+			'expected_sv' => 'Köpenhamn',
+			'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
+		) );
 	}
-	
-	WTA_Logger::info( 'GeoNames cache verified working!', array(
-		'test_geonameid' => $test_geonameid,
-		'test_result' => $test_translation,
-		'expected_sv' => 'Köpenhamn',
-		'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
-	) );
 
 	$stats = array(
 		'continents' => 0,
