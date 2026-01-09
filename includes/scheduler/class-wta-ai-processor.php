@@ -773,13 +773,9 @@ if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
 	$culture_content = ! empty( $results['culture'] ) ? $results['culture'] : '';
 	$travel_content = ! empty( $results['travel'] ) ? $results['travel'] : '';
 	
-	// v3.2.12: Generate Yoast title separately (skips if already set by Structure Processor)
-	$yoast_title = null;
-	$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
-	if ( empty( $existing_title ) ) {
-		// Only generate if not already set (uses templates, no AI cost!)
-		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
-	}
+	// v3.2.17: ALWAYS generate Yoast title for countries (AI-generated since v3.2.16)
+	// Removed v3.2.12 skip check - we WANT to overwrite the template-based title from Structure Processor
+	$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
 	
 	$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
 		
@@ -962,13 +958,9 @@ if ( isset( $result['yoast_title'] ) && ! empty( $result['yoast_title'] ) ) {
 	$nearby_cities_intro = ! empty( $results['nearby_cities'] ) ? $results['nearby_cities'] : '';
 	$nearby_countries_intro = ! empty( $results['nearby_countries'] ) ? $results['nearby_countries'] : '';
 	
-	// v3.2.12: Generate Yoast title separately (skips if already set by Structure Processor)
-	$yoast_title = null;
-	$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
-	if ( empty( $existing_title ) ) {
-		// Only generate if not already set (uses templates, no AI cost!)
-		$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );
-	}
+	// v3.2.17: ALWAYS generate Yoast title for cities (AI-generated since v3.2.16)
+	// Removed v3.2.12 skip check - we WANT to overwrite the template-based title from Structure Processor
+	$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'city' );
 	
 	$yoast_desc = ! empty( $results['yoast_desc'] ) ? $results['yoast_desc'] : '';
 		

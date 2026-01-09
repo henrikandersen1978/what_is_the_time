@@ -2,6 +2,164 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.17] - 2026-01-09
+
+### 🐛 CRITICAL FIX - AI Title Generation Not Working
+
+**USER REPORT:**
+"Det virker ikke for titlen: 'Vad är klockan i Stockholm, Sverige?' den er stadig for kort. Og tror ikke den er lavet med ai prompten"
+
+**ROOT CAUSE IDENTIFIED:**
+
+v3.2.16 added AI-generated titles for countries and cities, but v3.2.12 optimization prevented them from running!
+
+**THE PROBLEM:**
+
+v3.2.12 added an optimization to skip title generation if already set by Structure Processor:
+
+```php
+// v3.2.12: Generate Yoast title separately (skips if already set by Structure Processor)
+$yoast_title = null;
+$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+if ( empty( $existing_title ) ) {
+    // Only generate if not already set
+    $yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
+}
+```
+
+**Why this was a problem:**
+
+**STEP 1: Structure Processor (Import):**
+- Sets title with template: `"Vad är klockan i Stockholm, Sverige?"` ✅
+- Saves to `_yoast_wpseo_title` meta field
+
+**STEP 2: AI Processor (Content Generation):**
+- Checks: "Is title already set?" → **YES!** ❌
+- **SKIPS AI generation** ❌
+- Returns `NULL` (no update)
+- Title remains template-based! ❌
+
+**Result:**
+- Title tag: `"Vad är klockan i Stockholm, Sverige?"` (template) ❌
+- Expected: `"Vad är klockan i Stockholm just nu? Tidszoner och lokal tid"` (AI) ✅
+
+---
+
+### **SOLUTION v3.2.17:**
+
+**Remove skip check for countries and cities - ALWAYS run AI!**
+
+**BEFORE v3.2.17 (broken):**
+```php
+// Countries
+$yoast_title = null;
+$existing_title = get_post_meta( $post_id, '_yoast_wpseo_title', true );
+if ( empty( $existing_title ) ) {
+    $yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
+}
+```
+
+**AFTER v3.2.17 (fixed):**
+```php
+// v3.2.17: ALWAYS generate Yoast title for countries (AI-generated since v3.2.16)
+// Removed v3.2.12 skip check - we WANT to overwrite the template-based title from Structure Processor
+$yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'country' );
+```
+
+**Same fix applied for cities!**
+
+---
+
+### **CONTINENTS UNCHANGED:**
+
+Continents STILL use templates (not AI), so the skip check is CORRECT for continents:
+
+```php
+// Continents: Skip check is GOOD (both use templates, no need to regenerate)
+if ( empty( $existing_title ) ) {
+    $yoast_title = $this->generate_yoast_title( $post_id, $name_local, 'continent' );
+}
+```
+
+---
+
+### **📊 FLOW AFTER v3.2.17:**
+
+**Countries:**
+1. ✅ Structure Processor: Sets template title `"Vad är klockan i Sverige?"`
+2. ✅ AI Processor: **OVERWRITES** with AI title `"Vad är klockan i Sverige? Aktuell tid och tidszoner"`
+3. ✅ Final result: AI-generated, engaging title!
+
+**Cities:**
+1. ✅ Structure Processor: Sets template title `"Vad är klockan i Stockholm, Sverige?"`
+2. ✅ AI Processor: **OVERWRITES** with AI title `"Vad är klockan i Stockholm just nu? Tidszoner"`
+3. ✅ Final result: AI-generated, engaging title!
+
+**Continents:**
+1. ✅ Structure Processor: Sets template title `"Vad är klockan i Europa? Tidszoner och aktuell tid"`
+2. ✅ AI Processor: **SKIPS** (template is good enough, same result)
+3. ✅ Final result: Template-based title (no AI needed)
+
+---
+
+### **FILES MODIFIED:**
+
+**`includes/scheduler/class-wta-ai-processor.php`:**
+
+1. **Country generation (linje ~776):**
+   - Removed skip check
+   - Always calls `generate_yoast_title()` for AI generation
+
+2. **City generation (linje ~961):**
+   - Removed skip check
+   - Always calls `generate_yoast_title()` for AI generation
+
+3. **Continent generation (linje ~588):**
+   - **KEPT** skip check (still uses templates, no AI)
+
+---
+
+### **⚡ PERFORMANCE IMPACT:**
+
+**No performance regression:**
+- Countries and cities already called `generate_yoast_title()` (it just skipped)
+- Now it actually runs the AI call (~20 tokens, ~$0.00003 per post)
+- This was ALWAYS intended in v3.2.16, just blocked by skip check!
+
+---
+
+### **🎯 EXPECTED RESULTS AFTER v3.2.17:**
+
+**Re-process countries and cities to get AI titles:**
+
+**BEFORE (v3.2.16 - broken):**
+- 🇸🇪 Land: `Vad är klockan i Sverige?` ❌ (template)
+- 🇸🇪 By: `Vad är klockan i Stockholm, Sverige?` ❌ (template)
+
+**AFTER (v3.2.17 - fixed):**
+- 🇸🇪 Land: `Vad är klockan i Sverige? Aktuell tid och tidszoner` ✅ (AI)
+- 🇸🇪 By: `Vad är klockan i Stockholm just nu? Tidszoner och lokal tid` ✅ (AI)
+
+(Examples - actual titles will vary based on AI output)
+
+---
+
+### **🚀 DEPLOYMENT:**
+
+1. ✅ Install v3.2.17
+2. ✅ Re-process countries and cities
+3. ✅ Verify title tags are AI-generated and engaging
+4. ✅ H1 overskrifter remain template-based (correct!)
+
+**No need to reload prompts - already loaded in v3.2.14!**
+
+---
+
+**VERSION:** 3.2.17
+
+**LESSON LEARNED:**
+Don't optimize too early! The v3.2.12 "optimization" to skip title generation made sense when both Structure Processor and AI Processor used templates, but broke when we introduced AI titles in v3.2.16.
+
 ## [3.2.16] - 2026-01-09
 
 ### 🎯 FEATURE - AI-Generated Title Tags for Countries & Cities
