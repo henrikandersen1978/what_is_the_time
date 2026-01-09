@@ -2,6 +2,145 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.22] - 2026-01-09
+
+### 🐛 CRITICAL FIX - GeoNames Translation Cache Not Cleared on Reset
+
+**USER DISCOVERY:**
+"https://klockan-nu.se/europa/danmark/copenhagen/ er lige importeret forkert igen. Hvorfor?"
+
+User had:
+1. ✅ Reset All Data
+2. ✅ Loaded SV language defaults
+3. ✅ Re-imported with v3.2.20+
+4. ❌ Still got "copenhagen" instead of "köpenhamn"!
+
+---
+
+## **PROBLEMET:**
+
+Even after "Reset All Data", GeoNames translation cache was NOT being cleared!
+
+```
+FIRST IMPORT (before fix):
+1. GeoNames parsing (may timeout/fail)
+2. Cache saved with WRONG data ("copenhagen" ❌)
+3. Cache lives 24 hours!
+
+RE-IMPORT (after Reset All Data):
+1. "Reset All Data" → deletes POSTS, but NOT cache! ❌
+2. Import starts
+3. WTA_GeoNames_Translator: "Cache exists!" → uses OLD cache ❌
+4. Result: "copenhagen" again! ❌
+```
+
+**GeoNames cache key:** `_transient_wta_geonames_translations_{lang}` (e.g., `_transient_wta_geonames_translations_sv`)
+
+---
+
+## **ROOT CAUSE:**
+
+1. **"Reset All Data" button** (`class-wta-admin.php` line 486-490):
+   - ✅ Deleted posts
+   - ✅ Cleared queue
+   - ✅ Flushed WP cache
+   - ❌ Did NOT clear GeoNames cache!
+
+2. **"Clear Translation Cache" button** (`class-wta-ai-translator.php` line 313-324):
+   - ✅ Cleared AI translations (`wta_trans_*`)
+   - ✅ Cleared Wikidata translations (`wta_wikidata_*`)
+   - ❌ Did NOT clear GeoNames translations (`wta_geonames_translations_*`)!
+
+---
+
+## **LØSNING:**
+
+### **1. "Reset All Data" now clears GeoNames cache** (`class-wta-admin.php`):
+
+```php
+// v3.2.22: Clear GeoNames translation cache to force fresh re-parsing on next import
+// This ensures that new imports use correct language translations, not stale cache
+$geonames_cache_deleted = $wpdb->query(
+    "DELETE FROM {$wpdb->options} 
+     WHERE option_name LIKE '_transient_wta_geonames_translations_%' 
+        OR option_name LIKE '_transient_timeout_wta_geonames_translations_%'"
+);
+```
+
+### **2. "Clear Translation Cache" now includes GeoNames** (`class-wta-ai-translator.php`):
+
+```php
+// v3.2.22: Also clear GeoNames translation cache
+// This ensures fresh translations on next import, not stale cache
+WTA_GeoNames_Translator::clear_cache();
+
+WTA_Logger::info( 'Translation cache cleared (AI, Wikidata, GeoNames)' );
+```
+
+---
+
+## **RESULTAT:**
+
+```
+AFTER v3.2.22:
+1. "Reset All Data" → deletes posts, queue, AND GeoNames cache! ✅
+2. Import starts
+3. GeoNames pre-caching runs (2-5 min) ✅
+4. Fresh Swedish translations loaded ✅
+5. Result: "/europa/danmark/kopenhamn/" ✅
+```
+
+**ELLER:**
+
+```
+USER CLICKS "Clear Translation Cache":
+1. AI translations cleared ✅
+2. Wikidata translations cleared ✅
+3. GeoNames translations cleared ✅ (NEW!)
+4. Next import uses fresh translations ✅
+```
+
+---
+
+## **TEST PROCEDURE (FIXED!):**
+
+```
+1. Dashboard → Tools → Reset All Data
+   └─ Now ALSO clears GeoNames cache! ✅
+
+2. Settings → Timezone & Language
+   └─ Verify "Site Language: SV"
+   └─ Click "Load Default Prompts for SV"
+
+3. Data Import → Prepare Import Queue
+   └─ Wait for "GeoNames translations ready!" (2-5 min)
+
+4. VERIFY:
+   ✅ https://klockan-nu.se/europa/danmark/kopenhamn/
+   ❌ https://klockan-nu.se/europa/danmark/copenhagen/ (404 - deleted!)
+```
+
+---
+
+## **FILER ÆNDRET:**
+
+- `includes/admin/class-wta-admin.php` (linje 486-503): Added GeoNames cache deletion to `ajax_reset_all_data()`
+- `includes/helpers/class-wta-ai-translator.php` (linje 313-324): Added `WTA_GeoNames_Translator::clear_cache()` to `clear_cache()`
+
+---
+
+## **IMPORTANCE:**
+
+⭐⭐⭐⭐⭐ **CRITICAL** for multilingual sites!
+
+Without this fix, users would need to:
+- ❌ Wait 24 hours for transient to expire, OR
+- ❌ Manually delete transients via SQL
+
+Now: ✅ **ONE BUTTON** clears everything!
+
+---
+
 ## [3.2.21] - 2026-01-09
 
 ### 🐛 FIX - DST Time Display Escaping Issue

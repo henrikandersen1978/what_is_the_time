@@ -483,11 +483,25 @@ class WTA_Admin {
 			}
 		}
 		
-		// Clear queue
-		WTA_Queue::clear();
-		
-		// Clear WordPress caches
-		wp_cache_flush();
+	// Clear queue
+	WTA_Queue::clear();
+	
+	// v3.2.22: Clear GeoNames translation cache to force fresh re-parsing on next import
+	// This ensures that new imports use correct language translations, not stale cache
+	$geonames_cache_deleted = $wpdb->query(
+		"DELETE FROM {$wpdb->options} 
+		 WHERE option_name LIKE '_transient_wta_geonames_translations_%' 
+		    OR option_name LIKE '_transient_timeout_wta_geonames_translations_%'"
+	);
+	
+	if ( $geonames_cache_deleted > 0 ) {
+		WTA_Logger::info( 'GeoNames translation cache cleared', array(
+			'rows_deleted' => $geonames_cache_deleted,
+		) );
+	}
+	
+	// Clear WordPress caches
+	wp_cache_flush();
 		
 		$execution_time = round( microtime( true ) - $start_time, 2 );
 		
