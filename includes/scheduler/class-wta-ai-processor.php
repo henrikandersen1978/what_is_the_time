@@ -1287,8 +1287,11 @@ if ( 'city' === $type ) {
 	}
 	
 	$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-	$system = get_option( 'wta_prompt_city_title_system', 'Du er SEO ekspert der skriver fængende sider på dansk.' );
-	$user = get_option( 'wta_prompt_city_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}. Brug formatet "Hvad er klokken i [by]?"' );
+	
+	// v3.2.18: Use correct Yoast title prompts (not H1 prompts!)
+	// These are specifically designed for SEO meta titles with length restrictions
+	$system = get_option( 'wta_prompt_yoast_title_system', 'Du er SEO ekspert der skriver meta titles på dansk.' );
+	$user = get_option( 'wta_prompt_yoast_title_user', 'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i {location_name_local}.' );
 	
 	// Replace placeholder
 	$user = str_replace( '{location_name_local}', $name, $user );
@@ -1306,14 +1309,17 @@ if ( 'city' === $type ) {
 			return sprintf( $template, $name );
 		}
 		
-		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		$system = get_option( 'wta_prompt_country_title_system', 'Du er SEO ekspert der skriver fængende sider på dansk.' );
-		$user = get_option( 'wta_prompt_country_title_user', 'Skriv en fængende H1 titel for en side om hvad klokken er i {location_name_local}.' );
-		
-		// Replace placeholder
-		$user = str_replace( '{location_name_local}', $name, $user );
-		
-		return $this->call_openai_api( $api_key, $model, 0.7, 80, $system, $user );
+	$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
+	
+	// v3.2.18: Use correct Yoast title prompts (not H1 prompts!)
+	// These are specifically designed for SEO meta titles with length restrictions
+	$system = get_option( 'wta_prompt_yoast_title_system', 'Du er SEO ekspert der skriver meta titles på dansk.' );
+	$user = get_option( 'wta_prompt_yoast_title_user', 'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i {location_name_local}.' );
+	
+	// Replace placeholder
+	$user = str_replace( '{location_name_local}', $name, $user );
+	
+	return $this->call_openai_api( $api_key, $model, 0.7, 80, $system, $user );
 	}
 	
 	// Fallback for unknown types

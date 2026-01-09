@@ -2,6 +2,192 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.18] - 2026-01-09
+
+### 🔧 CRITICAL FIX + OPTIMIZATION - Use Correct Yoast Title Prompts & Optimize for SEO
+
+**USER DISCOVERY:**
+"Men bruger du ikke bare de forkerte prompts så? Var der ikke title prompts i jason filen?"
+
+**PROBLEM IDENTIFIED:**
+
+v3.2.16-v3.2.17 introducerede AI-genererede title tags, men brugte de **FORKERTE PROMPTS**!
+
+### **ROOT CAUSE:**
+
+Der er **3 forskellige prompt-sæt** i JSON filerne:
+
+1. **H1 prompts** (`city_title_system/user`, `country_title_system/user`)
+   - Til H1 overskrifter på siden
+   - Ingen længdebegrænsning
+   - "Skriv en fängslande H1-titel..."
+
+2. **Yoast title prompts** (`yoast_title_system/user`)
+   - Til SEO meta titles (`<title>` tags)
+   - 50-60 tegn begrænsning
+   - "Skriv en SEO meta-titel..."
+
+3. **Templates** (`city_title`, `country_title`)
+   - Simple text templates
+   - Bruges til H1 overskrifter
+
+**Vi brugte H1 prompts til title tags!** ❌
+
+---
+
+### **BEFORE v3.2.18 (FORKERT!):**
+
+**I `class-wta-ai-processor.php`:**
+
+```php
+// For cities
+$system = get_option( 'wta_prompt_city_title_system', '...' );  // ❌ H1 prompt!
+$user = get_option( 'wta_prompt_city_title_user', '...' );      // ❌ H1 prompt!
+
+// For countries
+$system = get_option( 'wta_prompt_country_title_system', '...' );  // ❌ H1 prompt!
+$user = get_option( 'wta_prompt_country_title_user', '...' );      // ❌ H1 prompt!
+```
+
+**Resultat:**
+- ❌ Ingen længdebegrænsning (H1 prompts har ikke max 60 tegn)
+- ❌ Fokus på "fængslande H1" i stedet for SEO meta title
+- ❌ Titles kunne blive meget lange
+
+---
+
+### **AFTER v3.2.18 (RIGTIGT!):**
+
+**I `class-wta-ai-processor.php`:**
+
+```php
+// v3.2.18: Use correct Yoast title prompts (not H1 prompts!)
+// These are specifically designed for SEO meta titles with length restrictions
+
+// For BOTH cities AND countries
+$system = get_option( 'wta_prompt_yoast_title_system', '...' );  // ✅ Yoast prompt!
+$user = get_option( 'wta_prompt_yoast_title_user', '...' );      // ✅ Yoast prompt!
+```
+
+**Resultat:**
+- ✅ 50-60 tegn begrænsning (perfekt for Google)
+- ✅ Fokus på SEO meta titles
+- ✅ Keyword-optimeret
+- ✅ Samme prompts for cities og countries (konsistent!)
+
+---
+
+### **BONUS: OPTIMEREDE YOAST PROMPTS!**
+
+**BEFORE v3.2.18 (simple):**
+```json
+"yoast_title_user": "Skriv en SEO meta-titel (50-60 tecken) för en sida om vad klockan är i {location_name_local}."
+```
+
+**AFTER v3.2.18 (keyword-optimeret):**
+```json
+"yoast_title_user": "Skriv en SEO-optimerad meta-titel (50-60 tecken) för en sida om aktuell tid i {location_name_local}. 
+
+INKLUDERA dessa primära sökord/synonymer naturligt: 
+- \"Vad är klockan\" ELLER \"Aktuell tid\" ELLER \"Tid just nu\" 
+- \"Tidszoner\" ELLER \"Tidszon\" 
+- {location_name_local}
+
+Använd variationer som: 
+- \"Vad är klockan i {location_name_local}? Aktuell tid & tidszoner\"
+- \"Aktuell tid i {location_name_local} | Tidszoner & info\"
+- \"Tid i {location_name_local} - Lokal tid och tidszon\"
+
+Gör titeln klickbar och informativ. Max 60 tecken!"
+```
+
+**Forbedringer:**
+- ✅ Specifik guidance om primære søgeord
+- ✅ Synonymer for variation ("Vad är klockan", "Aktuell tid", "Tid just nu")
+- ✅ Konkrete eksempler på gode formater
+- ✅ Fokus på klickbarhed
+- ✅ Gentager max 60 tegn kravet
+
+---
+
+### **📋 FILES MODIFIED:**
+
+**CODE:**
+1. `includes/scheduler/class-wta-ai-processor.php`:
+   - Cities: Changed to use `wta_prompt_yoast_title_system/user` (linje ~1289)
+   - Countries: Changed to use `wta_prompt_yoast_title_system/user` (linje ~1312)
+
+**JSON PROMPTS (optimeret for SEO keywords):**
+2. `includes/languages/da.json` - Optimeret yoast_title prompts
+3. `includes/languages/sv.json` - Optimeret yoast_title prompts
+4. `includes/languages/en.json` - Optimeret yoast_title prompts
+5. `includes/languages/de.json` - Optimeret yoast_title prompts
+
+---
+
+### **🎯 EXPECTED RESULTS AFTER v3.2.18:**
+
+**NUVÆRENDE (v3.2.17 med H1 prompts):**
+- 🇸🇪 By: `Vad är klockan i Stockholm` (kan være for kort eller for lang)
+- 🇸🇪 Land: `Vad är klockan i Sverige` (for simpel)
+
+**EFTER v3.2.18 (med Yoast prompts + keyword optimization):**
+- 🇸🇪 By: `Vad är klockan i Stockholm? Aktuell tid & tidszoner` ✅
+- 🇸🇪 Land: `Aktuell tid i Sverige | Tidszoner och lokal tid` ✅
+- 🇩🇰 By: `Hvad er klokken i København lige nu? | Tidszone` ✅
+- 🇩🇰 Land: `Tid i Danmark - Aktuel tid & tidszoner` ✅
+
+**Mere variation, bedre keywords, optimal længde!** ✅
+
+---
+
+### **💡 KEY KEYWORDS INKLUDERET:**
+
+**Dansk:**
+- Primære: "hvad er klokken", "aktuel tid", "tid lige nu", "tidszoner", "tidszone"
+- Sekundære: "lokal tid", location name
+
+**Svensk:**
+- Primære: "vad är klockan", "aktuell tid", "tid just nu", "tidszoner", "tidszon"
+- Sekundære: "lokal tid", location name
+
+**English:**
+- Primære: "what time is it", "current time", "time now", "timezones", "timezone"
+- Sekundære: "local time", location name
+
+**German:**
+- Primære: "wie spät ist es", "aktuelle uhrzeit", "uhrzeit jetzt", "zeitzonen", "zeitzone"
+- Sekundære: "lokale zeit", location name
+
+---
+
+### **🚀 DEPLOYMENT:**
+
+**After installing v3.2.18:**
+1. ✅ **CRITICAL:** Load "Default Prompts for [SPROG]" again!
+   - New optimized yoast_title prompts must be loaded
+2. ✅ Re-process countries and cities to get new SEO-optimized titles
+3. ✅ Verify title tags are 50-60 characters and keyword-rich
+
+**No re-import needed if you just installed v3.2.17!**
+- Just reload prompts and re-process existing posts
+
+---
+
+### **📊 COMPARISON:**
+
+| Version | Prompts Used | Length Control | Keywords | SEO Focus |
+|---------|-------------|----------------|----------|-----------|
+| **v3.2.16** | ❌ H1 prompts | ❌ No | ❌ Generic | ❌ Low |
+| **v3.2.17** | ❌ H1 prompts | ❌ No | ❌ Generic | ❌ Low |
+| **v3.2.18** | ✅ Yoast prompts | ✅ 50-60 chars | ✅ Optimized | ✅ High |
+
+---
+
+**VERSION:** 3.2.18
+
+**CRITICAL:** Remember to load prompts after update!
+
 ## [3.2.17] - 2026-01-09
 
 ### 🐛 CRITICAL FIX - AI Title Generation Not Working
