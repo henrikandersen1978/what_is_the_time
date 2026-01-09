@@ -86,6 +86,40 @@ class WTA_Importer {
 		'cache_key' => 'wta_geonames_translations_' . strtok( $lang_code, '-' ),
 		'expires' => '24 hours',
 	) );
+	
+	// v3.2.24: CRITICAL VERIFICATION - Double-check cache is readable!
+	// Sometimes set_transient succeeds but get_transient immediately fails (race condition, DB replication lag, etc.)
+	$test_geonameid = 2618425; // Copenhagen
+	$test_translation = WTA_GeoNames_Translator::get_name( $test_geonameid, $lang_code );
+	
+	if ( false === $test_translation ) {
+		WTA_Logger::error( 'FATAL: GeoNames cache verification FAILED - cache set but not readable!', array(
+			'language' => $lang_code,
+			'test_geonameid' => $test_geonameid,
+			'test_name' => 'Copenhagen',
+			'expected_sv' => 'Köpenhamn',
+			'actual' => 'false (not found)',
+			'possible_causes' => array(
+				'Database replication lag',
+				'Cache race condition',
+				'Transient corruption',
+			),
+		) );
+		
+		return array(
+			'continents' => 0,
+			'countries' => 0,
+			'cities' => 0,
+			'error' => 'GeoNames cache not readable - import aborted',
+		);
+	}
+	
+	WTA_Logger::info( 'GeoNames cache verified working!', array(
+		'test_geonameid' => $test_geonameid,
+		'test_result' => $test_translation,
+		'expected_sv' => 'Köpenhamn',
+		'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
+	) );
 
 	$stats = array(
 		'continents' => 0,

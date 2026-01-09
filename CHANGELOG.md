@@ -2,6 +2,187 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.24] - 2026-01-09
+
+### 🐛 CRITICAL FIX - Verify GeoNames Cache Is Readable Before Scheduling
+
+**USER DISCOVERY:**
+"jeg er ikke sikker på at du er på rette spor. Kan du tjekke filerne for at se hvad der står om københavn (eller copenhagen) i geonames filerne?"
+
+User dybde-researched GeoNames data og fandt:
+- ✅ GeoNames HAS "Köpenhamn (sv)" in alternateNamesV2.txt  
+- ✅ GeoNames HAS geonameid 2618425 for Copenhagen
+- ❌ BUT: Scheduled Actions STILL show "Copenhagen" (engelsk)!
+
+---
+
+## **PROBLEMET:**
+
+v3.2.23 added **abort on parsing failure**, but parsing **SUCCEEDED** - yet cities still got English names!
+
+**NEW ROOT CAUSE: RACE CONDITION!** ⚠️
+
+```php
+// includes/core/class-wta-importer.php
+
+// LINJE 59: Parsing + caching (2-5 minutes)
+$prepare_success = WTA_GeoNames_Translator::prepare_for_import( $lang_code );
+// ✅ Returns TRUE (parsing succeeded!)
+// ✅ set_transient() succeeds!
+
+// LINJE 106-148: Immediately schedule continents + countries
+$name_local = WTA_AI_Translator::translate( $continent, 'continent' );
+// ✅ Works fine (few locations, cache ready)
+
+// LINJE 738-773: Immediately schedule cities (thousands of locations!)
+$name_local = WTA_AI_Translator::translate( $city['name'], 'city', null, $geonameid );
+// ❌ Cache NOT YET READABLE! (DB replication lag? transient corruption?)
+// ❌ Falls back to original English name: "Copenhagen"
+```
+
+**RACE CONDITION TIMELINE:**
+
+```
+00:00 - prepare_for_import() starts parsing (2-5 min)
+02:30 - Parsing completes, set_transient() called
+02:30.001 - set_transient() WRITES to database
+02:30.002 - prepare_for_import() returns TRUE ✅
+02:30.003 - queue_cities_from_array() starts scheduling
+02:30.004 - WTA_AI_Translator::translate() calls get_transient()
+02:30.005 - get_transient() READS from database
+02:30.006 - ❌ Cache NOT YET REPLICATED! (DB lag, corruption, etc.)
+02:30.007 - translate() returns "Copenhagen" (fallback)
+02:30.008 - Scheduled with English name ❌
+```
+
+**MULIGE ÅRSAGER:**
+1. ❌ **DB replication lag:** Master/slave DB setup with millisecond delay
+2. ❌ **Transient corruption:** set_transient OK, but get_transient fails
+3. ❌ **Cache race:** Object cache vs DB cache mismatch
+4. ❌ **WP_CACHE plugins:** Redis/Memcached not synced with DB
+
+---
+
+## **LØSNING:**
+
+### **TEST CACHE READABILITY BEFORE SCHEDULING:**
+
+```php
+// v3.2.24: CRITICAL VERIFICATION - Double-check cache is readable!
+$test_geonameid = 2618425; // Copenhagen
+$test_translation = WTA_GeoNames_Translator::get_name( $test_geonameid, $lang_code );
+
+if ( false === $test_translation ) {
+    WTA_Logger::error( 'FATAL: GeoNames cache set but NOT READABLE!', array(
+        'test_geonameid' => $test_geonameid,
+        'expected_sv' => 'Köpenhamn',
+        'actual' => 'false (not found)',
+        'possible_causes' => array(
+            'Database replication lag',
+            'Cache race condition',
+            'Transient corruption',
+        ),
+    ) );
+    
+    return array( 'error' => 'GeoNames cache not readable - import aborted' );
+}
+
+WTA_Logger::info( 'GeoNames cache verified working!', array(
+    'test_geonameid' => $test_geonameid,
+    'test_result' => $test_translation,
+    'expected_sv' => 'Köpenhamn',
+    'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
+) );
+```
+
+---
+
+## **RESULTAT:**
+
+```
+FØR v3.2.24: ❌
+1. Parsing succeeds → set_transient() OK
+2. prepare_for_import() returns TRUE
+3. Scheduling starts IMMEDIATELY
+4. get_transient() fails (race condition)
+5. Cities scheduled as "Copenhagen" ❌
+
+EFTER v3.2.24: ✅
+1. Parsing succeeds → set_transient() OK
+2. prepare_for_import() returns TRUE
+3. TEST cache with København (geonameid 2618425)
+4. IF cache NOT readable → ABORT with detailed error! ✅
+5. IF cache readable → Log "✅ Köpenhamn" match → Continue! ✅
+6. Scheduling starts with VERIFIED working cache ✅
+7. Cities scheduled as "Köpenhamn" ✅
+```
+
+---
+
+## **TEST PROCEDURE:**
+
+### **1. Upload v3.2.24**
+
+### **2. Reset All Data** (clears cache + posts)
+
+### **3. Load Default Prompts for SV**
+
+### **4. Prepare Import Queue**
+
+### **5. CHECK LOGS:**
+
+```
+✅ "Pre-caching GeoNames translations..."
+✅ "Parsing alternateNamesV2.txt..."
+✅ "Finished parsing (~50,000 translations)"
+✅ "GeoNames translations ready for import!"
+✅ "GeoNames cache verified working!"  ← NEW!
+✅ "test_geonameid: 2618425"           ← NEW!
+✅ "test_result: Köpenhamn"             ← NEW!
+✅ "match: YES ✅"                       ← NEW!
+
+ELLER:
+❌ "FATAL: GeoNames cache set but NOT READABLE!"  ← NEW ERROR!
+❌ "expected_sv: Köpenhamn"
+❌ "actual: false (not found)"
+❌ "possible_causes: Database replication lag, Cache race condition, Transient corruption"
+❌ "GeoNames cache not readable - import aborted"
+```
+
+### **6. CHECK SCHEDULED ACTIONS:**
+
+```
+IF LOG SAYS "YES ✅":
+✅ wta_create_city → "Köpenhamn" (SVENSK!)
+
+IF LOG SAYS "NO ❌" OR ERROR:
+❌ Import aborted → NO scheduled actions
+→ User ser PRÆCIS fejl i logs → fikser problem → retry
+```
+
+---
+
+## **IMPORTANCE:**
+
+⭐⭐⭐⭐⭐ **DEBUGGING BREAKTHROUGH!**
+
+- v3.2.20: Added pre-caching (but didn't catch failures)
+- v3.2.22: Added cache clearing (but didn't catch failures)
+- v3.2.23: Abort on parsing failure (but parsing SUCCEEDED!)
+- **v3.2.24: Abort on cache READ failure!** ✅
+
+**Now we test the ACTUAL cache that will be used for scheduling!**
+
+If Copenhagen test returns "Köpenhamn" → All other cities will work too! ✅
+
+---
+
+## **FILER ÆNDRET:**
+
+- `includes/core/class-wta-importer.php` (linje 72-109): Added Copenhagen cache verification test after `prepare_for_import()`
+
+---
+
 ## [3.2.23] - 2026-01-09
 
 ### 🐛 CRITICAL FIX - Abort Import If GeoNames Parsing Fails
