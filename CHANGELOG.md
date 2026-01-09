@@ -2,6 +2,61 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.3] - 2026-01-09
+
+### 🔧 CRITICAL FIX: Slug Translation Now Works
+
+**PROBLEM (v3.2.2):**
+When clicking "Load Default Prompts for SV", only templates/prompts were updated:
+- ✅ `wta_site_language` → "sv" (templates virker)  
+- ❌ `wta_base_language` → stadig "da-DK" (slugs forblev danske!)
+
+This meant:
+- Swedish templates worked → "Vanliga frågor om tid i Stockholm" ✅
+- Swedish slugs DIDN'T work → URL still `/europa/sverige/stockholm` (English!) ❌
+- Wikidata/GeoNames translations used wrong language → Danish location names! ❌
+
+**ROOT CAUSE:**
+Two separate language options that weren't synchronized:
+1. `wta_site_language` (new in v3.2.0) - Used for templates/prompts (da, sv, en, de)
+2. `wta_base_language` (legacy) - Used for Wikidata/GeoNames translations/slugs (da-DK, sv-SE, en-GB, de-DE)
+
+The "Load Default Prompts" button only updated #1, not #2!
+
+**SOLUTION:**
+Updated `WTA_Activator::load_language_defaults()` to automatically sync both options:
+
+```php
+// When user clicks "Load Default Prompts for SV":
+update_option( 'wta_site_language', 'sv' );          // ✅ Templates
+update_option( 'wta_base_language', 'sv-SE' );       // ✅ Slugs/translations!
+update_option( 'wta_base_language_description', 'Skriv på flytande svenska...' ); // ✅ AI context
+```
+
+**Language Mapping:**
+- da → da-DK (Danish, Denmark)
+- sv → sv-SE (Swedish, Sweden) 
+- en → en-GB (English, UK)
+- de → de-DE (German, Germany)
+- no → nb-NO (Norwegian Bokmål, Norway)
+- fi → fi-FI (Finnish, Finland)
+- nl → nl-NL (Dutch, Netherlands)
+
+**RESULT:**
+✅ **One-click language switch now updates EVERYTHING:**
+- Templates/prompts → Correct language
+- Wikidata/GeoNames queries → Correct language
+- Post slugs → Correct language
+- AI context → Correct language
+
+✅ **Swedish example after "Load Default Prompts for SV":**
+- Templates: "Vanliga frågor om tid i Stockholm"
+- Slugs: `/europa/sverige/stockholm` → ALL Swedish! 🇸🇪
+- Location names: "Sverige", "Stockholm" (not "Sweden", "København")
+
+**FILES UPDATED:**
+- `includes/class-wta-activator.php` - Added base_language sync + language descriptions
+
 ## [3.2.2] - 2026-01-09
 
 ### ✨ Complete Frontend Translation - ALL Danish Strings Eliminated

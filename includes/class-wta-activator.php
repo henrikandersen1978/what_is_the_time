@@ -494,6 +494,37 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		// Update site language
 		update_option( 'wta_site_language', $lang );
 
+		// Update base_language for Wikidata/GeoNames translations (slugs)
+		// Map language codes to locale codes
+		$base_language_map = array(
+			'da' => 'da-DK',
+			'sv' => 'sv-SE',
+			'en' => 'en-GB',
+			'de' => 'de-DE',
+			'no' => 'nb-NO',
+			'fi' => 'fi-FI',
+			'nl' => 'nl-NL',
+		);
+		
+		if ( isset( $base_language_map[ $lang ] ) ) {
+			update_option( 'wta_base_language', $base_language_map[ $lang ] );
+		}
+
+		// Update base language description for AI context
+		$language_descriptions = array(
+			'da' => 'Skriv på flydende dansk til danske brugere',
+			'sv' => 'Skriv på flytande svenska till svenska användare',
+			'en' => 'Write in fluent English for English-speaking users',
+			'de' => 'Schreiben Sie fließend auf Deutsch für deutschsprachige Benutzer',
+			'no' => 'Skriv på flytende norsk til norske brukere',
+			'fi' => 'Kirjoita sujuvaa suomea suomalaisille käyttäjille',
+			'nl' => 'Schrijf in vloeiend Nederlands voor Nederlandstalige gebruikers',
+		);
+		
+		if ( isset( $language_descriptions[ $lang ] ) ) {
+			update_option( 'wta_base_language_description', $language_descriptions[ $lang ] );
+		}
+
 		return true;
 	}
 
