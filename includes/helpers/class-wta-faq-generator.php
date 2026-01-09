@@ -326,30 +326,37 @@ class WTA_FAQ_Generator {
 	private static function generate_time_difference_faq( $city_name, $timezone, $test_mode = false ) {
 		// Calculate time difference to Denmark
 		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+		$example_time = self::format_time_with_offset( 12, 0, $diff_hours );
 		
-		$base_answer = "Tidsforskellen mellem {$city_name} og Danmark er <strong>{$diff_hours} timer</strong>.";
+		// Get question and answer from language pack
+		$question = self::get_faq_text( 'faq6_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq6_answer', array(
+			'city_name' => $city_name,
+			'diff_hours' => $diff_hours,
+			'example_time' => $example_time
+		) );
 		
-		if ( $test_mode ) {
-			$base_answer .= " Dette betyder at når klokken er 12:00 i Danmark, er klokken " . 
-			                self::format_time_with_offset( 12, 0, $diff_hours ) . " i {$city_name}.";
-		} else {
-			// Add 1 AI sentence for variation
+		// Optionally add AI sentence for variation (only in normal mode)
+		if ( ! $test_mode ) {
 			$api_key = get_option( 'wta_openai_api_key', '' );
 			if ( ! empty( $api_key ) ) {
 				$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-				$system = 'Skriv 1 praktisk sætning på dansk. Ingen placeholders.';
-				$user = "Skriv 1 praktisk eksempel på tidsforskel mellem {$city_name} og Danmark (forskel: {$diff_hours} timer). F.eks. 'når klokken er 12:00 i Danmark...'. Max 25 ord. INGEN placeholders.";
+				$site_lang = get_option( 'wta_site_language', 'da' );
+				$lang_desc = get_option( 'wta_base_language_description', 'Skriv på flydende dansk til danske brugere' );
+				
+				$system = "Skriv 1 praktisk sætning på {$site_lang}. Ingen placeholders.";
+				$user = "{$lang_desc}. Skriv 1 praktisk eksempel på tidsforskel mellem {$city_name} og brugerens land (forskel: {$diff_hours} timer). F.eks. 'når klokken er 12:00...'. Max 25 ord. INGEN placeholders.";
 				
 				$ai_sentence = self::call_openai_simple( $api_key, $model, $system, $user, 40 );
 				if ( false !== $ai_sentence && ! empty( $ai_sentence ) ) {
-					$base_answer .= ' ' . $ai_sentence;
+					$answer .= ' ' . $ai_sentence;
 				}
 			}
 		}
 		
 		return array(
-			'question' => "Hvad er tidsforskellen mellem {$city_name} og Danmark?",
-			'answer'   => $base_answer,
+			'question' => $question,
+			'answer'   => $answer,
 			'icon'     => '⏰',
 		);
 	}
@@ -361,12 +368,17 @@ class WTA_FAQ_Generator {
 	 */
 	private static function generate_time_difference_faq_template( $city_name, $timezone ) {
 		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
+		$example_time = self::format_time_with_offset( 12, 0, $diff_hours );
 		
-		$answer = "Tidsforskellen mellem {$city_name} og Danmark er <strong>{$diff_hours} timer</strong>. Dette betyder at når klokken er 12:00 i Danmark, er klokken " . 
-		          self::format_time_with_offset( 12, 0, $diff_hours ) . " i {$city_name}.";
+		$question = self::get_faq_text( 'faq6_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq6_answer', array(
+			'city_name' => $city_name,
+			'diff_hours' => $diff_hours,
+			'example_time' => $example_time
+		) );
 		
 		return array(
-			'question' => "Hvad er tidsforskellen mellem {$city_name} og Danmark?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '⏰',
 		);
@@ -379,28 +391,42 @@ class WTA_FAQ_Generator {
 	 */
 	private static function generate_season_faq( $city_name, $latitude, $test_mode = false ) {
 		$season = self::get_current_season( $latitude );
-		$hemisphere = ( $latitude >= 0 ) ? 'nordlige' : 'sydlige';
 		
-		$base_answer = "Det er aktuelt <strong>{$season}</strong> i {$city_name}. Byen ligger på den {$hemisphere} halvkugle, hvilket påvirker sæsonerne og dagslængden.";
+		// Get hemisphere from templates
+		$templates = get_option( 'wta_templates', array() );
+		$hemisphere = ( $latitude >= 0 ) 
+			? ( isset( $templates['northern_hemisphere'] ) ? $templates['northern_hemisphere'] : 'nordlige' )
+			: ( isset( $templates['southern_hemisphere'] ) ? $templates['southern_hemisphere'] : 'sydlige' );
 		
+		// Get question and answer from language pack
+		$question = self::get_faq_text( 'faq7_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq7_answer', array(
+			'season' => $season,
+			'city_name' => $city_name,
+			'hemisphere' => $hemisphere
+		) );
+		
+		// Optionally add AI sentence for variation (only in normal mode)
 		if ( ! $test_mode ) {
-			// Add 1 AI sentence about season context
 			$api_key = get_option( 'wta_openai_api_key', '' );
 			if ( ! empty( $api_key ) ) {
 				$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-				$system = 'Skriv 1 sætning på dansk om vejr eller dagslængde. Ingen placeholders.';
-				$user = "Skriv 1 sætning om hvordan {$season} er i {$city_name} (lat: {$latitude}). Nævn vejr eller dagslængde. Max 25 ord. INGEN placeholders.";
+				$site_lang = get_option( 'wta_site_language', 'da' );
+				$lang_desc = get_option( 'wta_base_language_description', 'Skriv på flydende dansk til danske brugere' );
+				
+				$system = "Skriv 1 sætning på {$site_lang} om vejr eller dagslængde. Ingen placeholders.";
+				$user = "{$lang_desc}. Skriv 1 sætning om hvordan {$season} er i {$city_name} (lat: {$latitude}). Nævn vejr eller dagslængde. Max 25 ord. INGEN placeholders.";
 				
 				$ai_sentence = self::call_openai_simple( $api_key, $model, $system, $user, 40 );
 				if ( false !== $ai_sentence && ! empty( $ai_sentence ) ) {
-					$base_answer .= ' ' . $ai_sentence;
+					$answer .= ' ' . $ai_sentence;
 				}
 			}
 		}
 		
 		return array(
-			'question' => "Hvilken sæson er det i {$city_name}?",
-			'answer'   => $base_answer,
+			'question' => $question,
+			'answer'   => $answer,
 			'icon'     => '🍂',
 		);
 	}
@@ -412,16 +438,26 @@ class WTA_FAQ_Generator {
 	 */
 	private static function generate_season_faq_template( $city_name, $latitude ) {
 		$season = self::get_current_season( $latitude );
-		$hemisphere = ( $latitude >= 0 ) ? 'nordlige' : 'sydlige';
 		
-		$answer = "Det er aktuelt <strong>{$season}</strong> i {$city_name}. Byen ligger på den {$hemisphere} halvkugle, hvilket påvirker sæsonerne og dagslængden.";
+		// Get hemisphere from templates
+		$templates = get_option( 'wta_templates', array() );
+		$hemisphere = ( $latitude >= 0 ) 
+			? ( isset( $templates['northern_hemisphere'] ) ? $templates['northern_hemisphere'] : 'nordlige' )
+			: ( isset( $templates['southern_hemisphere'] ) ? $templates['southern_hemisphere'] : 'sydlige' );
 		
-		return array(
-			'question' => "Hvilken sæson er det i {$city_name}?",
-			'answer'   => $answer,
-			'icon'     => '🍂',
-		);
-	}
+		$question = self::get_faq_text( 'faq7_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq7_answer', array(
+			'season' => $season,
+			'city_name' => $city_name,
+			'hemisphere' => $hemisphere
+		) );
+	
+	return array(
+		'question' => $question,
+		'answer'   => $answer,
+		'icon'     => '🍂',
+	);
+}
 
 	/**
 	 * FAQ 8: DST info (light AI + template).
@@ -432,30 +468,36 @@ class WTA_FAQ_Generator {
 		// Check if timezone uses DST
 		$uses_dst = self::timezone_uses_dst( $timezone );
 		
+		// Get question and answer from language pack
+		$question = self::get_faq_text( 'faq8_question', array( 'city_name' => $city_name ) );
+		
 		if ( $uses_dst ) {
-			$base_answer = "{$city_name} <strong>bruger sommertid</strong>. Uret stilles frem om foråret og tilbage om efteråret for at udnytte dagslyset bedre.";
+			$answer = self::get_faq_text( 'faq8_answer_yes', array( 'city_name' => $city_name ) );
 		} else {
-			$base_answer = "{$city_name} <strong>bruger ikke sommertid</strong>. Tiden forbliver den samme året rundt.";
+			$answer = self::get_faq_text( 'faq8_answer_no', array( 'city_name' => $city_name ) );
 		}
 		
+		// Optionally add AI sentence for variation (only in normal mode and if DST is used)
 		if ( ! $test_mode && $uses_dst ) {
-			// Add 1 AI sentence about DST impact
 			$api_key = get_option( 'wta_openai_api_key', '' );
 			if ( ! empty( $api_key ) ) {
 				$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-				$system = 'Skriv 1 sætning på dansk. Ingen placeholders.';
-				$user = "Skriv 1 sætning om hvordan sommertid påvirker tid i {$city_name}. Max 20 ord. INGEN placeholders.";
+				$site_lang = get_option( 'wta_site_language', 'da' );
+				$lang_desc = get_option( 'wta_base_language_description', 'Skriv på flydende dansk til danske brugere' );
+				
+				$system = "Skriv 1 sætning på {$site_lang}. Ingen placeholders.";
+				$user = "{$lang_desc}. Skriv 1 sætning om hvordan sommertid påvirker tid i {$city_name}. Max 20 ord. INGEN placeholders.";
 				
 				$ai_sentence = self::call_openai_simple( $api_key, $model, $system, $user, 35 );
 				if ( false !== $ai_sentence && ! empty( $ai_sentence ) ) {
-					$base_answer .= ' ' . $ai_sentence;
+					$answer .= ' ' . $ai_sentence;
 				}
 			}
 		}
 		
 		return array(
-			'question' => "Bruger {$city_name} sommertid?",
-			'answer'   => $base_answer,
+			'question' => $question,
+			'answer'   => $answer,
 			'icon'     => '☀️',
 		);
 	}
@@ -468,14 +510,16 @@ class WTA_FAQ_Generator {
 	private static function generate_dst_faq_template( $city_name, $timezone ) {
 		$uses_dst = self::timezone_uses_dst( $timezone );
 		
+		$question = self::get_faq_text( 'faq8_question', array( 'city_name' => $city_name ) );
+		
 		if ( $uses_dst ) {
-			$answer = "{$city_name} <strong>bruger sommertid</strong>. Uret stilles frem om foråret og tilbage om efteråret for at udnytte dagslyset bedre.";
+			$answer = self::get_faq_text( 'faq8_answer_yes', array( 'city_name' => $city_name ) );
 		} else {
-			$answer = "{$city_name} <strong>bruger ikke sommertid</strong>. Tiden forbliver den samme året rundt.";
+			$answer = self::get_faq_text( 'faq8_answer_no', array( 'city_name' => $city_name ) );
 		}
 		
 		return array(
-			'question' => "Bruger {$city_name} sommertid?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '☀️',
 		);
@@ -573,10 +617,14 @@ INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 	private static function generate_calling_hours_faq_template( $city_name, $timezone ) {
 		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
 		
-		$answer = "For at ringe til {$city_name} fra Danmark, skal du tage højde for tidsforskellen på {$diff_hours} timer. Bedste tidspunkt er typisk mellem kl. 10:00-17:00 dansk tid, så du rammer arbejdstiden i {$city_name}.";
+		$question = self::get_faq_text( 'faq9_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq9_answer_template', array(
+			'city_name' => $city_name,
+			'diff_hours' => $diff_hours
+		) );
 		
 		return array(
-			'question' => "Hvornår skal jeg ringe til {$city_name} fra Danmark?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '📞',
 		);
@@ -585,31 +633,45 @@ INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 	private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		$diff_hours = self::calculate_time_difference( $timezone, 'Europe/Copenhagen' );
 		
-		$answer = "Med en tidsforskel på {$diff_hours} timer til {$city_name}, kan du undgå jetlag ved at tilpasse din søvnrytme gradvist før afrejse og få meget lys de første dage efter ankomst.";
+		$question = self::get_faq_text( 'faq11_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq11_answer_template', array(
+			'city_name' => $city_name,
+			'diff_hours' => $diff_hours
+		) );
 		
 		return array(
-			'question' => "Hvordan undgår jeg jetlag til {$city_name}?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '🌐',
 		);
 	}
 
 	private static function generate_culture_faq_template( $city_name, $country_name ) {
-		$answer = "I {$city_name} følger man lokale tidsvaner og arbejdstider. Det er en god idé at researche lokale skikke vedrørende måltider og arbejdstid før dit besøg i {$country_name}.";
+		$question = self::get_faq_text( 'faq10_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq10_answer_template', array( 'city_name' => $city_name ) );
 		
 		return array(
-			'question' => "Hvad skal jeg vide om tidskultur i {$city_name}?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '🕐',
 		);
 	}
 
 	private static function generate_travel_time_faq_template( $city_name, $latitude ) {
-		$hemisphere = ( $latitude >= 0 ) ? 'nordlige' : 'sydlige';
-		$answer = "{$city_name} ligger på den {$hemisphere} halvkugle. Bedste rejsetidspunkt afhænger af vejret og turistsæsonen, men generelt er forårs- og efterårsmånederne ofte gode valg.";
+		// Get hemisphere from templates
+		$templates = get_option( 'wta_templates', array() );
+		$hemisphere = ( $latitude >= 0 ) 
+			? ( isset( $templates['northern_hemisphere'] ) ? $templates['northern_hemisphere'] : 'nordlige' )
+			: ( isset( $templates['southern_hemisphere'] ) ? $templates['southern_hemisphere'] : 'sydlige' );
+		
+		$question = self::get_faq_text( 'faq12_question', array( 'city_name' => $city_name ) );
+		$answer = self::get_faq_text( 'faq12_answer_template', array(
+			'city_name' => $city_name,
+			'hemisphere' => $hemisphere
+		) );
 		
 		return array(
-			'question' => "Hvad er bedste tidspunkt at besøge {$city_name}?",
+			'question' => $question,
 			'answer'   => $answer,
 			'icon'     => '✈️',
 		);
@@ -672,27 +734,34 @@ INGEN placeholders. KUN faktisk indhold. NO markdown formatting.";
 		$month = (int) date( 'n' );
 		$is_northern = $latitude >= 0;
 		
+		// Get season templates from language pack
+		$templates = get_option( 'wta_templates', array() );
+		$spring = isset( $templates['season_spring'] ) ? $templates['season_spring'] : 'forår';
+		$summer = isset( $templates['season_summer'] ) ? $templates['season_summer'] : 'sommer';
+		$autumn = isset( $templates['season_autumn'] ) ? $templates['season_autumn'] : 'efterår';
+		$winter = isset( $templates['season_winter'] ) ? $templates['season_winter'] : 'vinter';
+		
 		// Northern hemisphere
 		if ( $is_northern ) {
 			if ( $month >= 3 && $month <= 5 ) {
-				return 'forår';
+				return $spring;
 			} elseif ( $month >= 6 && $month <= 8 ) {
-				return 'sommer';
+				return $summer;
 			} elseif ( $month >= 9 && $month <= 11 ) {
-				return 'efterår';
+				return $autumn;
 			} else {
-				return 'vinter';
+				return $winter;
 			}
 		} else {
 			// Southern hemisphere (reversed)
 			if ( $month >= 3 && $month <= 5 ) {
-				return 'efterår';
+				return $autumn;
 			} elseif ( $month >= 6 && $month <= 8 ) {
-				return 'vinter';
+				return $winter;
 			} elseif ( $month >= 9 && $month <= 11 ) {
-				return 'forår';
+				return $spring;
 			} else {
-				return 'sommer';
+				return $summer;
 			}
 		}
 	}

@@ -2,6 +2,118 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.7] - 2026-01-09
+
+### ✅ COMPLETE FAQ TRANSLATION: All 12 FAQs Now Use Language Packs
+
+**USER REQUEST:**
+"Bør FAQ #6-#12 ikke også være i JSON filerne? Men hvordan løste du FAQ 1-5 nu - og hvordan løses #6-#12 (som vist delvist benytter AI)?"
+
+**ANSWER:**
+✅ **YES! FAQ strings (all 12) ARE already in JSON files!** They were added in v3.2.0 in the `"faq"` section.
+
+**PROBLEM:**
+v3.2.6 only updated FAQ #1-#5 (tier 1 - template-based) to use `get_faq_text()`. FAQ #6-#12 still had hardcoded Danish strings in the generator methods!
+
+**SOLUTION v3.2.7:**
+
+**1. FAQ #6 (Time Difference):**
+- ✅ Updated both AI and template versions
+- ✅ Uses `faq6_question` and `faq6_answer` from JSON
+- ✅ AI prompts now language-aware (uses `wta_site_language` and `wta_base_language_description`)
+
+**2. FAQ #7 (Season):**
+- ✅ Updated both AI and template versions
+- ✅ Uses `faq7_question` and `faq7_answer` from JSON
+- ✅ **CRITICAL FIX:** Updated `get_current_season()` to use season templates (`season_winter`, `season_spring`, etc.)
+- ✅ Now returns "vinter" (Danish) vs "vinter" (Swedish) vs "winter" (English)
+- ✅ AI prompts now language-aware
+
+**3. FAQ #8 (DST - Daylight Saving Time):**
+- ✅ Updated both AI and template versions
+- ✅ Uses `faq8_question`, `faq8_answer_yes`, `faq8_answer_no` from JSON
+- ✅ AI prompts now language-aware
+
+**4. FAQ #9-#12 (Template Fallbacks):**
+- ✅ **FAQ #9 (Calling hours):** Uses `faq9_question` + `faq9_answer_template`
+- ✅ **FAQ #10 (Time culture):** Uses `faq10_question` + `faq10_answer_template`
+- ✅ **FAQ #11 (Jetlag):** Uses `faq11_question` + `faq11_answer_template`
+- ✅ **FAQ #12 (Best time to visit):** Uses `faq12_question` + `faq12_answer_template`
+
+**HOW IT WORKS:**
+
+**Step 1: Load Language Pack**
+When user clicks "Load Default Prompts for SV":
+```php
+WTA_Activator::load_language_defaults( 'sv' )
+  ↓
+Reads sv.json
+  ↓
+update_option( 'wta_faq_strings', $json['faq'] );  // All 12 FAQ Q&A
+update_option( 'wta_templates', $json['templates'] );  // All other strings
+```
+
+**Step 2: FAQ Generator Uses get_faq_text()**
+```php
+private static function get_faq_text( $key, $vars = array() ) {
+    $faq_strings = get_option( 'wta_faq_strings', array() );
+    $text = $faq_strings[ $key ];  // e.g. 'faq1_question'
+    
+    // Replace {variables} with actual values
+    foreach ( $vars as $name => $value ) {
+        $text = str_replace( '{' . $name . '}', $value, $text );
+    }
+    
+    return $text;
+}
+```
+
+**Step 3: Hybrid FAQ (AI + Template)**
+FAQ #6-#8 use **hybrid approach**:
+- **Base answer:** From JSON (static, translated)
+- **AI variation:** OpenAI adds 1 extra sentence for variety (optional, language-aware)
+
+Example:
+```php
+// Get base answer from JSON
+$answer = self::get_faq_text( 'faq6_answer', [...] );
+
+// Optionally add AI variation
+if ( ! $test_mode ) {
+    $site_lang = get_option( 'wta_site_language', 'da' );
+    $lang_desc = get_option( 'wta_base_language_description', '...' );
+    
+    $system = "Skriv 1 sætning på {$site_lang}...";
+    $user = "{$lang_desc}. Skriv 1 praktisk eksempel...";
+    
+    $ai_sentence = call_openai(...);
+    $answer .= ' ' . $ai_sentence;
+}
+```
+
+**FILES MODIFIED:**
+- `includes/helpers/class-wta-faq-generator.php`:
+  - Updated `get_current_season()` to use season templates (now returns translated seasons!)
+  - Updated `generate_time_difference_faq()` + template version (FAQ #6)
+  - Updated `generate_season_faq()` + template version (FAQ #7)
+  - Updated `generate_dst_faq()` + template version (FAQ #8)
+  - Updated `generate_calling_hours_faq_template()` (FAQ #9)
+  - Updated `generate_culture_faq_template()` (FAQ #10)
+  - Updated `generate_jetlag_faq_template()` (FAQ #11)
+  - Updated `generate_travel_time_faq_template()` (FAQ #12)
+
+**RESULT:**
+✅ **ALL 12 FAQs (v3.2.6: #1-#5, v3.2.7: #6-#12) NU FULDT OVERSAT!**
+✅ AI prompts for FAQ #6-#8 now language-aware
+✅ Season names now translated correctly
+✅ Hemisphere names use templates
+✅ FAQ strings loaded from JSON (`wta_faq_strings` option)
+✅ No more hardcoded Danish strings in FAQ generator!
+
+**VERSION:** 3.2.7
+
+---
+
 ## [3.2.6] - 2026-01-09
 
 ### 🔥 CRITICAL: FAQ + Remaining Hardcoded Strings Fixed
