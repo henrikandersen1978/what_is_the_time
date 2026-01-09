@@ -853,33 +853,34 @@ class WTA_Template_Loader {
 			return $content;
 		}
 		
-		$post_id = get_the_ID();
-		if ( ! $post_id ) {
-			return $content;
-		}
-		
-		$type = get_post_meta( $post_id, 'wta_type', true );
-		
-		// Only for cities
-		if ( 'city' !== $type ) {
-			return $content;
-		}
-		
-		// Get FAQ data
-		$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
-		
-		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
-			return $content;
-		}
-		
-		// Generate and append FAQ schema
-		// v3.0.20: Use get_post_field() to bypass the_title filter
-		// This ensures FAQ schema uses page title (e.g., "København")
-		// not H1 title (e.g., "Hvad er klokken i København, Danmark?")
-		$city_name = get_post_field( 'post_title', $post_id );
-		$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $city_name );
-		
+	$post_id = get_the_ID();
+	if ( ! $post_id ) {
 		return $content;
+	}
+	
+	$type = get_post_meta( $post_id, 'wta_type', true );
+	
+	// v3.2.9: FAQ schema for ALL types (continent, country, city)
+	// Previously only cities had FAQ schema
+	if ( ! in_array( $type, array( 'continent', 'country', 'city' ), true ) ) {
+		return $content;
+	}
+	
+	// Get FAQ data
+	$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
+	
+	if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+		return $content;
+	}
+	
+	// Generate and append FAQ schema
+	// v3.0.20: Use get_post_field() to bypass the_title filter
+	// This ensures FAQ schema uses page title (e.g., "København")
+	// not H1 title (e.g., "Hvad er klokken i København, Danmark?")
+	$location_name = get_post_field( 'post_title', $post_id );
+	$content .= WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $location_name );
+	
+	return $content;
 	}
 
 	/**

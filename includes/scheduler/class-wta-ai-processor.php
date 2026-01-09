@@ -1275,37 +1275,32 @@ class WTA_AI_Processor {
 			return sprintf( $template, $name );
 		}
 		
-		// v3.0.24: For cities, use question-based template (no AI needed, no year)
-		// v3.2.4: Now language-aware!
-		if ( 'city' === $type ) {
-			$parent_id = wp_get_post_parent_id( $post_id );
-			if ( $parent_id ) {
-				$country_name = get_post_field( 'post_title', $parent_id );
-				$template = isset( $templates['city_title'] ) ? $templates['city_title'] : 'Hvad er klokken i %s, %s?';
-				return sprintf( $template, $name, $country_name );
-			} else {
-				$template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
-				return sprintf( $template, $name );
-			}
-		}
-		
-		// For countries, use AI generation with language-aware prompts
-		$api_key = get_option( 'wta_openai_api_key', '' );
-		if ( empty( $api_key ) ) {
-			// Fallback to template if no API key
-			$template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+	// v3.0.24: For cities, use question-based template (no AI needed, no year)
+	// v3.2.4: Now language-aware!
+	// v3.2.9: Fixed fallback template when no parent
+	if ( 'city' === $type ) {
+		$parent_id = wp_get_post_parent_id( $post_id );
+		if ( $parent_id ) {
+			$country_name = get_post_field( 'post_title', $parent_id );
+			$template = isset( $templates['city_title'] ) ? $templates['city_title'] : 'Hvad er klokken i %s, %s?';
+			return sprintf( $template, $name, $country_name );
+		} else {
+			// v3.2.9: Use city_title_no_country template (not country_title!)
+			$template = isset( $templates['city_title_no_country'] ) ? $templates['city_title_no_country'] : 'Hvad er klokken i %s?';
 			return sprintf( $template, $name );
 		}
-
-		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
-		$system = get_option( 'wta_prompt_yoast_title_system', 'Du er SEO ekspert. Skriv KUN titlen, ingen citationstegn, ingen ekstra tekst.' );
-		$user = get_option( 'wta_prompt_yoast_title_user', 'Skriv en SEO meta title (50-60 tegn) for en side om hvad klokken er i {location_name_local}.' );
-		
-		// Replace placeholders
-		$user = str_replace( '{location_name_local}', $name, $user );
-		
-		return $this->call_openai_api( $api_key, $model, 0.7, 100, $system, $user );
 	}
+		
+	// v3.2.9: For countries, use template (no AI needed - saves costs and time!)
+	// Previously used AI which was expensive and inconsistent
+	if ( 'country' === $type ) {
+		$template = isset( $templates['country_title'] ) ? $templates['country_title'] : 'Hvad er klokken i %s?';
+		return sprintf( $template, $name );
+	}
+	
+	// Fallback for unknown types
+	return sprintf( 'Hvad er klokken i %s?', $name );
+}
 
 	/**
 	 * Generate Yoast SEO description.
