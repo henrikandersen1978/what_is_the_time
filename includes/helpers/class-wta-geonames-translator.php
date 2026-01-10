@@ -58,10 +58,11 @@ class WTA_GeoNames_Translator {
 			return array();
 		}
 
-		WTA_Logger::info( 'Parsing alternateNamesV2.txt (this takes 2-5 minutes)', array(
-			'language' => $lang,
-			'file_size' => size_format( filesize( $file_path ) ),
-		) );
+	WTA_Logger::info( 'Parsing alternateNamesV2.txt (this takes 2-5 minutes)', array(
+		'language' => $lang,
+		'file_size' => size_format( filesize( $file_path ) ),
+		'version' => 'v3.2.42 - TABS VERIFIED',
+	) );
 
 		$start_time = microtime( true );
 		$translations = array();
@@ -88,7 +89,7 @@ class WTA_GeoNames_Translator {
 		// Parse tab-separated values
 		$parts = explode( "\t", trim( $line ) );
 
-		// v3.2.41: Add missing TAB - all lines inside while loop need 2 tabs!
+		// v3.2.42: Log every 100k translations to prove code is running!
 		// Validate minimum required fields
 		if ( count( $parts ) < 5 ) {
 			continue;
@@ -106,6 +107,15 @@ class WTA_GeoNames_Translator {
 			if ( ! isset( $translations[ $geonameid ] ) ) {
 				$translations[ $geonameid ] = $alternate_name;
 				$matched_count++;
+				
+				// v3.2.42: Log every 10,000 matches to PROVE code is inside loop!
+				if ( $matched_count % 10000 === 0 ) {
+					WTA_Logger::info( 'v3.2.42 CODE IS RUNNING! Matched: ' . number_format($matched_count), array(
+						'line_count' => number_format($line_count),
+						'last_translation' => $alternate_name,
+						'last_geonameid' => $geonameid,
+					) );
+				}
 			}
 		}
 
