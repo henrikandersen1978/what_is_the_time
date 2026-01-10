@@ -63,7 +63,9 @@
     "faq_intro_system": "Du skriver korte, hjælpsomme introduktioner til FAQ sektioner på dansk. Ingen placeholders.",
     "faq_intro_user": "Skriv 2-3 korte sætninger der introducerer FAQ-sektionen om tid i {city_name}. Forklar kort hvad brugere kan finde svar på (tidszone, tidsforskel, praktiske tips). Tone: Hjælpsom og direkte. Max 50 ord. INGEN placeholders.",
     "faq_ai_batch_system": "Du er ekspert i at skrive FAQ svar på dansk. Svar skal være praktiske og hjælpsomme. INGEN placeholders. Return ONLY pure JSON, no markdown code blocks.",
-    "faq_ai_batch_user": "Skriv FAQ svar for {city_name}, {country_name}.\\n\\nFAQ 1: Hvornår skal jeg ringe til {city_name} fra Danmark?\\nTidsforskel: {diff_hours} timer. Skriv 2-3 praktiske sætninger (max 60 ord).\\n\\nFAQ 2: Hvad skal jeg vide om tidskultur i {city_name}?\\nSkriv 2-3 sætninger om arbejdstider, måltider, lokale tidsvaner (max 60 ord).\\n\\nFAQ 3: Hvordan undgår jeg jetlag til {city_name}?\\nTidsforskel: {diff_hours} timer. Skriv 2 jetlag-tips (max 50 ord).\\n\\nFAQ 4: Hvad er bedste tidspunkt at besøge {city_name}?\\nSkriv 2 sætninger om vejr og turistsæson (max 50 ord).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nINGEN placeholders. KUN faktisk indhold. NO markdown formatting."
+    "faq_ai_batch_user": "Skriv FAQ svar for {city_name}, {country_name}.\\n\\nFAQ 1: Hvornår skal jeg ringe til {city_name} fra Danmark?\\nTidsforskel: {diff_hours} timer. Skriv 2-3 praktiske sætninger (max 60 ord).\\n\\nFAQ 2: Hvad skal jeg vide om tidskultur i {city_name}?\\nSkriv 2-3 sætninger om arbejdstider, måltider, lokale tidsvaner (max 60 ord).\\n\\nFAQ 3: Hvordan undgår jeg jetlag til {city_name}?\\nTidsforskel: {diff_hours} timer. Skriv 2 jetlag-tips (max 50 ord).\\n\\nFAQ 4: Hvad er bedste tidspunkt at besøge {city_name}?\\nSkriv 2 sætninger om vejr og turistsæson (max 50 ord).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nINGEN placeholders. KUN faktisk indhold. NO markdown formatting.",
+    "comparison_intro_system": "Du er SEO-ekspert. Skriv KUN teksten, ingen citationstegn, ingen ekstra forklaringer.",
+    "comparison_intro_user": "Skriv præcis 40-50 ord om hvorfor et verdensur er nyttigt til at sammenligne tidsforskelle mellem %s og andre internationale byer. Inkludér nøgleordene \"tidsforskel\", \"tidsforskelle\" og \"verdensur\". Fokusér på rejseplanlægning og internationale møder. KUN teksten."
   },
   "templates": {
     "continent_h1": "Aktuel tid i lande og byer i %s",
@@ -113,6 +115,13 @@
     "cities_different_parts": "Byer i forskellige dele af %s",
     "time_difference_between": "Tidsforskel mellem %s og andre byer",
     "compare_local_time": "Sammenlign lokal tid i %s med 24 internationale byer",
+    "comparison_heading": "Tidsforskel: Sammenlign %s med verdensur i andre byer",
+    "table_header_city": "By",
+    "table_header_country": "Land",
+    "table_header_time_diff": "Tidsforskel",
+    "table_header_local_time": "Lokal tid",
+    "hour_singular": "time",
+    "hour_plural": "timer",
     "same_time": "Samme tid",
     "world_clock_intro_placeholder": "Dummy tekst om tidsforskelle og verdensur. Test mode aktiveret.",
     "world_timezones_by_continent": "Verdenstidszoner efter kontinent",

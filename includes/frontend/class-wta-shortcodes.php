@@ -1496,7 +1496,10 @@ class WTA_Shortcodes {
 		
 		// Build output
 		$output = '<div id="global-time-comparison" class="wta-comparison-section">' . "\n";
-		$output .= sprintf( '<h2>Tidsforskel: Sammenlign %s med verdensur i andre byer</h2>' . "\n", esc_html( $current_city_name ) );
+		
+		// v3.2.56: Use language-aware heading
+		$heading_template = self::get_template( 'comparison_heading' ) ?: 'Tidsforskel: Sammenlign %s med verdensur i andre byer';
+		$output .= sprintf( '<h2>' . $heading_template . '</h2>' . "\n", esc_html( $current_city_name ) );
 		
 		if ( ! empty( $intro_text ) ) {
 			$output .= '<p class="wta-comparison-intro">' . esc_html( $intro_text ) . '</p>' . "\n";
@@ -1506,7 +1509,19 @@ class WTA_Shortcodes {
 		$output .= '<div class="wta-table-wrapper">' . "\n";
 		$output .= '<table class="wta-time-comparison-table">' . "\n";
 		$output .= '<thead><tr>' . "\n";
-		$output .= '<th>By</th><th>Land</th><th>Tidsforskel</th><th>Lokal tid</th>' . "\n";
+		
+		// v3.2.56: Use language-aware table headers
+		$header_city = self::get_template( 'table_header_city' ) ?: 'By';
+		$header_country = self::get_template( 'table_header_country' ) ?: 'Land';
+		$header_time_diff = self::get_template( 'table_header_time_diff' ) ?: 'Tidsforskel';
+		$header_local_time = self::get_template( 'table_header_local_time' ) ?: 'Lokal tid';
+		
+		$output .= sprintf( '<th>%s</th><th>%s</th><th>%s</th><th>%s</th>' . "\n", 
+			esc_html( $header_city ),
+			esc_html( $header_country ),
+			esc_html( $header_time_diff ),
+			esc_html( $header_local_time )
+		);
 		$output .= '</tr></thead>' . "\n";
 		$output .= '<tbody>' . "\n";
 		
@@ -1557,9 +1572,12 @@ class WTA_Shortcodes {
 		$output .= '</table>' . "\n";
 		$output .= '</div>' . "\n";
 		
-		// Add ItemList schema (direct injection like existing schemas)
-		$schema_name = sprintf( 'Tidsforskel mellem %s og andre byer', $current_city_name );
-		$schema_description = sprintf( 'Sammenlign lokal tid i %s med 24 internationale byer', $current_city_name );
+		// v3.2.56: Use language-aware schema texts
+		$schema_name_template = self::get_template( 'time_difference_between' ) ?: 'Tidsforskel mellem %s og andre byer';
+		$schema_desc_template = self::get_template( 'compare_local_time' ) ?: 'Sammenlign lokal tid i %s med 24 internationale byer';
+		
+		$schema_name = sprintf( $schema_name_template, $current_city_name );
+		$schema_description = sprintf( $schema_desc_template, $current_city_name );
 		$output .= $this->generate_item_list_schema( $comparison_cities, $schema_name, $schema_description );
 		
 		$output .= '</div>' . "\n";
@@ -1854,15 +1872,18 @@ class WTA_Shortcodes {
 				? intval( $hours_abs ) 
 				: number_format( $hours_abs, 1, ',', '' );
 			
-			// Danish grammar: "time" (singular) vs "timer" (plural)
-			$plural = ( $hours_abs == 1 ) ? 'time' : 'timer';
+			// v3.2.56: Use language-aware hour singular/plural
+			$hour_singular = self::get_template( 'hour_singular' ) ?: 'time';
+			$hour_plural = self::get_template( 'hour_plural' ) ?: 'timer';
+			$plural = ( $hours_abs == 1 ) ? $hour_singular : $hour_plural;
 			
 			if ( $hours_diff > 0 ) {
 				return '+' . $hours_formatted . ' ' . $plural;
 			} elseif ( $hours_diff < 0 ) {
 				return $hours_formatted . ' ' . $plural; // Negative sign already in number
 			} else {
-				return 'Samme tid';
+				// v3.2.56: Use language-aware "same time"
+				return self::get_template( 'same_time' ) ?: 'Samme tid';
 			}
 		} catch ( Exception $e ) {
 			return '';
@@ -1922,11 +1943,10 @@ class WTA_Shortcodes {
 		
 		$model = get_option( 'wta_openai_model', 'gpt-4o-mini' );
 		
-		$system = 'Du er SEO-ekspert. Skriv KUN teksten, ingen citationstegn, ingen ekstra forklaringer.';
-		$user = sprintf(
-			'Skriv præcis 40-50 ord om hvorfor et verdensur er nyttigt til at sammenligne tidsforskelle mellem %s og andre internationale byer. Inkludér nøgleordene "tidsforskel", "tidsforskelle" og "verdensur". Fokusér på rejseplanlægning og internationale møder. KUN teksten.',
-			$city_name
-		);
+		// v3.2.56: Use language-aware prompts
+		$system = get_option( 'wta_prompt_comparison_intro_system', 'Du er SEO-ekspert. Skriv KUN teksten, ingen citationstegn, ingen ekstra forklaringer.' );
+		$user_template = get_option( 'wta_prompt_comparison_intro_user', 'Skriv præcis 40-50 ord om hvorfor et verdensur er nyttigt til at sammenligne tidsforskelle mellem %s og andre internationale byer. Inkludér nøgleordene "tidsforskel", "tidsforskelle" og "verdensur". Fokusér på rejseplanlægning og internationale møder. KUN teksten.' );
+		$user = sprintf( $user_template, $city_name );
 		
 		$url = 'https://api.openai.com/v1/chat/completions';
 		
