@@ -58,10 +58,16 @@ class WTA_GeoNames_Translator {
 			return array();
 		}
 
+	// v3.2.50: TEST - Log EXACT TIME when parsing starts
+	WTA_Logger::info( '🔵 v3.2.50 PARSING STARTS NOW', array(
+		'timestamp' => date('Y-m-d H:i:s'),
+		'microtime' => microtime(true),
+	) );
+
 	WTA_Logger::info( 'Parsing alternateNamesV2.txt (this takes 2-5 minutes)', array(
 		'language' => $lang,
 		'file_size' => size_format( filesize( $file_path ) ),
-		'version' => 'v3.2.42 - TABS VERIFIED',
+		'version' => 'v3.2.50 - TIMESTAMP TEST',
 	) );
 
 		$start_time = microtime( true );
@@ -107,8 +113,9 @@ class WTA_GeoNames_Translator {
 				
 				// Log every 500 matches
 				if ( $matched_count % 500 === 0 ) {
-					WTA_Logger::info( 'v3.2.49 Matched ' . number_format($matched_count), array(
+					WTA_Logger::info( '🟢 v3.2.50 Matched ' . number_format($matched_count), array(
 						'at_line' => number_format($line_count),
+						'timestamp' => date('Y-m-d H:i:s'),
 					) );
 				}
 			}
@@ -154,6 +161,12 @@ class WTA_GeoNames_Translator {
 			'expected' => '> 1000 for major languages',
 		) );
 	}
+	
+	// v3.2.50: TEST - Log EXACT TIME when parsing ends
+	WTA_Logger::info( '🔴 v3.2.50 PARSING FINISHED NOW', array(
+		'timestamp' => date('Y-m-d H:i:s'),
+		'microtime' => microtime(true),
+	) );
 	
 	// v3.2.45: CRITICAL - Compare matched_count vs actual array count!
 	$actual_array_count = count( $translations );
