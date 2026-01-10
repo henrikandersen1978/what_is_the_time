@@ -2,6 +2,70 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.27] - 2026-01-10
+
+### 🐛 DEBUG - Add AJAX logging to diagnose why imports don't start
+
+**USER REPORT:**
+"Jeg har kørt alle steps og importeret danmark (population min 250000) i version 3.2.26. Den importerer ingenting (var det meningen?)."
+
+---
+
+## **PROBLEMET:**
+
+v3.2.26 starter ALDRIG import - ingen log entries overhovedet!
+
+Log viser:
+- ❌ INGEN "AJAX prepare_import called"  
+- ❌ INGEN "GeoNames translations ready"  
+- ❌ INGEN "Waiting 2 seconds for database replication"  
+- ✅ Kun gamle AI processing fra tidligere imports
+
+**MULIGE ÅRSAGER:**
+1. AJAX request fejler (JavaScript error)
+2. Nonce check fejler
+3. Permission check fejler
+4. PHP error før første log
+
+---
+
+## **LØSNING:**
+
+### **Add Debug Logging to AJAX Handler**
+
+```php
+// class-wta-admin.php (line ~307)
+public function ajax_prepare_import() {
+    // v3.2.27: Debug logging
+    WTA_Logger::info('AJAX prepare_import called!', array(
+        'timestamp' => current_time('mysql'),
+        'user_id' => get_current_user_id(),
+    ));
+    
+    check_ajax_referer('wta-admin-nonce', 'nonce');
+    
+    // ... more logging after each step ...
+}
+```
+
+**FORMÅL:** Find ud af hvor importen stopper!
+
+---
+
+### Changed
+- **class-wta-admin.php**: Added debug logging to `ajax_prepare_import()` to track execution flow
+- **class-wta-admin.php**: Log before/after `WTA_Importer::prepare_import()` call
+
+### Next Steps
+1. Upload v3.2.27
+2. Clear browser cache
+3. Try import again
+4. Check log for "AJAX prepare_import called!"
+5. If missing → JavaScript error (check browser console)
+6. If present → Find where it stops
+
+---
+
 ## [3.2.26] - 2026-01-10
 
 ### 🎯 FIX - Cache Race Condition + Legacy Code Cleanup

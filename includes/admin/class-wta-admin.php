@@ -305,9 +305,18 @@ class WTA_Admin {
 	 * @since    2.0.0
 	 */
 	public function ajax_prepare_import() {
+		// v3.2.27: Add debug logging to see if AJAX is working
+		WTA_Logger::info( 'AJAX prepare_import called!', array(
+			'timestamp' => current_time( 'mysql' ),
+			'user_id' => get_current_user_id(),
+		) );
+		
 		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
+			WTA_Logger::error( 'AJAX prepare_import UNAUTHORIZED!', array(
+				'user_id' => get_current_user_id(),
+			) );
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
@@ -318,6 +327,13 @@ class WTA_Admin {
 		$max_cities_per_country = isset( $_POST['max_cities_per_country'] ) ? intval( $_POST['max_cities_per_country'] ) : 0;
 		$clear_queue = isset( $_POST['clear_queue'] ) && 'yes' === $_POST['clear_queue'];
 
+		WTA_Logger::info( 'Calling WTA_Importer::prepare_import()...', array(
+			'import_mode' => $import_mode,
+			'selected_countries' => $selected_countries,
+			'min_population' => $min_population,
+			'max_cities_per_country' => $max_cities_per_country,
+		) );
+		
 		$stats = WTA_Importer::prepare_import( array(
 			'import_mode'            => $import_mode,
 			'selected_continents'    => $selected_continents,
@@ -325,6 +341,11 @@ class WTA_Admin {
 			'min_population'         => $min_population,
 			'max_cities_per_country' => $max_cities_per_country,
 			'clear_queue'            => $clear_queue,
+		) );
+
+		WTA_Logger::info( 'WTA_Importer::prepare_import() COMPLETED!', array(
+			'stats' => $stats,
+			'result_type' => gettype( $stats ),
 		) );
 
 		wp_send_json_success( array(
