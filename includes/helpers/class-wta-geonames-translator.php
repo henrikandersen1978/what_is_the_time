@@ -75,13 +75,14 @@ class WTA_GeoNames_Translator {
 		$line_count = 0;
 		$matched_count = 0;
 
-		while ( ( $line = fgets( $file ) ) !== false ) {
-			$line_count++;
+	while ( ( $line = fgets( $file ) ) !== false ) {
+		$line_count++;
 
-			// Skip comments
-			if ( strpos( $line, '#' ) === 0 ) {
-				continue;
-			}
+		// v3.2.35: CRITICAL FIX - All code below must be INSIDE while loop (3 tabs!)
+		// Skip comments
+		if ( strpos( $line, '#' ) === 0 ) {
+			continue;
+		}
 
 		// Parse tab-separated values
 		$parts = explode( "\t", trim( $line ) );
@@ -91,7 +92,6 @@ class WTA_GeoNames_Translator {
 			continue;
 		}
 
-		// v3.2.34: CRITICAL FIX - Proper indentation (was outside while loop!)
 		$geonameid = $parts[1];
 		$isolanguage = $parts[2];
 		$alternate_name = $parts[3];
@@ -121,8 +121,8 @@ class WTA_GeoNames_Translator {
 			}
 		}
 
-			// Progress logging every 1 million lines
-			if ( $line_count % 1000000 === 0 ) {
+		// Progress logging every 1 million lines
+		if ( $line_count % 1000000 === 0 ) {
 				$elapsed = round( microtime( true ) - $start_time, 2 );
 				$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
 				

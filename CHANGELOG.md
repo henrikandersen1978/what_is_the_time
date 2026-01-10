@@ -2,6 +2,44 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.35] - 2026-01-10
+
+### 🚨 CRITICAL FIX - v3.2.34 indentation was incomplete!
+
+**USER REPORT:**
+"translations: 1,443" - After v3.2.34, still only 1,443!
+
+**PROBLEM:**
+v3.2.34 attempted to fix indentation, but INCOMPLETE:
+- Lines 81-84 (Skip comments) still had 2 tabs instead of 3
+- Lines 86-122 (Parsing logic) still had 2 tabs instead of 3
+- Result: Code still OUTSIDE while loop! ❌
+
+**v3.2.35 FIX:**
+- ALL parsing logic now has proper 3-tab indentation
+- Matches line 79 (`$line_count++;`) which was already correct
+- Entire processing block now INSIDE while loop ✅
+
+**VERIFIED:**
+```php
+// v3.2.35 - CORRECT:
+while ( ( $line = fgets( $file ) ) !== false ) {
+    $line_count++;           ← 3 tabs ✅
+    
+    // Skip comments
+    if ( strpos(...) ) {     ← 3 tabs ✅
+    
+    $parts = explode(...);   ← 3 tabs ✅
+    $geonameid = $parts[1];  ← 3 tabs ✅
+    
+    if ( $isolanguage === $lang ) {  ← 3 tabs ✅
+        $translations[$geonameid] = $alternate_name;
+    }
+}
+```
+
+---
+
 ## [3.2.34] - 2026-01-10
 
 ### 🚨 CRITICAL BUG FIX - Indentation error caused 98% data loss!
