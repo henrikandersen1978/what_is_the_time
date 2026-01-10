@@ -99,12 +99,18 @@ class WTA_GeoNames_Translator {
 		$isolanguage = $parts[2];
 		$alternate_name = $parts[3];
 
-		// v3.2.48: CLEAN VERSION - removed ALL debug code
-		// Store ALL translations for target language (not just "preferred")
+		// v3.2.49: Log every 500 matches to track progression
 		if ( $isolanguage === $lang ) {
 			if ( ! isset( $translations[ $geonameid ] ) ) {
 				$translations[ $geonameid ] = $alternate_name;
 				$matched_count++;
+				
+				// Log every 500 matches
+				if ( $matched_count % 500 === 0 ) {
+					WTA_Logger::info( 'v3.2.49 Matched ' . number_format($matched_count), array(
+						'at_line' => number_format($line_count),
+					) );
+				}
 			}
 		}
 
