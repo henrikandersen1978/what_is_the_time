@@ -528,14 +528,27 @@ class WTA_Admin {
 		}
 	}
 	
-	// v3.2.58: Also delete cancelled, failed, and complete actions via SQL
+	// v3.2.59: Delete cancelled, failed, and complete actions via SQL
 	// as_unschedule_all_actions() only removes pending/scheduled, not historical ones
 	$hooks_string = "'" . implode( "','", array_map( 'esc_sql', $wta_hooks ) ) . "'";
+	
+	// First, count how many we're about to delete (for logging)
+	$count_query = "SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions 
+	                WHERE hook IN ($hooks_string) 
+	                AND status IN ('cancelled', 'failed', 'complete')";
+	$historical_count = $wpdb->get_var( $count_query );
+	
+	WTA_Logger::info( 'Attempting to delete historical actions', array(
+		'found_historical' => $historical_count,
+		'hooks' => $wta_hooks,
+		'query' => $count_query,
+	) );
+	
+	// Delete directly from actionscheduler_actions table (no JOIN needed!)
 	$deleted_historical = $wpdb->query(
-		"DELETE a FROM {$wpdb->prefix}actionscheduler_actions a
-		 INNER JOIN {$wpdb->prefix}actionscheduler_actions_by_hook abh ON a.action_id = abh.action_id
-		 WHERE abh.hook IN ($hooks_string)
-		 AND a.status IN ('cancelled', 'failed', 'complete')"
+		"DELETE FROM {$wpdb->prefix}actionscheduler_actions 
+		 WHERE hook IN ($hooks_string)
+		 AND status IN ('cancelled', 'failed', 'complete')"
 	);
 	
 	if ( $deleted_historical > 0 ) {
@@ -545,8 +558,10 @@ class WTA_Admin {
 	WTA_Logger::info( 'Action Scheduler actions cleared', array(
 		'unscheduled_pending' => $cleared_actions - $deleted_historical,
 		'deleted_historical' => $deleted_historical,
+		'expected_to_delete' => $historical_count,
 		'total_cleared' => $cleared_actions,
 		'hooks_cleared' => count( $wta_hooks ),
+		'last_error' => $wpdb->last_error ? $wpdb->last_error : 'none',
 	) );
 	
 	// v3.2.22: Clear GeoNames translation cache to force fresh re-parsing on next import

@@ -2,6 +2,39 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.60] - 2026-01-10
+
+### 🔧 FIXED: SQL query for deleting historical actions
+
+**ISSUE:**
+v3.2.59 used a JOIN with `actionscheduler_actions_by_hook` table which may not have worked correctly. 14K cancelled actions remained after reset.
+
+**FIX:**
+- Removed JOIN - delete directly from `actionscheduler_actions` table using `hook` column
+- Added pre-count query to log how many actions we expect to delete
+- Added detailed logging including `last_error` to diagnose SQL issues
+
+**CODE:**
+```php
+// Count first (for logging)
+$count_query = "SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions 
+                WHERE hook IN ($hooks_string) 
+                AND status IN ('cancelled', 'failed', 'complete')";
+$historical_count = $wpdb->get_var( $count_query );
+
+// Delete directly (no JOIN needed!)
+$deleted_historical = $wpdb->query(
+    "DELETE FROM {$wpdb->prefix}actionscheduler_actions 
+     WHERE hook IN ($hooks_string)
+     AND status IN ('cancelled', 'failed', 'complete')"
+);
+```
+
+**RESULT:**
+✅ Should now properly delete cancelled, failed, and complete actions
+✅ Detailed logging shows expected vs. actual deletion count
+✅ Logs SQL errors if any occur
+
 ## [3.2.59] - 2026-01-10
 
 ### 🔧 FIXED: Cancelled, failed, and complete actions now also cleared
