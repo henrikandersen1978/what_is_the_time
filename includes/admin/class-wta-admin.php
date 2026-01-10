@@ -521,16 +521,31 @@ class WTA_Admin {
 	
 	$cleared_actions = 0;
 	foreach ( $wta_hooks as $hook ) {
-		// Unschedule ALL actions for this hook (pending, failed, past-due)
-		// Note: in-progress actions may complete and throw errors, but that's expected
+		// Unschedule pending/scheduled actions
 		$cleared = as_unschedule_all_actions( $hook );
 		if ( $cleared > 0 ) {
 			$cleared_actions += $cleared;
 		}
 	}
 	
+	// v3.2.58: Also delete cancelled, failed, and complete actions via SQL
+	// as_unschedule_all_actions() only removes pending/scheduled, not historical ones
+	$hooks_string = "'" . implode( "','", array_map( 'esc_sql', $wta_hooks ) ) . "'";
+	$deleted_historical = $wpdb->query(
+		"DELETE a FROM {$wpdb->prefix}actionscheduler_actions a
+		 INNER JOIN {$wpdb->prefix}actionscheduler_actions_by_hook abh ON a.action_id = abh.action_id
+		 WHERE abh.hook IN ($hooks_string)
+		 AND a.status IN ('cancelled', 'failed', 'complete')"
+	);
+	
+	if ( $deleted_historical > 0 ) {
+		$cleared_actions += $deleted_historical;
+	}
+	
 	WTA_Logger::info( 'Action Scheduler actions cleared', array(
-		'actions_cleared' => $cleared_actions,
+		'unscheduled_pending' => $cleared_actions - $deleted_historical,
+		'deleted_historical' => $deleted_historical,
+		'total_cleared' => $cleared_actions,
 		'hooks_cleared' => count( $wta_hooks ),
 	) );
 	

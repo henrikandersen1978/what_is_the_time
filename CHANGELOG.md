@@ -2,6 +2,32 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.59] - 2026-01-10
+
+### 🔧 FIXED: Cancelled, failed, and complete actions now also cleared
+
+**ISSUE:**
+v3.2.58 only cleared pending/scheduled actions. Cancelled, failed, and complete actions remained in database.
+
+**FIX:**
+Added SQL query to delete cancelled, failed, and complete actions from Action Scheduler database tables.
+
+**CODE:**
+```php
+// Delete cancelled, failed, and complete actions via SQL
+$deleted_historical = $wpdb->query(
+    "DELETE a FROM {$wpdb->prefix}actionscheduler_actions a
+     INNER JOIN {$wpdb->prefix}actionscheduler_actions_by_hook abh ON a.action_id = abh.action_id
+     WHERE abh.hook IN ($hooks_string)
+     AND a.status IN ('cancelled', 'failed', 'complete')"
+);
+```
+
+**RESULT:**
+✅ "Reset All Data" now removes pending, cancelled, failed, AND complete actions
+✅ 100% clean database after reset
+✅ Improved logging shows "unscheduled_pending" + "deleted_historical" counts
+
 ## [3.2.58] - 2026-01-10
 
 ### 🔧 FIXED: Action Scheduler actions not cleared on "Reset All Data"
