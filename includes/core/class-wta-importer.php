@@ -119,13 +119,15 @@ class WTA_Importer {
 	}
 	
 	if ( ! $cache_verified ) {
-		WTA_Logger::error( 'FATAL: GeoNames cache NOT readable after 2s wait!', array(
+		// v3.2.31: CHANGED from ABORT to WARNING - let import continue for debugging
+		WTA_Logger::warning( 'WARNING: GeoNames cache verification failed - import will continue anyway!', array(
 			'language' => $lang_code,
 			'test_results' => $test_results,
-			'impact' => 'All cities will get ENGLISH names instead of translated names!',
-			'action_required' => 'Import ABORTED - fix database replication or increase sleep time',
+			'impact' => 'Cities MAY get ENGLISH names instead of translated names (if OpCache not cleared)',
+			'action_required' => 'Check if v3.2.29+ code is actually running (OpCache issue)',
+			'note' => 'Import will continue to allow debugging - check actual city names in scheduled actions',
 		) );
-		return false; // Abort import!
+		// DO NOT abort - continue import so we can see actual translation results
 	}
 	
 	WTA_Logger::info( 'GeoNames cache verified working after replication wait!', array(

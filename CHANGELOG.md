@@ -2,6 +2,107 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.31] - 2026-01-10
+
+### 🚨 CRITICAL FIX - Change cache verification from ABORT to WARNING
+
+**USER REPORT:**
+"Stadig ingenting. Dette virkede upåklageligt før version 3.2.25 tror jeg. Tidligere blev der fint importeret, men blot med forkerte navne"
+
+---
+
+## **PROBLEMET:**
+
+**TIMELINE OF THE BUG:**
+
+```
+v3.2.24 og tidligere:
+✅ Import kørte ALTID
+✅ Men med forkerte navne (Copenhagen → skulle være Köpenhamn)
+
+v3.2.26 (introduced bug):
+❌ Added cache verification with ABORT on failure
+❌ return false; hvis cache test fejler
+❌ Resultat: "Countries: 0" - INGEN IMPORT OVERHOVEDET!
+
+v3.2.29:
+✅ Removed isPreferredName requirement (should give 20,000+ translations)
+❌ BUT: OpCache issue → old code still running
+❌ Only 1,443 translations found → cache test fails → ABORT!
+```
+
+**ROOT CAUSE:**
+```php
+// v3.2.26-3.2.30 (line 128)
+if ( ! $cache_verified ) {
+    WTA_Logger::error('FATAL: Cache NOT readable');
+    return false; // ← ABORTS ENTIRE IMPORT! ❌
+}
+```
+
+**KONSEKVENS:**
+- Cache verification test fejler (pga. OpCache)
+- Import aborteres fuldstændigt
+- Ingen countries, ingen cities
+- Værre end at have forkerte navne!
+
+---
+
+## **LØSNINGEN:**
+
+### **Change from ABORT to WARNING:**
+
+```php
+// v3.2.31 (NEW)
+if ( ! $cache_verified ) {
+    WTA_Logger::warning('WARNING: Cache verification failed');
+    // DO NOT abort - continue import!
+    // This allows debugging actual translation results
+}
+```
+
+**FORDELE:**
+- ✅ Import kører ALTID (som før v3.2.26)
+- ✅ Vi kan SE om navne er korrekte i scheduled actions
+- ✅ Vi kan DEBUG OpCache problem
+- ✅ Bedre at have NOGLE cities (selv med forkerte navne) end INGEN cities!
+
+---
+
+## **FORVENTET RESULTAT:**
+
+**Med v3.2.31:**
+
+```
+Import Danmark:
+✅ Countries: 1 (Danmark scheduled!)
+✅ Cities: 1 (batch job scheduled!)
+✅ Log viser: "WARNING: Cache verification failed" (men fortsætter!)
+
+Efter 15 min (når cities processed):
+- Hvis OpCache cleared: København → "Köpenhamn" ✅
+- Hvis OpCache IKKE cleared: København → "Copenhagen" (men det er OK - import kørte!)
+```
+
+**Vi kan så:**
+1. SE om navne er korrekte
+2. Hvis ikke → fix OpCache issue separat
+3. Men mindst KAN vi importere!
+
+---
+
+### Changed
+- **class-wta-importer.php**: Changed `return false;` to continue import on cache verification failure
+- **class-wta-importer.php**: Changed ERROR to WARNING for cache verification failure
+- **class-wta-importer.php**: Added debug note explaining why import continues
+
+### Impact
+- **Import works again:** Even if cache verification fails
+- **Same as v3.2.24:** Import always runs (but may have English names if OpCache issue)
+- **Better than nothing:** Some cities with wrong names > no cities at all
+
+---
+
 ## [3.2.30] - 2026-01-10
 
 ### 🔧 CRITICAL FIX - Add OpCache clear to "Clear Translation Cache" button
