@@ -88,51 +88,26 @@ class WTA_GeoNames_Translator {
 		// Parse tab-separated values
 		$parts = explode( "\t", trim( $line ) );
 
-		// Validate minimum required fields
-		if ( count( $parts ) < 5 ) {
-			continue;
-		}
+	// Validate minimum required fields
+	if ( count( $parts ) < 5 ) {
+		continue;
+	}
 
+	// v3.2.39: FINAL FIX - ALL parsing logic must have 2 TABS (inside while loop!)
 	$geonameid = $parts[1];
 	$isolanguage = $parts[2];
 	$alternate_name = $parts[3];
 
-	// v3.2.38: Increase debug count to 200 to ensure we catch Swedish entries
-	static $lang_debug_count = 0;
-	if ( $lang_debug_count < 200 ) {
-		WTA_Logger::info( 'DEBUG: Line parsed', array(
-			'line_count' => $line_count,
-			'isolanguage' => $isolanguage,
-			'target_lang' => $lang,
-			'match' => ( $isolanguage === $lang ) ? 'YES' : 'NO',
-			'isolanguage_length' => strlen($isolanguage),
-			'target_lang_length' => strlen($lang),
-		) );
-		$lang_debug_count++;
-	}
-	
 	// v3.2.29: Store ALL translations for target language (not just "preferred")
 	// Many cities like "Copenhagen" don't have "preferred" Swedish translations
 	// We use the FIRST translation found for each geonameid+language combination
-	
-	// v3.2.36: EXTENSIVE DEBUG - Log at 1M, 5M, 10M, 18M line marks
 	if ( $isolanguage === $lang ) {
-			// Use first translation found for each geonameid
-			if ( ! isset( $translations[ $geonameid ] ) ) {
-				$translations[ $geonameid ] = $alternate_name;
-				$matched_count++;
-				
-				// Log specific entries for debugging
-				if ( $line_count == 1000000 || $line_count == 5000000 || 
-				     $line_count == 10000000 || $line_count == 18000000 ) {
-					WTA_Logger::info( 'DEBUG: Translation added at line ' . number_format($line_count), array(
-						'geonameid' => $geonameid,
-						'alternate_name' => $alternate_name,
-						'matched_count_so_far' => number_format($matched_count),
-					) );
-				}
-			}
+		// Use first translation found for each geonameid
+		if ( ! isset( $translations[ $geonameid ] ) ) {
+			$translations[ $geonameid ] = $alternate_name;
+			$matched_count++;
 		}
+	}
 
 		// Progress logging every 1 million lines
 		if ( $line_count % 1000000 === 0 ) {
