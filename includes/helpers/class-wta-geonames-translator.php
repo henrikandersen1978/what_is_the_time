@@ -85,29 +85,29 @@ class WTA_GeoNames_Translator {
 			continue;
 		}
 
-	// Parse tab-separated values
-	$parts = explode( "\t", trim( $line ) );
+		// Parse tab-separated values
+		$parts = explode( "\t", trim( $line ) );
 
-	// v3.2.40: ABSOLUTE FINAL FIX - Everything must have 2 TABS!
-	// Validate minimum required fields
-	if ( count( $parts ) < 5 ) {
-		continue;
-	}
-
-	$geonameid = $parts[1];
-	$isolanguage = $parts[2];
-	$alternate_name = $parts[3];
-
-	// v3.2.29: Store ALL translations for target language (not just "preferred")
-	// Many cities like "Copenhagen" don't have "preferred" Swedish translations
-	// We use the FIRST translation found for each geonameid+language combination
-	if ( $isolanguage === $lang ) {
-		// Use first translation found for each geonameid
-		if ( ! isset( $translations[ $geonameid ] ) ) {
-			$translations[ $geonameid ] = $alternate_name;
-			$matched_count++;
+		// v3.2.41: Add missing TAB - all lines inside while loop need 2 tabs!
+		// Validate minimum required fields
+		if ( count( $parts ) < 5 ) {
+			continue;
 		}
-	}
+
+		$geonameid = $parts[1];
+		$isolanguage = $parts[2];
+		$alternate_name = $parts[3];
+
+		// v3.2.29: Store ALL translations for target language (not just "preferred")
+		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
+		// We use the FIRST translation found for each geonameid+language combination
+		if ( $isolanguage === $lang ) {
+			// Use first translation found for each geonameid
+			if ( ! isset( $translations[ $geonameid ] ) ) {
+				$translations[ $geonameid ] = $alternate_name;
+				$matched_count++;
+			}
+		}
 
 		// Progress logging every 1 million lines
 		if ( $line_count % 1000000 === 0 ) {
