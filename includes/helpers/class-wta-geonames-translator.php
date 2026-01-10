@@ -185,10 +185,15 @@ class WTA_GeoNames_Translator {
 		) );
 	}
 	
+	// v3.2.45: CRITICAL - Compare matched_count vs actual array count!
+	$actual_array_count = count( $translations );
+	
 	WTA_Logger::info( 'Finished parsing alternateNamesV2.txt', array(
 		'language'        => $lang,
 		'lines_processed' => number_format( $line_count ),
-		'translations'    => number_format( $matched_count ),
+		'matched_count'   => number_format( $matched_count ),
+		'array_count'     => number_format( $actual_array_count ),
+		'DISCREPANCY'     => ($matched_count !== $actual_array_count) ? 'YES! ' . number_format($matched_count - $actual_array_count) . ' missing!' : 'NO',
 		'elapsed_seconds' => $elapsed,
 		'memory_mb'       => $memory_mb,
 	) );
