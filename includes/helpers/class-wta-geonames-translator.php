@@ -97,9 +97,9 @@ class WTA_GeoNames_Translator {
 	$isolanguage = $parts[2];
 	$alternate_name = $parts[3];
 
-	// v3.2.37: CRITICAL DEBUG - Log FIRST 20 isolanguages to see what we're getting!
+	// v3.2.38: Increase debug count to 200 to ensure we catch Swedish entries
 	static $lang_debug_count = 0;
-	if ( $lang_debug_count < 20 ) {
+	if ( $lang_debug_count < 200 ) {
 		WTA_Logger::info( 'DEBUG: Line parsed', array(
 			'line_count' => $line_count,
 			'isolanguage' => $isolanguage,
