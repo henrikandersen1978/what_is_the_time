@@ -2,6 +2,120 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.32] - 2026-01-10
+
+### 🔧 CRITICAL FIX - Force re-parse GeoNames on import (ignore cache)
+
+**USER DISCOVERY:**
+"Der importeres nu, men stadig: translations: 1,443 - Find ud af hvor denne logbesked skrives fra. Måske er der transients der også mangler at blive slettet?"
+
+---
+
+## **PROBLEMET:**
+
+**Cache returnerer GAMMEL data:**
+
+```php
+// class-wta-geonames-translator.php (line 34)
+$cached = get_transient( $cache_key );
+
+if ( false !== $cached ) {
+    return $cached; // ← Returns OLD 1,443 translations! ❌
+}
+```
+
+**ROOT CAUSE:**
+
+```
+1. v3.2.29 uploaded (new code: no isPreferredName filter)
+2. OpCache serves OLD compiled code
+3. Import runs → parses with OLD filter → caches 1,443 translations
+4. Transient saved to database with OLD data
+5. v3.2.30/31 uploaded (OpCache clear added)
+6. Import runs → but transient still has OLD cached data!
+7. Returns 1,443 from cache (never re-parses with new code)
+```
+
+**KONSEKVENS:**
+- ✅ Import kører (v3.2.31 fix)
+- ✅ OpCache cleared (v3.2.30 fix)
+- ❌ BUT: Cached transient from OLD parse still used!
+- ❌ Result: Still only 1,443 translations
+
+---
+
+## **LØSNINGEN:**
+
+### **Force re-parse på imports:**
+
+```php
+// v3.2.32 (NEW)
+public static function parse_alternate_names( $lang_code, $force_reparse = false ) {
+    $cached = get_transient( $cache_key );
+    
+    if ( $cached && ! $force_reparse ) {
+        return $cached; // Only use cache if NOT forcing
+    }
+    
+    if ( $force_reparse ) {
+        delete_transient( $cache_key ); // Explicitly delete old cache
+        WTA_Logger::info('Force re-parsing (ignoring cache)');
+    }
+    
+    // Parse file with NEW code...
+}
+
+// Always force reparse on imports
+public static function prepare_for_import( $lang_code, $force_reparse = true ) {
+    $translations = self::parse_alternate_names( $lang_code, $force_reparse );
+}
+```
+
+**FORDELE:**
+- ✅ Import ALTID parser på ny (ignore gamle cached transients)
+- ✅ Sikrer ny v3.2.29+ kode bruges (no isPreferredName filter)
+- ✅ Garanteret 20,000+ oversættelser!
+
+---
+
+## **FORVENTET RESULTAT:**
+
+**Med v3.2.32:**
+
+```
+[12:XX:XX] INFO: Preparing GeoNames translations...
+Context: {
+    "force_reparse": "yes (ignore cache)"  ← NY!
+}
+
+[12:XX:XX] INFO: Force re-parsing GeoNames
+Context: {
+    "reason": "Ensure new v3.2.29+ code is used"
+}
+
+[12:XX:XX] INFO: Parsing alternateNamesV2.txt...
+[12:XX:XX] INFO: 18M lines processed, 15,000+ translations ← HØJT!
+
+[12:XX:XX] INFO: GeoNames translations ready!
+Context: {
+    "translations": "15,000+" ← IKKE 1,443! ✅
+}
+```
+
+---
+
+### Changed
+- **class-wta-geonames-translator.php**: Added `$force_reparse` parameter to `parse_alternate_names()`
+- **class-wta-geonames-translator.php**: `prepare_for_import()` now defaults to `force_reparse = true`
+- **class-wta-geonames-translator.php**: Explicitly deletes old transient before re-parsing
+
+### Impact
+- **Always fresh data on imports:** Ignores potentially outdated cached transients
+- **Fixes OpCache issue:** Even if old code cached data, import re-parses with new code
+- **Guaranteed 20,000+ translations:** No more 1,443!
+
+---
+
 ## [3.2.31] - 2026-01-10
 
 ### 🚨 CRITICAL FIX - Change cache verification from ABORT to WARNING

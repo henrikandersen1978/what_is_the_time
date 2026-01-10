@@ -25,20 +25,29 @@ class WTA_GeoNames_Translator {
 	 * @param    string $lang_code Language code (e.g., 'da-DK', 'en-US').
 	 * @return   array             Array of geonameid => translated_name pairs.
 	 */
-	public static function parse_alternate_names( $lang_code = 'da-DK' ) {
+	public static function parse_alternate_names( $lang_code = 'da-DK', $force_reparse = false ) {
 		// Extract language prefix (da-DK → da)
 		$lang = strtok( $lang_code, '-' );
 
-		// Check cache first (24h)
+		// Check cache first (24h) - unless force_reparse is true
 		$cache_key = 'wta_geonames_translations_' . $lang;
 		$cached = get_transient( $cache_key );
 		
-		if ( false !== $cached ) {
+		if ( false !== $cached && ! $force_reparse ) {
 			WTA_Logger::info( 'GeoNames translations loaded from cache', array(
 				'language' => $lang,
 				'count'    => count( $cached ),
 			) );
 			return $cached;
+		}
+		
+		// v3.2.32: If force_reparse, explicitly delete old cache first
+		if ( $force_reparse ) {
+			delete_transient( $cache_key );
+			WTA_Logger::info( 'Force re-parsing GeoNames (ignoring cache)', array(
+				'language' => $lang,
+				'reason' => 'Ensure new v3.2.29+ code is used (no isPreferredName filter)',
+			) );
 		}
 
 		// Parse file
@@ -285,7 +294,7 @@ class WTA_GeoNames_Translator {
 	 * @param    string $lang_code Language code.
 	 * @return   bool              Success status.
 	 */
-	public static function prepare_for_import( $lang_code = null ) {
+	public static function prepare_for_import( $lang_code = null, $force_reparse = true ) {
 		if ( null === $lang_code ) {
 			$lang_code = get_option( 'wta_base_language', 'da-DK' );
 		}
@@ -293,10 +302,12 @@ class WTA_GeoNames_Translator {
 	WTA_Logger::info( 'Preparing GeoNames translations for import (may take 2-5 minutes)...', array(
 		'language' => $lang_code,
 		'file' => 'alternateNamesV2.txt (~745 MB)',
+		'force_reparse' => $force_reparse ? 'yes (ignore cache)' : 'no (use cache if available)',
 	) );
 
-	// Parse and cache translations
-	$translations = self::parse_alternate_names( $lang_code );
+	// v3.2.32: Default to force_reparse = true to ensure fresh data on imports
+	// This prevents issues with OpCache serving old cached translations
+	$translations = self::parse_alternate_names( $lang_code, $force_reparse );
 
 	// v3.2.23: Strict validation - empty array means parsing/caching FAILED
 	if ( empty( $translations ) ) {
