@@ -2,6 +2,34 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.37] - 2026-01-10
+
+### 🔍 CRITICAL DEBUG - WHY is isolanguage NOT matching?
+
+**USER REPORT:**
+"translations: 1,443" - Still! And NO debug entries from v3.2.36!
+
+**DISCOVERY:**
+v3.2.36 debug entries (at 1M, 5M, 10M, 18M) did NOT appear in log!
+This means: `if ( $isolanguage === $lang )` is NEVER true!
+
+**POSSIBLE CAUSES:**
+1. `$isolanguage` has extra whitespace (e.g., "sv " or " sv")
+2. `$lang` is wrong (e.g., "sv-SE" instead of "sv")
+3. Tab parsing is broken (wrong field)
+4. Character encoding issue
+
+**v3.2.37 FIX:**
+Log first 20 parsed lines with:
+- `isolanguage` value
+- `target_lang` value  
+- Match YES/NO
+- String lengths
+
+This will show us EXACTLY why the match fails!
+
+---
+
 ## [3.2.36] - 2026-01-10
 
 ### 🔍 DEBUG - Better logging to find WHY only 1,443 matches

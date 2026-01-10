@@ -93,16 +93,30 @@ class WTA_GeoNames_Translator {
 			continue;
 		}
 
-		$geonameid = $parts[1];
-		$isolanguage = $parts[2];
-		$alternate_name = $parts[3];
+	$geonameid = $parts[1];
+	$isolanguage = $parts[2];
+	$alternate_name = $parts[3];
 
-		// v3.2.29: Store ALL translations for target language (not just "preferred")
-		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
-		// We use the FIRST translation found for each geonameid+language combination
-		
-		// v3.2.36: EXTENSIVE DEBUG - Log at 1M, 5M, 10M, 18M line marks
-		if ( $isolanguage === $lang ) {
+	// v3.2.37: CRITICAL DEBUG - Log FIRST 20 isolanguages to see what we're getting!
+	static $lang_debug_count = 0;
+	if ( $lang_debug_count < 20 ) {
+		WTA_Logger::info( 'DEBUG: Line parsed', array(
+			'line_count' => $line_count,
+			'isolanguage' => $isolanguage,
+			'target_lang' => $lang,
+			'match' => ( $isolanguage === $lang ) ? 'YES' : 'NO',
+			'isolanguage_length' => strlen($isolanguage),
+			'target_lang_length' => strlen($lang),
+		) );
+		$lang_debug_count++;
+	}
+	
+	// v3.2.29: Store ALL translations for target language (not just "preferred")
+	// Many cities like "Copenhagen" don't have "preferred" Swedish translations
+	// We use the FIRST translation found for each geonameid+language combination
+	
+	// v3.2.36: EXTENSIVE DEBUG - Log at 1M, 5M, 10M, 18M line marks
+	if ( $isolanguage === $lang ) {
 			// Use first translation found for each geonameid
 			if ( ! isset( $translations[ $geonameid ] ) ) {
 				$translations[ $geonameid ] = $alternate_name;
