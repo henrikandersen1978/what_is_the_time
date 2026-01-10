@@ -752,10 +752,11 @@ class WTA_Structure_Processor {
 				throw new Exception( 'cities500.txt not found at: ' . $file_path );
 			}
 
-			// Increase time limit for processing
-			set_time_limit( 300 ); // 5 minutes
+		// Increase time limit and memory for processing
+		set_time_limit( 300 ); // 5 minutes
+		ini_set( 'memory_limit', '512M' ); // Cities500.txt can be large
 
-			$file_size = filesize( $file_path );
+		$file_size = filesize( $file_path );
 			file_put_contents( $debug_file, "File size: " . round( $file_size / 1024 / 1024, 2 ) . " MB\n", FILE_APPEND );
 			WTA_Logger::info( 'Starting cities_import batch (GeoNames TAB-SEPARATED)', array(
 				'file' => basename( $file_path ),
@@ -840,55 +841,61 @@ class WTA_Structure_Processor {
 	
 	// STEP 1: Read all lines and collect into temporary array
 	// (We need total count for chunking logic)
+	// CRITICAL: Use try-finally to ensure file is always closed!
 	file_put_contents( $debug_file, "Reading all lines from cities500.txt...\n", FILE_APPEND );
 	$all_cities = array();
 	$line_count = 0;
 	
-	while ( ( $line = fgets( $file ) ) !== false ) {
-		$line_count++;
-		
-		// Parse tab-separated values
-		$parts = explode( "\t", trim( $line ) );
-		
-		// Validate minimum required fields (19 columns in GeoNames)
-		if ( count( $parts ) < 19 ) {
-			continue;
+	try {
+		while ( ( $line = fgets( $file ) ) !== false ) {
+			$line_count++;
+			
+			// Parse tab-separated values
+			$parts = explode( "\t", trim( $line ) );
+			
+			// Validate minimum required fields (19 columns in GeoNames)
+			if ( count( $parts ) < 19 ) {
+				continue;
+			}
+			
+			// Extract GeoNames fields
+			$geonameid = $parts[0];
+			$name = $parts[1];           // Name (UTF-8)
+			$asciiname = $parts[2];      // ASCII name (for URL slugs)
+			$latitude = $parts[4];
+			$longitude = $parts[5];
+			$feature_class = $parts[6];
+			$feature_code = $parts[7];
+			$country_code = $parts[8];   // ISO2 country code
+			$population = $parts[14];
+			$timezone = $parts[17];
+			
+			// Only include populated places (P class) - CRITICAL FILTER
+			if ( $feature_class !== 'P' ) {
+				continue;
+			}
+			
+			// Convert to standardized city array format
+			$city = array(
+				'geonameid'    => intval( $geonameid ),
+				'name'         => $name,
+				'name_ascii'   => $asciiname,
+				'country_code' => strtoupper( $country_code ),
+				'latitude'     => floatval( $latitude ),
+				'longitude'    => floatval( $longitude ),
+				'population'   => intval( $population ),
+				'timezone'     => $timezone,
+				'feature_code' => $feature_code,
+			);
+			
+			$all_cities[] = $city;
 		}
-		
-		// Extract GeoNames fields
-		$geonameid = $parts[0];
-		$name = $parts[1];           // Name (UTF-8)
-		$asciiname = $parts[2];      // ASCII name (for URL slugs)
-		$latitude = $parts[4];
-		$longitude = $parts[5];
-		$feature_class = $parts[6];
-		$feature_code = $parts[7];
-		$country_code = $parts[8];   // ISO2 country code
-		$population = $parts[14];
-		$timezone = $parts[17];
-		
-		// Only include populated places (P class) - CRITICAL FILTER
-		if ( $feature_class !== 'P' ) {
-			continue;
+	} finally {
+		// CRITICAL: Always close file, even if exception occurs
+		if ( is_resource( $file ) ) {
+			fclose( $file );
 		}
-		
-		// Convert to standardized city array format
-		$city = array(
-			'geonameid'    => intval( $geonameid ),
-			'name'         => $name,
-			'name_ascii'   => $asciiname,
-			'country_code' => strtoupper( $country_code ),
-			'latitude'     => floatval( $latitude ),
-			'longitude'    => floatval( $longitude ),
-			'population'   => intval( $population ),
-			'timezone'     => $timezone,
-			'feature_code' => $feature_code,
-		);
-		
-		$all_cities[] = $city;
 	}
-	
-	fclose( $file );
 	
 	$total_cities = count( $all_cities );
 	file_put_contents( $debug_file, sprintf(

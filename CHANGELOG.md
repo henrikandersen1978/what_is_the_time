@@ -2,6 +2,41 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.62] - 2026-01-10
+
+### 🔧 CRITICAL FIX: File resource cleanup in cities_import
+
+**ISSUE:**
+v3.2.61 failed with "supplied resource is not a valid stream resource" error when processing cities500.txt. If an exception occurred during file reading (e.g., memory overflow), the file was never closed properly.
+
+**ROOT CAUSE:**
+File was opened with `fopen()` but `fclose()` was only called at the end of the try block. If an exception occurred during the while-loop (reading 37 MB file into memory), the code jumped directly to the catch block without closing the file.
+
+**FIX:**
+1. Added try-finally block around file reading to ensure `fclose()` is ALWAYS called
+2. Increased memory limit to 512M to handle large cities500.txt files
+3. Added `is_resource()` check before calling `fclose()`
+
+**CODE:**
+```php
+try {
+    while ( ( $line = fgets( $file ) ) !== false ) {
+        // ... parse city data ...
+        $all_cities[] = $city;
+    }
+} finally {
+    // CRITICAL: Always close file, even if exception occurs
+    if ( is_resource( $file ) ) {
+        fclose( $file );
+    }
+}
+```
+
+**RESULT:**
+✅ File is always closed, even if exception occurs
+✅ Memory limit increased to 512M for large imports
+✅ No more "supplied resource is not a valid stream" errors
+
 ## [3.2.61] - 2026-01-10
 
 ### 🔧 CRITICAL FIX: Use Action Scheduler API instead of SQL
