@@ -379,6 +379,7 @@ private static function send_chunk_notification( $chunk_data ) {
 	$scheduled = 0;
 	$skipped = 0;
 	$per_country = array();
+	$cities_by_country = array(); // v3.2.57: Collect cities per country for sorting
 	$delay = 0;
 	$file_line = 0; // v3.0.74: Start from 0 to properly track file position
 	$first_city_in_chunk = null; // v3.0.70: Track first city for email notification
@@ -429,83 +430,115 @@ private static function send_chunk_notification( $chunk_data ) {
 				continue;
 			}
 
-			// Population filter
-			if ( $min_population > 0 ) {
-				$pop = intval( $population );
-				if ( $pop > 0 && $pop < $min_population ) {
-					$skipped++;
-					continue;
-				}
+		// Population filter
+		if ( $min_population > 0 ) {
+			$pop = intval( $population );
+			if ( $pop > 0 && $pop < $min_population ) {
+				$skipped++;
+				continue;
 			}
-
-			// Max cities per country
-			if ( $max_cities_per_country > 0 ) {
-				if ( ! isset( $per_country[ $country_code ] ) ) {
-					$per_country[ $country_code ] = 0;
-				}
-
-				if ( $per_country[ $country_code ] >= $max_cities_per_country ) {
-					$skipped++;
-					continue;
-				}
-
-				$per_country[ $country_code ]++;
-			}
-
-		// Translate city name
-		$name_local = WTA_AI_Translator::translate( $name, 'city', null, intval( $geonameid ) );
-
-	// v3.0.70: Track first city for email notification
-	if ( $scheduled === 0 ) {
-		$first_city_in_chunk = $name;
-	}
-
-	// v3.0.72: Schedule cities IMMEDIATELY (no delay)
-	// Processing controlled by 'wta_enable_city_processing' toggle in admin
-	// This allows chunking to complete fast (~30-45 min) before processing starts
-	
-	// Schedule city creation
-		as_schedule_single_action(
-			time() + $delay,  // Immediate + spread (1 per second)
-			'wta_create_city',
-			array(  // Separate args, NOT nested array
-				$name,                         // name
-				$name_local,                   // name_local
-				intval( $geonameid ),          // geonameid
-				strtoupper( $country_code ),   // country_code
-				floatval( $latitude ),         // latitude
-				floatval( $longitude ),        // longitude
-				intval( $population )          // population
-			),
-			'wta_structure'
-		);
-
-		$scheduled++;
-
-		// Spread cities over time (1 per second)
-		$delay++;
-
-		// Log progress every 1000 cities
-		if ( $scheduled % 1000 === 0 ) {
-			WTA_Logger::info( 'Cities scheduling progress', array(
-				'scheduled' => $scheduled,
-				'skipped'   => $skipped,
-			) );
-		}
-
-		// Prevent timeout
-		if ( $scheduled % 500 === 0 ) {
-			set_time_limit( 60 );
 		}
 		
-	// v3.0.69: Stop after chunk_size cities scheduled
-	if ( $scheduled >= $chunk_size ) {
-		WTA_Logger::info( 'Chunk limit reached, preparing next chunk', array(
-			'scheduled_in_chunk' => $scheduled,
-			'current_line' => $file_line, // v3.0.70: Fixed - use $file_line
-		) );
-		break;
+		// v3.2.57: Extract feature_code for filtering
+		$feature_code = isset( $parts[7] ) ? $parts[7] : '';
+		
+		// v3.2.57: Filter out SMALL administrative centers (PPLA2, PPLA3, PPLA4)
+		// PPLA2+ are "kommun" centers (Sola kommun) - usually small
+		// PPLA are MAJOR cities (Bergen, Göteborg) - KEEP THESE!
+		$excluded_feature_codes = array( 'PPLA2', 'PPLA3', 'PPLA4' );
+		if ( in_array( $feature_code, $excluded_feature_codes, true ) ) {
+			$skipped++;
+			continue;
+		}
+
+		// v3.2.57: COLLECT cities per country (don't limit yet - we'll sort and take top X)
+		if ( ! isset( $cities_by_country[ $country_code ] ) ) {
+			$cities_by_country[ $country_code ] = array();
+		}
+		
+		// Store city data for later sorting
+		$cities_by_country[ $country_code ][] = array(
+			'geonameid'    => intval( $geonameid ),
+			'name'         => $name,
+			'latitude'     => $latitude,
+			'longitude'    => $longitude,
+			'country_code' => strtoupper( $country_code ),
+			'population'   => intval( $population ),
+			'feature_code' => $feature_code,
+		);
+
+		// v3.2.57: Continue collecting (scheduling happens AFTER sorting)
+		// Stop after chunk_size COLLECTED (not scheduled yet)
+		$collected = array_sum( array_map( 'count', $cities_by_country ) );
+		if ( $collected >= $chunk_size ) {
+			WTA_Logger::info( 'Chunk limit reached, will sort and schedule', array(
+				'collected_cities' => $collected,
+				'current_line' => $file_line,
+			) );
+			break;
+		}
 	}
+
+	$reached_eof = feof( $file );
+	fclose( $file );
+	
+	// v3.2.57: NOW sort cities by population per country and schedule top X
+	WTA_Logger::info( 'Sorting cities by population', array(
+		'countries' => count( $cities_by_country ),
+		'total_cities' => array_sum( array_map( 'count', $cities_by_country ) ),
+	) );
+	
+	foreach ( $cities_by_country as $country_code => $cities ) {
+		// Sort by population (descending)
+		usort( $cities, function( $a, $b ) {
+			return $b['population'] - $a['population'];
+		});
+		
+		// Take top X cities (or all if no limit)
+		$cities_to_schedule = $cities;
+		if ( $max_cities_per_country > 0 && count( $cities ) > $max_cities_per_country ) {
+			$cities_to_schedule = array_slice( $cities, 0, $max_cities_per_country );
+			WTA_Logger::info( 'Limited cities for country', array(
+				'country' => $country_code,
+				'found' => count( $cities ),
+				'scheduling' => count( $cities_to_schedule ),
+			) );
+		}
+		
+		// Schedule each city
+		foreach ( $cities_to_schedule as $city ) {
+			// Track first city for email notification
+			if ( $scheduled === 0 ) {
+				$first_city_in_chunk = $city['name'];
+			}
+			
+			// Translate city name
+			$name_local = WTA_AI_Translator::translate( $city['name'], 'city', null, $city['geonameid'] );
+			
+			// Schedule city creation
+			as_schedule_single_action(
+				time() + $delay,
+				'wta_create_city',
+				array(
+					$city['name'],
+					$name_local,
+					$city['geonameid'],
+					$city['country_code'],
+					floatval( $city['latitude'] ),
+					floatval( $city['longitude'] ),
+					$city['population']
+				),
+				'wta_structure'
+			);
+			
+			$scheduled++;
+			$delay++; // Spread cities over time (1 per second)
+			
+			// Prevent timeout
+			if ( $scheduled % 500 === 0 ) {
+				set_time_limit( 60 );
+			}
+		}
 	}
 
 	$reached_eof = feof( $file );

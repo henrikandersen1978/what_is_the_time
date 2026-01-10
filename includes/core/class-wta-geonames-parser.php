@@ -216,10 +216,11 @@ class WTA_GeoNames_Parser {
 			continue;
 		}
 		
-		// v3.2.55: Filter out administrative centers (PPLA, PPLA2, PPLA3, PPLA4)
-		// These are "kommun" centers, not actual cities
-		// Only allow: PPL (city/town), PPLC (capital), PPLX (section of populated place)
-		$excluded_feature_codes = array( 'PPLA', 'PPLA2', 'PPLA3', 'PPLA4' );
+		// v3.2.57: Filter out SMALL administrative centers (PPLA2, PPLA3, PPLA4)
+		// PPLA2+ are "kommun" centers (Sola kommun, etc.) - usually small
+		// PPLA are MAJOR cities (Bergen, Göteborg, etc.) - KEEP THESE!
+		// Allow: PPL (city/town), PPLC (capital), PPLA (major city), PPLX (section)
+		$excluded_feature_codes = array( 'PPLA2', 'PPLA3', 'PPLA4' );
 		if ( in_array( $feature_code, $excluded_feature_codes, true ) ) {
 			continue;
 		}
