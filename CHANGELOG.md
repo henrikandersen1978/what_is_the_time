@@ -2,6 +2,66 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.55] - 2026-01-10
+
+### 🎯 FIXED: Use GeoNames structured data instead of string manipulation
+
+**ISSUE:**
+- "Sola kommun, Norge" imported (administrative center, not a city)
+- "Konungariket Sverige" imported instead of "Sverige"
+- v3.2.54 used string manipulation to clean names (not optimal)
+
+**ROOT CAUSE:**
+1. **Cities**: Imported PPLA2 feature codes (administrative centers like "Sola kommun")
+2. **Countries**: Picked first translation found, which was "Konungariket Sverige" (no priority flags) instead of "Sverige" (isPreferredName=1)
+
+**BETTER SOLUTION (v3.2.55):**
+
+**1. Filter feature codes in cities500.txt:**
+- ✅ Allow: PPL (city/town), PPLC (capital)
+- ❌ Exclude: PPLA, PPLA2, PPLA3, PPLA4 (administrative centers)
+- This prevents "Sola kommun" from being imported at all
+
+**2. Prioritize isPreferredName/isShortName in alternateNamesV2.txt:**
+- Parse `isPreferredName` (field 4) and `isShortName` (field 5)
+- If multiple translations exist for same geonameid, prefer ones with flags
+- "Sverige" (isPreferredName=1) now wins over "Konungariket Sverige" (no flags)
+
+**RESULT:**
+- ✅ "Sola kommun" never imported (filtered by feature code)
+- ✅ "Sverige" chosen over "Konungariket Sverige" (preferred name priority)
+- ✅ Uses GeoNames' own quality indicators instead of string manipulation
+- ✅ v3.2.54 cleanup still active as fallback for edge cases
+
+**FILES CHANGED:**
+- `includes/core/class-wta-geonames-parser.php`: Filter PPLA* feature codes
+- `includes/helpers/class-wta-geonames-translator.php`: Prioritize isPreferredName/isShortName
+
+## [3.2.54] - 2026-01-10
+
+### 🧹 FIXED: Administrative terms in location names (FALLBACK)
+
+**ISSUE:**
+- Cities imported as "Sola kommun, Norge" instead of "Sola"
+- Countries imported as "Konungariket Sverige" instead of "Sverige"
+- GeoNames returns full official names with administrative designations
+
+**ROOT CAUSE:**
+GeoNames translations were returned without cleanup, even though Wikidata translator had cleanup logic.
+
+**FIX:**
+Added `clean_name()` function to `class-wta-geonames-translator.php`:
+- Removes country prefixes: "Konungariket", "Kingdom of", "Republic of", etc.
+- Removes administrative suffixes: "kommun", "kommune", "municipality", etc.
+- Handles multiple languages: Nordic, English, Spanish, German, French, Polish, etc.
+- Applied automatically in `get_name()` before returning translations
+
+**RESULT:**
+- ✅ "Sola kommun" → "Sola"
+- ✅ "Konungariket Sverige" → "Sverige"
+- ✅ "Kingdom of Denmark" → "Denmark"
+- ✅ Clean city and country names across all languages
+
 ## [3.2.37] - 2026-01-10
 
 ### 🔍 CRITICAL DEBUG - WHY is isolanguage NOT matching?

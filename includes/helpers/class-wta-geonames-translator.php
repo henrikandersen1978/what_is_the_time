@@ -70,9 +70,10 @@ class WTA_GeoNames_Translator {
 		'version' => 'v3.2.52 - TRIM FIX WORKING! ✅',
 	) );
 
-		$start_time = microtime( true );
-		$translations = array();
-		$file = fopen( $file_path, 'r' );
+	$start_time = microtime( true );
+	$translations = array();
+	$translation_priorities = array(); // v3.2.55: Track which translations have isPreferredName/isShortName
+	$file = fopen( $file_path, 'r' );
 
 		if ( ! $file ) {
 			WTA_Logger::error( 'Failed to open alternateNamesV2.txt' );
@@ -124,11 +125,27 @@ class WTA_GeoNames_Translator {
 		$geonameid = isset( $parts[1] ) ? trim( $parts[1] ) : '';
 		$isolanguage = isset( $parts[2] ) ? trim( $parts[2] ) : '';
 		$alternate_name = isset( $parts[3] ) ? trim( $parts[3] ) : '';
+		$isPreferredName = isset( $parts[4] ) ? trim( $parts[4] ) : '';
+		$isShortName = isset( $parts[5] ) ? trim( $parts[5] ) : '';
 
-		// v3.2.51: Log matches to track progression
+		// v3.2.55: PRIORITIZE isPreferredName=1 OR isShortName=1
+		// This ensures "Sverige" (preferred) is chosen over "Konungariket Sverige" (no flags)
 		if ( $isolanguage === $lang ) {
-			if ( ! isset( $translations[ $geonameid ] ) ) {
+			// If we already have a translation, only overwrite if this one is better
+			if ( isset( $translations[ $geonameid ] ) ) {
+				// Check if current stored translation has priority flag
+				$current_has_priority = isset( $translation_priorities[ $geonameid ] ) && $translation_priorities[ $geonameid ];
+				$new_has_priority = ( $isPreferredName === '1' || $isShortName === '1' );
+				
+				// Only overwrite if new one has priority and old one doesn't
+				if ( $new_has_priority && ! $current_has_priority ) {
+					$translations[ $geonameid ] = $alternate_name;
+					$translation_priorities[ $geonameid ] = true;
+				}
+			} else {
+				// First translation for this geonameid
 				$translations[ $geonameid ] = $alternate_name;
+				$translation_priorities[ $geonameid ] = ( $isPreferredName === '1' || $isShortName === '1' );
 				$matched_count++;
 				
 				// Log first 10 matches in detail

@@ -211,12 +211,20 @@ class WTA_GeoNames_Parser {
 				continue;
 			}
 
-			// Only include populated places (P class)
-			if ( $feature_class !== 'P' ) {
-				continue;
-			}
+		// Only include populated places (P class)
+		if ( $feature_class !== 'P' ) {
+			continue;
+		}
+		
+		// v3.2.55: Filter out administrative centers (PPLA, PPLA2, PPLA3, PPLA4)
+		// These are "kommun" centers, not actual cities
+		// Only allow: PPL (city/town), PPLC (capital), PPLX (section of populated place)
+		$excluded_feature_codes = array( 'PPLA', 'PPLA2', 'PPLA3', 'PPLA4' );
+		if ( in_array( $feature_code, $excluded_feature_codes, true ) ) {
+			continue;
+		}
 
-			// Population filter (same logic as old system)
+		// Population filter (same logic as old system)
 			if ( $min_population > 0 ) {
 				$pop = intval( $population );
 				if ( $pop > 0 && $pop < $min_population ) {
