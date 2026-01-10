@@ -85,15 +85,15 @@ class WTA_GeoNames_Translator {
 			continue;
 		}
 
-		// Parse tab-separated values
-		$parts = explode( "\t", trim( $line ) );
+	// Parse tab-separated values
+	$parts = explode( "\t", trim( $line ) );
 
+	// v3.2.40: ABSOLUTE FINAL FIX - Everything must have 2 TABS!
 	// Validate minimum required fields
 	if ( count( $parts ) < 5 ) {
 		continue;
 	}
 
-	// v3.2.39: FINAL FIX - ALL parsing logic must have 2 TABS (inside while loop!)
 	$geonameid = $parts[1];
 	$isolanguage = $parts[2];
 	$alternate_name = $parts[3];
