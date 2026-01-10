@@ -82,19 +82,20 @@ class WTA_GeoNames_Translator {
 				continue;
 			}
 
-			$geonameid = $parts[1];
-			$isolanguage = $parts[2];
-			$alternate_name = $parts[3];
-			$isPreferredName = isset( $parts[4] ) ? $parts[4] : '0';
+		$geonameid = $parts[1];
+		$isolanguage = $parts[2];
+		$alternate_name = $parts[3];
 
-			// Only store translations for target language + preferred names
-			if ( $isolanguage === $lang && $isPreferredName === '1' ) {
-				// Use first preferred name found for each geonameid
-				if ( ! isset( $translations[ $geonameid ] ) ) {
-					$translations[ $geonameid ] = $alternate_name;
-					$matched_count++;
-				}
+		// v3.2.29: Store ALL translations for target language (not just "preferred")
+		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
+		// We use the FIRST translation found for each geonameid+language combination
+		if ( $isolanguage === $lang ) {
+			// Use first translation found for each geonameid
+			if ( ! isset( $translations[ $geonameid ] ) ) {
+				$translations[ $geonameid ] = $alternate_name;
+				$matched_count++;
 			}
+		}
 
 			// Progress logging every 1 million lines
 			if ( $line_count % 1000000 === 0 ) {
