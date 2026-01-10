@@ -528,40 +528,60 @@ class WTA_Admin {
 		}
 	}
 	
-	// v3.2.59: Delete cancelled, failed, and complete actions via SQL
-	// as_unschedule_all_actions() only removes pending/scheduled, not historical ones
+	// v3.2.60: DEBUG - Check what's actually in the database
 	$hooks_string = "'" . implode( "','", array_map( 'esc_sql', $wta_hooks ) ) . "'";
 	
-	// First, count how many we're about to delete (for logging)
-	$count_query = "SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions 
-	                WHERE hook IN ($hooks_string) 
-	                AND status IN ('cancelled', 'failed', 'complete')";
-	$historical_count = $wpdb->get_var( $count_query );
-	
-	WTA_Logger::info( 'Attempting to delete historical actions', array(
-		'found_historical' => $historical_count,
-		'hooks' => $wta_hooks,
-		'query' => $count_query,
-	) );
-	
-	// Delete directly from actionscheduler_actions table (no JOIN needed!)
-	$deleted_historical = $wpdb->query(
-		"DELETE FROM {$wpdb->prefix}actionscheduler_actions 
-		 WHERE hook IN ($hooks_string)
-		 AND status IN ('cancelled', 'failed', 'complete')"
+	// Check all WTA actions regardless of status
+	$all_wta_actions = $wpdb->get_results(
+		"SELECT status, COUNT(*) as count 
+		 FROM {$wpdb->prefix}actionscheduler_actions 
+		 WHERE hook IN ($hooks_string) 
+		 GROUP BY status",
+		ARRAY_A
 	);
 	
-	if ( $deleted_historical > 0 ) {
-		$cleared_actions += $deleted_historical;
+	WTA_Logger::info( 'DEBUG: All WTA actions by status', array(
+		'breakdown' => $all_wta_actions,
+		'table' => $wpdb->prefix . 'actionscheduler_actions',
+	) );
+	
+	// v3.2.60: Use Action Scheduler's own API to delete actions
+	// SQL queries might not work due to Action Scheduler's internal structure
+	$deleted_count = 0;
+	
+	foreach ( $wta_hooks as $hook ) {
+		// Get ALL action IDs for this hook (any status)
+		$action_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT action_id FROM {$wpdb->prefix}actionscheduler_actions WHERE hook = %s",
+				$hook
+			)
+		);
+		
+		if ( ! empty( $action_ids ) ) {
+			foreach ( $action_ids as $action_id ) {
+				try {
+					// Use Action Scheduler's store to delete the action
+					ActionScheduler_Store::instance()->delete_action( $action_id );
+					$deleted_count++;
+				} catch ( Exception $e ) {
+					WTA_Logger::warning( 'Failed to delete action', array(
+						'action_id' => $action_id,
+						'hook' => $hook,
+						'error' => $e->getMessage(),
+					) );
+				}
+			}
+		}
 	}
 	
-	WTA_Logger::info( 'Action Scheduler actions cleared', array(
-		'unscheduled_pending' => $cleared_actions - $deleted_historical,
-		'deleted_historical' => $deleted_historical,
-		'expected_to_delete' => $historical_count,
+	$cleared_actions += $deleted_count;
+	
+	WTA_Logger::info( 'Action Scheduler actions cleared via API', array(
+		'unscheduled_pending' => 0,
+		'deleted_via_api' => $deleted_count,
 		'total_cleared' => $cleared_actions,
 		'hooks_cleared' => count( $wta_hooks ),
-		'last_error' => $wpdb->last_error ? $wpdb->last_error : 'none',
 	) );
 	
 	// v3.2.22: Clear GeoNames translation cache to force fresh re-parsing on next import

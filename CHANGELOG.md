@@ -2,6 +2,43 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.61] - 2026-01-10
+
+### 🔧 CRITICAL FIX: Use Action Scheduler API instead of SQL
+
+**ISSUE:**
+v3.2.60 SQL query found 0 actions even though 13,726 cancelled actions existed. SQL approach doesn't work with Action Scheduler's internal structure.
+
+**ROOT CAUSE:**
+Action Scheduler stores actions across multiple tables and may use different status values than expected. Direct SQL queries are unreliable.
+
+**FIX:**
+- Added DEBUG logging to show all WTA actions grouped by status
+- Changed from SQL DELETE to Action Scheduler's official API: `ActionScheduler_Store::instance()->delete_action()`
+- Gets all action IDs for each hook and deletes them one by one using the proper API
+
+**CODE:**
+```php
+// Get ALL action IDs for this hook
+$action_ids = $wpdb->get_col(
+    $wpdb->prepare(
+        "SELECT action_id FROM {$wpdb->prefix}actionscheduler_actions WHERE hook = %s",
+        $hook
+    )
+);
+
+// Delete using Action Scheduler's API
+foreach ( $action_ids as $action_id ) {
+    ActionScheduler_Store::instance()->delete_action( $action_id );
+    $deleted_count++;
+}
+```
+
+**RESULT:**
+✅ Uses Action Scheduler's official API (reliable)
+✅ Debug log shows status breakdown before deletion
+✅ Properly cleans up all related tables automatically
+
 ## [3.2.60] - 2026-01-10
 
 ### 🔧 FIXED: SQL query for deleting historical actions
