@@ -2,6 +2,38 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.33] - 2026-01-10
+
+### 🔍 DEBUG - Why only 1,443 Swedish translations?
+
+**USER REPORT:**
+"Tror stadig det er 1443" - Efter v3.2.32 force re-parse, stadig kun 1,443 oversættelser!
+
+**LOG VISER:**
+```
+[12:22:05] Force re-parsing GeoNames (ignoring cache) ✅
+[12:22:12] Finished parsing 18,677,030 lines
+           translations: 1,443 ❌ (Expected: 15,000+!)
+```
+
+**PROBLEM:**
+- v3.2.32 force re-parse ✅
+- v3.2.29 code (no isPreferredName filter) ✅  
+- Parsing 18.6M lines ✅
+- BUT: Kun 1,443 results! ❌
+
+**MULIGE ÅRSAGER:**
+1. GeoNames data har faktisk kun få "sv" oversættelser?
+2. `isolanguage` field er "sv-SE" (ikke "sv")?
+3. Data format ikke som forventet?
+
+**DEBUG FIX:**
+- Tilføjet logging af første 10 Swedish entries
+- Logger: geonameid, isolanguage, alternate_name, isPreferredName
+- Vi kan se PRÆCIS hvad der matches
+
+---
+
 ## [3.2.32] - 2026-01-10
 
 ### 🔧 CRITICAL FIX - Force re-parse GeoNames on import (ignore cache)

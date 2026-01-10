@@ -98,6 +98,20 @@ class WTA_GeoNames_Translator {
 		// v3.2.29: Store ALL translations for target language (not just "preferred")
 		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
 		// We use the FIRST translation found for each geonameid+language combination
+		
+		// v3.2.33: DEBUG - Log first 10 Swedish entries to see actual data
+		static $debug_count = 0;
+		if ( $isolanguage === $lang && $debug_count < 10 ) {
+			WTA_Logger::info( 'DEBUG: Swedish translation found', array(
+				'geonameid' => $geonameid,
+				'isolanguage' => $isolanguage,
+				'alternate_name' => $alternate_name,
+				'parts_count' => count( $parts ),
+				'isPreferredName' => isset( $parts[4] ) ? $parts[4] : 'N/A',
+			) );
+			$debug_count++;
+		}
+		
 		if ( $isolanguage === $lang ) {
 			// Use first translation found for each geonameid
 			if ( ! isset( $translations[ $geonameid ] ) ) {
