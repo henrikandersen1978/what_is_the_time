@@ -245,6 +245,7 @@ class WTA_GeoNames_Translator {
 	 * Get translated name for a GeoNames ID.
 	 *
 	 * Performs instant lookup from cached translations array.
+	 * Returns cleaned name without administrative terms.
 	 *
 	 * @since    3.0.0
 	 * @param    int    $geonameid   GeoNames ID.
@@ -271,10 +272,169 @@ class WTA_GeoNames_Translator {
 		$geonameid_str = strval( $geonameid );
 		
 		if ( isset( $translations[ $geonameid_str ] ) ) {
-			return $translations[ $geonameid_str ];
+			// v3.2.54: Clean administrative terms before returning
+			return self::clean_name( $translations[ $geonameid_str ] );
 		}
 
 		return false;
+	}
+	
+	/**
+	 * Clean administrative terms from location names.
+	 *
+	 * Removes suffixes like "kommun", "kommune", "municipality", etc.
+	 * Also removes country prefixes like "Konungariket", "Kingdom of", etc.
+	 *
+	 * @since    3.2.54
+	 * @param    string $name  Location name to clean.
+	 * @return   string        Cleaned name.
+	 */
+	public static function clean_name( $name ) {
+		if ( empty( $name ) ) {
+			return $name;
+		}
+		
+		$original_name = $name;
+		
+		// Country prefixes to remove (case-insensitive)
+		$country_prefixes = array(
+			'Konungariket ',      // Swedish: Kingdom
+			'Kongeriget ',        // Danish: Kingdom
+			'Kongeriket ',        // Norwegian: Kingdom
+			'Kingdom of ',        // English
+			'Republic of ',       // English
+			'Republiken ',        // Swedish/Danish: Republic
+			'Republikken ',       // Norwegian: Republic
+			'République ',        // French: Republic
+			'República ',         // Spanish/Portuguese: Republic
+			'Rzeczpospolita ',    // Polish: Republic
+			'Federative Republic of ',
+			'Democratic Republic of ',
+			'People\'s Republic of ',
+			'Islamic Republic of ',
+			'The ',               // "The Netherlands", "The Gambia"
+		);
+		
+		// Remove country prefixes first
+		foreach ( $country_prefixes as $prefix ) {
+			$prefix_lower = mb_strtolower( $prefix, 'UTF-8' );
+			$name_lower = mb_strtolower( $name, 'UTF-8' );
+			
+			if ( mb_strpos( $name_lower, $prefix_lower, 0, 'UTF-8' ) === 0 ) {
+				// Found prefix at start - remove it
+				$name = mb_substr( $name, mb_strlen( $prefix, 'UTF-8' ), null, 'UTF-8' );
+				$name = trim( $name );
+				break; // Only remove one prefix
+			}
+		}
+		
+		// Administrative terms to remove (can appear anywhere)
+		$admin_terms = array(
+			// Nordic languages
+			'kommune',          // Danish/Norwegian
+			'kommun',           // Swedish
+			'kunta',            // Finnish
+			'kommuna',          // Icelandic
+			
+			// English
+			'municipality',
+			'city',
+			'county',
+			'district',
+			'province',
+			'state',
+			'borough',
+			'township',
+			'region',
+			
+			// Spanish/Portuguese
+			'municipio',
+			'município',
+			'departamento',
+			'provincia',
+			'concelho',
+			
+			// German/Austrian
+			'gemeinde',
+			'landkreis',
+			'kreis',
+			'bezirk',
+			'stadtkreis',
+			
+			// French/Belgian
+			'commune',
+			'arrondissement',
+			'canton',
+			'département',
+			
+			// Italian
+			'comune',
+			
+			// Eastern European
+			'oblast',           // Russian/Ukrainian
+			'rayon',            // Russian/Azerbaijani
+			'gmina',            // Polish
+			'powiat',           // Polish
+			'voivodeship',      // Polish
+			'okrug',            // Russian
+			
+			// Asian
+			'prefecture',       // Japanese
+			'governorate',      // Arabic
+			'shi',              // Chinese/Japanese (city)
+			'gun',              // Korean (county)
+			
+			// Other patterns
+			'urban area',
+			'metropolitan area',
+			'metro area',
+		);
+		
+		// Sort by length (longest first) to avoid partial matches
+		usort( $admin_terms, function( $a, $b ) {
+			return mb_strlen( $b, 'UTF-8' ) - mb_strlen( $a, 'UTF-8' );
+		});
+		
+		// Remove administrative terms (up to 3 iterations)
+		$max_iterations = 3;
+		for ( $i = 0; $i < $max_iterations; $i++ ) {
+			$found = false;
+			$name_lower = mb_strtolower( $name, 'UTF-8' );
+			
+			foreach ( $admin_terms as $term ) {
+				$term_lower = mb_strtolower( $term, 'UTF-8' );
+				
+				// Search for the term anywhere in the string (case-insensitive)
+				$pos = mb_strpos( $name_lower, $term_lower, 0, 'UTF-8' );
+				
+				if ( $pos !== false ) {
+					// Found the term! Remove it from original name
+					$before = mb_substr( $name, 0, $pos, 'UTF-8' );
+					$after = mb_substr( $name, $pos + mb_strlen( $term, 'UTF-8' ), null, 'UTF-8' );
+					$name = trim( $before . ' ' . $after );
+					
+					// Clean up multiple spaces
+					$name = preg_replace( '/\s+/', ' ', $name );
+					
+					$found = true;
+					break; // Restart search after removing this term
+				}
+			}
+			
+			// If no more terms found, stop
+			if ( ! $found ) {
+				break;
+			}
+		}
+		
+		$name = trim( $name );
+		
+		// Don't return empty string - return original if cleaning failed
+		if ( empty( $name ) ) {
+			return $original_name;
+		}
+		
+		return $name;
 	}
 
 	/**
