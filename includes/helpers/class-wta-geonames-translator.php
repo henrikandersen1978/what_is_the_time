@@ -99,6 +99,22 @@ class WTA_GeoNames_Translator {
 		$isolanguage = $parts[2];
 		$alternate_name = $parts[3];
 
+		// v3.2.43: Log first 50 lines to see EXACT comparison
+		static $debug_line_count = 0;
+		if ( $debug_line_count < 50 ) {
+			WTA_Logger::info( 'v3.2.43 Line comparison', array(
+				'line_num' => $line_count,
+				'isolanguage' => "[$isolanguage]",
+				'target_lang' => "[$lang]",
+				'iso_length' => strlen($isolanguage),
+				'target_length' => strlen($lang),
+				'iso_bytes' => implode(',', array_map('ord', str_split($isolanguage))),
+				'target_bytes' => implode(',', array_map('ord', str_split($lang))),
+				'match' => ($isolanguage === $lang) ? 'YES' : 'NO',
+			) );
+			$debug_line_count++;
+		}
+
 		// v3.2.29: Store ALL translations for target language (not just "preferred")
 		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
 		// We use the FIRST translation found for each geonameid+language combination
