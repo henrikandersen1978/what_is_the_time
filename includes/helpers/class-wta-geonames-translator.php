@@ -137,21 +137,22 @@ class WTA_GeoNames_Translator {
 			}
 		}
 
-		// Progress logging every 1 million lines
-		if ( $line_count % 1000000 === 0 ) {
-			$elapsed = round( microtime( true ) - $start_time, 2 );
-			$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
-			
-			WTA_Logger::info( 'Parsing progress', array(
-				'lines_processed' => number_format( $line_count ),
-				'translations'    => number_format( $matched_count ),
-				'elapsed_seconds' => $elapsed,
-				'memory_mb'       => $memory_mb,
-			) );
-			
-			// Extend execution time
-			set_time_limit( 300 ); // 5 minutes
-		}
+	// v3.2.47: Log progress every 1M lines showing EXACTLY how many Swedish matches so far!
+	if ( $line_count % 1000000 === 0 ) {
+		$elapsed = round( microtime( true ) - $start_time, 2 );
+		$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
+		
+		WTA_Logger::info( 'v3.2.47 Parsing progress', array(
+			'lines_processed' => number_format( $line_count ),
+			'translations' => number_format( $matched_count ),
+			'expected_at_this_line' => ($line_count == 1000000 ? '~4,400' : ($line_count == 6000000 ? '~65,000' : 'see local test')),
+			'elapsed_seconds' => $elapsed,
+			'memory_mb'       => $memory_mb,
+		) );
+		
+		// Extend execution time
+		set_time_limit( 300 ); // 5 minutes
+	}
 	} // End while loop
 
 		fclose( $file );
