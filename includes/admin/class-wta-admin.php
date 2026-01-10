@@ -553,22 +553,25 @@ class WTA_Admin {
 		
 		$execution_time = round( microtime( true ) - $start_time, 2 );
 		
-		WTA_Logger::info( 'All data reset by user (SQL optimized)', array(
-			'posts_deleted'   => $total_posts,
-			'execution_time'  => $execution_time . 's',
-			'method'          => 'direct_sql',
-		) );
+	WTA_Logger::info( 'All data reset by user (SQL optimized)', array(
+		'posts_deleted'     => $total_posts,
+		'actions_cleared'   => $cleared_actions,
+		'execution_time'    => $execution_time . 's',
+		'method'            => 'direct_sql',
+	) );
 
-		wp_send_json_success( array(
-			'message' => sprintf( 
-				'All data has been reset successfully (%d posts deleted in %s seconds)', 
-				$total_posts, 
-				$execution_time 
-			),
-			'deleted' => $total_posts,
-			'time'    => $execution_time,
-		) );
-	}
+	wp_send_json_success( array(
+		'message' => sprintf( 
+			'All data has been reset successfully (%d posts deleted, %d actions cleared in %s seconds)', 
+			$total_posts,
+			$cleared_actions,
+			$execution_time 
+		),
+		'deleted' => $total_posts,
+		'actions_cleared' => $cleared_actions,
+		'time'    => $execution_time,
+	) );
+}
 
 	/**
 	 * AJAX: View queue details.
