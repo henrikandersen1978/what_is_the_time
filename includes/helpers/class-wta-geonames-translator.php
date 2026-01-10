@@ -58,8 +58,8 @@ class WTA_GeoNames_Translator {
 			return array();
 		}
 
-	// v3.2.50: TEST - Log EXACT TIME when parsing starts
-	WTA_Logger::info( '🔵 v3.2.50 PARSING STARTS NOW', array(
+	// v3.2.52: TEST - Log EXACT TIME when parsing starts
+	WTA_Logger::info( '🔵 v3.2.52 PARSING STARTS NOW', array(
 		'timestamp' => date('Y-m-d H:i:s'),
 		'microtime' => microtime(true),
 	) );
@@ -67,7 +67,7 @@ class WTA_GeoNames_Translator {
 	WTA_Logger::info( 'Parsing alternateNamesV2.txt (this takes 2-5 minutes)', array(
 		'language' => $lang,
 		'file_size' => size_format( filesize( $file_path ) ),
-		'version' => 'v3.2.50 - TIMESTAMP TEST',
+		'version' => 'v3.2.52 - TRIM FIX WORKING! ✅',
 	) );
 
 		$start_time = microtime( true );
@@ -97,7 +97,7 @@ class WTA_GeoNames_Translator {
 				'is_sv' => ( isset( $parts_debug[2] ) && $parts_debug[2] === $lang ),
 			);
 			if ( $line_count === 100 ) {
-				WTA_Logger::info( '🔍 v3.2.51 First 100 lines', array(
+				WTA_Logger::info( '🔍 v3.2.52 First 100 lines', array(
 					'sv_count' => count( array_filter( $debug_first_100, function($i) { return $i['is_sv']; } ) ),
 					'sample' => array_slice( $debug_first_100, 65, 10 ), // Lines 66-75
 				) );
@@ -133,7 +133,7 @@ class WTA_GeoNames_Translator {
 				
 				// Log first 10 matches in detail
 				if ( $matched_count <= 10 ) {
-					WTA_Logger::info( '✅ v3.2.51 Match #' . $matched_count, array(
+					WTA_Logger::info( '✅ v3.2.52 Match #' . $matched_count, array(
 						'line' => number_format($line_count),
 						'geonameid' => $geonameid,
 						'name' => $alternate_name,
@@ -142,7 +142,7 @@ class WTA_GeoNames_Translator {
 				
 				// Log every 500 matches
 				if ( $matched_count % 500 === 0 ) {
-					WTA_Logger::info( '🟢 v3.2.51 Matched ' . number_format($matched_count), array(
+					WTA_Logger::info( '🟢 v3.2.52 Matched ' . number_format($matched_count), array(
 						'at_line' => number_format($line_count),
 						'timestamp' => date('Y-m-d H:i:s'),
 					) );
@@ -150,12 +150,12 @@ class WTA_GeoNames_Translator {
 			}
 		}
 
-	// v3.2.47: Log progress every 1M lines showing EXACTLY how many Swedish matches so far!
+	// v3.2.52: Log progress every 1M lines showing EXACTLY how many Swedish matches so far!
 	if ( $line_count % 1000000 === 0 ) {
 		$elapsed = round( microtime( true ) - $start_time, 2 );
 		$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
 		
-		WTA_Logger::info( 'v3.2.47 Parsing progress', array(
+		WTA_Logger::info( 'v3.2.52 Parsing progress', array(
 			'lines_processed' => number_format( $line_count ),
 			'translations' => number_format( $matched_count ),
 			'expected_at_this_line' => ($line_count == 1000000 ? '~4,400' : ($line_count == 6000000 ? '~65,000' : 'see local test')),
@@ -191,8 +191,8 @@ class WTA_GeoNames_Translator {
 		) );
 	}
 	
-	// v3.2.50: TEST - Log EXACT TIME when parsing ends
-	WTA_Logger::info( '🔴 v3.2.50 PARSING FINISHED NOW', array(
+	// v3.2.52: TEST - Log EXACT TIME when parsing ends
+	WTA_Logger::info( '🔴 v3.2.52 PARSING FINISHED NOW', array(
 		'timestamp' => date('Y-m-d H:i:s'),
 		'microtime' => microtime(true),
 	) );
