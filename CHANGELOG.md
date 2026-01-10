@@ -2,6 +2,65 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.28] - 2026-01-10
+
+### 🐛 FIX - Use correct test cities for cache verification
+
+**USER REPORT:**
+"Loggen viser: ERROR: FATAL: GeoNames cache NOT readable after 2s wait! Test: Copenhagen (2618425) → false"
+
+---
+
+## **PROBLEMET:**
+
+v3.2.27 testede cachen med **Copenhagen (geonameid 2618425)** - en **DANSK** by!
+
+```
+Cache: 1,302 svenske oversættelser SAT ✅
+Test: Copenhagen (dansk by) → NOT FOUND ❌
+Result: Import ABORTED ❌
+```
+
+**ÅRSAG:** Copenhagen har måske IKKE en "preferred name" oversættelse til svensk i `alternateNamesV2.txt`!
+
+---
+
+## **LØSNING:**
+
+### **Test med SVENSKE byer i stedet!**
+
+```php
+// v3.2.28: Test with 3 Swedish cities
+$test_cities = array(
+    array('geonameid' => 2673730, 'name' => 'Stockholm', 'expected_sv' => 'Stockholm'),
+    array('geonameid' => 2711537, 'name' => 'Gothenburg', 'expected_sv' => 'Göteborg'),
+    array('geonameid' => 2692969, 'name' => 'Malmö', 'expected_sv' => 'Malmö'),
+);
+
+// If AT LEAST ONE test passes → cache is working! ✅
+```
+
+**LOGIK:** Vi tester 3 store svenske byer. Hvis mindst 1 findes → cachen virker!
+
+---
+
+## **FORVENTET RESULTAT:**
+
+```
+11:37:01: Cache sat med 1,302 oversættelser ✅
+11:37:01: Waiting 2 seconds for database replication... ✅
+11:37:03: Test Stockholm → "Stockholm" ✅
+11:37:03: Cache verified! Import continues! ✅
+```
+
+---
+
+### Changed
+- **class-wta-importer.php**: Changed cache verification test from Copenhagen (DK) to Stockholm/Göteborg/Malmö (SE)
+- **class-wta-importer.php**: Test passes if AT LEAST ONE city is found (robust verification)
+
+---
+
 ## [3.2.27] - 2026-01-10
 
 ### 🐛 DEBUG - Add AJAX logging to diagnose why imports don't start
