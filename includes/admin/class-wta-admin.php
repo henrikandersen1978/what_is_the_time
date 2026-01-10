@@ -752,12 +752,30 @@ class WTA_Admin {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
+		// Clear WordPress transient cache
 		WTA_AI_Translator::clear_cache();
 
-		WTA_Logger::info( 'Translation cache cleared by user' );
+		// v3.2.30: CRITICAL - Clear PHP OpCache so new code is used!
+		// Without this, updated plugin code won't be used until server restart
+		$opcache_cleared = false;
+		if ( function_exists( 'opcache_reset' ) ) {
+			$opcache_cleared = opcache_reset();
+			WTA_Logger::info( 'PHP OpCache cleared (ensures new plugin code is used)', array(
+				'success' => $opcache_cleared,
+			) );
+		}
+
+		WTA_Logger::info( 'Translation cache cleared by user', array(
+			'opcache_cleared' => $opcache_cleared ? 'yes' : 'no (function not available)',
+		) );
+
+		$message = 'Translation cache has been cleared. New imports will use fresh translations.';
+		if ( $opcache_cleared ) {
+			$message .= ' PHP OpCache also cleared - new plugin code is now active!';
+		}
 
 		wp_send_json_success( array(
-			'message' => 'Translation cache has been cleared. New imports will use fresh translations.',
+			'message' => $message,
 		) );
 	}
 

@@ -2,6 +2,83 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.30] - 2026-01-10
+
+### 🔧 CRITICAL FIX - Add OpCache clear to "Clear Translation Cache" button
+
+**USER INSIGHT:**
+"Kunne det være vores backend 'clear translation cache' der skal justeres? Den knap har været der siden vi skiftede til geonames"
+
+---
+
+## **PROBLEMET:**
+
+v3.2.29 viste stadig kun **1,443 oversættelser** selvom ny kode skulle vise **20,000+**!
+
+**ROOT CAUSE:** PHP OpCache!
+
+```
+"Clear Translation Cache" button:
+✅ Cleared WordPress transients (database)
+❌ Did NOT clear PHP OpCache (compiled code)
+
+Result: 
+- New v3.2.29 code uploaded ✅
+- BUT server still runs OLD compiled code ❌
+- Only 1,443 translations found (old isPreferredName filter)
+```
+
+**KONKLUSION:** Efter plugin update skal PHP OpCache cleares for at ny kode aktiveres!
+
+---
+
+## **LØSNINGEN:**
+
+### **Add OpCache clear to "Clear Translation Cache" button:**
+
+```php
+// class-wta-admin.php (line ~748)
+public function ajax_clear_translation_cache() {
+    // Clear WordPress transient cache
+    WTA_AI_Translator::clear_cache();
+
+    // v3.2.30: CRITICAL - Clear PHP OpCache!
+    if ( function_exists( 'opcache_reset' ) ) {
+        opcache_reset();
+        WTA_Logger::info('PHP OpCache cleared');
+    }
+}
+```
+
+**FORDELE:**
+- ✅ Efter plugin update → klik "Clear Translation Cache" → ny kode aktivt!
+- ✅ Ingen manual server restart nødvendig
+- ✅ Ingen SSH adgang nødvendig
+- ✅ Virker automatisk hvis `opcache_reset()` er tilgængelig
+
+---
+
+## **TEST INSTRUKTIONER:**
+
+1. **Upload v3.2.30**
+2. **Klik "Clear Translation Cache"** ← VIGTIG!
+3. **Test import** (Danmark, 250k+)
+4. **Tjek log:** `"translations": "20,000+"` ← SKAL VÆRE HØJT!
+
+---
+
+### Changed
+- **class-wta-admin.php**: Added `opcache_reset()` call to "Clear Translation Cache" button
+- **class-wta-admin.php**: Enhanced logging to show if OpCache was cleared
+- **class-wta-admin.php**: Updated success message to indicate OpCache clear status
+
+### Impact
+- **After plugin updates:** OpCache automatically cleared when clicking "Clear Translation Cache"
+- **No server restart needed:** New code immediately active
+- **Works automatically:** If `opcache_reset()` function available
+
+---
+
 ## [3.2.29] - 2026-01-10
 
 ### 🎯 MAJOR FIX - Remove "preferred name" requirement for GeoNames translations
