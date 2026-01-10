@@ -110,18 +110,20 @@ class WTA_GeoNames_Translator {
 			continue;
 		}
 
-		// Parse tab-separated values
-		$parts = explode( "\t", trim( $line ) );
+		// v3.2.52: CRITICAL FIX - Don't trim() before explode!
+		// trim() removes trailing tabs, breaking lines with empty fields at the end!
+		// Only trim line endings (CRLF/LF), not tabs!
+		$line = rtrim( $line, "\r\n" );
+		$parts = explode( "\t", $line );
 
-		// v3.2.42: Log every 100k translations to prove code is running!
-		// Validate minimum required fields
-		if ( count( $parts ) < 5 ) {
+		// Validate minimum required fields (geonameid, isolanguage, alternate_name)
+		if ( count( $parts ) < 4 ) {
 			continue;
 		}
 
-		$geonameid = $parts[1];
-		$isolanguage = $parts[2];
-		$alternate_name = $parts[3];
+		$geonameid = isset( $parts[1] ) ? trim( $parts[1] ) : '';
+		$isolanguage = isset( $parts[2] ) ? trim( $parts[2] ) : '';
+		$alternate_name = isset( $parts[3] ) ? trim( $parts[3] ) : '';
 
 		// v3.2.51: Log matches to track progression
 		if ( $isolanguage === $lang ) {
