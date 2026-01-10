@@ -124,12 +124,22 @@ class WTA_GeoNames_Translator {
 				$translations[ $geonameid ] = $alternate_name;
 				$matched_count++;
 				
-				// v3.2.42: Log every 10,000 matches to PROVE code is inside loop!
+				// v3.2.44: Log FIRST 10 Swedish matches to prove they exist!
+				if ( $matched_count <= 10 ) {
+					WTA_Logger::info( 'v3.2.44 SWEDISH MATCH #' . $matched_count . '!', array(
+						'line_count' => number_format($line_count),
+						'geonameid' => $geonameid,
+						'translation' => $alternate_name,
+						'isolanguage' => $isolanguage,
+						'target_lang' => $lang,
+					) );
+				}
+				
+				// Log every 10,000 matches
 				if ( $matched_count % 10000 === 0 ) {
-					WTA_Logger::info( 'v3.2.42 CODE IS RUNNING! Matched: ' . number_format($matched_count), array(
+					WTA_Logger::info( 'v3.2.44 Progress: ' . number_format($matched_count) . ' matches', array(
 						'line_count' => number_format($line_count),
 						'last_translation' => $alternate_name,
-						'last_geonameid' => $geonameid,
 					) );
 				}
 			}
