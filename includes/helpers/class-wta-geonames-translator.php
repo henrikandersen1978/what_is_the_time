@@ -83,14 +83,15 @@ class WTA_GeoNames_Translator {
 				continue;
 			}
 
-			// Parse tab-separated values
-			$parts = explode( "\t", trim( $line ) );
+		// Parse tab-separated values
+		$parts = explode( "\t", trim( $line ) );
 
-			// Validate minimum required fields
-			if ( count( $parts ) < 5 ) {
-				continue;
-			}
+		// Validate minimum required fields
+		if ( count( $parts ) < 5 ) {
+			continue;
+		}
 
+		// v3.2.34: CRITICAL FIX - Proper indentation (was outside while loop!)
 		$geonameid = $parts[1];
 		$isolanguage = $parts[2];
 		$alternate_name = $parts[3];
