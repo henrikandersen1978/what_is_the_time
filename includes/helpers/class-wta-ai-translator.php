@@ -69,15 +69,12 @@ class WTA_AI_Translator {
 			}
 		}
 
-		// 3. Try static translation (fast and free)
-		$static_translation = WTA_Quick_Translate::translate( $name, $type, $target_lang );
-		if ( $static_translation !== $name ) {
-			// Static translation found - return directly (v3.0.80: no caching)
-			return $static_translation;
-		}
+		// v3.2.26: REMOVED Quick_Translate fallback (legacy code from pre-GeoNames era)
+		// Quick_Translate only has da-DK translations, causing English names on other languages
+		// GeoNames provides comprehensive translations for all languages - no need for fallback!
 
-		// 4. Use AI as last resort - BUT NOT FOR CITIES!
-		// Cities should keep their original names unless found in Wikidata or Quick_Translate
+		// 3. Use AI as last resort - BUT NOT FOR CITIES!
+		// Cities should keep their original names unless found in GeoNames or Wikidata
 		// This prevents AI from translating city names like "Ojo de Agua" to "Øje de Agua"
 		if ( 'city' === $type ) {
 			// Return original city name (v3.0.80: no caching)

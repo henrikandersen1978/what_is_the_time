@@ -82,35 +82,39 @@ class WTA_Importer {
 		'expires' => '24 hours',
 	) );
 	
-	// v3.2.25: DEBUG MODE - Test cache but DON'T ABORT (just log results)
-	// This helps diagnose why cities get English names without blocking import
+	// v3.2.26: CRITICAL FIX - Wait for database replication!
+	// Race condition: set_transient() writes to master DB, but get_transient() 
+	// might read from slave DB that hasn't synced yet. Wait 2 seconds for replication.
+	WTA_Logger::info( 'Waiting 2 seconds for database replication...', array(
+		'reason' => 'Ensure GeoNames cache is readable from all DB servers',
+		'issue' => 'Race condition between set_transient() and get_transient()',
+	) );
+	sleep( 2 );
+	
+	// v3.2.26: CRITICAL VERIFICATION - Verify cache is readable after wait
 	$test_geonameid = 2618425; // Copenhagen
 	$test_translation = WTA_GeoNames_Translator::get_name( $test_geonameid, $lang_code );
 	
 	if ( false === $test_translation ) {
-		WTA_Logger::warning( 'WARNING: GeoNames cache verification FAILED - proceeding anyway for debugging!', array(
+		WTA_Logger::error( 'FATAL: GeoNames cache NOT readable after 2s wait!', array(
 			'language' => $lang_code,
 			'test_geonameid' => $test_geonameid,
 			'test_name' => 'Copenhagen',
 			'expected_sv' => 'Köpenhamn',
 			'actual' => 'false (not found)',
-			'impact' => 'Cities will likely get English names instead of translated names',
-			'possible_causes' => array(
-				'Database replication lag',
-				'Cache race condition',
-				'Transient corruption',
-				'alternateNamesV2.txt does not contain this city',
-			),
+			'impact' => 'All cities will get ENGLISH names instead of translated names!',
+			'action_required' => 'Import ABORTED - fix database replication or increase sleep time',
 		) );
-		// v3.2.25: Continue anyway (don't abort) - let user see actual behavior in scheduled actions
-	} else {
-		WTA_Logger::info( 'GeoNames cache verified working!', array(
-			'test_geonameid' => $test_geonameid,
-			'test_result' => $test_translation,
-			'expected_sv' => 'Köpenhamn',
-			'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
-		) );
+		return false; // Abort import!
 	}
+	
+	WTA_Logger::info( 'GeoNames cache verified working after replication wait!', array(
+		'test_geonameid' => $test_geonameid,
+		'test_result' => $test_translation,
+		'expected_sv' => 'Köpenhamn',
+		'match' => ( $test_translation === 'Köpenhamn' ) ? 'YES ✅' : 'NO ❌',
+		'wait_time' => '2 seconds',
+	) );
 
 	$stats = array(
 		'continents' => 0,

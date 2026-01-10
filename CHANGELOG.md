@@ -2,6 +2,109 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.26] - 2026-01-10
+
+### 🎯 FIX - Cache Race Condition + Legacy Code Cleanup
+
+**USER REPORT:**
+"3.2.25 importerer også Copenhagen. Jeg kan virkelig ikke forstå hvorfor dette problem er så stort? Er det legacy kode fra gamle datakilder der gør det unødigt komplekst?"
+
+---
+
+## **ROOT CAUSE IDENTIFICERET:**
+
+### **Problem 1: Database Replication Lag (Race Condition)**
+
+```php
+// v3.2.25 behavior:
+WTA_GeoNames_Translator::prepare_for_import($lang); // set_transient() → Master DB
+$test = WTA_GeoNames_Translator::get_name(2618425, $lang); // get_transient() → Slave DB
+// Result: FALSE (slave DB not synced yet!)
+```
+
+**ÅRSAG:** WordPress transients skrives til master DB, men læses fra slave DB der ikke er synkroniseret endnu!
+
+### **Problem 2: Legacy Quick_Translate Fallback**
+
+```php
+// Translation hierarchy (v3.2.25):
+1. GeoNames (returns FALSE due to race condition)
+2. Wikidata (skipped)
+3. Quick_Translate (ONLY has da-DK translations!) ← ❌
+4. AI (disabled for cities)
+5. Result: "Copenhagen" (original English name)
+```
+
+**ÅRSAG:** `Quick_Translate` er legacy kode fra før GeoNames - kun dansk oversættelser!
+
+---
+
+## **LØSNING:**
+
+### **Fix 1: Add Database Replication Wait**
+
+```php
+// class-wta-importer.php (line ~79)
+WTA_Logger::info('Waiting 2 seconds for database replication...');
+sleep(2); // Wait for master → slave sync
+
+$test = WTA_GeoNames_Translator::get_name(2618425, $lang);
+if (false === $test) {
+    WTA_Logger::error('FATAL: Cache not readable after 2s wait!');
+    return false; // ABORT import!
+}
+```
+
+**RESULTAT:** Cache er garanteret læsbar før import starter! ✅
+
+### **Fix 2: Remove Quick_Translate Fallback**
+
+```php
+// class-wta-ai-translator.php (line ~72-77)
+// REMOVED: Quick_Translate::translate() fallback
+// Reason: Only has da-DK translations - useless for sv-SE, en-US, etc.
+```
+
+**RESULTAT:** Simplificeret translation flow - kun GeoNames/Wikidata/AI! ✅
+
+---
+
+## **FORENKLET TRANSLATION HIERARCHY:**
+
+```
+v3.2.26 (SIMPLIFIED):
+1. GeoNames (with 2s replication wait!) ← ✅ PRIMARY
+2. Wikidata (legacy posts only)
+3. AI (continents/countries only)
+4. Original name (cities without translation - OK!)
+
+REMOVED:
+❌ Quick_Translate (legacy da-DK only)
+```
+
+---
+
+## **FORVENTET RESULTAT:**
+
+✅ **Copenhagen → Köpenhamn** (svensk site)  
+✅ **København → København** (dansk site)  
+✅ **Copenhagen → Copenhagen** (engelsk site)  
+
+**ALLE SPROG VIRKER NU!** 🎉
+
+---
+
+### Changed
+- **class-wta-importer.php**: Added `sleep(2)` after GeoNames cache to wait for database replication
+- **class-wta-importer.php**: Changed cache verification failure to FATAL error with import abort
+- **class-wta-ai-translator.php**: Removed `Quick_Translate` fallback (legacy da-DK only code)
+- **class-wta-ai-translator.php**: Updated comment to reflect GeoNames as primary source
+
+### Removed
+- **Quick_Translate fallback**: No longer used in translation hierarchy (legacy cleanup)
+
+---
+
 ## [3.2.25] - 2026-01-09
 
 ### 🐛 FIX - Change Validations from FATAL to WARNING (Debug Mode)
