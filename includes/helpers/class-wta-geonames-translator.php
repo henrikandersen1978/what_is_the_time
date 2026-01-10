@@ -81,10 +81,28 @@ class WTA_GeoNames_Translator {
 
 	$line_count = 0;
 	$matched_count = 0;
+	$debug_first_100 = array(); // v3.2.51: DEBUG
 
 	// v3.2.36: CRITICAL FIX - while loop was missing one level of indentation!
 	while ( ( $line = fgets( $file ) ) !== false ) {
 		$line_count++;
+		
+		// v3.2.51: DEBUG - Capture first 100 lines to see what PHP reads
+		if ( $line_count <= 100 ) {
+			$parts_debug = explode( "\t", trim( $line ) );
+			$debug_first_100[] = array(
+				'line' => $line_count,
+				'parts_count' => count( $parts_debug ),
+				'isolang' => isset( $parts_debug[2] ) ? $parts_debug[2] : 'N/A',
+				'is_sv' => ( isset( $parts_debug[2] ) && $parts_debug[2] === $lang ),
+			);
+			if ( $line_count === 100 ) {
+				WTA_Logger::info( '🔍 v3.2.51 First 100 lines', array(
+					'sv_count' => count( array_filter( $debug_first_100, function($i) { return $i['is_sv']; } ) ),
+					'sample' => array_slice( $debug_first_100, 65, 10 ), // Lines 66-75
+				) );
+			}
+		}
 
 		// v3.2.35: CRITICAL FIX - All code below must be INSIDE while loop (3 tabs!)
 		// Skip comments
@@ -105,15 +123,24 @@ class WTA_GeoNames_Translator {
 		$isolanguage = $parts[2];
 		$alternate_name = $parts[3];
 
-		// v3.2.49: Log every 500 matches to track progression
+		// v3.2.51: Log matches to track progression
 		if ( $isolanguage === $lang ) {
 			if ( ! isset( $translations[ $geonameid ] ) ) {
 				$translations[ $geonameid ] = $alternate_name;
 				$matched_count++;
 				
+				// Log first 10 matches in detail
+				if ( $matched_count <= 10 ) {
+					WTA_Logger::info( '✅ v3.2.51 Match #' . $matched_count, array(
+						'line' => number_format($line_count),
+						'geonameid' => $geonameid,
+						'name' => $alternate_name,
+					) );
+				}
+				
 				// Log every 500 matches
 				if ( $matched_count % 500 === 0 ) {
-					WTA_Logger::info( '🟢 v3.2.50 Matched ' . number_format($matched_count), array(
+					WTA_Logger::info( '🟢 v3.2.51 Matched ' . number_format($matched_count), array(
 						'at_line' => number_format($line_count),
 						'timestamp' => date('Y-m-d H:i:s'),
 					) );
