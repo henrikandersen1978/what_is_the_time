@@ -72,9 +72,10 @@ class WTA_GeoNames_Translator {
 			return array();
 		}
 
-		$line_count = 0;
-		$matched_count = 0;
+	$line_count = 0;
+	$matched_count = 0;
 
+	// v3.2.36: CRITICAL FIX - while loop was missing one level of indentation!
 	while ( ( $line = fgets( $file ) ) !== false ) {
 		$line_count++;
 
@@ -100,43 +101,41 @@ class WTA_GeoNames_Translator {
 		// Many cities like "Copenhagen" don't have "preferred" Swedish translations
 		// We use the FIRST translation found for each geonameid+language combination
 		
-		// v3.2.33: DEBUG - Log first 10 Swedish entries to see actual data
-		static $debug_count = 0;
-		if ( $isolanguage === $lang && $debug_count < 10 ) {
-			WTA_Logger::info( 'DEBUG: Swedish translation found', array(
-				'geonameid' => $geonameid,
-				'isolanguage' => $isolanguage,
-				'alternate_name' => $alternate_name,
-				'parts_count' => count( $parts ),
-				'isPreferredName' => isset( $parts[4] ) ? $parts[4] : 'N/A',
-			) );
-			$debug_count++;
-		}
-		
+		// v3.2.36: EXTENSIVE DEBUG - Log at 1M, 5M, 10M, 18M line marks
 		if ( $isolanguage === $lang ) {
 			// Use first translation found for each geonameid
 			if ( ! isset( $translations[ $geonameid ] ) ) {
 				$translations[ $geonameid ] = $alternate_name;
 				$matched_count++;
+				
+				// Log specific entries for debugging
+				if ( $line_count == 1000000 || $line_count == 5000000 || 
+				     $line_count == 10000000 || $line_count == 18000000 ) {
+					WTA_Logger::info( 'DEBUG: Translation added at line ' . number_format($line_count), array(
+						'geonameid' => $geonameid,
+						'alternate_name' => $alternate_name,
+						'matched_count_so_far' => number_format($matched_count),
+					) );
+				}
 			}
 		}
 
 		// Progress logging every 1 million lines
 		if ( $line_count % 1000000 === 0 ) {
-				$elapsed = round( microtime( true ) - $start_time, 2 );
-				$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
-				
-				WTA_Logger::info( 'Parsing progress', array(
-					'lines_processed' => number_format( $line_count ),
-					'translations'    => number_format( $matched_count ),
-					'elapsed_seconds' => $elapsed,
-					'memory_mb'       => $memory_mb,
-				) );
-				
-				// Extend execution time
-				set_time_limit( 300 ); // 5 minutes
-			}
+			$elapsed = round( microtime( true ) - $start_time, 2 );
+			$memory_mb = round( memory_get_usage() / 1024 / 1024, 2 );
+			
+			WTA_Logger::info( 'Parsing progress', array(
+				'lines_processed' => number_format( $line_count ),
+				'translations'    => number_format( $matched_count ),
+				'elapsed_seconds' => $elapsed,
+				'memory_mb'       => $memory_mb,
+			) );
+			
+			// Extend execution time
+			set_time_limit( 300 ); // 5 minutes
 		}
+	} // End while loop
 
 		fclose( $file );
 

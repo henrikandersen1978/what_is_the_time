@@ -2,6 +2,37 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.36] - 2026-01-10
+
+### 🔍 DEBUG - Better logging to find WHY only 1,443 matches
+
+**USER REPORT:**
+"Tror problemet stadig består" - After v3.2.35, still 1,443!
+
+**KNOWN FACTS:**
+- Local file: 86,388 unique Swedish geonameids ✅
+- Server parses: 18.6M lines ✅
+- Server finds: 1,443 translations (1.7% of expected!) ❌
+
+**v3.2.36 DEBUG:**
+- Removed first-10-only debug logging
+- Added debug at specific line marks (1M, 5M, 10M, 18M)
+- Will show `matched_count_so_far` to see if it grows
+- If matched_count stays low throughout, there's a logic bug
+- If matched_count grows normally, there's a cache/OpCache issue
+
+**EXPECTED LOG:**
+```
+Line 1,000,000: matched_count_so_far: 4,500+ ✅
+Line 5,000,000: matched_count_so_far: 23,000+ ✅
+Line 10,000,000: matched_count_so_far: 46,000+ ✅
+Line 18,000,000: matched_count_so_far: 86,000+ ✅
+```
+
+If numbers are MUCH lower, there's a parsing bug we haven't found yet.
+
+---
+
 ## [3.2.35] - 2026-01-10
 
 ### 🚨 CRITICAL FIX - v3.2.34 indentation was incomplete!
