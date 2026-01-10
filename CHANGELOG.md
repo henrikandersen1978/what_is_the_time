@@ -2,6 +2,82 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.58] - 2026-01-10
+
+### 🔧 FIXED: Action Scheduler actions not cleared on "Reset All Data"
+
+**ISSUE:**
+When clicking "Reset All Data", posts were deleted but 15K+ scheduled actions continued running, trying to process deleted posts and causing errors.
+
+**ROOT CAUSE:**
+`WTA_Queue::clear()` only cleared the old custom queue table, not Action Scheduler actions.
+
+**FIX:**
+Added code to clear ALL WTA Action Scheduler actions when resetting data:
+- `wta_create_continent`
+- `wta_create_country`
+- `wta_schedule_cities`
+- `wta_create_city`
+- `wta_lookup_timezone`
+- `wta_generate_ai_content`
+- `wta_start_waiting_city_processing`
+
+**RESULT:**
+✅ "Reset All Data" now deletes posts AND clears all pending/past-due/failed actions
+✅ No more ghost actions trying to process deleted posts
+✅ Clean slate for re-import
+
+## [3.2.57] - 2026-01-10
+
+### 🎯 CRITICAL FIX: Sort cities by population + only filter PPLA2+ (keep PPLA major cities)
+
+**TWO MAJOR ISSUES FIXED:**
+
+**Issue 1: Feature Code Filtering was TOO AGGRESSIVE**
+- v3.2.55-3.2.56 filtered ALL PPLA, PPLA2, PPLA3, PPLA4
+- Lost major cities like Bergen (294k), Göteborg (570k), Stavanger (148k)
+
+**PPLA ≠ small administrative centers!**
+- PPLA = First-order administrative division = MAJOR CITIES (Bergen, Göteborg)
+- PPLA2+ = Second-order+ = Small kommun centers (Sola kommun)
+
+**Fix:** Only filter PPLA2, PPLA3, PPLA4 (keep PPLA!)
+
+**Issue 2: `min_population` took FIRST X cities, not LARGEST X**
+- Old code took first 10 cities in file order (random/alphabetic)
+- Not sorted by population!
+
+**Fix:** Now collects all matching cities, sorts by population, then takes top X
+
+**EXAMPLE: Norway with min: 150k, max: 5**
+
+Before v3.2.57:
+- ❌ Got: Random 5 cities in file order
+- ❌ Lost: Bergen, Stavanger (PPLA filtered out)
+
+After v3.2.57:
+- ✅ Gets: Oslo (1.08M), Bergen (294k), Trondheim (216k), Stavanger (148k), Kristiansand (117k)
+- ✅ The 5 LARGEST cities, correctly sorted!
+
+## [3.2.56] - 2026-01-10
+
+### 🌍 ADDED: Language support for `[wta_global_time_comparison]` shortcode
+
+**FIXED:**
+All hardcoded Danish strings in the global time comparison shortcode are now language-aware:
+
+**Added to JSON files:**
+- `comparison_heading`: "Tidsforskel: Sammenlign %s med verdensur i andre byer"
+- `table_header_city`, `table_header_country`, `table_header_time_diff`, `table_header_local_time`
+- `hour_singular`, `hour_plural`: "time"/"timer" (DA), "timme"/"timmar" (SV)
+- `comparison_intro_system`, `comparison_intro_user`: AI prompts for intro text
+
+**RESULT:**
+- ✅ Heading now in correct language: "Tidsskillnad: Jämför Stockholm..." (SV)
+- ✅ Table headers: "Stad", "Land", "Tidsskillnad", "Lokal tid" (SV)
+- ✅ Time differences: "+8 timmar", "Samma tid" (SV)
+- ✅ AI-generated intro uses language-specific prompts
+
 ## [3.2.55] - 2026-01-10
 
 ### 🎯 FIXED: Use GeoNames structured data instead of string manipulation

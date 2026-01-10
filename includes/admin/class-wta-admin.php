@@ -507,6 +507,33 @@ class WTA_Admin {
 	// Clear queue
 	WTA_Queue::clear();
 	
+	// v3.2.58: CRITICAL - Clear ALL Action Scheduler actions when resetting data
+	// Without this, 15K+ pending/in-progress actions continue processing deleted posts!
+	$wta_hooks = array(
+		'wta_create_continent',
+		'wta_create_country',
+		'wta_schedule_cities',
+		'wta_create_city',
+		'wta_lookup_timezone',
+		'wta_generate_ai_content',
+		'wta_start_waiting_city_processing',
+	);
+	
+	$cleared_actions = 0;
+	foreach ( $wta_hooks as $hook ) {
+		// Unschedule ALL actions for this hook (pending, failed, past-due)
+		// Note: in-progress actions may complete and throw errors, but that's expected
+		$cleared = as_unschedule_all_actions( $hook );
+		if ( $cleared > 0 ) {
+			$cleared_actions += $cleared;
+		}
+	}
+	
+	WTA_Logger::info( 'Action Scheduler actions cleared', array(
+		'actions_cleared' => $cleared_actions,
+		'hooks_cleared' => count( $wta_hooks ),
+	) );
+	
 	// v3.2.22: Clear GeoNames translation cache to force fresh re-parsing on next import
 	// This ensures that new imports use correct language translations, not stale cache
 	$geonames_cache_deleted = $wpdb->query(
