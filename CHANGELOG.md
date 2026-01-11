@@ -2,6 +2,64 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.73] - 2026-01-11
+
+### 🌙 FIX: Moon phase shows "(Unknown)" instead of translated name
+
+**USER REPORT:**
+After installing v3.2.72, moon phase FAQ showed:
+```
+"Månfasen i Asunción är för närvarande 75.9% (Unknown)."
+```
+Should show Swedish translation: "Sista kvarteret"
+
+**ROOT CAUSE:**
+v3.2.72 tried to get moon phase translations from `wta_faq_strings` option:
+```php
+$faq_strings = get_option( 'wta_faq_strings', array() );  // ← Only contains FAQ texts!
+$phase_name = isset( $faq_strings[ $phase_key ] ) 
+    ? $faq_strings[ $phase_key ] 
+    : 'Unknown';  // ← Always returns 'Unknown'
+```
+
+**Problem:** `wta_faq_strings` only contains FAQ question/answer templates (faq1_question, faq2_answer, etc.), NOT moon phase translations (moon_last_quarter, etc.)!
+
+**THE FIX:**
+Load translations directly from language JSON file:
+
+```php
+// OLD (v3.2.72 - broken):
+$faq_strings = get_option( 'wta_faq_strings', array() );
+$phase_name = isset( $faq_strings[ $phase_key ] ) ? $faq_strings[ $phase_key ] : 'Unknown';
+
+// NEW (v3.2.73 - fixed):
+$language = get_option( 'wta_language', 'da-DK' );
+$lang_code = substr( $language, 0, 2 ); // sv-SE → sv
+$json_file = WTA_PLUGIN_DIR . 'includes/languages/' . $lang_code . '.json';
+
+if ( file_exists( $json_file ) ) {
+    $translations = json_decode( file_get_contents( $json_file ), true );
+    if ( isset( $translations[ $phase_key ] ) ) {
+        $phase_name = $translations[ $phase_key ];  // ✅ "Sista kvarteret"
+    }
+}
+```
+
+**Why this works:**
+- JSON files contain ALL translations including moon phases
+- Direct file read ensures we get the translations
+- Same approach as other parts of the system use
+- Works in static context without $this
+
+**RESULT:**
+- ✅ Danish: "Sidste kvarter"
+- ✅ Swedish: "Sista kvarteret" (fixed!)
+- ✅ English: "Last quarter"
+- ✅ German: "Letztes Viertel"
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Changed to load from JSON file instead of option
+
 ## [3.2.72] - 2026-01-11
 
 ### 🔧 HOTFIX: "Using $this when not in object context" fatal error

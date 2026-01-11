@@ -816,9 +816,20 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 			$phase_key = 'moon_waning_crescent';
 		}
 		
-		// Translate phase name to current language (get from wta_faq_strings option)
-		$faq_strings = get_option( 'wta_faq_strings', array() );
-		$phase_name = isset( $faq_strings[ $phase_key ] ) ? $faq_strings[ $phase_key ] : 'Unknown';
+		// Translate phase name to current language (load from JSON file)
+		$language = get_option( 'wta_language', 'da-DK' );
+		$lang_code = substr( $language, 0, 2 ); // da-DK → da, sv-SE → sv
+		
+		// Load language JSON file
+		$json_file = WTA_PLUGIN_DIR . 'includes/languages/' . $lang_code . '.json';
+		$phase_name = $phase_key; // Fallback to key if translation not found
+		
+		if ( file_exists( $json_file ) ) {
+			$translations = json_decode( file_get_contents( $json_file ), true );
+			if ( isset( $translations[ $phase_key ] ) ) {
+				$phase_name = $translations[ $phase_key ];
+			}
+		}
 		
 		return array(
 			'percentage'  => number_format( $percentage, 1 ),
