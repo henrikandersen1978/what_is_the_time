@@ -2,6 +2,128 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.9] - 2026-01-11
+
+### 🔍 DEBUG: Enhanced TimezoneDB API Error Logging
+
+**USER REPORT:**
+"379 API fejl" - Even with staggered scheduling (v3.3.8), API still fails with "data": null
+
+**THE PROBLEM:**
+
+Despite v3.3.8 fixing the burst overload issue, API still fails:
+```
+✅ Staggering works: "staggered_over": "10 seconds"
+✅ 100 API calls scheduled correctly
+❌ Only 9 successful out of 100 (9% success rate!)
+❌ 379 API errors: "data": null
+
+ERROR: TimeZoneDB API returned error
+Context: { "data": null, "lat": -27.46794, "lng": 153.02809 }
+```
+
+**But we have NO information about WHY it fails:**
+- ❌ No HTTP status code (200, 429, 500?)
+- ❌ No TimezoneDB error message
+- ❌ No raw API response
+- ❌ No JSON parse error details
+
+**This makes debugging IMPOSSIBLE!**
+
+### ✅ THE FIX - Enhanced Error Logging:
+
+**Added comprehensive error logging to diagnose API failures:**
+
+```php
+// v3.3.9: Enhanced error logging
+$body = wp_remote_retrieve_body( $response );
+$http_code = wp_remote_retrieve_response_code( $response );
+$data = json_decode( $body, true );
+
+// Case 1: JSON parsing failed (API returned HTML/invalid JSON)
+if ( null === $data && ! empty( $body ) ) {
+    WTA_Logger::error( 'TimeZoneDB API - JSON parse failed', array(
+        'http_code' => $http_code,           // ← NEW! (200, 500, etc.)
+        'raw_response' => substr( $body, 0, 500 ), // ← NEW! (first 500 chars)
+        'json_error' => json_last_error_msg(),     // ← NEW! (parse error details)
+        'lat'  => $lat,
+        'lng'  => $lng,
+    ) );
+    return false;
+}
+
+// Case 2: Valid JSON but API returned error status
+if ( ! isset( $data['status'] ) || 'OK' !== $data['status'] ) {
+    WTA_Logger::error( 'TimeZoneDB API returned error', array(
+        'http_code' => $http_code,           // ← NEW!
+        'status' => isset( $data['status'] ) ? $data['status'] : 'MISSING', // ← NEW!
+        'message' => isset( $data['message'] ) ? $data['message'] : 'NO MESSAGE', // ← NEW!
+        'data' => $data,
+        'lat'  => $lat,
+        'lng'  => $lng,
+    ) );
+    return false;
+}
+```
+
+### 📊 WHAT THIS REVEALS:
+
+**HTTP Status Codes:**
+- `200` = API working, but returned error status
+- `401/403` = API key invalid/unauthorized
+- `429` = Rate limit exceeded (shouldn't happen with Premium)
+- `500/502/503` = TimezoneDB server error
+- `0` = Connection timeout/DNS failure
+
+**Raw Response:**
+- If API returns HTML error page instead of JSON
+- If API returns malformed JSON
+- If connection drops mid-response
+
+**TimezoneDB Error Message:**
+- `"Invalid API key"` = Key not valid
+- `"Limit exceeded"` = Quota reached
+- `"Invalid coordinates"` = Lat/lng out of range
+- etc.
+
+### 🎯 NEXT STEPS:
+
+After deploying v3.3.9, the log will show:
+```
+[TIME] ERROR: TimeZoneDB API - JSON parse failed
+Context: {
+    "http_code": 500,  ← Server error!
+    "raw_response": "<html><body>Database connection failed...</body></html>",
+    "json_error": "Syntax error",
+    "lat": -27.46794,
+    "lng": 153.02809
+}
+```
+
+OR:
+
+```
+[TIME] ERROR: TimeZoneDB API returned error
+Context: {
+    "http_code": 200,
+    "status": "FAILED",
+    "message": "Invalid API key",  ← Clear error message!
+    "lat": -27.46794,
+    "lng": 153.02809
+}
+```
+
+**Then we can fix the actual root cause!**
+
+### 🔧 AFFECTED FILES:
+
+- `includes/helpers/class-wta-timezone-helper.php`
+  - Line 134-157: Added HTTP status code logging
+  - Line 137-144: Added JSON parse error detection
+  - Line 146-154: Enhanced error status logging
+
+---
+
 ## [3.3.8] - 2026-01-11
 
 ### 🚨 CRITICAL FIX #1: TimezoneDB API Overload - 88% Failure Rate!

@@ -132,10 +132,27 @@ class WTA_Timezone_Helper {
 		}
 
 		$body = wp_remote_retrieve_body( $response );
+		$http_code = wp_remote_retrieve_response_code( $response );
 		$data = json_decode( $body, true );
+
+		// v3.3.9: Enhanced error logging to debug API failures
+		// Log HTTP status and raw response to diagnose why API returns null
+		if ( null === $data && ! empty( $body ) ) {
+			WTA_Logger::error( 'TimeZoneDB API - JSON parse failed', array(
+				'http_code' => $http_code,
+				'raw_response' => substr( $body, 0, 500 ),
+				'json_error' => json_last_error_msg(),
+				'lat'  => $lat,
+				'lng'  => $lng,
+			) );
+			return false;
+		}
 
 		if ( ! isset( $data['status'] ) || 'OK' !== $data['status'] ) {
 			WTA_Logger::error( 'TimeZoneDB API returned error', array(
+				'http_code' => $http_code,
+				'status' => isset( $data['status'] ) ? $data['status'] : 'MISSING',
+				'message' => isset( $data['message'] ) ? $data['message'] : 'NO MESSAGE',
 				'data' => $data,
 				'lat'  => $lat,
 				'lng'  => $lng,
