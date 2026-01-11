@@ -122,9 +122,14 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'continent_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// v3.2.80: AI content is NOT scheduled here
-			// Sequential phases: Structure → Timezone → AI
-			// AI will be batch-scheduled after all structure is complete
+			// v3.2.81: Schedule AI with delay to allow structure phase to complete
+			// Continents don't need timezone, so AI can start after structure
+			as_schedule_single_action(
+				time() + 1800, // 30 min delay (after structure phase)
+				'wta_generate_ai_content',
+				array( $post_id, 'continent', false ),
+				'wta_ai_content'
+			);
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -282,9 +287,14 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'country_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// v3.2.80: AI content is NOT scheduled here
-			// Sequential phases: Structure → Timezone → AI
-			// AI will be batch-scheduled after all structure is complete
+			// v3.2.81: Schedule AI with delay to allow structure phase to complete
+			// Countries don't need timezone, so AI can start after structure
+			as_schedule_single_action(
+				time() + 1800, // 30 min delay (after structure phase)
+				'wta_generate_ai_content',
+				array( $post_id, 'country', false ),
+				'wta_ai_content'
+			);
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -508,9 +518,15 @@ class WTA_Single_Structure_Processor {
 				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 				update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Flag for AI queue
 				
-				// v3.2.80: AI content is NOT scheduled here
-				// Sequential phases: Structure → Timezone → AI
-				// AI will be batch-scheduled after timezone resolution
+				// v3.2.81: CRITICAL FIX - Schedule AI for simple countries!
+				// These cities get timezone from country list (no API call needed)
+				// So they bypass timezone processor and need AI scheduled here
+				as_schedule_single_action(
+					time(),
+					'wta_generate_ai_content',
+					array( $post_id, 'city', false ),
+					'wta_ai_content'
+				);
 			} else {
 				// Country not in list - use API
 				if ( $final_lat !== null && $final_lon !== null ) {

@@ -2,6 +2,124 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.81] - 2026-01-11
+
+### 🚨 CRITICAL HOTFIX: AI Scheduling for All Entity Types
+
+**USER QUESTION:**
+"Men vent nu lidt. Ikke alle byer har brug for timezone. Dem der ikke har, hvordan får de så ai_content nu?"
+
+**EXCELLENT CATCH!** 🎯 v3.2.80 had a critical bug!
+
+### 🐛 THE BUG in v3.2.80:
+
+**Problem 1: Simple Countries (Denmark, Norway, etc.)**
+Cities in "simple countries" get timezone directly from `WTA_Timezone_Helper::get_country_timezone()`:
+```php
+if ( $timezone ) {
+    update_post_meta( $post_id, 'wta_timezone', $timezone );
+    // v3.2.80: NO AI scheduling! ❌
+    // These cities NEVER go through timezone processor
+    // So they NEVER get AI content!
+}
+```
+
+**Problem 2: Continents and Countries**
+Continents and countries don't need timezone at all, but v3.2.80 removed ALL their AI scheduling!
+
+**Result:**
+- ❌ Continents: NO AI
+- ❌ Countries: NO AI
+- ❌ Cities (simple countries): NO AI
+- ✅ Cities (with API timezone): AI works (from timezone processor)
+
+### ✅ THE FIX in v3.2.81:
+
+**1. Cities with Simple Country Timezone**
+```php
+// Line 506-520: class-wta-single-structure-processor.php
+$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
+if ( $timezone ) {
+    update_post_meta( $post_id, 'wta_timezone', $timezone );
+    update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
+    
+    // v3.2.81: FIXED - Schedule AI immediately!
+    as_schedule_single_action(
+        time(),
+        'wta_generate_ai_content',
+        array( $post_id, 'city', false ),
+        'wta_ai_content'
+    );
+}
+```
+
+**2. Continents**
+```php
+// Line 125-133: class-wta-single-structure-processor.php
+// v3.2.81: Schedule AI with 30 min delay
+as_schedule_single_action(
+    time() + 1800, // After structure phase completes
+    'wta_generate_ai_content',
+    array( $post_id, 'continent', false ),
+    'wta_ai_content'
+);
+```
+
+**3. Countries**
+```php
+// Line 290-298: class-wta-single-structure-processor.php
+// v3.2.81: Schedule AI with 30 min delay
+as_schedule_single_action(
+    time() + 1800, // After structure phase completes
+    'wta_generate_ai_content',
+    array( $post_id, 'country', false ),
+    'wta_ai_content'
+);
+```
+
+### 📊 COMPLETE AI SCHEDULING FLOW:
+
+```
+CONTINENTS:
+  └─ AI scheduled: time + 30 min ✅
+
+COUNTRIES:
+  └─ AI scheduled: time + 30 min ✅
+
+CITIES:
+  ├─ Simple country (DK, NO, SE, etc.):
+  │   ├─ Timezone: From country list (immediate)
+  │   └─ AI scheduled: immediate ✅
+  │
+  └─ Complex country (needs API):
+      ├─ Timezone: From TimezoneDB API
+      └─ AI scheduled: From timezone processor ✅
+```
+
+### 🎯 BENEFITS:
+
+1. **ALL entities get AI** - No more missing content!
+2. **Structure phase stays fast** - Delayed AI for continents/countries
+3. **Simple countries work** - Immediate AI after timezone from list
+4. **API cities work** - AI after timezone resolution
+5. **Sequential phases maintained** - Structure → Timezone → AI
+
+### 📦 FILES MODIFIED:
+
+- `includes/processors/class-wta-single-structure-processor.php`:
+  - Line 125-133: Continent AI (30 min delay)
+  - Line 290-298: Country AI (30 min delay)
+  - Line 506-520: Simple country city AI (immediate)
+- `time-zone-clock.php`:
+  - Version bumped to 3.2.81
+
+### ⚠️ UPGRADE IMMEDIATELY:
+
+v3.2.80 is BROKEN - continents, countries, and simple country cities get NO AI!
+Upgrade to v3.2.81 to fix this critical issue!
+
+---
+
 ## [3.2.80] - 2026-01-11
 
 ### 🎯 CRITICAL FIX: Sequential Phases Strategy (The REAL Solution!)
