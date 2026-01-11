@@ -518,11 +518,11 @@ class WTA_Single_Structure_Processor {
 				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 				update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Flag for AI queue
 				
-				// v3.2.81: CRITICAL FIX - Schedule AI for simple countries!
+				// v3.2.82: TRUE Sequential Phases - Delay AI for simple countries!
 				// These cities get timezone from country list (no API call needed)
-				// So they bypass timezone processor and need AI scheduled here
+				// But AI is delayed 30 min to allow structure phase to complete first
 				as_schedule_single_action(
-					time(),
+					time() + 1800, // 30 min delay (same as continents/countries)
 					'wta_generate_ai_content',
 					array( $post_id, 'city', false ),
 					'wta_ai_content'
