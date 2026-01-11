@@ -485,27 +485,12 @@ class WTA_Single_Structure_Processor {
 		return; // Exit early - don't schedule timezone/AI yet
 	}
 
-	// Handle timezone
-	if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
-			// Complex country - need API lookup
-			if ( $final_lat !== null && $final_lon !== null ) {
-				update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
-				update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
-
-			// v3.0.65: Schedule immediately (no delay to prevent cleanup race condition)
-			as_schedule_single_action(
-				time(),
-				'wta_lookup_timezone',
-				array( $post_id, $final_lat, $final_lon ),
-				'wta_timezone'
-			);
-			}
-		} else {
-			// Simple country - try hardcoded list
-			// v3.3.0: NO timezone or AI scheduling during city creation!
-			// Timezone and AI will be batch-scheduled after structure phase completes
-			// This allows structure to run at maximum speed for ANY number of cities
-		}
+	// v3.3.0+: NO timezone or AI scheduling during city creation!
+	// The batch processor (class-wta-batch-processor.php) handles ALL timezone resolution
+	// after structure phase completes. This ensures:
+	// 1. True sequential phases (structure → timezone → AI)
+	// 2. Proper completion detection regardless of import size
+	// 3. No race conditions between individual and batch scheduling
 
 			// SEO metadata
 			$parent_country_name = get_post_field( 'post_title', $parent_id );

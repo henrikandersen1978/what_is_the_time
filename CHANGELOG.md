@@ -2,6 +2,112 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.3] - 2026-01-11
+
+### 🔴 CRITICAL HOTFIX: v3.3.2 Incomplete Fix - Timezone Still Scheduled During Creation!
+
+**USER REPORT:**
+"wta_batch_schedule_timezone er den nye ikke? Den blev kørt tror jeg, men gjorde ikke noget. Men hvorfor er der 4 wta_lookup_timezone"
+
+**THE REAL PROBLEM (v3.3.2 didn't fix):**
+v3.3.2 fixed the query in `batch_schedule_timezone()`, but timezone lookups were STILL being scheduled during city creation for complex countries!
+
+```php
+// Line 489-502 in class-wta-single-structure-processor.php (v3.3.2):
+if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+    update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+    
+    // THIS WAS STILL ACTIVE! ❌
+    as_schedule_single_action(
+        time(),
+        'wta_lookup_timezone',
+        array( $post_id, $final_lat, $final_lon ),
+        'wta_timezone'
+    );
+}
+```
+
+**WHAT HAPPENED:**
+```
+Time 16:18:54: Buenos Aires created
+                └─ wta_timezone_status = 'pending' ✅
+                └─ wta_lookup_timezone scheduled IMMEDIATELY ❌
+                
+Time 16:18:55: Timezone lookup RUNS and resolves
+                └─ wta_timezone_status = 'resolved' ✅
+                
+Time 16:20:12: Structure phase COMPLETE
+                └─ Triggers batch_schedule_timezone
+                
+Time 16:22:03: batch_schedule_timezone runs
+                └─ Query looks for cities with 'pending' or NULL
+                └─ Finds 0 because ALL are already 'resolved'! ❌
+                └─ "total_cities": 0
+```
+
+**WHY only 4 timezone lookups in pending:**
+- 161 cities: Already processed during creation (resolved)
+- 4 cities: The last ones created, still in queue
+- Batch scheduler found: 0 cities (all already resolved!)
+
+**THE CONSEQUENCE:**
+- ✅ v3.3.2 query was correct
+- ❌ But legacy timezone scheduling was still active!
+- ❌ Timezone phase completed "instantly" (0 cities found)
+- ❌ AI batch never triggered (no completion checker scheduled for 0 cities)
+
+### ✅ THE FIX:
+
+**Removed ALL timezone scheduling from city creation:**
+
+```php
+// OLD (v3.3.2 and earlier - lines 488-508):
+if ( WTA_Timezone_Helper::is_complex_country( $country_code ) ) {
+    update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
+    as_schedule_single_action(...);  // ❌ REMOVED!
+} else {
+    // Simple country - no scheduling
+}
+
+// NEW (v3.3.3 - lines 488-493):
+// v3.3.0+: NO timezone or AI scheduling during city creation!
+// The batch processor handles ALL timezone resolution after structure completes.
+// This ensures true sequential phases regardless of import size.
+```
+
+**NOW:**
+- ✅ Cities are created WITHOUT any timezone scheduling
+- ✅ Structure phase completes
+- ✅ Batch processor finds ALL cities (none resolved yet)
+- ✅ Batch processor schedules timezone for all cities
+- ✅ Timezone phase completes
+- ✅ AI batch triggered
+
+### 🎯 AFFECTED FILES:
+- `includes/processors/class-wta-single-structure-processor.php`
+  - Line 488-508: Removed timezone scheduling entirely
+  - Line 488-493: Added clear comment about batch processing
+
+### 📊 EXPECTED BEHAVIOR:
+```
+[TIME] INFO: 🌍 Starting batch timezone scheduling...
+[TIME] INFO: ✅ Timezone batch scheduled
+Context: {
+    "total_cities": 165,      ← NOW CORRECT!
+    "api_scheduled": 165,
+    "simple_resolved": 0
+}
+```
+
+### 🧪 TESTING:
+1. Import with complex countries (Peru, Argentina, Uruguay)
+2. Structure phase completes
+3. Batch timezone should find ALL cities (not 0!)
+4. All cities get timezone resolved
+5. AI batch triggers for all entities
+
+---
+
 ## [3.3.2] - 2026-01-11
 
 ### 🔴 CRITICAL HOTFIX: Batch Timezone Scheduling Finds 0 Cities
