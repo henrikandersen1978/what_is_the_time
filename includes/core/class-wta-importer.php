@@ -370,42 +370,44 @@ private static function send_chunk_notification( $chunk_data ) {
 		'chunk_size'             => $chunk_size,
 	) );
 
-	$file = fopen( $file_path, 'r' );
-	if ( ! $file ) {
-		WTA_Logger::error( 'Failed to open cities500.txt' );
+	// v3.2.69: Load entire file into memory (37MB cities500.txt fits easily in 1024MB)
+	// Using file_get_contents + preg_split ensures proper handling of all line endings
+	// across Windows (CRLF) and Linux (LF) without trim() issues
+	$file_contents = file_get_contents( $file_path );
+	if ( $file_contents === false ) {
+		WTA_Logger::error( 'Failed to read cities500.txt' );
 		return;
 	}
+
+	// Split by all common line endings: \r\n (Windows), \n (Linux), \r (old Mac)
+	$lines = preg_split( '/\r\n|\r|\n/', $file_contents );
+	unset( $file_contents ); // Free memory immediately
+	
+	$total_lines = count( $lines );
+	WTA_Logger::debug( 'File loaded into memory', array(
+		'total_lines' => $total_lines,
+		'start_offset' => $line_offset,
+	) );
 
 	$scheduled = 0;
 	$skipped = 0;
 	$per_country = array();
 	$cities_by_country = array(); // v3.2.57: Collect cities per country for sorting
 	$delay = 0;
-	$file_line = 0; // v3.0.74: Start from 0 to properly track file position
+	$file_line = 0; // v3.0.74: Track current line position
 	$first_city_in_chunk = null; // v3.0.70: Track first city for email notification
 
-	// v3.0.74: CRITICAL FIX - Skip lines to reach offset BEFORE processing
-	// Without this, we always read from line 1, causing infinite loop on same cities
-	if ( $line_offset > 0 ) {
-		WTA_Logger::debug( 'Skipping to offset', array(
-			'target_offset' => $line_offset,
-		) );
+	// v3.2.69: Process lines from offset onwards
+	for ( $i = $line_offset; $i < $total_lines; $i++ ) {
+		$file_line = $i + 1; // Convert to 1-based line number
+		$line = $lines[ $i ];
 		
-		while ( $file_line < $line_offset && fgets( $file ) !== false ) {
-			$file_line++;
+		// Skip empty lines
+		if ( empty( $line ) ) {
+			continue;
 		}
 		
-		WTA_Logger::debug( 'Reached offset', array(
-			'file_position' => $file_line,
-			'target_offset' => $line_offset,
-		) );
-	}
-
-	// v3.0.74: Now process lines from offset onwards
-	while ( ( $line = fgets( $file ) ) !== false ) {
-		$file_line++; // Increment for each line read
-		
-		$parts = explode( "\t", trim( $line ) );
+		$parts = explode( "\t", $line );
 			
 			if ( count( $parts ) < 19 ) {
 				continue;
@@ -479,8 +481,10 @@ private static function send_chunk_notification( $chunk_data ) {
 		}
 	}
 
-	$reached_eof = feof( $file );
-	fclose( $file );
+	// v3.2.69: Check if we reached end of file
+	$reached_eof = ( $i >= $total_lines - 1 );
+	$next_offset = isset( $i ) ? ( $i + 1 ) : $line_offset; // Next line position (0-based)
+	unset( $lines ); // Free memory
 	
 	// v3.2.57: NOW sort cities by population per country and schedule top X
 	WTA_Logger::info( 'Sorting cities by population', array(
@@ -541,20 +545,18 @@ private static function send_chunk_notification( $chunk_data ) {
 		}
 	}
 
-	$reached_eof = feof( $file );
-	fclose( $file );
-
 	// v3.0.70: Calculate chunk number and progress
+	// v3.2.69: Use $next_offset for all calculations
 	$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
-	$progress_percent = round( ( $file_line / 150000 ) * 100, 1 ); // Approximate total lines
+	$progress_percent = round( ( $next_offset / 150000 ) * 100, 1 ); // Approximate total lines
 
 	WTA_Logger::info( 'Cities scheduling chunk complete', array(
 		'chunk_number'   => $chunk_number,
 		'scheduled'      => $scheduled,
 		'skipped'        => $skipped,
 		'prev_offset'    => $line_offset,
-		'next_offset'    => $file_line, // v3.0.70: Fixed - use $file_line
-		'offset_diff'    => $file_line - $line_offset,
+		'next_offset'    => $next_offset,
+		'offset_diff'    => $next_offset - $line_offset,
 		'reached_eof'    => $reached_eof,
 		'first_city'     => $first_city_in_chunk,
 		'last_city'      => isset( $name ) ? $name : 'unknown',
@@ -562,12 +564,12 @@ private static function send_chunk_notification( $chunk_data ) {
 	) );
 
 	// v3.0.70: CRITICAL SAFETY CHECK - Detect stuck offset
-	$offset_is_stuck = ( $line_offset > 0 && $file_line <= $line_offset );
+	$offset_is_stuck = ( $line_offset > 0 && $next_offset <= $line_offset );
 
 	if ( $offset_is_stuck ) {
 		WTA_Logger::error( '🚨 CRITICAL: Offset not advancing! Import STOPPED.', array(
 			'previous_offset' => $line_offset,
-			'current_offset'  => $file_line,
+			'current_offset'  => $next_offset,
 			'scheduled'       => $scheduled,
 		) );
 		
@@ -575,7 +577,7 @@ private static function send_chunk_notification( $chunk_data ) {
 		self::send_chunk_notification( array(
 			'chunk_number'      => $chunk_number,
 			'prev_offset'       => $line_offset,
-			'next_offset'       => $file_line,
+			'next_offset'       => $next_offset,
 			'scheduled'         => $scheduled,
 			'skipped'           => $skipped,
 			'first_city'        => $first_city_in_chunk,
@@ -592,7 +594,7 @@ private static function send_chunk_notification( $chunk_data ) {
 	self::send_chunk_notification( array(
 		'chunk_number'      => $chunk_number,
 		'prev_offset'       => $line_offset,
-		'next_offset'       => $file_line,
+		'next_offset'       => $next_offset,
 		'scheduled'         => $scheduled,
 		'skipped'           => $skipped,
 		'first_city'        => $first_city_in_chunk,
@@ -602,9 +604,10 @@ private static function send_chunk_notification( $chunk_data ) {
 	) );
 	
 	// v3.0.69: If more cities remain, schedule next chunk
-	if ( ! $reached_eof && $scheduled >= $chunk_size ) {
+	// v3.2.69: Check if we collected a full chunk (indicates more data available)
+	if ( ! $reached_eof && $collected >= $chunk_size ) {
 		WTA_Logger::info( 'Scheduling next chunk', array(
-			'next_offset' => $file_line, // v3.0.70: Fixed - use $file_line
+			'next_offset' => $next_offset,
 		) );
 		
 		as_schedule_single_action(
@@ -615,7 +618,7 @@ private static function send_chunk_notification( $chunk_data ) {
 				'min_population'         => $min_population,
 				'max_cities_per_country' => $max_cities_per_country,
 				'filtered_country_codes' => $filtered_country_codes,
-				'line_offset'            => $file_line, // v3.0.70: Fixed - use $file_line
+				'line_offset'            => $next_offset,
 				'chunk_size'             => $chunk_size,
 			),
 			'wta_structure'
