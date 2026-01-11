@@ -329,11 +329,13 @@ class WTA_Core {
 	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 1 );
 
 	// Batch Processor for Sequential Phases (v3.3.0 - Completion Detection)
-	$this->loader->add_action( 'wta_check_structure_completion', 'WTA_Batch_Processor', 'check_structure_completion', 10, 0 );
-	$this->loader->add_action( 'wta_batch_schedule_timezone', 'WTA_Batch_Processor', 'batch_schedule_timezone', 10, 0 );
-	$this->loader->add_action( 'wta_check_timezone_completion', 'WTA_Batch_Processor', 'check_timezone_completion', 10, 0 );
-	$this->loader->add_action( 'wta_batch_schedule_ai_non_cities', 'WTA_Batch_Processor', 'batch_schedule_ai_non_cities', 10, 0 ); // v3.3.1
-	$this->loader->add_action( 'wta_batch_schedule_ai_cities', 'WTA_Batch_Processor', 'batch_schedule_ai_cities', 10, 0 ); // v3.3.1
+	// v3.3.4: Changed to instance methods (was incorrectly using static with string reference)
+	$batch_processor = new WTA_Batch_Processor();
+	$this->loader->add_action( 'wta_check_structure_completion', $batch_processor, 'check_structure_completion', 10, 0 );
+	$this->loader->add_action( 'wta_batch_schedule_timezone', $batch_processor, 'batch_schedule_timezone', 10, 0 );
+	$this->loader->add_action( 'wta_check_timezone_completion', $batch_processor, 'check_timezone_completion', 10, 0 );
+	$this->loader->add_action( 'wta_batch_schedule_ai_non_cities', $batch_processor, 'batch_schedule_ai_non_cities', 10, 0 );
+	$this->loader->add_action( 'wta_batch_schedule_ai_cities', $batch_processor, 'batch_schedule_ai_cities', 10, 0 );
 
 	// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
 		$timezone_processor = new WTA_Single_Timezone_Processor();

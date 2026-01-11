@@ -2,6 +2,124 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.4] - 2026-01-11
+
+### 🔴 CRITICAL HOTFIX: Structure Completion Checker Never Runs!
+
+**USER REPORT:**
+"wta_check_structure_completion findes ikke som pending"
+
+**THE PROBLEM:**
+The structure completion checker was scheduled in the log, but NEVER appeared in Action Scheduler pending actions!
+
+```
+[16:31:47] INFO: ✅ Structure completion checker scheduled (checks every 2 min)
+
+BUT: Action Scheduler shows NO wta_check_structure_completion action! ❌
+```
+
+**ROOT CAUSE:**
+Batch Processor hooks were registered incorrectly using **STRING reference** instead of **INSTANCE**:
+
+```php
+// v3.3.3 (WRONG - line 332 in class-wta-core.php):
+$this->loader->add_action( 'wta_check_structure_completion', 'WTA_Batch_Processor', 'check_structure_completion', 10, 0 );
+//                                                            ^^^^^^^^^^^^^^^^^^^^ STRING!
+
+// WTA_Loader expects an OBJECT:
+public function add_action( $hook, $component, $callback, ... ) {
+    // Later: add_action( $hook, array( $component, $callback ), ... );
+    //        array( 'WTA_Batch_Processor', 'method' ) is INVALID for non-static context!
+}
+```
+
+**Compare with working processors:**
+```php
+// Single Timezone Processor (CORRECT - line 339):
+$timezone_processor = new WTA_Single_Timezone_Processor();
+$this->loader->add_action( 'wta_lookup_timezone', $timezone_processor, 'lookup_timezone', 10, 3 );
+//                                                 ^^^^^^^^^^^^^^^^^^^ INSTANCE!
+```
+
+**THE CONSEQUENCE:**
+- ✅ Cities created successfully
+- ✅ `as_schedule_single_action()` called for structure checker
+- ❌ WordPress hook NOT registered (string vs object mismatch)
+- ❌ Action Scheduler: "Hook 'wta_check_structure_completion' does not exist"
+- ❌ Action NOT scheduled in Action Scheduler database
+- ❌ Import stalls after structure phase (no timezone batch triggered)
+
+### ✅ THE FIX:
+
+**1. Converted all Batch Processor methods from static to instance:**
+
+```php
+// BEFORE (v3.3.3):
+class WTA_Batch_Processor {
+    public static function check_structure_completion() { ... }
+    public static function batch_schedule_timezone() { ... }
+    public static function check_timezone_completion() { ... }
+    public static function batch_schedule_ai_non_cities() { ... }
+    public static function batch_schedule_ai_cities() { ... }
+}
+
+// AFTER (v3.3.4):
+class WTA_Batch_Processor {
+    public function check_structure_completion() { ... }
+    public function batch_schedule_timezone() { ... }
+    public function check_timezone_completion() { ... }
+    public function batch_schedule_ai_non_cities() { ... }
+    public function batch_schedule_ai_cities() { ... }
+}
+```
+
+**2. Register hooks with instance (like other processors):**
+
+```php
+// BEFORE (v3.3.3 - line 331-336):
+$this->loader->add_action( 'wta_check_structure_completion', 'WTA_Batch_Processor', 'check_structure_completion', 10, 0 );
+// ... other hooks with string reference
+
+// AFTER (v3.3.4 - line 331-338):
+$batch_processor = new WTA_Batch_Processor();
+$this->loader->add_action( 'wta_check_structure_completion', $batch_processor, 'check_structure_completion', 10, 0 );
+$this->loader->add_action( 'wta_batch_schedule_timezone', $batch_processor, 'batch_schedule_timezone', 10, 0 );
+$this->loader->add_action( 'wta_check_timezone_completion', $batch_processor, 'check_timezone_completion', 10, 0 );
+$this->loader->add_action( 'wta_batch_schedule_ai_non_cities', $batch_processor, 'batch_schedule_ai_non_cities', 10, 0 );
+$this->loader->add_action( 'wta_batch_schedule_ai_cities', $batch_processor, 'batch_schedule_ai_cities', 10, 0 );
+```
+
+**NOW:**
+- ✅ Hooks properly registered with WordPress
+- ✅ Actions scheduled successfully in Action Scheduler
+- ✅ Structure completion checker runs every 2 minutes
+- ✅ Timezone batch triggers after structure completes
+- ✅ AI batch triggers after timezone completes
+
+### 🎯 AFFECTED FILES:
+- `includes/processors/class-wta-batch-processor.php`
+  - All methods: Changed from `public static function` to `public function`
+- `includes/class-wta-core.php`
+  - Line 331-338: Create instance, register with instance reference
+
+### 📋 POST-UPDATE STEPS:
+1. Upload plugin v3.3.4
+2. **IMPORTANT:** Deactivate and reactivate plugin (to re-register hooks)
+3. Start new import
+4. Verify `wta_check_structure_completion` appears in Action Scheduler pending
+
+### 🧪 TESTING:
+```
+1. Start import
+2. Check Action Scheduler after city scheduling
+3. Should see: wta_check_structure_completion (Pending, Non-repeating)
+4. Wait 2 minutes
+5. Should see in log: "🔍 Structure completion check"
+6. After cities complete: Should see "total_cities": 38 (not 0!)
+```
+
+---
+
 ## [3.3.3] - 2026-01-11
 
 ### 🔴 CRITICAL HOTFIX: v3.3.2 Incomplete Fix - Timezone Still Scheduled During Creation!

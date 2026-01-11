@@ -20,7 +20,7 @@ class WTA_Batch_Processor {
 	 *
 	 * @since 3.3.0
 	 */
-	public static function check_structure_completion() {
+	public function check_structure_completion() {
 		global $wpdb;
 
 		// Count cities without timezone status (still being created or waiting)
@@ -82,7 +82,7 @@ class WTA_Batch_Processor {
 	 *
 	 * @since 3.3.0
 	 */
-	public static function batch_schedule_timezone() {
+	public function batch_schedule_timezone() {
 		global $wpdb;
 
 		WTA_Logger::info( '🌍 Starting batch timezone scheduling...' );
@@ -147,7 +147,7 @@ class WTA_Batch_Processor {
 	 *
 	 * @since 3.3.0
 	 */
-	public static function check_timezone_completion() {
+	public function check_timezone_completion() {
 		global $wpdb;
 
 		// Count cities without resolved timezone
@@ -196,7 +196,7 @@ class WTA_Batch_Processor {
 	 *
 	 * @since 3.3.1
 	 */
-	public static function batch_schedule_ai_non_cities() {
+	public function batch_schedule_ai_non_cities() {
 		global $wpdb;
 
 		WTA_Logger::info( '🤖 Starting Continent + Country AI batch...' );
@@ -241,7 +241,7 @@ class WTA_Batch_Processor {
 	 *
 	 * @since 3.3.1
 	 */
-	public static function batch_schedule_ai_cities() {
+	public function batch_schedule_ai_cities() {
 		global $wpdb;
 
 		WTA_Logger::info( '🤖 Starting City AI batch...' );
