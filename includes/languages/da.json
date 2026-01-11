@@ -135,6 +135,8 @@
     "faq_schema_name": "Ofte stillede spørgsmål om tid i %s",
     "hours_ahead": "%s timer foran %s",
     "hours_behind": "%s timer bagud for %s",
+    "hours_after": "%s timer efter %s",
+    "hours_before": "%s timer før %s",
     "polar_night": "Mørketid (polarnatt) - ingen solopgang i denne periode",
     "midnight_sun": "Midnatssol - solen går ikke ned i denne periode",
     "extreme_light_polar_region": "Ekstreme lysforhold på grund af polarregion",

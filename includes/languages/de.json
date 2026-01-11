@@ -126,6 +126,8 @@
     "faq_schema_name": "Häufig gestellte Fragen zur Uhrzeit in %s",
     "hours_ahead": "%s Stunden vor %s",
     "hours_behind": "%s Stunden hinter %s",
+    "hours_after": "%s Stunden nach %s",
+    "hours_before": "%s Stunden vor %s",
     "polar_night": "Polarnacht - kein Sonnenaufgang während dieser Periode",
     "midnight_sun": "Mitternachtssonne - die Sonne geht während dieser Periode nicht unter",
     "extreme_light_polar_region": "Extreme Lichtverhältnisse aufgrund der Polarregion",

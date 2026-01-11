@@ -126,6 +126,8 @@
     "faq_schema_name": "Frequently asked questions about time in %s",
     "hours_ahead": "%s hours ahead of %s",
     "hours_behind": "%s hours behind %s",
+    "hours_after": "%s hours after %s",
+    "hours_before": "%s hours before %s",
     "polar_night": "Polar night - no sunrise during this period",
     "midnight_sun": "Midnight sun - the sun does not set during this period",
     "extreme_light_polar_region": "Extreme light conditions due to polar region",

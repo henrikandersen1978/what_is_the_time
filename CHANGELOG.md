@@ -2,6 +2,69 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.78] - 2026-01-11
+
+### 🔧 FIX: Time difference shows "före Sverige" instead of "efter Sverige" in purple info box
+
+**USER REPORT:**
+On Jeddah page (UTC+3), purple info box showed:
+```
+"2 timmar före Sverige"  ❌ WRONG
+```
+
+But Jeddah is 15:19 and Sweden is 13:19, so Jeddah is 2 hours AFTER Sweden, not before!
+
+Should be:
+```
+"2 timmar efter Sverige"  ✅ CORRECT
+```
+
+**ROOT CAUSE:**
+Confusing terminology in code:
+- `hours_ahead` (geografisk: foran) was used for positive offset
+- But in Swedish/Danish, time should use "efter" (after in time), not "foran" (ahead in space)
+
+**Example that clarifies:**
+- Jeddah: UTC+3 (15:19)
+- Sweden: UTC+1 (13:19)
+- Offset calculation: +3 - (+1) = **+2** (positive)
+- OLD: +2 → "2 timmar **före** Sverige" ❌ (wrong direction!)
+- NEW: +2 → "2 timmar **efter** Sverige" ✅ (correct!)
+
+**THE FIX:**
+Changed logic in purple info box (`class-wta-template-loader.php`):
+
+```php
+// OLD (v3.2.77) - confusing terminology:
+if ( $hours_diff > 0 ) {
+    // "hours_ahead" = "före" (WRONG for time!)
+    $diff_text = sprintf( self::get_template( 'hours_ahead' ) ?: '%s timer foran %s', ... );
+}
+
+// NEW (v3.2.78) - clear terminology:
+if ( $hours_diff > 0 ) {
+    // City is ahead in time = "after base country" ✅
+    $diff_text = sprintf( self::get_template( 'hours_after' ) ?: '%s timer efter %s', ... );
+} elseif ( $hours_diff < 0 ) {
+    // City is behind in time = "before base country" ✅
+    $diff_text = sprintf( self::get_template( 'hours_before' ) ?: '%s timer før %s', ... );
+}
+```
+
+**Added new translation keys to all languages:**
+- `hours_after`: "%s timmar efter %s" (Swedish)
+- `hours_before`: "%s timmar före %s" (Swedish)
+- And equivalents for Danish, English, German
+
+**RESULT:**
+- ✅ Jeddah (UTC+3): "2 timmar **efter** Sverige" (correct!)
+- ✅ Uruguay (UTC-3): "4 timmar **före** Sverige" (correct!)
+- ✅ Kenya (UTC+3): "2 timmar **efter** Sverige" (correct!)
+
+**Files changed:**
+- `includes/frontend/class-wta-template-loader.php` - Fixed time difference logic
+- `includes/languages/*.json` - Added `hours_after` and `hours_before` keys
+
 ## [3.2.77] - 2026-01-11
 
 ### 🔥 CRITICAL FIX: Moon phase shows DANISH translation on Swedish site!
