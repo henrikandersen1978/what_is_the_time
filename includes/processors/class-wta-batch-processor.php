@@ -52,11 +52,22 @@ class WTA_Batch_Processor {
 			return;
 		}
 
-		// Structure phase complete! Trigger timezone batch
-		WTA_Logger::info( '✅ Structure phase COMPLETE! Triggering timezone batch...' );
-
+		// Structure phase complete! Trigger TWO things:
+		WTA_Logger::info( '✅ Structure phase COMPLETE!' );
+		
+		// 1. AI for continents + countries (no timezone needed!)
+		WTA_Logger::info( '→ Triggering Continent + Country AI batch...' );
 		as_schedule_single_action(
-			time() + 30, // Small buffer
+			time() + 30,
+			'wta_batch_schedule_ai_non_cities',
+			array(),
+			'wta_ai_content'
+		);
+		
+		// 2. Timezone for cities
+		WTA_Logger::info( '→ Triggering Timezone batch for cities...' );
+		as_schedule_single_action(
+			time() + 60, // Small buffer
 			'wta_batch_schedule_timezone',
 			array(),
 			'wta_timezone'
@@ -171,36 +182,38 @@ class WTA_Batch_Processor {
 			return;
 		}
 
-		// Timezone phase complete! Trigger AI batch
-		WTA_Logger::info( '✅ Timezone phase COMPLETE! Triggering AI batch...' );
+		// Timezone phase complete! Trigger City AI batch
+		WTA_Logger::info( '✅ Timezone phase COMPLETE! Triggering City AI batch...' );
 
 		as_schedule_single_action(
 			time() + 30, // Small buffer
-			'wta_batch_schedule_ai',
+			'wta_batch_schedule_ai_cities',
 			array(),
 			'wta_ai_content'
 		);
 	}
 
 	/**
-	 * Batch schedule AI generation for all entities.
+	 * Batch schedule AI for continents and countries (no timezone needed).
 	 *
-	 * Finds all continents, countries, and cities that need AI and schedules them.
+	 * Runs immediately after structure phase completes.
+	 * These entities don't need timezone data for AI generation.
 	 *
-	 * @since 3.3.0
+	 * @since 3.3.1
 	 */
-	public static function batch_schedule_ai() {
+	public static function batch_schedule_ai_non_cities() {
 		global $wpdb;
 
-		WTA_Logger::info( '🤖 Starting batch AI scheduling...' );
+		WTA_Logger::info( '🤖 Starting Continent + Country AI batch...' );
 
-		// Find all entities that need AI content
+		// Find continents and countries that need AI
 		$entities_needing_ai = $wpdb->get_results(
 			"SELECT p.ID, pm_type.meta_value as entity_type
 			 FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			 WHERE p.post_type = 'world_time_location'
 			 AND p.post_status = 'publish'
+			 AND pm_type.meta_value IN ('continent', 'country')
 			 AND NOT EXISTS (
 				 SELECT 1 FROM {$wpdb->postmeta} pm_ai
 				 WHERE pm_ai.post_id = p.ID
@@ -220,8 +233,53 @@ class WTA_Batch_Processor {
 			$scheduled++;
 		}
 
-		WTA_Logger::info( '✅ AI batch scheduled', array(
+		WTA_Logger::info( '✅ Continent + Country AI batch scheduled', array(
 			'total_entities' => $scheduled,
+		) );
+	}
+
+	/**
+	 * Batch schedule AI for cities (after timezone resolution).
+	 *
+	 * Runs after timezone phase completes.
+	 * Cities need timezone data for accurate AI content.
+	 *
+	 * @since 3.3.1
+	 */
+	public static function batch_schedule_ai_cities() {
+		global $wpdb;
+
+		WTA_Logger::info( '🤖 Starting City AI batch...' );
+
+		// Find cities that need AI
+		$cities_needing_ai = $wpdb->get_results(
+			"SELECT p.ID, pm_type.meta_value as entity_type
+			 FROM {$wpdb->posts} p
+			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			 WHERE p.post_type = 'world_time_location'
+			 AND p.post_status = 'publish'
+			 AND pm_type.meta_value = 'city'
+			 AND NOT EXISTS (
+				 SELECT 1 FROM {$wpdb->postmeta} pm_ai
+				 WHERE pm_ai.post_id = p.ID
+				 AND pm_ai.meta_key = 'wta_ai_generated'
+				 AND pm_ai.meta_value = '1'
+			 )"
+		);
+
+		$scheduled = 0;
+		foreach ( $cities_needing_ai as $city ) {
+			as_schedule_single_action(
+				time(),
+				'wta_generate_ai_content',
+				array( $city->ID, $city->entity_type, false ),
+				'wta_ai_content'
+			);
+			$scheduled++;
+		}
+
+		WTA_Logger::info( '✅ City AI batch scheduled', array(
+			'total_cities' => $scheduled,
 		) );
 	}
 }

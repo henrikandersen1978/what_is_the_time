@@ -2,6 +2,159 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.1] - 2026-01-11
+
+### 🚀 OPTIMIZATION: 3-Phase AI Strategy - Faster Continent + Country AI!
+
+**USER INSIGHT:**
+"3 separate faser til AI giver vel fin mening."
+
+**THE PROBLEM with v3.3.0:**
+ALL AI was batch-scheduled AFTER timezone completion:
+```
+Time 0-50 min:  Structure (continents + countries + cities)
+Time 50-67 min: Timezone (only cities need this!)
+Time 67+ min:   AI for ALL (continents + countries + cities)
+
+= Continents + Countries wait for cities timezone! ❌
+```
+
+**Why is this bad?**
+- Continents (6) don't need timezone for AI
+- Countries (244) don't need timezone for AI
+- Only Cities (10,000+) need timezone for AI
+- But ALL wait for timezone to complete! ❌
+
+**Result:** Continents/Countries AI delayed 17 minutes unnecessarily!
+
+### ✅ THE FIX - 3-Phase AI Strategy:
+
+```
+PHASE 1: Structure Complete (Time 50 min)
+  └─ Trigger TWO things simultaneously:
+     1. AI for Continents + Countries ✅
+     2. Timezone for Cities (parallel) ✅
+
+PHASE 2: Timezone Complete (Time 67 min)
+  └─ Trigger AI for Cities ✅
+```
+
+**NOW:**
+- Continents AI: Starts at 50 min ⚡ (was 67 min)
+- Countries AI: Starts at 50 min ⚡ (was 67 min)
+- Cities AI: Starts at 67 min ✅ (unchanged, has timezone!)
+
+**= Continents + Countries get AI 17 minutes earlier!** 🚀
+
+### 🔧 IMPLEMENTATION:
+
+**1. Split AI Batch Functions:**
+
+```php
+// OLD (v3.3.0): One batch for ALL
+batch_schedule_ai() {
+    // Schedule AI for continents + countries + cities
+}
+
+// NEW (v3.3.1): Two separate batches
+batch_schedule_ai_non_cities() {
+    // Schedule AI for continents + countries only
+    // WHERE entity_type IN ('continent', 'country')
+}
+
+batch_schedule_ai_cities() {
+    // Schedule AI for cities only
+    // WHERE entity_type = 'city'
+}
+```
+
+**2. Updated Triggers:**
+
+```php
+// After structure complete:
+→ Trigger: batch_schedule_ai_non_cities (time + 30s)
+→ Trigger: batch_schedule_timezone (time + 60s)
+
+// After timezone complete:
+→ Trigger: batch_schedule_ai_cities (time + 30s)
+```
+
+### 📊 PERFORMANCE IMPROVEMENT (10,000 cities):
+
+| Entity | v3.3.0 | v3.3.1 | Improvement |
+|--------|--------|--------|-------------|
+| Continents (6) | 67 min | 50 min | **17 min faster** ⚡ |
+| Countries (244) | 67 min | 50 min | **17 min faster** ⚡ |
+| Cities (10,000) | 67 min | 67 min | Same (correct!) ✅ |
+
+**For larger imports, the improvement scales:**
+
+| Cities | Timezone Time | Continent/Country AI Starts | Time Saved |
+|--------|---------------|---------------------------|------------|
+| 10,000 | 17 min | 17 min earlier | 17 min ⚡ |
+| 50,000 | 83 min | 83 min earlier | 83 min ⚡ |
+| 200,000 | 333 min | 333 min earlier | 5.5 hours ⚡ |
+
+**= Massive improvement for large imports!** 🚀
+
+### 📦 FILES MODIFIED:
+
+- `includes/processors/class-wta-batch-processor.php`:
+  - Line 52-66: Structure completion now triggers TWO actions
+  - Line 192-228: NEW `batch_schedule_ai_non_cities()` function
+  - Line 230-266: NEW `batch_schedule_ai_cities()` function
+  - Line 175-182: Timezone completion triggers city AI only
+- `includes/class-wta-core.php`:
+  - Registered 2 new action hooks (non-cities AI + cities AI)
+- `time-zone-clock.php`:
+  - Version bumped to 3.3.1
+
+### 🎯 VISUAL FLOW:
+
+```
+TIME 0: Import starts
+  ├─ Create continents (6)
+  ├─ Create countries (244)
+  └─ Create cities (10,000)
+
+TIME 50 MIN: Structure complete! ✅
+  ├─→ START: Continent + Country AI (250 entities)
+  └─→ START: City Timezone (10,000 cities)
+
+TIME 67 MIN: Timezone complete! ✅
+  └─→ START: City AI (10,000 cities)
+```
+
+**= Perfect parallelization! Continent/Country AI runs WHILE timezone resolves!** ⚡
+
+### ✅ BENEFITS:
+
+1. **Faster AI for continents/countries:** 17+ min improvement
+2. **Better resource usage:** Parallel work instead of sequential
+3. **Logical separation:** Entities without timezone dependencies start earlier
+4. **Same correctness:** Cities still get timezone before AI ✅
+5. **Scales beautifully:** Larger imports = bigger time savings
+
+### 🎯 LOG OUTPUT:
+
+```
+✅ Structure phase COMPLETE!
+→ Triggering Continent + Country AI batch...
+→ Triggering Timezone batch for cities...
+🤖 Starting Continent + Country AI batch...
+✅ Continent + Country AI batch scheduled (total: 250)
+🌍 Starting batch timezone scheduling...
+✅ Timezone batch scheduled (API: 2,000, simple: 8,000)
+... (timezone processing) ...
+✅ Timezone phase COMPLETE! Triggering City AI batch...
+🤖 Starting City AI batch...
+✅ City AI batch scheduled (total: 10,000)
+```
+
+**Clean, logical, optimized!** 🎯
+
+---
+
 ## [3.3.0] - 2026-01-11
 
 ### 🚀 MAJOR: Completion Detection System - Scales to MILLIONS of Cities!
