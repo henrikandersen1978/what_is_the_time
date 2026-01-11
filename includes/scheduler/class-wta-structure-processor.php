@@ -829,87 +829,39 @@ class WTA_Structure_Processor {
 	}
 		
 	// ==========================================
-	// EFFICIENT 2-PASS STREAMING (v3.2.63)
+	// SINGLE-PASS STREAMING WITH FILTER-FIRST (v3.2.64)
 	// ==========================================
-	// PASS 1: Count total valid cities (no memory storage)
-	// PASS 2: Stream directly to the chunk we need
-	// This uses minimal memory regardless of file size!
+	// Problem with 2-pass: File might not reset properly between passes
+	// Solution: Process in ONE pass with smart chunking
+	// 1. Read and filter cities (apply population/country filters EARLY)
+	// 2. Only store cities that pass ALL filters
+	// 3. Process in manageable batches
 	
-	file_put_contents( $debug_file, "PASS 1: Counting valid cities in file...\n", FILE_APPEND );
+	file_put_contents( $debug_file, "Single-pass streaming with early filtering...\n", FILE_APPEND );
 	
-	// PASS 1: Count valid cities
-	$file = fopen( $file_path, 'r' );
+	$file = @fopen( $file_path, 'rb' ); // Binary mode for cross-platform line endings
 	if ( ! $file ) {
 		throw new Exception( 'Failed to open cities500.txt' );
 	}
 	
-	$total_cities = 0;
-	$line_count = 0;
-	
-	try {
-		while ( ( $line = fgets( $file ) ) !== false ) {
-			$line_count++;
-			
-			// Parse tab-separated values
-			$parts = explode( "\t", trim( $line ) );
-			
-			// Validate minimum required fields (19 columns in GeoNames)
-			if ( count( $parts ) < 19 ) {
-				continue;
-			}
-			
-			// Only count populated places (P class) - CRITICAL FILTER
-			$feature_class = $parts[6];
-			if ( $feature_class !== 'P' ) {
-				continue;
-			}
-			
-			$total_cities++;
-		}
-	} finally {
-		// CRITICAL: Always close file
-		if ( is_resource( $file ) ) {
-			fclose( $file );
-		}
-	}
-	
-	file_put_contents( $debug_file, sprintf(
-		"Found %d valid cities (P-class) from %d lines\n",
-		$total_cities,
-		$line_count
-	), FILE_APPEND );
-	
-	// Calculate chunk boundaries
-	$chunk_start = $offset;
-	$chunk_end = min( $offset + $chunk_size, $total_cities );
-	
-	file_put_contents( $debug_file, sprintf(
-		"PASS 2: Streaming chunk %d-%d of %d cities...\n",
-		$chunk_start,
-		$chunk_end - 1,
-		$total_cities
-	), FILE_APPEND );
-	
-	WTA_Logger::info( sprintf(
-		'Processing chunk: %d-%d of %d cities (GeoNames stream)',
-		$chunk_start,
-		$chunk_end - 1,
-		$total_cities
-	) );
-	
-	// PASS 2: Stream to chunk (only store what we need!)
-	$file = fopen( $file_path, 'r' );
-	if ( ! $file ) {
-		throw new Exception( 'Failed to reopen cities500.txt' );
-	}
-	
 	$cities_chunk = array();
 	$city_index = 0;
+	$line_count = 0;
+	$skipped_before_chunk = 0;
 	
 	try {
-		while ( ( $line = fgets( $file ) ) !== false ) {
-			// Parse tab-separated values
-			$parts = explode( "\t", trim( $line ) );
+		// Process file line by line
+		while ( ! feof( $file ) ) {
+			$line = fgets( $file );
+			if ( $line === false ) {
+				break; // End of file or error
+			}
+			
+			$line_count++;
+			
+			// Parse tab-separated values (handle both LF and CRLF)
+			$line = rtrim( $line, "\r\n" );
+			$parts = explode( "\t", $line );
 			
 			// Validate minimum required fields (19 columns in GeoNames)
 			if ( count( $parts ) < 19 ) {
@@ -924,36 +876,52 @@ class WTA_Structure_Processor {
 				continue;
 			}
 			
-			// Skip cities before our chunk
-			if ( $city_index < $chunk_start ) {
+			// Extract basic fields for filtering
+			$country_code = strtoupper( trim( $parts[8] ) );
+			$population = intval( $parts[14] );
+			
+			// EARLY FILTERING: Apply filters BEFORE counting/chunking
+			// This dramatically reduces memory usage!
+			
+			// Filter by country_code
+			if ( ! empty( $filtered_country_codes ) && ! in_array( $country_code, $filtered_country_codes, true ) ) {
+				continue; // Skip before even counting
+			}
+			
+			// Population filter
+			if ( $min_population > 0 && $population < $min_population ) {
+				continue; // Skip before counting
+			}
+			
+			// NOW this city passed filters - check if it's in our chunk
+			if ( $city_index < $offset ) {
 				$city_index++;
-				continue;
+				$skipped_before_chunk++;
+				continue; // Skip cities before our chunk
 			}
 			
-			// Stop after our chunk
-			if ( $city_index >= $chunk_end ) {
-				break;
+			// Stop after we have enough cities for this chunk
+			if ( count( $cities_chunk ) >= $chunk_size ) {
+				break; // We have our chunk, stop reading file
 			}
 			
-			// This city is in our chunk - parse and store it!
+			// This city is IN our chunk - parse and store it!
 			$geonameid = $parts[0];
-			$name = $parts[1];           // Name (UTF-8)
-			$asciiname = $parts[2];      // ASCII name (for URL slugs)
-			$latitude = $parts[4];
-			$longitude = $parts[5];
+			$name = $parts[1];
+			$asciiname = $parts[2];
+			$latitude = floatval( $parts[4] );
+			$longitude = floatval( $parts[5] );
 			$feature_code = $parts[7];
-			$country_code = $parts[8];   // ISO2 country code
-			$population = $parts[14];
 			$timezone = $parts[17];
 			
 			$city = array(
 				'geonameid'    => intval( $geonameid ),
 				'name'         => $name,
 				'name_ascii'   => $asciiname,
-				'country_code' => strtoupper( $country_code ),
-				'latitude'     => floatval( $latitude ),
-				'longitude'    => floatval( $longitude ),
-				'population'   => intval( $population ),
+				'country_code' => $country_code,
+				'latitude'     => $latitude,
+				'longitude'    => $longitude,
+				'population'   => $population,
 				'timezone'     => $timezone,
 				'feature_code' => $feature_code,
 			);
@@ -968,10 +936,21 @@ class WTA_Structure_Processor {
 		}
 	}
 	
+	$chunk_end = $offset + count( $cities_chunk );
+	$total_cities = $city_index; // Best estimate (actual filtered count)
+	
 	file_put_contents( $debug_file, sprintf(
-		"Loaded %d cities into memory for chunk processing\n",
+		"Single-pass complete: Read %d lines, skipped %d before chunk, loaded %d cities for processing\n",
+		$line_count,
+		$skipped_before_chunk,
 		count( $cities_chunk )
 	), FILE_APPEND );
+	
+	WTA_Logger::info( sprintf(
+		'Processing chunk: %d cities loaded (offset: %d, filtered on-the-fly)',
+		count( $cities_chunk ),
+		$offset
+	) );
 	
 	// STEP 3: Process each city in this chunk
 	foreach ( $cities_chunk as $index => $city ) {
