@@ -2,6 +2,57 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.71] - 2026-01-11
+
+### 🌙 FIX: Hardcoded Danish moon phase names in FAQ
+
+**USER REPORT:**
+Swedish site (klockan-nu.se) showed Danish moon phase text: "(Sidste kvartal)" instead of Swedish "(Sista kvarteret)"
+
+**ROOT CAUSE:**
+Moon phase calculation in FAQ generator had hardcoded Danish phase names (linje 802-816):
+```php
+$phase_name = 'Nymåne';           // ❌ Hardcoded Danish
+$phase_name = 'Første kvartal';    // ❌ Hardcoded Danish  
+$phase_name = 'Sidste kvartal';    // ❌ Hardcoded Danish (user saw this!)
+// ... all 8 phases hardcoded in Danish
+```
+
+**THE FIX:**
+
+1. **Added missing translation keys to all languages:**
+```json
+"moon_new_moon": "Nymåne" / "Nymåne" / "New moon" / "Neumond"
+"moon_full_moon": "Fuldmåne" / "Fullmåne" / "Full moon" / "Vollmond"
+"moon_waxing_gibbous": "Tiltagende måne" / "Tilltagande måne" / "Waxing gibbous" / "Zunehmender Mond"
+"moon_waning_gibbous": "Aftagende måne" / "Avtagande måne" / "Waning gibbous" / "Abnehmender Mond"
+```
+
+2. **Updated PHP to use translation system:**
+```php
+// OLD (hardcoded Danish):
+$phase_name = 'Sidste kvartal';
+
+// NEW (translated):
+$phase_key = 'moon_last_quarter';
+$phase_name = $this->translate( $phase_key, $this->language );
+```
+
+**RESULT:**
+- ✅ Danish site: "Sidste kvarter"
+- ✅ Swedish site: "Sista kvarteret" (fixed!)
+- ✅ English site: "Last quarter"
+- ✅ German site: "Letztes Viertel"
+
+**Files changed:**
+- `includes/languages/da.json` - Added 4 missing moon phase keys
+- `includes/languages/sv.json` - Added 4 missing moon phase keys
+- `includes/languages/en.json` - Added 4 missing moon phase keys
+- `includes/languages/de.json` - Added 4 missing moon phase keys
+- `includes/helpers/class-wta-faq-generator.php` - Changed from hardcoded Danish to translation system
+
+**All 8 moon phases now properly translated:** Nymåne, Voksende halvmåne, Første kvartal, Voksende måne, Fuldmåne, Aftagende måne, Sidste kvartal, Aftagende halvmåne ✨
+
 ## [3.2.70] - 2026-01-11
 
 ### 🚨 CRITICAL FIX: PPLA2 filter removed ALL major cities!

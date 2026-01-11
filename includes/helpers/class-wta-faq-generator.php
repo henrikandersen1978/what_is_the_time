@@ -797,24 +797,27 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		
 		$percentage = ( $phase_days / $synodic_month ) * 100;
 		
-		// Determine phase name
+		// Determine phase name key (use translation system)
 		if ( $phase_days < 1.84566 ) {
-			$phase_name = 'Nymåne';
+			$phase_key = 'moon_new_moon';
 		} elseif ( $phase_days < 5.53699 ) {
-			$phase_name = 'Voksende halvmåne';
+			$phase_key = 'moon_waxing_crescent';
 		} elseif ( $phase_days < 9.22831 ) {
-			$phase_name = 'Første kvartal';
+			$phase_key = 'moon_first_quarter';
 		} elseif ( $phase_days < 12.91963 ) {
-			$phase_name = 'Voksende måne';
+			$phase_key = 'moon_waxing_gibbous';
 		} elseif ( $phase_days < 16.61096 ) {
-			$phase_name = 'Fuldmåne';
+			$phase_key = 'moon_full_moon';
 		} elseif ( $phase_days < 20.30228 ) {
-			$phase_name = 'Aftagende måne';
+			$phase_key = 'moon_waning_gibbous';
 		} elseif ( $phase_days < 23.99361 ) {
-			$phase_name = 'Sidste kvartal';
+			$phase_key = 'moon_last_quarter';
 		} else {
-			$phase_name = 'Aftagende halvmåne';
+			$phase_key = 'moon_waning_crescent';
 		}
+		
+		// Translate phase name to current language
+		$phase_name = $this->translate( $phase_key, $this->language );
 		
 		return array(
 			'percentage'  => number_format( $percentage, 1 ),
