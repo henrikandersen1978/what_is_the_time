@@ -444,10 +444,11 @@ private static function send_chunk_notification( $chunk_data ) {
 		// v3.2.57: Extract feature_code for filtering
 		$feature_code = isset( $parts[7] ) ? $parts[7] : '';
 		
-		// v3.2.57: Filter out SMALL administrative centers (PPLA2, PPLA3, PPLA4)
-		// PPLA2+ are "kommun" centers (Sola kommun) - usually small
-		// PPLA are MAJOR cities (Bergen, Göteborg) - KEEP THESE!
-		$excluded_feature_codes = array( 'PPLA2', 'PPLA3', 'PPLA4' );
+		// v3.2.70: CRITICAL FIX - PPLA2 filter removed ALL major Danish cities!
+		// PPLA2 = "second-order administrative division seat" = MAJOR cities in DK/SE/NO
+		// Examples: Odense (180k), Esbjerg (71k), Randers (62k), Kolding (61k)
+		// Only filter PPLA3/PPLA4 (tiny "kommun" centers with inflated populations)
+		$excluded_feature_codes = array( 'PPLA3', 'PPLA4' );
 		if ( in_array( $feature_code, $excluded_feature_codes, true ) ) {
 			$skipped++;
 			continue;

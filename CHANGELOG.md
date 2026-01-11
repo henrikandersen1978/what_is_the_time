@@ -2,6 +2,109 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.70] - 2026-01-11
+
+### 🚨 CRITICAL FIX: PPLA2 filter removed ALL major cities!
+
+**USER REPORT:**
+v3.2.69 import af Danmark med min_population = 50000:
+- ✅ Ingen fejl (file_get_contents fix virkede!)
+- ❌ Kun 5 byer importeret
+- ❌ Manglede: Aarhus, Odense, Esbjerg, Randers, Kolding, Horsens, Roskilde
+- ❌ Importerede "underlige byer": Klinteby Frihed (53k), Avedøre (53k)
+
+**ROOT CAUSE ANALYSE:**
+
+I v3.2.57 blev PPLA2/PPLA3/PPLA4 feature codes filtreret for at fjerne små norske "kommun" centre:
+
+```php
+// v3.2.57: Filter out SMALL administrative centers
+$excluded_feature_codes = array( 'PPLA2', 'PPLA3', 'PPLA4' );
+```
+
+**Men PPLA2 betyder IKKE det samme i alle lande!**
+
+**GeoNames Feature Code Definitions:**
+
+- **PPLC** = Capital (København: 1,153,615)
+- **PPLA** = First-order admin seat (Aalborg: 142,937, Vejle: 60,231)
+- **PPLA2** = Second-order admin seat = **STORE BYER I DANMARK!**
+  - Odense: 180,863 ❌ **Filtreret!**
+  - Frederiksberg: 95,029 ❌ **Filtreret!**
+  - Esbjerg: 71,698 ❌ **Filtreret!**
+  - Randers: 62,802 ❌ **Filtreret!**
+  - Kolding: 61,638 ❌ **Filtreret!**
+  - Horsens: 61,074 ❌ **Filtreret!**
+  - Roskilde: 51,916 ❌ **Filtreret!**
+- **PPLA3/PPLA4** = Tiny kommun centers (ofte fejlagtig population)
+  - Klinteby Frihed: 53,443 ✅ Burde filtreres (sandsynligvis PPLA3/4)
+  - Avedøre: 53,443 ✅ Burde filtreres (sandsynligvis PPLA3/4)
+
+**Hvad blev importeret med v3.2.69?**
+
+Med PPLA2 filtreret blev kun disse 5 fundet:
+1. København (PPLC - capital, ikke filtreret)
+2. Aalborg (PPLA - major city, ikke filtreret)
+3. Vejle (PPLA - major city, ikke filtreret)
+4. Klinteby Frihed (PPL - regular place, men fejlagtig population)
+5. Avedøre (PPL - regular place, men fejlagtig population)
+
+**THE FIX (v3.2.70):**
+
+```php
+// OLD (v3.2.69): Blocked ALL PPLA2 cities
+$excluded_feature_codes = array( 'PPLA2', 'PPLA3', 'PPLA4' );
+
+// NEW (v3.2.70): Only block PPLA3/PPLA4 (tiny centers)
+$excluded_feature_codes = array( 'PPLA3', 'PPLA4' );
+```
+
+**Forventede resultater med v3.2.70 (Danmark, min_population 50k):**
+
+| By | Population | Feature Code | v3.2.69 | v3.2.70 |
+|---|---|---|---|---|
+| København | 1,153,615 | PPLC | ✅ | ✅ |
+| Aarhus | ~280,000 | PPLA2 | ❌ | ✅ |
+| Odense | 180,863 | PPLA2 | ❌ | ✅ |
+| Aalborg | 142,937 | PPLA | ✅ | ✅ |
+| Frederiksberg | 95,029 | PPLA2 | ❌ | ✅ |
+| Esbjerg | 71,698 | PPLA2 | ❌ | ✅ |
+| Randers | 62,802 | PPLA2 | ❌ | ✅ |
+| Kolding | 61,638 | PPLA2 | ❌ | ✅ |
+| Horsens | 61,074 | PPLA2 | ❌ | ✅ |
+| Vejle | 60,231 | PPLA | ✅ | ✅ |
+| Roskilde | 51,916 | PPLA2 | ❌ | ✅ |
+| **TOTAL** | | | **5 byer** | **11 byer** ✅ |
+
+**Hvad med de "underlige byer"?**
+
+Klinteby Frihed og Avedøre har fejlagtig population i GeoNames (53,443 - sandsynligvis en kommune-population). Disse vil stadig importeres da:
+1. De har feature code = PPL (regular populated place)
+2. De har population > 50k (fejlagtig, men vi kan ikke detektere det)
+
+**Fremtidig løsning for fejlagtige GeoNames data:**
+
+Hvis disse fejlagtige byer er et problem, kan vi tilføje et navne-filter:
+
+```php
+// Filter suspicious Danish place names (wrong GeoNames data)
+$suspicious_patterns = array( 'Frihed', 'Gård', 'Garde', 'Kanal' );
+foreach ( $suspicious_patterns as $pattern ) {
+    if ( stripos( $name, $pattern ) !== false ) {
+        $skipped++;
+        continue 2;
+    }
+}
+```
+
+Men først: Lad os få de KORREKTE byer importeret! ✅
+
+**Files changed:**
+- `includes/core/class-wta-importer.php` - Removed PPLA2 from excluded feature codes
+
+**RESULT:**
+Danmark import burde nu finde 11 byer over 50k (i stedet for 5)! 🎉
+
 ## [3.2.69] - 2026-01-11
 
 ### 🎯 CRITICAL FIX: Fixed the RIGHT file (finally!)
