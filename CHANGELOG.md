@@ -2,6 +2,104 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.6] - 2026-01-11
+
+### 🔴 CRITICAL HOTFIX: Batch Queries Find 0 Entities - Draft vs Publish!
+
+**USER REPORT:**
+"Total cities in database: 0" but 50 cities were created!
+
+**THE PROBLEM:**
+All batch queries (timezone, AI) found 0 entities:
+```
+[17:00:57] DEBUG: Total cities in database
+Context: { "total_cities": "0" }  ← 50 cities exist!
+
+[17:00:56] INFO: ✅ Continent + Country AI batch scheduled
+Context: { "total_entities": 0 }  ← 6 continents + 34 countries exist!
+```
+
+**ROOT CAUSE - Posts Created as Draft!**
+
+Posts are intentionally created with `post_status = 'draft'` and only become `'publish'` AFTER AI content is generated:
+
+```php
+// class-wta-single-structure-processor.php (lines 101, 225, 391):
+'post_status'  => 'draft',  ← By design! AI processor publishes them.
+
+// class-wta-single-ai-processor.php (after AI complete):
+wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
+```
+
+**But ALL batch queries only searched for 'publish' posts:**
+
+```php
+// v3.3.5 (WRONG):
+WHERE p.post_status = 'publish'  ← Misses ALL draft posts!
+
+// Result:
+- Cities created as draft: 50
+- Continents created as draft: 6  
+- Countries created as draft: 34
+- Total found by queries: 0  ← ❌
+```
+
+**THE CONSEQUENCE:**
+- ✅ Structure phase completes (entities created as draft)
+- ❌ Batch timezone: Finds 0 cities (looking for publish only)
+- ❌ Batch AI: Finds 0 entities (looking for publish only)
+- ❌ No timezone resolution
+- ❌ No AI generation
+- ❌ Posts stay as draft forever!
+
+### ✅ THE FIX:
+
+**Updated ALL batch queries to include draft posts:**
+
+```php
+// BEFORE (v3.3.5 and earlier):
+WHERE p.post_status = 'publish'
+
+// AFTER (v3.3.6):
+WHERE p.post_status IN ('publish', 'draft')
+```
+
+**Affected queries (6 total):**
+1. `check_structure_completion()` - Structure detection
+2. `batch_schedule_timezone()` - City count debug + main query
+3. `check_timezone_completion()` - Timezone progress  
+4. `batch_schedule_ai_non_cities()` - Continents + countries
+5. `batch_schedule_ai_cities()` - Cities
+
+**NOW:**
+- ✅ Batch queries find draft posts
+- ✅ Timezone resolution scheduled for all cities
+- ✅ AI generation scheduled for all entities
+- ✅ After AI completes → posts become 'publish'
+- ✅ Import completes successfully!
+
+### 🎯 AFFECTED FILES:
+- `includes/processors/class-wta-batch-processor.php`
+  - Lines 29-34: check_structure_completion() - include draft
+  - Lines 91-94: batch_schedule_timezone() debug - include draft
+  - Lines 109-111: batch_schedule_timezone() main - include draft
+  - Lines 171-174: check_timezone_completion() - include draft
+  - Lines 220-222: batch_schedule_ai_non_cities() - include draft
+  - Lines 266-268: batch_schedule_ai_cities() - include draft
+
+### 🧪 TESTING:
+```
+1. Start import
+2. Wait for structure completion
+3. Check log: "total_cities": "50" (not 0!)
+4. Check log: "total_entities": 40 (6+34, not 0!)
+5. Timezone batch schedules 50 cities
+6. AI batch schedules 40 entities
+7. After AI: All posts become 'publish'
+```
+
+---
+
 ## [3.3.4] - 2026-01-11
 
 ### 🔴 CRITICAL HOTFIX: Structure Completion Checker Never Runs!

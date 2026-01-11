@@ -23,13 +23,14 @@ class WTA_Batch_Processor {
 	public function check_structure_completion() {
 		global $wpdb;
 
-		// Count cities without timezone status (still being created or waiting)
+		// Count cities without structure_complete flag (still being created)
+		// v3.3.6: Include draft posts (posts start as draft, become publish after AI)
 		$pending_structure = $wpdb->get_var(
 			"SELECT COUNT(*)
 			 FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type' AND pm_type.meta_value = 'city'
 			 WHERE p.post_type = 'world_time_location'
-			 AND p.post_status = 'publish'
+			 AND p.post_status IN ('publish', 'draft')
 			 AND NOT EXISTS (
 				 SELECT 1 FROM {$wpdb->postmeta} pm_tz
 				 WHERE pm_tz.post_id = p.ID
@@ -87,17 +88,17 @@ class WTA_Batch_Processor {
 
 		WTA_Logger::info( '🌍 Starting batch timezone scheduling...' );
 
-		// v3.3.5: DEBUG - Count total cities first
+		// v3.3.6: Count total cities (include draft - they become publish after AI)
 		$total_cities = $wpdb->get_var(
 			"SELECT COUNT(*) FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'wta_type' AND pm.meta_value = 'city'
-			 WHERE p.post_type = 'world_time_location' AND p.post_status = 'publish'"
+			 WHERE p.post_type = 'world_time_location' AND p.post_status IN ('publish', 'draft')"
 		);
 		
 		WTA_Logger::debug( 'Total cities in database', array( 'total_cities' => $total_cities ) );
 
 		// Find all cities that need timezone resolution
-		// v3.3.2: Include cities with 'pending' or 'waiting_for_toggle' status
+		// v3.3.6: Include draft posts (they become publish after AI completes)
 		$cities_needing_timezone = $wpdb->get_results(
 			"SELECT p.ID, pm_lat.meta_value as lat, pm_lng.meta_value as lng, pm_country.meta_value as country_code
 			 FROM {$wpdb->posts} p
@@ -107,7 +108,7 @@ class WTA_Batch_Processor {
 			 INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id AND pm_country.meta_key = 'wta_country_code'
 			 LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone_status'
 			 WHERE p.post_type = 'world_time_location'
-			 AND p.post_status = 'publish'
+			 AND p.post_status IN ('publish', 'draft')
 			 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value IN ('pending', 'waiting_for_toggle'))"
 		);
 		
@@ -165,14 +166,14 @@ class WTA_Batch_Processor {
 		global $wpdb;
 
 		// Count cities without resolved timezone
-		// v3.3.2: Only count cities (type = 'city'), not continents/countries
+		// v3.3.6: Include draft posts (posts start as draft, become publish after AI)
 		$pending_timezone = $wpdb->get_var(
 			"SELECT COUNT(*)
 			 FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type' AND pm_type.meta_value = 'city'
 			 LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone_status'
 			 WHERE p.post_type = 'world_time_location'
-			 AND p.post_status = 'publish'
+			 AND p.post_status IN ('publish', 'draft')
 			 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value != 'resolved')"
 		);
 
@@ -216,12 +217,13 @@ class WTA_Batch_Processor {
 		WTA_Logger::info( '🤖 Starting Continent + Country AI batch...' );
 
 		// Find continents and countries that need AI
+		// v3.3.6: Include draft posts (posts start as draft, become publish after AI)
 		$entities_needing_ai = $wpdb->get_results(
 			"SELECT p.ID, pm_type.meta_value as entity_type
 			 FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			 WHERE p.post_type = 'world_time_location'
-			 AND p.post_status = 'publish'
+			 AND p.post_status IN ('publish', 'draft')
 			 AND pm_type.meta_value IN ('continent', 'country')
 			 AND NOT EXISTS (
 				 SELECT 1 FROM {$wpdb->postmeta} pm_ai
@@ -261,12 +263,13 @@ class WTA_Batch_Processor {
 		WTA_Logger::info( '🤖 Starting City AI batch...' );
 
 		// Find cities that need AI
+		// v3.3.6: Include draft posts (posts start as draft, become publish after AI)
 		$cities_needing_ai = $wpdb->get_results(
 			"SELECT p.ID, pm_type.meta_value as entity_type
 			 FROM {$wpdb->posts} p
 			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			 WHERE p.post_type = 'world_time_location'
-			 AND p.post_status = 'publish'
+			 AND p.post_status IN ('publish', 'draft')
 			 AND pm_type.meta_value = 'city'
 			 AND NOT EXISTS (
 				 SELECT 1 FROM {$wpdb->postmeta} pm_ai
