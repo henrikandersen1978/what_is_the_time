@@ -4,10 +4,14 @@
  *
  * v3.3.0: Implements smart completion detection instead of fixed delays.
  * Handles ANY number of cities (1k to 1M+) by detecting when phases complete.
+ * 
+ * v3.3.8: Staggered API scheduling to prevent TimezoneDB overload.
+ * Spreads API calls over time (10 req/s) instead of bursting all at once.
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/processors
  * @since      3.3.0
+ * @since      3.3.8 Added staggered scheduling for timezone API calls
  */
 
 class WTA_Batch_Processor {
@@ -127,6 +131,9 @@ class WTA_Batch_Processor {
 		) );
 
 		$scheduled = 0;
+		$delay = 0;
+		$api_count = 0;
+		
 		foreach ( $cities_needing_timezone as $city ) {
 			// Check if city is in simple country list
 			$timezone = WTA_Timezone_Helper::get_country_timezone( $city->country_code );
@@ -137,14 +144,21 @@ class WTA_Batch_Processor {
 				update_post_meta( $city->ID, 'wta_timezone_status', 'resolved' );
 				update_post_meta( $city->ID, 'wta_has_timezone', 1 );
 			} else {
-				// Needs API lookup
+				// v3.3.8: STAGGERED SCHEDULING to prevent API overload!
+				// Spread API calls over time instead of all at once
 				as_schedule_single_action(
-					time(),
+					time() + $delay,  // Add incremental delay
 					'wta_lookup_timezone',
 					array( $city->ID, floatval( $city->lat ), floatval( $city->lng ) ),
 					'wta_timezone'
 				);
 				$scheduled++;
+				$api_count++;
+				
+				// Add 1 second delay after every 10 API calls (= 10 req/s for Premium)
+				if ( $api_count % 10 == 0 ) {
+					$delay += 1;
+				}
 			}
 		}
 
@@ -152,6 +166,8 @@ class WTA_Batch_Processor {
 			'total_cities'    => count( $cities_needing_timezone ),
 			'api_scheduled'   => $scheduled,
 			'simple_resolved' => count( $cities_needing_timezone ) - $scheduled,
+			'staggered_over'  => $delay . ' seconds',
+			'rate_limit'      => '10 req/s (Premium tier)',
 		) );
 
 		// Start checking for timezone completion
