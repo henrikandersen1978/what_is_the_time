@@ -829,36 +829,52 @@ class WTA_Structure_Processor {
 	}
 		
 	// ==========================================
-	// SINGLE-PASS STREAMING WITH FILTER-FIRST (v3.2.64)
+	// ULTRA-SIMPLE FILE READING (v3.2.68)
 	// ==========================================
-	// Problem with 2-pass: File might not reset properly between passes
-	// Solution: Process in ONE pass with smart chunking
-	// 1. Read and filter cities (apply population/country filters EARLY)
-	// 2. Only store cities that pass ALL filters
-	// 3. Process in manageable batches
+	// Problem: Complex streaming with fgets/feof/rtrim causes errors
+	// Solution: Load ENTIRE file in memory (it's only 37 MB!)
+	// Modern PHP can handle this easily with 512M memory limit
 	
-	file_put_contents( $debug_file, "Single-pass streaming with early filtering...\n", FILE_APPEND );
+	file_put_contents( $debug_file, "Loading entire file into memory...\n", FILE_APPEND );
 	
-	$file = @fopen( $file_path, 'rb' ); // Binary mode for cross-platform line endings
-	if ( ! $file ) {
-		throw new Exception( 'Failed to open cities500.txt' );
+	// Load entire file (37 MB = nothing for modern servers)
+	$file_contents = @file_get_contents( $file_path );
+	if ( $file_contents === false ) {
+		throw new Exception( 'Failed to read cities500.txt' );
 	}
+	
+	file_put_contents( $debug_file, sprintf(
+		"File loaded: %d bytes (%.2f MB)\n",
+		strlen( $file_contents ),
+		strlen( $file_contents ) / 1024 / 1024
+	), FILE_APPEND );
+	
+	// Split into lines WITHOUT using trim/rtrim (handle line endings manually)
+	// This works regardless of Windows CRLF or Linux LF
+	$lines = preg_split( '/\r\n|\r|\n/', $file_contents );
+	unset( $file_contents ); // Free memory immediately
+	
+	$total_lines = count( $lines );
+	file_put_contents( $debug_file, sprintf(
+		"File has %d lines total\n",
+		$total_lines
+	), FILE_APPEND );
 	
 	$cities_chunk = array();
 	$city_index = 0;
 	$line_count = 0;
 	$skipped_before_chunk = 0;
 	
-	try {
-		// Process file line by line
-		// CRITICAL: Use fgets() directly in while condition (never call feof() explicitly!)
-		// This prevents "supplied resource is not a valid stream" errors
-		while ( ( $line = fgets( $file ) ) !== false ) {
-			$line_count++;
-			
-			// Parse tab-separated values (handle both LF and CRLF)
-			$line = rtrim( $line, "\r\n" );
-			$parts = explode( "\t", $line );
+	// Process lines
+	foreach ( $lines as $line ) {
+		if ( empty( $line ) ) {
+			continue; // Skip empty lines
+		}
+		
+		$line_count++;
+		
+		// Parse tab-separated values
+		$parts = explode( "\t", $line );
 			
 			// Validate minimum required fields (19 columns in GeoNames)
 			if ( count( $parts ) < 19 ) {
@@ -873,65 +889,62 @@ class WTA_Structure_Processor {
 				continue;
 			}
 			
-			// Extract basic fields for filtering
-			$country_code = strtoupper( trim( $parts[8] ) );
-			$population = intval( $parts[14] );
-			
-			// EARLY FILTERING: Apply filters BEFORE counting/chunking
-			// This dramatically reduces memory usage!
-			
-			// Filter by country_code
-			if ( ! empty( $filtered_country_codes ) && ! in_array( $country_code, $filtered_country_codes, true ) ) {
-				continue; // Skip before even counting
-			}
-			
-			// Population filter
-			if ( $min_population > 0 && $population < $min_population ) {
-				continue; // Skip before counting
-			}
-			
-			// NOW this city passed filters - check if it's in our chunk
-			if ( $city_index < $offset ) {
-				$city_index++;
-				$skipped_before_chunk++;
-				continue; // Skip cities before our chunk
-			}
-			
-			// Stop after we have enough cities for this chunk
-			if ( count( $cities_chunk ) >= $chunk_size ) {
-				break; // We have our chunk, stop reading file
-			}
-			
-			// This city is IN our chunk - parse and store it!
-			$geonameid = $parts[0];
-			$name = $parts[1];
-			$asciiname = $parts[2];
-			$latitude = floatval( $parts[4] );
-			$longitude = floatval( $parts[5] );
-			$feature_code = $parts[7];
-			$timezone = $parts[17];
-			
-			$city = array(
-				'geonameid'    => intval( $geonameid ),
-				'name'         => $name,
-				'name_ascii'   => $asciiname,
-				'country_code' => $country_code,
-				'latitude'     => $latitude,
-				'longitude'    => $longitude,
-				'population'   => $population,
-				'timezone'     => $timezone,
-				'feature_code' => $feature_code,
-			);
-			
-			$cities_chunk[] = $city;
+		// Extract basic fields for filtering
+		$country_code = strtoupper( $parts[8] );
+		$population = intval( $parts[14] );
+		
+		// EARLY FILTERING: Apply filters BEFORE counting/chunking
+		// This dramatically reduces memory usage!
+		
+		// Filter by country_code
+		if ( ! empty( $filtered_country_codes ) && ! in_array( $country_code, $filtered_country_codes, true ) ) {
+			continue; // Skip before even counting
+		}
+		
+		// Population filter
+		if ( $min_population > 0 && $population < $min_population ) {
+			continue; // Skip before counting
+		}
+		
+		// NOW this city passed filters - check if it's in our chunk
+		if ( $city_index < $offset ) {
 			$city_index++;
+			$skipped_before_chunk++;
+			continue; // Skip cities before our chunk
 		}
-	} finally {
-		// CRITICAL: Always close file
-		if ( is_resource( $file ) ) {
-			fclose( $file );
+		
+		// Stop after we have enough cities for this chunk
+		if ( count( $cities_chunk ) >= $chunk_size ) {
+			break; // We have our chunk, stop processing
 		}
+		
+		// This city is IN our chunk - parse and store it!
+		$geonameid = $parts[0];
+		$name = $parts[1];
+		$asciiname = $parts[2];
+		$latitude = floatval( $parts[4] );
+		$longitude = floatval( $parts[5] );
+		$feature_code = $parts[7];
+		$timezone = $parts[17];
+		
+		$city = array(
+			'geonameid'    => intval( $geonameid ),
+			'name'         => $name,
+			'name_ascii'   => $asciiname,
+			'country_code' => $country_code,
+			'latitude'     => $latitude,
+			'longitude'    => $longitude,
+			'population'   => $population,
+			'timezone'     => $timezone,
+			'feature_code' => $feature_code,
+		);
+		
+		$cities_chunk[] = $city;
+		$city_index++;
 	}
+	
+	// Free memory
+	unset( $lines );
 	
 	$chunk_end = $offset + count( $cities_chunk );
 	$chunk_is_full = ( count( $cities_chunk ) >= $chunk_size ); // Did we get a full chunk?
