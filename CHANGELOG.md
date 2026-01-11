@@ -2,6 +2,50 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.74] - 2026-01-11
+
+### 🔧 FIX: Moon phase shows key "moon_last_quarter" instead of translation
+
+**USER REPORT:**
+After installing v3.2.73, moon phase FAQ showed the JSON key instead of translation:
+```
+"Månfasen i Asunción är för närvarande 75.9% (moon_last_quarter)."
+```
+
+**ROOT CAUSE:**
+v3.2.73 used wrong file path to load JSON:
+```php
+$plugin_dir = defined( 'WTA_PLUGIN_DIR' ) ? WTA_PLUGIN_DIR : plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+$json_file = $plugin_dir . 'includes/languages/' . $lang_code . '.json';
+// Path might be wrong → file_exists() returns false → uses fallback key
+```
+
+**THE FIX:**
+Use relative path from current file location:
+
+```php
+// OLD (v3.2.73 - wrong path):
+$plugin_dir = defined( 'WTA_PLUGIN_DIR' ) ? WTA_PLUGIN_DIR : plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+$json_file = $plugin_dir . 'includes/languages/' . $lang_code . '.json';
+
+// NEW (v3.2.74 - correct relative path):
+// This file: includes/helpers/class-wta-faq-generator.php
+// JSON files: includes/languages/*.json
+$json_file = dirname( dirname( __FILE__ ) ) . '/languages/' . $lang_code . '.json';
+```
+
+**Why this works:**
+- `__FILE__` = `/path/to/includes/helpers/class-wta-faq-generator.php`
+- `dirname(__FILE__)` = `/path/to/includes/helpers`
+- `dirname(dirname(__FILE__))` = `/path/to/includes`
+- Add `/languages/sv.json` = `/path/to/includes/languages/sv.json` ✅
+
+**RESULT:**
+Now correctly loads translations from JSON file and displays "Sista kvarteret" instead of "moon_last_quarter"!
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Fixed file path to use relative path from current file
+
 ## [3.2.73] - 2026-01-11
 
 ### 🌙 FIX: Moon phase shows "(Unknown)" instead of translated name

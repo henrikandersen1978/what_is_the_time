@@ -820,13 +820,17 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		$language = get_option( 'wta_language', 'da-DK' );
 		$lang_code = substr( $language, 0, 2 ); // da-DK → da, sv-SE → sv
 		
-		// Load language JSON file
-		$json_file = WTA_PLUGIN_DIR . 'includes/languages/' . $lang_code . '.json';
+		// Build path to JSON file relative to this file
+		// This file is in: includes/helpers/class-wta-faq-generator.php
+		// JSON files are in: includes/languages/*.json
+		$json_file = dirname( dirname( __FILE__ ) ) . '/languages/' . $lang_code . '.json';
 		$phase_name = $phase_key; // Fallback to key if translation not found
 		
 		if ( file_exists( $json_file ) ) {
-			$translations = json_decode( file_get_contents( $json_file ), true );
-			if ( isset( $translations[ $phase_key ] ) ) {
+			$json_content = file_get_contents( $json_file );
+			$translations = json_decode( $json_content, true );
+			
+			if ( is_array( $translations ) && isset( $translations[ $phase_key ] ) ) {
 				$phase_name = $translations[ $phase_key ];
 			}
 		}
