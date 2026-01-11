@@ -509,6 +509,7 @@ class WTA_Admin {
 	
 	// v3.2.58: CRITICAL - Clear ALL Action Scheduler actions when resetting data
 	// Without this, 15K+ pending/in-progress actions continue processing deleted posts!
+	// v3.3.8: Added new batch processor hooks from v3.3.0+ sequential phases
 	$wta_hooks = array(
 		'wta_create_continent',
 		'wta_create_country',
@@ -517,6 +518,12 @@ class WTA_Admin {
 		'wta_lookup_timezone',
 		'wta_generate_ai_content',
 		'wta_start_waiting_city_processing',
+		// v3.3.0+ Batch processor hooks:
+		'wta_check_structure_completion',
+		'wta_batch_schedule_timezone',
+		'wta_check_timezone_completion',
+		'wta_batch_schedule_ai_non_cities',
+		'wta_batch_schedule_ai_cities',
 	);
 	
 	$cleared_actions = 0;

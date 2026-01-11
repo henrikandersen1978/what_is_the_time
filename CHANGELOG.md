@@ -4,7 +4,7 @@ All notable changes to World Time AI will be documented in this file.
 
 ## [3.3.8] - 2026-01-11
 
-### 🚨 CRITICAL FIX: TimezoneDB API Overload - 88% Failure Rate!
+### 🚨 CRITICAL FIX #1: TimezoneDB API Overload - 88% Failure Rate!
 
 **USER REPORT:**
 "286 API fejl" - Only 17 out of 139 API calls succeeded (~12% success rate)
@@ -178,6 +178,86 @@ Even without Premium, this fix drastically improves success rate:
 - FREE tier: 1 req/s limit
 - Staggered scheduling: Spreads 139 calls over 139 seconds
 - Success rate: ~100% (no burst overload)
+
+---
+
+### 🔧 CRITICAL FIX #2: Reset All Actions Missing v3.3.0+ Hooks!
+
+**USER QUESTION:**
+"reset all actions - sletter den alt det nødvendige efter de seneste serialized ændringer?"
+
+**THE PROBLEM:**
+
+When v3.3.0 introduced the completion detection system, 5 new Action Scheduler hooks were added:
+
+```php
+// New batch processor hooks (v3.3.0+):
+'wta_check_structure_completion',
+'wta_batch_schedule_timezone',
+'wta_check_timezone_completion',
+'wta_batch_schedule_ai_non_cities',
+'wta_batch_schedule_ai_cities',
+```
+
+**BUT** the "Reset All Actions" function ONLY cleared these hooks:
+
+```php
+// OLD (v3.3.7 and earlier):
+$wta_hooks = array(
+    'wta_create_continent',
+    'wta_create_country',
+    'wta_schedule_cities',
+    'wta_create_city',
+    'wta_lookup_timezone',
+    'wta_generate_ai_content',
+    'wta_start_waiting_city_processing',
+    // ← Missing the 5 new hooks! ❌
+);
+```
+
+**THE CONSEQUENCE:**
+
+When clicking "Reset All Actions":
+- ✅ Old actions cleared (city creation, timezone, AI)
+- ❌ NEW actions NOT cleared (completion checkers, batch schedulers)
+- ❌ Completion checkers keep running (every 2-5 minutes)
+- ❌ Batch schedulers may trigger unexpectedly
+- ❌ Confusion about import state
+
+### ✅ THE FIX:
+
+**Added all missing hooks to reset function:**
+
+```php
+// v3.3.8: Complete hook list
+$wta_hooks = array(
+    'wta_create_continent',
+    'wta_create_country',
+    'wta_schedule_cities',
+    'wta_create_city',
+    'wta_lookup_timezone',
+    'wta_generate_ai_content',
+    'wta_start_waiting_city_processing',
+    // v3.3.0+ Batch processor hooks:
+    'wta_check_structure_completion',         // ← NEW!
+    'wta_batch_schedule_timezone',            // ← NEW!
+    'wta_check_timezone_completion',          // ← NEW!
+    'wta_batch_schedule_ai_non_cities',       // ← NEW!
+    'wta_batch_schedule_ai_cities',           // ← NEW!
+);
+```
+
+**NOW:**
+- ✅ ALL actions cleared (including batch processors)
+- ✅ Clean slate for new imports
+- ✅ No orphaned completion checkers
+- ✅ Predictable reset behavior
+
+### 🎯 AFFECTED FILES:
+
+- `includes/admin/class-wta-admin.php`
+  - Line 510-525: Added 5 new hooks to $wta_hooks array
+  - Line 510: Updated comment to reference v3.3.8
 
 ---
 
