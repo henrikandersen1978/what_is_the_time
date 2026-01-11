@@ -87,6 +87,7 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-structure-processor.php';
 		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-timezone-processor.php';
 		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-ai-processor.php';
+		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-batch-processor.php'; // v3.3.0
 
 		// Admin
 		if ( is_admin() ) {
@@ -326,6 +327,12 @@ class WTA_Core {
 	
 	// Bulk start city processing (v3.0.72, v3.0.78: Added chunking)
 	$this->loader->add_action( 'wta_start_waiting_city_processing', 'WTA_Importer', 'start_waiting_city_processing', 10, 1 );
+
+	// Batch Processor for Sequential Phases (v3.3.0 - Completion Detection)
+	$this->loader->add_action( 'wta_check_structure_completion', 'WTA_Batch_Processor', 'check_structure_completion', 10, 0 );
+	$this->loader->add_action( 'wta_batch_schedule_timezone', 'WTA_Batch_Processor', 'batch_schedule_timezone', 10, 0 );
+	$this->loader->add_action( 'wta_check_timezone_completion', 'WTA_Batch_Processor', 'check_timezone_completion', 10, 0 );
+	$this->loader->add_action( 'wta_batch_schedule_ai', 'WTA_Batch_Processor', 'batch_schedule_ai', 10, 0 );
 
 	// Single Timezone Processor (v3.0.43 - Pilanto-AI Model)
 		$timezone_processor = new WTA_Single_Timezone_Processor();

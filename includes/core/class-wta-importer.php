@@ -629,6 +629,16 @@ private static function send_chunk_notification( $chunk_data ) {
 			'total_scheduled' => $scheduled,
 			'total_skipped'   => $skipped,
 		) );
+
+		// v3.3.0: Start structure completion detection
+		// This will check if all cities are created and trigger timezone batch
+		as_schedule_single_action(
+			time() + 120, // Check in 2 minutes
+			'wta_check_structure_completion',
+			array(),
+			'wta_structure'
+		);
+		WTA_Logger::info( '✅ Structure completion checker scheduled (checks every 2 min)' );
 	}
 }
 

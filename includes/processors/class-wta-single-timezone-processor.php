@@ -142,19 +142,8 @@ class WTA_Single_Timezone_Processor {
 			'tier'           => $is_premium ? 'Premium (10 req/s)' : 'FREE (1 req/s)',
 		) );
 
-		// CRITICAL: Schedule AI content after timezone resolved
-	$type = get_post_meta( $post_id, 'wta_type', true );
-	as_schedule_single_action(
-		time(),
-		'wta_generate_ai_content',
-		array( $post_id, $type, false ),  // post_id, type, force_ai
-		'wta_ai_content'
-	);
-
-		WTA_Logger::info( 'AI content scheduled after timezone resolution', array(
-			'post_id' => $post_id,
-			'type'    => $type,
-		) );
+		// v3.3.0: NO AI scheduling here!
+		// AI will be batch-scheduled after ALL timezones are resolved
 
 		} catch ( Exception $e ) {
 			WTA_Logger::error( 'Failed to lookup timezone', array(

@@ -122,14 +122,9 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'continent_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// v3.2.81: Schedule AI with delay to allow structure phase to complete
-			// Continents don't need timezone, so AI can start after structure
-			as_schedule_single_action(
-				time() + 1800, // 30 min delay (after structure phase)
-				'wta_generate_ai_content',
-				array( $post_id, 'continent', false ),
-				'wta_ai_content'
-			);
+			// v3.3.0: Mark structure as complete for completion detection
+			// AI will be batch-scheduled after ALL structure is complete
+			update_post_meta( $post_id, 'wta_structure_complete', 1 );
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -287,14 +282,9 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'country_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// v3.2.81: Schedule AI with delay to allow structure phase to complete
-			// Countries don't need timezone, so AI can start after structure
-			as_schedule_single_action(
-				time() + 1800, // 30 min delay (after structure phase)
-				'wta_generate_ai_content',
-				array( $post_id, 'country', false ),
-				'wta_ai_content'
-			);
+			// v3.3.0: Mark structure as complete for completion detection
+			// AI will be batch-scheduled after ALL structure is complete
+			update_post_meta( $post_id, 'wta_structure_complete', 1 );
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -512,36 +502,9 @@ class WTA_Single_Structure_Processor {
 			}
 		} else {
 			// Simple country - try hardcoded list
-			$timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
-			if ( $timezone ) {
-				update_post_meta( $post_id, 'wta_timezone', $timezone );
-				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
-				update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Flag for AI queue
-				
-				// v3.2.82: TRUE Sequential Phases - Delay AI for simple countries!
-				// These cities get timezone from country list (no API call needed)
-				// But AI is delayed 30 min to allow structure phase to complete first
-				as_schedule_single_action(
-					time() + 1800, // 30 min delay (same as continents/countries)
-					'wta_generate_ai_content',
-					array( $post_id, 'city', false ),
-					'wta_ai_content'
-				);
-			} else {
-				// Country not in list - use API
-				if ( $final_lat !== null && $final_lon !== null ) {
-					update_post_meta( $post_id, 'wta_timezone_status', 'pending' );
-					update_post_meta( $post_id, 'wta_has_timezone', 0 ); // v3.0.58: Flag for AI queue
-				
-				// v3.0.65: Schedule immediately (no delay to prevent cleanup race condition)
-				as_schedule_single_action(
-					time(),
-					'wta_lookup_timezone',
-					array( $post_id, $final_lat, $final_lon ),
-					'wta_timezone'
-				);
-				}
-			}
+			// v3.3.0: NO timezone or AI scheduling during city creation!
+			// Timezone and AI will be batch-scheduled after structure phase completes
+			// This allows structure to run at maximum speed for ANY number of cities
 		}
 
 			// SEO metadata
@@ -551,6 +514,9 @@ class WTA_Single_Structure_Processor {
 			
 			$seo_title = sprintf( self::get_template( 'city_title' ), $data['name_local'], $parent_country_name );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $seo_title );
+
+			// v3.3.0: Mark structure as complete for completion detection
+			update_post_meta( $post_id, 'wta_structure_complete', 1 );
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
