@@ -130,7 +130,7 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 						</td>
 					</tr>
 
-					<!-- Concurrent Processing Settings (v3.0.41) -->
+					<!-- Concurrent Processing Settings (v3.2.80 - Sequential Phases) -->
 					<tr>
 						<th scope="row">
 							<?php esc_html_e( 'Concurrent Processing', WTA_TEXT_DOMAIN ); ?>
@@ -139,7 +139,7 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 							<table class="widefat" style="max-width: 700px;">
 								<thead>
 									<tr>
-										<th><?php esc_html_e( 'Processor', WTA_TEXT_DOMAIN ); ?></th>
+										<th><?php esc_html_e( 'Mode', WTA_TEXT_DOMAIN ); ?></th>
 										<th><?php esc_html_e( 'Concurrent Queues', WTA_TEXT_DOMAIN ); ?></th>
 										<th><?php esc_html_e( 'Recommended', WTA_TEXT_DOMAIN ); ?></th>
 									</tr>
@@ -147,8 +147,8 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 								<tbody>
 									<tr>
 										<td>
-											<strong><?php esc_html_e( 'AI Content (Test Mode)', WTA_TEXT_DOMAIN ); ?></strong>
-											<br><span class="description"><?php esc_html_e( 'Template generation only', WTA_TEXT_DOMAIN ); ?></span>
+											<strong><?php esc_html_e( 'Test Mode', WTA_TEXT_DOMAIN ); ?></strong>
+											<br><span class="description"><?php esc_html_e( 'Template generation only (no API calls)', WTA_TEXT_DOMAIN ); ?></span>
 										</td>
 										<td>
 											<input type="number" 
@@ -161,65 +161,37 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 										</td>
 										<td>
 											<span style="color: #46b450;">✓ 10</span>
-											<br><span class="description"><?php esc_html_e( 'High throughput, no API calls', WTA_TEXT_DOMAIN ); ?></span>
+											<br><span class="description"><?php esc_html_e( 'High throughput', WTA_TEXT_DOMAIN ); ?></span>
 										</td>
 									</tr>
 									<tr>
 										<td>
-											<strong><?php esc_html_e( 'AI Content (Normal Mode)', WTA_TEXT_DOMAIN ); ?></strong>
-											<br><span class="description"><?php esc_html_e( 'Full AI generation', WTA_TEXT_DOMAIN ); ?></span>
+											<strong><?php esc_html_e( 'Normal Mode', WTA_TEXT_DOMAIN ); ?></strong>
+											<br><span class="description"><?php esc_html_e( 'Full import with API calls', WTA_TEXT_DOMAIN ); ?></span>
 										</td>
 										<td>
 											<input type="number" 
 												name="wta_concurrent_normal_mode" 
-												value="<?php echo esc_attr( get_option( 'wta_concurrent_normal_mode', 5 ) ); ?>" 
+												value="<?php echo esc_attr( get_option( 'wta_concurrent_normal_mode', 10 ) ); ?>" 
 												min="1" 
-												max="10" 
+												max="20" 
 												class="small-text"
 											/>
 										</td>
 										<td>
-											<span style="color: #46b450;">✓ 3-5</span>
-											<br><span class="description"><?php esc_html_e( 'Balanced for OpenAI Tier 5', WTA_TEXT_DOMAIN ); ?></span>
-										</td>
-									</tr>
-									<tr>
-										<td>
-											<strong><?php esc_html_e( 'Structure Processor', WTA_TEXT_DOMAIN ); ?></strong>
-											<br><span class="description"><?php esc_html_e( 'City creation', WTA_TEXT_DOMAIN ); ?></span>
-										</td>
-										<td>
-											<input type="number" 
-												name="wta_concurrent_structure" 
-												value="<?php echo esc_attr( get_option( 'wta_concurrent_structure', 2 ) ); ?>" 
-												min="1" 
-												max="5" 
-												class="small-text"
-											/>
-										</td>
-										<td>
-											<span style="color: #46b450;">✓ 2-3</span>
-											<br><span class="description"><?php esc_html_e( 'Limited benefit (continents/countries sequential)', WTA_TEXT_DOMAIN ); ?></span>
-										</td>
-									</tr>
-									<tr style="background: #f9f9f9;">
-										<td>
-											<strong><?php esc_html_e( 'Timezone Processor', WTA_TEXT_DOMAIN ); ?></strong>
-											<br><span class="description"><?php esc_html_e( 'TimeZoneDB API lookups', WTA_TEXT_DOMAIN ); ?></span>
-										</td>
-										<td>
-											<strong>1</strong> <?php esc_html_e( '(Fixed)', WTA_TEXT_DOMAIN ); ?>
-										</td>
-										<td>
-											<span style="color: #dc3232;">⚠️ 1 only</span>
-											<br><span class="description"><?php esc_html_e( 'API rate limit: 1 req/s (FREE tier)', WTA_TEXT_DOMAIN ); ?></span>
+											<span style="color: #46b450;">✓ 10</span>
+											<br><span class="description"><?php esc_html_e( 'With TimezoneDB Premium (10 req/s)', WTA_TEXT_DOMAIN ); ?></span>
 										</td>
 									</tr>
 								</tbody>
 							</table>
 							<p class="description" style="margin-top: 10px;">
-								<strong><?php esc_html_e( 'How it works:', WTA_TEXT_DOMAIN ); ?></strong>
-								<?php esc_html_e( 'Multiple concurrent queues process different items in parallel, dramatically increasing throughput. Each queue atomically claims unique items to prevent duplicates.', WTA_TEXT_DOMAIN ); ?>
+								<strong><?php esc_html_e( 'Sequential Phases (v3.2.80):', WTA_TEXT_DOMAIN ); ?></strong>
+								<?php esc_html_e( 'Import runs in 3 phases: Structure (continents/countries/cities) → Timezone (API lookups) → AI Content (OpenAI generation). This prevents different processor types from blocking each other.', WTA_TEXT_DOMAIN ); ?>
+							</p>
+							<p class="description">
+								<strong><?php esc_html_e( 'TimezoneDB Premium recommended:', WTA_TEXT_DOMAIN ); ?></strong>
+								<?php esc_html_e( 'Upgrade to Premium ($9.99/month) for 10 req/s (10x faster timezone resolution). FREE tier: 1 req/s.', WTA_TEXT_DOMAIN ); ?>
 							</p>
 							<p class="description" style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107;">
 								<strong>⚠️ <?php esc_html_e( 'Important:', WTA_TEXT_DOMAIN ); ?></strong>

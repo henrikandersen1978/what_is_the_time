@@ -51,11 +51,7 @@ class WTA_Settings {
 		) );
 		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_normal_mode', array( 
 			'sanitize_callback' => 'intval',
-			'default' => 5
-		) );
-		register_setting( 'wta_data_import_settings_group', 'wta_concurrent_structure', array( 
-			'sanitize_callback' => 'intval',
-			'default' => 2
+			'default' => 10  // v3.2.80: Increased for TimezoneDB Premium
 		) );
 
 		// AI Prompts

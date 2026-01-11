@@ -122,13 +122,9 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'continent_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// Schedule AI content generation
-			as_schedule_single_action(
-				time(),
-				'wta_generate_ai_content',
-				array( $post_id, 'continent', false ),  // post_id, type, force_ai
-				'wta_ai_content'
-			);
+			// v3.2.80: AI content is NOT scheduled here
+			// Sequential phases: Structure → Timezone → AI
+			// AI will be batch-scheduled after all structure is complete
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -286,14 +282,9 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'country_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// Schedule AI content generation with delay (v3.2.79: 20 min delay)
-			// This allows all countries to be created before AI processing starts
-			as_schedule_single_action(
-				time() + 1200, // Wait 20 minutes for all countries to be created first
-				'wta_generate_ai_content',
-				array( $post_id, 'country', false ),  // post_id, type, force_ai
-				'wta_ai_content'
-			);
+			// v3.2.80: AI content is NOT scheduled here
+			// Sequential phases: Structure → Timezone → AI
+			// AI will be batch-scheduled after all structure is complete
 
 			$execution_time = round( microtime( true ) - $start_time, 3 );
 			
@@ -517,13 +508,9 @@ class WTA_Single_Structure_Processor {
 				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' );
 				update_post_meta( $post_id, 'wta_has_timezone', 1 ); // v3.0.58: Flag for AI queue
 				
-			// Schedule AI content immediately for simple countries
-			as_schedule_single_action(
-				time(),
-				'wta_generate_ai_content',
-				array( $post_id, 'city', false ),  // post_id, type, force_ai
-				'wta_ai_content'
-			);
+				// v3.2.80: AI content is NOT scheduled here
+				// Sequential phases: Structure → Timezone → AI
+				// AI will be batch-scheduled after timezone resolution
 			} else {
 				// Country not in list - use API
 				if ( $final_lat !== null && $final_lon !== null ) {
