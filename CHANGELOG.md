@@ -2,6 +2,31 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.75] - 2026-01-11
+
+### 🔍 DEBUG: Moon phase translation still shows key instead of translation
+
+**USER REPORT:**
+After installing v3.2.74, newly imported cities (Uruguay) still show:
+```
+"Månefasen i {city_name} är aktuelt {percentage}% (moon_last_quarter)."
+```
+
+Even though v3.2.74 fixed the file path, the translation is not being loaded.
+
+**DEBUG VERSION:**
+Added extensive logging to `calculate_moon_phase()` to diagnose:
+- Whether JSON file is found
+- File path construction
+- Whether translation key exists in JSON
+- What the actual translation value is
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Added debug logging to moon phase translation
+
+**Next step:**
+Import a new city and check log file to see what's failing.
+
 ## [3.2.74] - 2026-01-11
 
 ### 🔧 FIX: Moon phase shows key "moon_last_quarter" instead of translation
