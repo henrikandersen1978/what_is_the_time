@@ -826,38 +826,14 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		$json_file = dirname( dirname( __FILE__ ) ) . '/languages/' . $lang_code . '.json';
 		$phase_name = $phase_key; // Fallback to key if translation not found
 		
-		// DEBUG: Log all information
-		WTA_Logger::debug( 'Moon phase translation debug', array(
-			'phase_key' => $phase_key,
-			'language' => $language,
-			'lang_code' => $lang_code,
-			'json_file' => $json_file,
-			'file_exists' => file_exists( $json_file ) ? 'YES' : 'NO',
-			'__FILE__' => __FILE__,
-			'dirname(__FILE__)' => dirname( __FILE__ ),
-			'dirname(dirname(__FILE__))' => dirname( dirname( __FILE__ ) ),
-		) );
-		
 		if ( file_exists( $json_file ) ) {
 			$json_content = file_get_contents( $json_file );
 			$translations = json_decode( $json_content, true );
 			
-			WTA_Logger::debug( 'JSON loaded', array(
-				'file_size' => strlen( $json_content ),
-				'is_array' => is_array( $translations ) ? 'YES' : 'NO',
-				'has_key' => isset( $translations[ $phase_key ] ) ? 'YES' : 'NO',
-				'translation' => isset( $translations[ $phase_key ] ) ? $translations[ $phase_key ] : 'NOT FOUND',
-				'first_5_keys' => is_array( $translations ) ? implode( ', ', array_slice( array_keys( $translations ), 0, 5 ) ) : 'N/A',
-			) );
-			
-			if ( is_array( $translations ) && isset( $translations[ $phase_key ] ) ) {
-				$phase_name = $translations[ $phase_key ];
+			// Moon phase translations are in the 'templates' section
+			if ( is_array( $translations ) && isset( $translations['templates'][ $phase_key ] ) ) {
+				$phase_name = $translations['templates'][ $phase_key ];
 			}
-		} else {
-			WTA_Logger::error( 'JSON file not found', array(
-				'expected_path' => $json_file,
-				'lang_code' => $lang_code,
-			) );
 		}
 		
 		return array(

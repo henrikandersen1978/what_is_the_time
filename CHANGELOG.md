@@ -2,6 +2,58 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.76] - 2026-01-11
+
+### ✅ FIX: Moon phase shows key instead of translation (FINAL FIX!)
+
+**ROOT CAUSE IDENTIFIED:**
+Debug logging from v3.2.75 revealed the real problem:
+```
+"has_key": "NO",
+"translation": "NOT FOUND",
+"first_5_keys": "meta, base_settings, prompts, templates, faq"
+```
+
+JSON file has nested structure! Moon phase translations are under `templates`:
+```json
+{
+  "templates": {
+    "moon_last_quarter": "Sidste kvarter",
+    "moon_new_moon": "Nymåne",
+    ...
+  }
+}
+```
+
+**THE PROBLEM:**
+PHP code was searching in root of JSON:
+```php
+// WRONG (v3.2.74-75):
+if ( isset( $translations[ $phase_key ] ) ) {
+    $phase_name = $translations[ $phase_key ]; // Searches root!
+}
+```
+
+**THE FIX:**
+Now correctly accessing the `templates` section:
+```php
+// CORRECT (v3.2.76):
+if ( isset( $translations['templates'][ $phase_key ] ) ) {
+    $phase_name = $translations['templates'][ $phase_key ]; // ✅
+}
+```
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Fixed translation lookup to use `templates` section
+- Removed debug logging (no longer needed)
+
+**RESULT:**
+Now correctly displays:
+- ✅ **"Sidste kvarter"** (Danish)
+- ✅ **"Sista kvarteret"** (Swedish)  
+- ✅ **"Last Quarter"** (English)
+- ✅ **"Letztes Viertel"** (German)
+
 ## [3.2.75] - 2026-01-11
 
 ### 🔍 DEBUG: Moon phase translation still shows key instead of translation
