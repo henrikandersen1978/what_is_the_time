@@ -286,9 +286,10 @@ class WTA_Single_Structure_Processor {
 			$yoast_title = sprintf( self::get_template( 'country_title' ), $data['name_local'] );
 			update_post_meta( $post_id, '_yoast_wpseo_title', $yoast_title );
 
-			// Schedule AI content generation
+			// Schedule AI content generation with delay (v3.2.79: 20 min delay)
+			// This allows all countries to be created before AI processing starts
 			as_schedule_single_action(
-				time(),
+				time() + 1200, // Wait 20 minutes for all countries to be created first
 				'wta_generate_ai_content',
 				array( $post_id, 'country', false ),  // post_id, type, force_ai
 				'wta_ai_content'

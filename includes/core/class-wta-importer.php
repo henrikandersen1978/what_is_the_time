@@ -231,9 +231,9 @@ class WTA_Importer {
 		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
 	// Schedule a single action to process all cities
-	// v3.0.70: Wait 15 minutes (900s) to ensure ALL continents and countries are created
+	// v3.2.79: Reduced to 10 minutes (600s) since country AI is now delayed
 	as_schedule_single_action(
-		time() + 900, // Wait 15 minutes for all 244 countries to be created
+		time() + 600, // Wait 10 minutes for all countries to be created
 		'wta_schedule_cities',
 		array(
 			'file_path'              => $cities_file,

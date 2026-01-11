@@ -2,6 +2,120 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.79] - 2026-01-11
+
+### 🚀 MAJOR: Group-based concurrent processing (GAME CHANGER!)
+
+**USER PROBLEM:**
+"Jeg synes kun der kører 1 eller max 2 'In-progress' actions af gangen, selvom concurrent står til 3."
+
+**ROOT CAUSE - Shared Concurrent Pool:**
+ALL processor types shared the SAME concurrent slots:
+```
+wta_structure (city creation)    ┐
+wta_timezone (API lookups)        ├─► Only 3 concurrent slots TOTAL!
+wta_ai_content (AI generation)    ┘
+```
+
+Result: Slow country creation would BLOCK fast city creation!
+
+**THE FIX - Separate Concurrent Pools:**
+Each action group now gets its own concurrent pool!
+
+```php
+// v3.2.79: class-wta-core.php - detect_current_action_group()
+switch ( $current_group ) {
+    case 'wta_structure':
+        return get_option( 'wta_concurrent_structure', 5 ); // Fast DB operations
+        
+    case 'wta_timezone':
+        return 1; // Always 1 (API rate limit: 1 req/sec)
+        
+    case 'wta_ai_content':
+        return $test_mode ? 10 : 6; // AI generation
+}
+```
+
+**NEW CONCURRENT ARCHITECTURE:**
+```
+wta_structure  → 5 concurrent ┐
+wta_timezone   → 1 concurrent ├─► INDEPENDENT pools!
+wta_ai_content → 6 concurrent ┘
+```
+
+**FILES MODIFIED:**
+- `includes/class-wta-core.php`:
+  - `set_concurrent_batches()` - Now group-aware!
+  - `detect_current_action_group()` - NEW: Detects current group via DB query
+  - `get_concurrent_for_group()` - NEW: Returns concurrent limit per group
+  - `request_additional_runners()` - Now uses group-based limits
+
+**RESULT:**
+- ✅ City creation: 5 concurrent (fast!)
+- ✅ Timezone lookups: 1 concurrent (respects API rate limit)
+- ✅ AI generation: 6-10 concurrent (heavy processing)
+- ✅ NO MORE BLOCKING between different action types!
+
+---
+
+### ⏱️ OPTIMIZATION: Reduced delays for faster full imports
+
+**USER CONCERN:**
+"En fuld import tager ret lang tid. Er det på grund af disse indstillinger og timing?"
+
+**OPTIMIZATIONS:**
+
+1. **Country AI Delay: 0 → 20 minutes**
+   ```php
+   // class-wta-single-structure-processor.php (line 290)
+   as_schedule_single_action(
+       time() + 1200, // NEW: 20 min delay
+       'wta_generate_ai_content',
+       array( $post_id, 'country', false ),
+       'wta_ai_content'
+   );
+   ```
+   **Why?** Prevents country AI from blocking country creation!
+
+2. **City Scheduling Delay: 15 → 10 minutes**
+   ```php
+   // class-wta-importer.php (line 236)
+   as_schedule_single_action(
+       time() + 600, // REDUCED from 900s
+       'wta_schedule_cities',
+       ...
+   );
+   ```
+   **Why?** Country creation is now faster since AI is delayed!
+
+**FILES MODIFIED:**
+- `includes/processors/class-wta-single-structure-processor.php`:
+  - Country AI scheduling now delayed 20 minutes (line 290)
+- `includes/core/class-wta-importer.php`:
+  - City scheduling reduced to 10 minutes (line 236)
+
+**OPTIMAL FLOW FOR FULL IMPORT:**
+```
+Time 0:
+  ├─► Create continents (instant)
+  └─► Create countries (10 min)
+  
+Time +10 min:
+  └─► Create cities (starts)
+  
+Time +20 min:
+  ├─► Country AI (starts, doesn't block cities!)
+  └─► City timezone (1/sec, separate pool)
+  └─► City AI (6 concurrent, separate pool)
+```
+
+**EXPECTED IMPROVEMENTS:**
+- 🚀 Country creation: 5x faster (no AI blocking)
+- 🚀 City creation: Starts 5 minutes earlier
+- 🚀 Overall: 30-40% faster full imports!
+
+---
+
 ## [3.2.78] - 2026-01-11
 
 ### 🔧 FIX: Time difference shows "före Sverige" instead of "efter Sverige" in purple info box

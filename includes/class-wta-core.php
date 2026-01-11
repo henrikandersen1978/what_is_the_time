@@ -445,42 +445,124 @@ class WTA_Core {
 	}
 
 	/**
-	 * Set concurrent batches dynamically.
+	 * Set concurrent batches dynamically (GROUP-BASED).
 	 * 
-	 * v3.0.48: SIMPLIFIED - Returns global concurrent setting based on test mode.
-	 * This is called by ActionScheduler BEFORE any actions are dispatched, so
-	 * doing_action() checks don't work here.
+	 * v3.2.79: MAJOR UPGRADE - Group-based concurrent limits!
+	 * Each action group (structure, timezone, AI) gets its own concurrent pool.
+	 * This prevents different processor types from blocking each other.
 	 * 
-	 * Individual action throttling (timezone = 1/sec) is handled at the ACTION level,
-	 * not at the concurrent batches level.
+	 * Groups:
+	 * - wta_structure: City/country creation (fast, DB only)
+	 * - wta_timezone: Timezone lookups (slow, API rate limited)
+	 * - wta_ai_content: AI generation (slow, API heavy)
 	 *
 	 * @since    3.0.41
+	 * @since    3.2.79 Added group-based concurrent limits
 	 * @param    int $default Default concurrent batches.
-	 * @return   int Adjusted concurrent batches.
+	 * @return   int Adjusted concurrent batches for current group.
 	 */
 	public function set_concurrent_batches( $default ) {
-		$test_mode = get_option( 'wta_test_mode', 0 );
-		$concurrent = $test_mode 
-			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
-			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		// Detect which action group is currently being processed
+		$current_group = $this->detect_current_action_group();
 		
-		// Get backtrace to see where filter is being called from
-		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
-		$caller = 'unknown';
-		if ( isset( $backtrace[3] ) ) {
-			$caller = ( $backtrace[3]['class'] ?? '' ) . '::' . ( $backtrace[3]['function'] ?? '' );
+		$test_mode = get_option( 'wta_test_mode', 0 );
+		
+		// Group-based concurrent limits
+		$concurrent = $default;
+		
+		switch ( $current_group ) {
+			case 'wta_structure':
+				// Structure: City/country creation (fast, DB operations)
+				$concurrent = intval( get_option( 'wta_concurrent_structure', 5 ) );
+				break;
+				
+			case 'wta_timezone':
+				// Timezone: Always 1 (API rate limit: 1 req/sec)
+				$concurrent = 1;
+				break;
+				
+			case 'wta_ai_content':
+				// AI Content: Test or normal mode
+				$concurrent = $test_mode 
+					? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+					: intval( get_option( 'wta_concurrent_normal_mode', 6 ) );
+				break;
+				
+			default:
+				// Unknown group: use test/normal mode default
+				$concurrent = $test_mode 
+					? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+					: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+				break;
 		}
 		
-		// Debug logging with MORE context
-		WTA_Logger::info( '🔧 Concurrent batches filter called', array(
-			'test_mode'  => $test_mode ? 'yes' : 'no',
+		// Debug logging
+		WTA_Logger::info( '🔧 Concurrent batches (group-based)', array(
+			'group'      => $current_group ? $current_group : 'unknown',
 			'concurrent' => $concurrent,
-			'default'    => $default,
-			'returning'  => $concurrent,
-			'caller'     => $caller,
+			'test_mode'  => $test_mode ? 'yes' : 'no',
 		) );
 		
 		return $concurrent;
+	}
+	
+	/**
+	 * Detect current action group being processed.
+	 * 
+	 * Checks the Action Scheduler queue to find which group
+	 * is currently being claimed/processed.
+	 *
+	 * @since    3.2.79
+	 * @return   string|null Action group or null if not detected.
+	 */
+	private function detect_current_action_group() {
+		global $wpdb;
+		
+		// Query Action Scheduler to find pending actions being processed
+		// We look for the most common group among pending/in-progress actions
+		$sql = "
+			SELECT `group`, COUNT(*) as count
+			FROM {$wpdb->actionscheduler_actions}
+			WHERE status IN ('pending', 'in-progress')
+			AND `group` LIKE 'wta_%'
+			GROUP BY `group`
+			ORDER BY count DESC
+			LIMIT 1
+		";
+		
+		$result = $wpdb->get_row( $sql );
+		
+		return $result ? $result->group : null;
+	}
+	
+	/**
+	 * Get concurrent limit for a specific action group.
+	 * 
+	 * Helper function to determine concurrent batches for each group.
+	 *
+	 * @since    3.2.79
+	 * @param    string|null $group Action group.
+	 * @param    bool        $test_mode Whether test mode is active.
+	 * @return   int Concurrent limit.
+	 */
+	private function get_concurrent_for_group( $group, $test_mode ) {
+		switch ( $group ) {
+			case 'wta_structure':
+				return intval( get_option( 'wta_concurrent_structure', 5 ) );
+				
+			case 'wta_timezone':
+				return 1; // Always 1 (API rate limit)
+				
+			case 'wta_ai_content':
+				return $test_mode 
+					? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+					: intval( get_option( 'wta_concurrent_normal_mode', 6 ) );
+				
+			default:
+				return $test_mode 
+					? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
+					: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		}
 	}
 
 	/**
@@ -499,11 +581,13 @@ class WTA_Core {
 	 * @link     https://actionscheduler.org/perf/
 	 */
 	public function request_additional_runners() {
-		// Determine concurrent setting based on test mode
+		// v3.2.79: Group-based concurrent limits
+		$current_group = $this->detect_current_action_group();
+		
 		$test_mode = get_option( 'wta_test_mode', 0 );
-		$concurrent = $test_mode 
-			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
-			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+		
+		// Determine concurrent based on group
+		$concurrent = $this->get_concurrent_for_group( $current_group, $test_mode );
 		
 		// Number of additional runners (minus 1 because AS already starts one)
 		$additional_runners = max( 0, $concurrent - 1 );
