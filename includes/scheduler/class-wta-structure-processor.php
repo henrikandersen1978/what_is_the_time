@@ -851,12 +851,9 @@ class WTA_Structure_Processor {
 	
 	try {
 		// Process file line by line
-		while ( ! feof( $file ) ) {
-			$line = fgets( $file );
-			if ( $line === false ) {
-				break; // End of file or error
-			}
-			
+		// CRITICAL: Use fgets() directly in while condition (never call feof() explicitly!)
+		// This prevents "supplied resource is not a valid stream" errors
+		while ( ( $line = fgets( $file ) ) !== false ) {
 			$line_count++;
 			
 			// Parse tab-separated values (handle both LF and CRLF)

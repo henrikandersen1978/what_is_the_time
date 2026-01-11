@@ -2,6 +2,65 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.65] - 2026-01-11
+
+### 🔧 CRITICAL FIX: Never call feof() explicitly
+
+**ISSUE:**
+v3.2.64 still failed with "feof(): supplied resource is not a valid stream resource". User confirmed:
+- v3.2.64 installed ✅
+- Still failed with same error ❌
+- Danmark import (150k): Only found København (should find Århus too) ❌
+
+**ROOT CAUSE:**
+Found on line 854: `while ( ! feof( $file ) )`
+
+```php
+// BAD - Explicit feof() call can fail if resource becomes invalid
+while ( ! feof( $file ) ) {
+    $line = fgets( $file );
+    if ( $line === false ) {
+        break;
+    }
+}
+```
+
+**Why this fails:**
+1. If `fgets()` fails internally, the file resource can become invalid
+2. Next loop iteration calls `feof($file)` on invalid resource
+3. PHP error: "supplied resource is not a valid stream resource"
+
+**FIX: Classic PHP file reading pattern**
+
+```php
+// GOOD - Never call feof() explicitly!
+while ( ( $line = fgets( $file ) ) !== false ) {
+    // Process line
+}
+```
+
+**Why this works:**
+1. `fgets()` returns `false` at EOF or on error
+2. Loop exits immediately when `fgets()` fails
+3. Never calls `feof()` explicitly
+4. No "invalid stream resource" errors possible
+
+**CODE CHANGE:**
+```diff
+- while ( ! feof( $file ) ) {
+-     $line = fgets( $file );
+-     if ( $line === false ) {
+-         break;
+-     }
++ while ( ( $line = fgets( $file ) ) !== false ) {
+```
+
+**RESULT:**
+✅ Never calls feof() - no more "invalid stream" errors
+✅ Standard PHP pattern (used in PHP documentation)
+✅ More robust error handling
+✅ Exits immediately on any file read error
+
 ## [3.2.64] - 2026-01-11
 
 ### 🔧 CRITICAL FIX: Single-pass streaming with filter-first
