@@ -87,6 +87,15 @@ class WTA_Batch_Processor {
 
 		WTA_Logger::info( '🌍 Starting batch timezone scheduling...' );
 
+		// v3.3.5: DEBUG - Count total cities first
+		$total_cities = $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->posts} p
+			 INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'wta_type' AND pm.meta_value = 'city'
+			 WHERE p.post_type = 'world_time_location' AND p.post_status = 'publish'"
+		);
+		
+		WTA_Logger::debug( 'Total cities in database', array( 'total_cities' => $total_cities ) );
+
 		// Find all cities that need timezone resolution
 		// v3.3.2: Include cities with 'pending' or 'waiting_for_toggle' status
 		$cities_needing_timezone = $wpdb->get_results(
@@ -101,6 +110,11 @@ class WTA_Batch_Processor {
 			 AND p.post_status = 'publish'
 			 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value IN ('pending', 'waiting_for_toggle'))"
 		);
+		
+		WTA_Logger::debug( 'Cities found by timezone query', array( 
+			'found' => count( $cities_needing_timezone ),
+			'sample_ids' => array_slice( array_map( function($c) { return $c->ID; }, $cities_needing_timezone ), 0, 5 )
+		) );
 
 		$scheduled = 0;
 		foreach ( $cities_needing_timezone as $city ) {
