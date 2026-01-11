@@ -817,8 +817,7 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		}
 		
 		// Translate phase name to current language (load from JSON file)
-		$language = get_option( 'wta_language', 'da-DK' );
-		$lang_code = substr( $language, 0, 2 ); // da-DK → da, sv-SE → sv
+		$lang_code = get_option( 'wta_site_language', 'da' );
 		
 		// Build path to JSON file relative to this file
 		// This file is in: includes/helpers/class-wta-faq-generator.php

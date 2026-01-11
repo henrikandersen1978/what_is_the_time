@@ -2,6 +2,50 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.77] - 2026-01-11
+
+### 🔥 CRITICAL FIX: Moon phase shows DANISH translation on Swedish site!
+
+**USER REPORT:**
+On Swedish site (klockan-nu.se), FAQ moon phase showed:
+```
+"Månfasen i Jerusalem är för närvarande 75.9% (Sidste kvarter)."
+                                                  ^^^^^^^^^^^^
+                                                  DANISH! ❌
+```
+
+Should be: "**Sista kvarteret**" (Swedish) ✅
+
+**ROOT CAUSE:**
+`calculate_moon_phase()` used wrong WordPress option:
+```php
+// WRONG (v3.2.76):
+$language = get_option( 'wta_language', 'da-DK' );  // ← This option doesn't match site language!
+$lang_code = substr( $language, 0, 2 );  // Always returned 'da' → loaded da.json
+```
+
+**WHY IT FAILED:**
+- Rest of plugin uses `wta_site_language` (lines 350, 422, 493)
+- Moon phase used `wta_language` (line 820) - inconsistent!
+- `wta_language` option returned 'da-DK' even on Swedish site
+- Always loaded Danish JSON file
+
+**THE FIX:**
+Use same option as rest of plugin:
+```php
+// CORRECT (v3.2.77):
+$lang_code = get_option( 'wta_site_language', 'da' );  // ✅ Matches site language directly
+```
+
+**RESULT:**
+- ✅ Danish site: "Sidste kvarter"
+- ✅ Swedish site: "Sista kvarteret"
+- ✅ English site: "Last Quarter"
+- ✅ German site: "Letztes Viertel"
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Fixed to use `wta_site_language` option
+
 ## [3.2.76] - 2026-01-11
 
 ### ✅ FIX: Moon phase shows key instead of translation (FINAL FIX!)
