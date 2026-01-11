@@ -53,6 +53,12 @@ class WTA_Settings {
 			'sanitize_callback' => 'intval',
 			'default' => 10  // v3.2.80: Increased for TimezoneDB Premium
 		) );
+		
+		// TimezoneDB Premium (v3.2.83)
+		register_setting( 'wta_data_import_settings_group', 'wta_timezonedb_premium', array(
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default' => false
+		) );
 
 		// AI Prompts
 		$prompt_types = array(

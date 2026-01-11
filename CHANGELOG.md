@@ -2,6 +2,117 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.83] - 2026-01-11
+
+### 🚀 TimezoneDB Premium Support - 10x Faster Timezone Resolution!
+
+**USER QUESTION:**
+"Har vi stadig delay på timezonedb? Har opdateret til premium"
+
+**PROBLEM:**
+Even with Premium subscription ($9.99/month for 10 req/s), the plugin still enforced FREE tier rate limiting (1 req/s)! 🐌
+
+**ROOT CAUSE:**
+```php
+// Hardcoded rate limiting (line 31-56):
+// RATE LIMITING: TimeZoneDB FREE tier allows 1 request/second
+if ( $time_since_last_call < 1.5 ) {
+    // Wait and reschedule ❌
+}
+```
+
+This blocked 9 out of 10 concurrent requests, wasting Premium's 10x speed!
+
+### ✅ THE FIX - Premium Tier Detection:
+
+**1. New Backend Setting:**
+```
+☑ I have TimezoneDB Premium ($9.99/month)
+```
+
+**2. Smart Rate Limiting:**
+```php
+// v3.2.83: Premium tier detection
+$is_premium = get_option( 'wta_timezonedb_premium', false );
+
+if ( ! $is_premium ) {
+    // FREE tier: Rate limit to 1 req/s
+    if ( $time_since_last_call < 1.5 ) {
+        as_schedule_single_action( time() + $wait_time, ... );
+        return;
+    }
+}
+// Premium tier: No rate limiting! Concurrent 10 handles it! 🚀
+```
+
+**3. Logging Shows Tier:**
+```
+🌍 Timezone resolved
+    tier: Premium (10 req/s) ✅
+```
+
+### 📊 PERFORMANCE IMPROVEMENT:
+
+**10,000 Cities Timezone Resolution:**
+
+| Tier | Rate | Time |
+|------|------|------|
+| FREE | 1 req/s | ~3 hours 🐌 |
+| **Premium** | **10 req/s** | **~17 minutes** ⚡ |
+
+**= 10.5x faster!** 🚀
+
+### 🎯 ADMIN UI:
+
+**New Setting: "TimezoneDB API Tier"**
+- ☐ Unchecked (FREE): Shows warning about 3-hour timezone resolution
+- ☑ Checked (Premium): Shows green success message with "Rate limiting disabled"
+- Link to upgrade: https://timezonedb.com/pricing
+
+**Status Indicators:**
+```
+FREE tier active ⚠️
+Rate limiting enforced (1 request/second).
+For 10,000 cities: ~3 hours
+
+Premium Active! ✅
+Rate limiting disabled.
+Timezone resolution: ~17 minutes
+```
+
+### 🔧 FILES MODIFIED:
+
+- `includes/processors/class-wta-single-timezone-processor.php`:
+  - Line 29-60: Premium tier detection and conditional rate limiting
+  - Line 134-139: Logging now shows tier (FREE/Premium)
+  - Header documentation updated
+- `includes/admin/class-wta-settings.php`:
+  - Registered `wta_timezonedb_premium` setting (boolean)
+- `includes/admin/views/data-import.php`:
+  - Added "TimezoneDB API Tier" checkbox with status indicators
+- `time-zone-clock.php`:
+  - Version bumped to 3.2.83
+
+### 🎯 UPGRADE INSTRUCTIONS:
+
+1. **Install v3.2.83**
+2. **Go to:** World Time AI → Data & Import
+3. **Check:** ☑ "I have TimezoneDB Premium"
+4. **Save settings**
+5. **Enjoy 10x faster timezone resolution!** ⚡
+
+### 💰 INVESTMENT vs. SAVINGS:
+
+**Premium Cost:** $9.99/month
+
+**Time Saved per full import (10k cities):**
+- Timezone: 3 hours → 17 min = **2h 43min saved** ✅
+- Your time = valuable!
+
+**= Premium pays for itself in ONE full import!** 🎯
+
+---
+
 ## [3.2.82] - 2026-01-11
 
 ### 🎯 TRUE Sequential Phases - Architecture Perfection!

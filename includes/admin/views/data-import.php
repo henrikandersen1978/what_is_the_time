@@ -200,6 +200,42 @@ $max_cities = get_option( 'wta_max_cities_per_country', 0 );
 						</td>
 					</tr>
 
+					<!-- TimezoneDB Premium Setting (v3.2.83) -->
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'TimezoneDB API Tier', WTA_TEXT_DOMAIN ); ?>
+						</th>
+						<td>
+							<label>
+								<input type="checkbox" 
+									name="wta_timezonedb_premium" 
+									value="1" 
+									<?php checked( get_option( 'wta_timezonedb_premium', false ), true ); ?>
+								/>
+								<?php esc_html_e( 'I have TimezoneDB Premium ($9.99/month)', WTA_TEXT_DOMAIN ); ?>
+							</label>
+							<p class="description">
+								<strong><?php esc_html_e( 'FREE tier:', WTA_TEXT_DOMAIN ); ?></strong> 1 request/second (rate limiting enforced)<br>
+								<strong><?php esc_html_e( 'Premium tier:', WTA_TEXT_DOMAIN ); ?></strong> 10 requests/second (no rate limiting, 10x faster!)<br>
+								<br>
+								<?php esc_html_e( 'Check this box if you have upgraded to Premium. This disables rate limiting and allows concurrent timezone resolution.', WTA_TEXT_DOMAIN ); ?>
+								<br>
+								<a href="https://timezonedb.com/pricing" target="_blank"><?php esc_html_e( 'Upgrade to Premium →', WTA_TEXT_DOMAIN ); ?></a>
+							</p>
+							<?php if ( get_option( 'wta_timezonedb_premium', false ) ): ?>
+								<p style="padding: 10px; background: #d4edda; border-left: 4px solid #28a745; color: #155724;">
+									<strong>✅ <?php esc_html_e( 'Premium Active!', WTA_TEXT_DOMAIN ); ?></strong><br>
+									<?php esc_html_e( 'Rate limiting disabled. Timezone resolution will use full concurrent capacity (10 requests/second).', WTA_TEXT_DOMAIN ); ?>
+								</p>
+							<?php else: ?>
+								<p style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107;">
+									<strong>⚠️ <?php esc_html_e( 'FREE tier active', WTA_TEXT_DOMAIN ); ?></strong><br>
+									<?php esc_html_e( 'Rate limiting enforced (1 request/second). For 10,000 cities, timezone resolution will take ~3 hours. With Premium: ~17 minutes!', WTA_TEXT_DOMAIN ); ?>
+								</p>
+							<?php endif; ?>
+						</td>
+					</tr>
+
 					<!-- City Processing Toggle (v3.0.72) -->
 					<tr>
 						<th scope="row">

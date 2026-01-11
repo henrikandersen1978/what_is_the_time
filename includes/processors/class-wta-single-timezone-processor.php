@@ -3,11 +3,14 @@
  * Single timezone processor for Action Scheduler (Pilanto-AI Model).
  *
  * Processes ONE timezone lookup per action.
- * CRITICAL: Must remain serial (1 concurrent) due to TimeZoneDB FREE tier limit!
+ * v3.2.83: Premium tier support!
+ * - FREE tier: Rate limited to 1 req/s (enforced)
+ * - Premium tier: No rate limiting, 10 req/s via concurrent
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/processors
  * @since      3.0.43
+ * @since      3.2.83 Added Premium tier support
  */
 
 class WTA_Single_Timezone_Processor {
@@ -28,32 +31,38 @@ class WTA_Single_Timezone_Processor {
 		
 		// Arguments already unpacked by Action Scheduler - no changes needed
 		try {
-			// RATE LIMITING: TimeZoneDB FREE tier allows 1 request/second
-			// Use transient as distributed lock across all runners
-			$last_api_call = get_transient( 'wta_timezone_api_last_call' );
+			// v3.2.83: Premium tier detection
+			$is_premium = get_option( 'wta_timezonedb_premium', false );
 			$wait_time_applied = 0;
 			
-		if ( false !== $last_api_call ) {
-			$time_since_last_call = microtime( true ) - $last_api_call;
-			if ( $time_since_last_call < 1.5 ) {
-				// Too soon! Wait and reschedule (v3.0.57: increased to 1.5s for 50% safety margin)
-				$wait_time = ceil( 2.0 - $time_since_last_call );
-				$wait_time_applied = $wait_time;
-					
-					WTA_Logger::debug( 'Timezone API rate limit - rescheduling', array(
-						'post_id'   => $post_id,
-						'wait_time' => $wait_time . ' seconds',
-					) );
-					
-					as_schedule_single_action(
-						time() + $wait_time,
-						'wta_lookup_timezone',
-						array( $post_id, $lat, $lng ),
-						'wta_timezone'
-					);
-					return;
+			// RATE LIMITING: Only apply for FREE tier
+			if ( ! $is_premium ) {
+				// FREE tier: 1 request/second (1.5s safety margin)
+				$last_api_call = get_transient( 'wta_timezone_api_last_call' );
+				
+				if ( false !== $last_api_call ) {
+					$time_since_last_call = microtime( true ) - $last_api_call;
+					if ( $time_since_last_call < 1.5 ) {
+						// Too soon! Wait and reschedule
+						$wait_time = ceil( 2.0 - $time_since_last_call );
+						$wait_time_applied = $wait_time;
+						
+						WTA_Logger::debug( 'Timezone API rate limit (FREE tier) - rescheduling', array(
+							'post_id'   => $post_id,
+							'wait_time' => $wait_time . ' seconds',
+						) );
+						
+						as_schedule_single_action(
+							time() + $wait_time,
+							'wta_lookup_timezone',
+							array( $post_id, $lat, $lng ),
+							'wta_timezone'
+						);
+						return;
+					}
 				}
 			}
+			// Premium tier: No rate limiting! Concurrent 10 handles throughput
 			
 			// Set timestamp BEFORE API call (pessimistic locking)
 			$api_start = microtime( true );
@@ -130,6 +139,7 @@ class WTA_Single_Timezone_Processor {
 			'timezone'       => $timezone,
 			'api_time'       => $api_time . 's',
 			'execution_time' => $execution_time . 's',
+			'tier'           => $is_premium ? 'Premium (10 req/s)' : 'FREE (1 req/s)',
 		) );
 
 		// CRITICAL: Schedule AI content after timezone resolved
