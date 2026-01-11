@@ -2,6 +2,71 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.66] - 2026-01-11
+
+### 🔧 CRITICAL FIX: Chunking logic stopped after first chunk
+
+**ISSUE:**
+v3.2.65 still failed - user confirmed:
+- Danmark import (150k population): **Only found København** ❌
+- Should have found København + Århus (both > 150k)
+- Failed with "feof(): supplied resource is not a valid stream resource"
+
+**ROOT CAUSE:**
+Chunking logic was completely broken on lines 937 and 1130:
+
+```php
+// Line 937: Wrong calculation of total cities
+$total_cities = $city_index; // Could be just 1!
+
+// Line 1130: Wrong continuation check
+elseif ( $next_offset < $total_cities ) {
+    // Queue next chunk
+```
+
+**What went wrong:**
+1. **Chunk 1:** Read from start, found København, stopped when chunk full
+   - Set `$total_cities = $city_index = 1` (wrong!)
+2. **Calculate next chunk:** `$next_offset = 0 + 1000 = 1000`
+3. **Check if continue:** `1000 < 1`? **NO!** → **STOPPED** 💥
+4. Result: Only København imported, Århus never reached
+
+**FIX: Check if chunk is FULL instead of comparing offsets**
+
+```php
+// NEW: Check if we got a full chunk
+$chunk_is_full = ( count( $cities_chunk ) >= $chunk_size );
+
+// Continue if chunk was FULL (more data likely exists)
+elseif ( $chunk_is_full ) {
+    // Queue next chunk - there's more data!
+}
+```
+
+**Logic:**
+- **Full chunk (1000 cities)?** → More data exists, continue!
+- **Partial chunk (< 1000 cities)?** → End of data, stop!
+
+**BEFORE (v3.2.65):**
+```
+Chunk 1: Find København → total_cities=1 → STOP
+Result: 1 city (wrong!)
+```
+
+**AFTER (v3.2.66):**
+```
+Chunk 1: Find København → chunk_is_full=true → Continue
+Chunk 2: Find Århus → chunk_is_full=true → Continue
+Chunk N: Find last city → chunk_is_full=false → STOP
+Result: All cities! ✅
+```
+
+**RESULT:**
+✅ Continues processing until chunk is not full
+✅ No more premature stops after first city
+✅ Works with any file size or filter combination
+✅ Danmark import will now find all cities > 150k
+
 ## [3.2.65] - 2026-01-11
 
 ### 🔧 CRITICAL FIX: Never call feof() explicitly

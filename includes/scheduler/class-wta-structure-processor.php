@@ -934,19 +934,21 @@ class WTA_Structure_Processor {
 	}
 	
 	$chunk_end = $offset + count( $cities_chunk );
-	$total_cities = $city_index; // Best estimate (actual filtered count)
+	$chunk_is_full = ( count( $cities_chunk ) >= $chunk_size ); // Did we get a full chunk?
 	
 	file_put_contents( $debug_file, sprintf(
-		"Single-pass complete: Read %d lines, skipped %d before chunk, loaded %d cities for processing\n",
+		"Single-pass complete: Read %d lines, skipped %d before chunk, loaded %d cities (chunk %s)\n",
 		$line_count,
 		$skipped_before_chunk,
-		count( $cities_chunk )
+		count( $cities_chunk ),
+		$chunk_is_full ? 'FULL' : 'PARTIAL'
 	), FILE_APPEND );
 	
 	WTA_Logger::info( sprintf(
-		'Processing chunk: %d cities loaded (offset: %d, filtered on-the-fly)',
+		'Processing chunk: %d cities loaded (offset: %d, chunk %s)',
 		count( $cities_chunk ),
-		$offset
+		$offset,
+		$chunk_is_full ? 'FULL - more to come' : 'PARTIAL - likely last chunk'
 	) );
 	
 	// STEP 3: Process each city in this chunk
@@ -1126,10 +1128,10 @@ class WTA_Structure_Processor {
 		file_put_contents( $debug_file, "\n⚠️ CHUNK STOP: Max chunks limit reached ($max_chunks)\n", FILE_APPEND );
 		WTA_Logger::warning( "Chunking stopped: Max chunks limit ($max_chunks)" );
 	}
-	// Safety check 2: More cities to process?
-	elseif ( $next_offset < $total_cities ) {
-		// Queue next chunk
-		$next_chunk_end = min( $next_offset + $chunk_size, $total_cities );
+	// Safety check 2: Was this chunk FULL? If yes, there's likely more data!
+	elseif ( $chunk_is_full ) {
+		// Chunk was full - continue processing
+		$next_chunk_end = $next_offset + $chunk_size;
 		
 		file_put_contents( $debug_file, sprintf(
 			"\n✅ CHUNK %d DONE: %d-%d, Queued %d. Next chunk: %d-%d\n",
@@ -1161,17 +1163,16 @@ class WTA_Structure_Processor {
 			'cities_import_chunk_' . $next_offset
 		);
 	} else {
-		// All chunks complete!
+		// All chunks complete! (chunk was not full = end of data)
 		file_put_contents( $debug_file, sprintf(
-			"\n🎉 ALL CHUNKS COMPLETE! Total: %d cities, Chunks: %d\n",
-			$total_cities,
+			"\n🎉 ALL CHUNKS COMPLETE! Last chunk had %d cities (partial chunk = end of data). Total chunks: %d\n",
+			count( $cities_chunk ),
 			$current_chunk_number
 		), FILE_APPEND );
 		
 		WTA_Logger::info( sprintf(
-			'All GeoNames chunks complete! Chunks: %d, Total cities: %d',
-			$current_chunk_number,
-			$total_cities
+			'All GeoNames chunks complete! Chunks processed: %d (stopped because last chunk was partial)',
+			$current_chunk_number
 		) );
 	}
 
