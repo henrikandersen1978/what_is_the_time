@@ -113,12 +113,28 @@ class WTA_Timezone_Helper {
 			return false;
 		}
 
+		// v3.3.10: Use VIP gateway for Premium tier
+		// Premium tier MUST use vip.timezonedb.com (not api.timezonedb.com)
+		// Using wrong endpoint causes HTTP 429 even with valid Premium key!
+		$is_premium = get_option( 'wta_timezonedb_premium', false );
+		$base_url = $is_premium 
+			? 'http://vip.timezonedb.com'    // Premium VIP gateway
+			: 'http://api.timezonedb.com';   // Free tier gateway
+
 		$url = sprintf(
-			'http://api.timezonedb.com/v2.1/get-time-zone?key=%s&format=json&by=position&lat=%s&lng=%s',
+			'%s/v2.1/get-time-zone?key=%s&format=json&by=position&lat=%s&lng=%s',
+			$base_url,
 			$api_key,
 			$lat,
 			$lng
 		);
+
+		WTA_Logger::debug( 'TimezoneDB API request', array(
+			'endpoint' => $is_premium ? 'VIP (Premium)' : 'Standard (Free)',
+			'url' => str_replace( $api_key, '***KEY***', $url ),
+			'lat' => $lat,
+			'lng' => $lng,
+		) );
 
 		$response = wp_remote_get( $url, array( 'timeout' => 10 ) );
 

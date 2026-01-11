@@ -2,6 +2,152 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.10] - 2026-01-11
+
+### 🎯 CRITICAL FIX: Premium Tier Must Use VIP Gateway!
+
+**USER DISCOVERY:**
+"i mail jeg fik fra timezone db, står der at gateway er http://vip.timezonedb.com"
+
+**THE PROBLEM:**
+
+After v3.3.9 revealed HTTP 429 errors, user discovered the root cause:
+
+```
+❌ Plugin uses: http://api.timezonedb.com (FREE tier gateway)
+✅ Premium needs: http://vip.timezonedb.com (VIP gateway)
+
+Result with Premium key + wrong endpoint:
+- HTTP 429: "Too Many Request"
+- 98 failed API calls
+- Only 8% success rate
+```
+
+**ROOT CAUSE:**
+
+TimezoneDB Premium tier requires a **different API endpoint**:
+
+| Tier | Gateway | Rate Limit |
+|------|---------|------------|
+| **FREE** | `api.timezonedb.com` | 1 req/s |
+| **PREMIUM** | `vip.timezonedb.com` | 10 req/s |
+
+**Our code ALWAYS used FREE tier gateway:**
+
+```php
+// v3.3.9 and earlier (WRONG for Premium!):
+$url = 'http://api.timezonedb.com/v2.1/get-time-zone?...';
+
+// Result: Premium key + FREE endpoint = HTTP 429! ❌
+```
+
+**Why This Happened:**
+
+When user enabled Premium checkbox:
+- ✅ Rate limiting was disabled in `class-wta-single-timezone-processor.php`
+- ✅ Premium tier logging added
+- ❌ **BUT:** API endpoint was still hardcoded to FREE tier gateway!
+
+This is like having a VIP pass but standing in the regular line! 🎫
+
+### ✅ THE FIX - Dynamic Gateway Selection:
+
+**Now endpoint changes based on Premium status:**
+
+```php
+// v3.3.10: Dynamic gateway selection
+$is_premium = get_option( 'wta_timezonedb_premium', false );
+$base_url = $is_premium 
+    ? 'http://vip.timezonedb.com'    // ← Premium VIP gateway
+    : 'http://api.timezonedb.com';   // ← Free tier gateway
+
+$url = sprintf(
+    '%s/v2.1/get-time-zone?key=%s&format=json&by=position&lat=%s&lng=%s',
+    $base_url,  // ← Dynamic!
+    $api_key,
+    $lat,
+    $lng
+);
+
+// Added debug logging to verify correct endpoint:
+WTA_Logger::debug( 'TimezoneDB API request', array(
+    'endpoint' => $is_premium ? 'VIP (Premium)' : 'Standard (Free)',
+    'url' => str_replace( $api_key, '***KEY***', $url ),
+    'lat' => $lat,
+    'lng' => $lng,
+) );
+```
+
+### 📊 EXPECTED RESULTS:
+
+**Before (v3.3.9 with Premium key):**
+```
+Endpoint: api.timezonedb.com (FREE tier)
+100 API calls @ 10 req/s
+❌ HTTP 429: Too Many Request
+❌ Success rate: 8%
+```
+
+**After (v3.3.10 with Premium key):**
+```
+Endpoint: vip.timezonedb.com (VIP gateway) ✅
+100 API calls @ 10 req/s
+✅ HTTP 200: OK
+✅ Success rate: 100%
+```
+
+### 🔍 HOW TO VERIFY:
+
+**Check logs for correct endpoint:**
+
+```
+[TIME] DEBUG: TimezoneDB API request
+Context: {
+    "endpoint": "VIP (Premium)",  ← Should show "VIP" not "Standard"!
+    "url": "http://vip.timezonedb.com/v2.1/get-time-zone?key=***KEY***&...",
+    "lat": 25.68,
+    "lng": -100.31
+}
+
+[TIME] INFO: 🌍 Timezone resolved
+Context: {
+    "timezone": "America/Monterrey",
+    "api_time": "0.21s",
+    "tier": "Premium (10 req/s)"
+}
+```
+
+### 🎯 WHY THIS IS CRITICAL:
+
+**Without this fix:**
+- Premium subscription = **WASTED MONEY** 💸
+- Plugin thinks it's using Premium (rate limiting disabled)
+- But API thinks it's FREE tier (wrong gateway)
+- Result: HTTP 429 errors everywhere
+
+**With this fix:**
+- Premium subscription = **WORKS AS EXPECTED** ✅
+- Correct VIP gateway used
+- True 10 req/s rate
+- 100% success rate
+
+### 🔧 AFFECTED FILES:
+
+- `includes/helpers/class-wta-timezone-helper.php`
+  - Line 108-138: Dynamic gateway selection based on Premium status
+  - Line 131-137: Added debug logging to show which endpoint is used
+
+### 💡 LESSON LEARNED:
+
+**Always read the welcome email from API providers!**
+
+TimezoneDB Premium welcome email specifically states:
+> "Gateway: http://vip.timezonedb.com"
+
+This was the missing piece of the puzzle! 🧩
+
+---
+
 ## [3.3.9] - 2026-01-11
 
 ### 🔍 DEBUG: Enhanced TimezoneDB API Error Logging
