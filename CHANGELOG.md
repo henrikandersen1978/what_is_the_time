@@ -2,6 +2,53 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.72] - 2026-01-11
+
+### 🔧 HOTFIX: "Using $this when not in object context" fatal error
+
+**USER REPORT:**
+After installing v3.2.71, AI content generation failed with:
+```
+Fatal error: Using $this when not in object context
+in class-wta-faq-generator.php on line 820
+```
+
+**ROOT CAUSE:**
+v3.2.71 changed moon phase logic to use `$this->translate()`:
+```php
+private static function calculate_moon_phase() {  // ← STATIC method
+    // ...
+    $phase_name = $this->translate( $phase_key, $this->language );  // ← ERROR!
+}
+```
+
+**Problem:** `$this` cannot be used in static methods!
+
+**THE FIX:**
+Changed to get translations directly from `wta_faq_strings` option (same as other FAQ methods):
+
+```php
+// OLD (v3.2.71 - broken):
+$phase_name = $this->translate( $phase_key, $this->language );
+
+// NEW (v3.2.72 - fixed):
+$faq_strings = get_option( 'wta_faq_strings', array() );
+$phase_name = isset( $faq_strings[ $phase_key ] ) ? $faq_strings[ $phase_key ] : 'Unknown';
+```
+
+**Why this works:**
+- `get_option('wta_faq_strings')` contains ALL translated strings loaded from JSON files
+- No need for `$this` - works in static context ✅
+- Same approach as `get_faq_text()` method uses
+
+**RESULT:**
+- ✅ Moon phase translations work correctly
+- ✅ No fatal errors in AI content generation
+- ✅ Static method context preserved
+
+**Files changed:**
+- `includes/helpers/class-wta-faq-generator.php` - Fixed static method to use get_option() instead of $this
+
 ## [3.2.71] - 2026-01-11
 
 ### 🌙 FIX: Hardcoded Danish moon phase names in FAQ

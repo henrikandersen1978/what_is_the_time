@@ -816,8 +816,9 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 			$phase_key = 'moon_waning_crescent';
 		}
 		
-		// Translate phase name to current language
-		$phase_name = $this->translate( $phase_key, $this->language );
+		// Translate phase name to current language (get from wta_faq_strings option)
+		$faq_strings = get_option( 'wta_faq_strings', array() );
+		$phase_name = isset( $faq_strings[ $phase_key ] ) ? $faq_strings[ $phase_key ] : 'Unknown';
 		
 		return array(
 			'percentage'  => number_format( $percentage, 1 ),
