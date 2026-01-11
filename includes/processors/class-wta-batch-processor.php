@@ -88,6 +88,7 @@ class WTA_Batch_Processor {
 		WTA_Logger::info( '🌍 Starting batch timezone scheduling...' );
 
 		// Find all cities that need timezone resolution
+		// v3.3.2: Include cities with 'pending' or 'waiting_for_toggle' status
 		$cities_needing_timezone = $wpdb->get_results(
 			"SELECT p.ID, pm_lat.meta_value as lat, pm_lng.meta_value as lng, pm_country.meta_value as country_code
 			 FROM {$wpdb->posts} p
@@ -95,13 +96,10 @@ class WTA_Batch_Processor {
 			 INNER JOIN {$wpdb->postmeta} pm_lat ON p.ID = pm_lat.post_id AND pm_lat.meta_key = 'wta_latitude'
 			 INNER JOIN {$wpdb->postmeta} pm_lng ON p.ID = pm_lng.post_id AND pm_lng.meta_key = 'wta_longitude'
 			 INNER JOIN {$wpdb->postmeta} pm_country ON p.ID = pm_country.post_id AND pm_country.meta_key = 'wta_country_code'
+			 LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone_status'
 			 WHERE p.post_type = 'world_time_location'
 			 AND p.post_status = 'publish'
-			 AND NOT EXISTS (
-				 SELECT 1 FROM {$wpdb->postmeta} pm_tz
-				 WHERE pm_tz.post_id = p.ID
-				 AND pm_tz.meta_key = 'wta_timezone_status'
-			 )"
+			 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value IN ('pending', 'waiting_for_toggle'))"
 		);
 
 		$scheduled = 0;
@@ -152,19 +150,16 @@ class WTA_Batch_Processor {
 	public static function check_timezone_completion() {
 		global $wpdb;
 
-		// Count cities without timezone
+		// Count cities without resolved timezone
+		// v3.3.2: Only count cities (type = 'city'), not continents/countries
 		$pending_timezone = $wpdb->get_var(
 			"SELECT COUNT(*)
 			 FROM {$wpdb->posts} p
-			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+			 INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type' AND pm_type.meta_value = 'city'
+			 LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone_status'
 			 WHERE p.post_type = 'world_time_location'
 			 AND p.post_status = 'publish'
-			 AND NOT EXISTS (
-				 SELECT 1 FROM {$wpdb->postmeta} pm_tz
-				 WHERE pm_tz.post_id = p.ID
-				 AND pm_tz.meta_key = 'wta_timezone_status'
-				 AND pm_tz.meta_value = 'resolved'
-			 )"
+			 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value != 'resolved')"
 		);
 
 		WTA_Logger::info( '🔍 Timezone completion check', array(

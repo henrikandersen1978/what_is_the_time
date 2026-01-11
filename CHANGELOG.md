@@ -2,6 +2,94 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.2] - 2026-01-11
+
+### 🔴 CRITICAL HOTFIX: Batch Timezone Scheduling Finds 0 Cities
+
+**USER REPORT:**
+"Kontinenter, lande og byer er oprettet, men så sker der ikke mere."
+
+**THE PROBLEM:**
+When structure phase completes, batch timezone scheduling found 0 cities:
+```
+[15:56:34] INFO: 🌍 Starting batch timezone scheduling...
+[15:56:34] INFO: ✅ Timezone batch scheduled
+Context: {
+    "total_cities": 0,      ← SHOULD BE 165!
+    "api_scheduled": 0,
+    "simple_resolved": 0
+}
+```
+
+**ROOT CAUSE:**
+During city creation, `wta_timezone_status` meta is set based on country type:
+- **API countries** (Peru, Argentina, etc.): `'pending'`
+- **Simple countries** (Danmark, Sverige, Norge): No meta key set
+- **Processing disabled**: `'waiting_for_toggle'`
+
+But `batch_schedule_timezone()` query ONLY looked for cities WITHOUT the meta key:
+```sql
+AND NOT EXISTS (
+    SELECT 1 FROM postmeta
+    WHERE meta_key = 'wta_timezone_status'
+)
+```
+
+**= Missed ALL API countries with status = 'pending'!** ❌
+
+**THE CONSEQUENCE:**
+- ✅ Structure phase completed (165 cities created)
+- ❌ Timezone batch found 0 cities (should find 165!)
+- ❌ AI batch never triggered (waiting for timezone completion)
+- ❌ Import stalled after structure phase!
+
+### ✅ THE FIX:
+
+**Updated `batch_schedule_timezone()` query:**
+```sql
+-- OLD (only finds cities without meta key):
+AND NOT EXISTS (
+    SELECT 1 FROM postmeta
+    WHERE meta_key = 'wta_timezone_status'
+)
+
+-- NEW (finds ALL cities needing timezone):
+LEFT JOIN postmeta pm_tz ON p.ID = pm_tz.post_id 
+    AND pm_tz.meta_key = 'wta_timezone_status'
+WHERE (
+    pm_tz.meta_value IS NULL 
+    OR pm_tz.meta_value IN ('pending', 'waiting_for_toggle')
+)
+```
+
+**Updated `check_timezone_completion()` query:**
+```sql
+-- OLD (counted continents/countries too):
+AND NOT EXISTS (
+    SELECT 1 FROM postmeta
+    WHERE meta_key = 'wta_timezone_status'
+    AND meta_value = 'resolved'
+)
+
+-- NEW (only counts cities without resolved timezone):
+INNER JOIN postmeta pm_type ON ... AND pm_type.meta_value = 'city'
+LEFT JOIN postmeta pm_tz ON ... AND pm_tz.meta_key = 'wta_timezone_status'
+WHERE (pm_tz.meta_value IS NULL OR pm_tz.meta_value != 'resolved')
+```
+
+### 🎯 AFFECTED FILES:
+- `includes/processors/class-wta-batch-processor.php`
+  - Line 91-105: `batch_schedule_timezone()` query fixed
+  - Line 156-168: `check_timezone_completion()` query fixed
+
+### 🧪 TESTING:
+1. Import with API countries (Peru, Argentina) + simple countries (Danmark)
+2. Structure phase completes → batch timezone should find ALL cities
+3. Timezone phase processes → should resolve all
+4. AI batch triggers for cities after timezone completion
+
+---
+
 ## [3.3.1] - 2026-01-11
 
 ### 🚀 OPTIMIZATION: 3-Phase AI Strategy - Faster Continent + Country AI!
