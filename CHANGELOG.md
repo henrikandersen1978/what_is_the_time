@@ -2,6 +2,45 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.2.67] - 2026-01-11
+
+### 🔧 FIX: Remove double filtering
+
+**ISSUE:**
+v3.2.66 had duplicate filtering logic that could cause unexpected behavior:
+- Line 889: Filtered during file reading (correct!)
+- Line 980: Filtered AGAIN after loading chunk (wrong!)
+
+**ROOT CAUSE:**
+When refactoring to single-pass streaming with early filtering, I moved the filters to the file reading stage BUT forgot to remove the old filtering logic in the foreach loop that processes the loaded chunk.
+
+**RESULT:**
+Cities were being filtered twice, which was inefficient and could cause confusion in logs/stats.
+
+**FIX:**
+Removed duplicate filters on lines 973-983. Cities in `$cities_chunk` have already passed all filters during file reading.
+
+```php
+// BEFORE: Double filtering
+// Filter during file read (line 889)
+if ( $min_population > 0 && $population < $min_population ) {
+    continue;
+}
+// ... later ... filter AGAIN (line 980)
+if ( $min_population > 0 && $city['population'] < $min_population ) {
+    continue; // Redundant!
+}
+
+// AFTER: Single filtering
+// Filter during file read only (line 889)
+// Cities in $cities_chunk already passed filters!
+```
+
+**NOTE:** If you're still getting "feof(): supplied resource is not a valid stream resource" errors:
+1. Make sure you've installed v3.2.67 (check Plugins page)
+2. DELETE all old failed actions from previous versions
+3. Start a FRESH import (don't "Run" old failed actions!)
+
 ## [3.2.66] - 2026-01-11
 
 ### 🔧 CRITICAL FIX: Chunking logic stopped after first chunk

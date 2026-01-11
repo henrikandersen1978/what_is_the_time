@@ -967,20 +967,12 @@ class WTA_Structure_Processor {
 		
 		// Log first city
 		if ( $total_read === 1 ) {
-			file_put_contents( $debug_file, "First city: " . $city['name'] . " (GID:" . $city['geonameid'] . ", " . $city['country_code'] . ")\n", FILE_APPEND );
+			file_put_contents( $debug_file, "First city: " . $city['name'] . " (GID:" . $city['geonameid'] . ", " . $city['country_code'] . ", Pop:" . $city['population'] . ")\n", FILE_APPEND );
 		}
 			
-		// Filter by country_code
-		if ( ! empty( $filtered_country_codes ) && ! in_array( $city['country_code'], $filtered_country_codes, true ) ) {
-			$skipped_country++;
-			continue;
-		}
-			
-		// Population filter
-		if ( $min_population > 0 && $city['population'] < $min_population ) {
-			$skipped_population++;
-			continue;
-		}
+		// NOTE: Country and population filters are applied DURING file reading (lines 884-891)
+		// Cities in $cities_chunk have ALREADY passed these filters!
+		// No need to filter again here.
 		
 		// GPS validation (GeoNames data is reliable, just basic sanity checks)
 		$lat = $city['latitude'];
