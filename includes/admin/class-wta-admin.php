@@ -911,6 +911,8 @@ class WTA_Admin {
 		OR option_name LIKE '_transient_timeout_wta_continent_data_%'
 		OR option_name LIKE '_transient_wta_regional_centres_%'
 		OR option_name LIKE '_transient_timeout_wta_regional_centres_%'
+		OR option_name LIKE '_transient_wta_nearby_countries_%'
+		OR option_name LIKE '_transient_timeout_wta_nearby_countries_%'
 	" );
 
 		WTA_Logger::info( 'Shortcode cache cleared by user (' . $deleted . ' entries)' );

@@ -2,6 +2,106 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.4.2] - 2026-01-12
+
+### 🐛 FIX: Nearby Countries Cache & Count Issues
+
+**USER REPORT:**
+"disse tal passer ikke. 10 byer er pt oprettet for brasilien og jeg har tømt shortcode cache. Alligevel vises der kun 1 plats i databasen."
+
+**THE PROBLEM:**
+
+Two related issues with `[wta_nearby_countries]` shortcode:
+
+**Issue 1: Cache Not Cleared**
+```php
+// ajax_clear_shortcode_cache() in class-wta-admin.php
+// Cleared these transients:
+- wta_child_locations
+- wta_nearby_cities       ✅
+- wta_major_cities
+- wta_regional_centres
+// But NOT:
+- wta_nearby_countries    ❌ MISSING!
+```
+
+When user clicked "Clear Shortcode Cache", `wta_nearby_countries_*` transients were NOT deleted. Old cached data (e.g., "1 plats") persisted for 24 hours even after all cities were published.
+
+**Issue 2: Only Counted Published Cities**
+```php
+// Line 798 in class-wta-shortcodes.php
+SELECT COUNT(*) as city_count 
+FROM wp_posts 
+WHERE post_status = 'publish'  // ❌ Only published!
+```
+
+During import, cities are created as `draft` and only set to `publish` when AI content is done. If 9/10 cities were still processing, count would show "1" instead of "10".
+
+### ✅ THE FIX:
+
+**1. Added `wta_nearby_countries` to Clear Cache Function:**
+
+```php
+// class-wta-admin.php (ajax_clear_shortcode_cache)
+OR option_name LIKE '_transient_wta_nearby_countries_%'
+OR option_name LIKE '_transient_timeout_wta_nearby_countries_%'
+```
+
+Now clicking "Clear Shortcode Cache" properly clears nearby countries cache! ✅
+
+**2. Include Draft Cities in Count:**
+
+```php
+// BEFORE (v3.4.1):
+AND post_status = 'publish'
+
+// AFTER (v3.4.2):
+AND post_status IN ('publish', 'draft')
+```
+
+Counts all cities regardless of publication status. This matches the pattern used elsewhere in the codebase (AI processor, batch processor, etc.).
+
+**3. Bumped Cache Version (v7 → v8):**
+
+```php
+// BEFORE:
+$cache_key = 'wta_nearby_countries_' . $post_id . '_v7_' . intval($atts['count']);
+
+// AFTER:
+$cache_key = 'wta_nearby_countries_' . $post_id . '_v8_' . intval($atts['count']);
+```
+
+Old cache (v7) is automatically ignored. New cache (v8) uses updated count query.
+
+### 📊 RESULT:
+
+**Before (v3.4.1):**
+- Brazil: 10 cities created → Shows "1 plats i databasen" ❌
+- Click "Clear Shortcode Cache" → No effect ❌
+- Wait 24 hours → Still shows old count ❌
+
+**After (v3.4.2):**
+- Brazil: 10 cities created → Shows "10 platser i databasen" ✅
+- Click "Clear Shortcode Cache" → Clears nearby countries cache ✅
+- New cache uses correct count query ✅
+
+### 🔧 MODIFIED FILES:
+
+- ✅ `includes/admin/class-wta-admin.php` (Added `wta_nearby_countries` to clear cache)
+- ✅ `includes/frontend/class-wta-shortcodes.php` (Changed `post_status` query, bumped v7→v8)
+
+### 🚀 DEPLOYMENT:
+
+**No re-import needed.** Simply:
+1. Upload v3.4.2
+2. Click "Clear Shortcode Cache" in Tools
+3. Visit any page with `[wta_nearby_countries]`
+4. Counts now accurate! ✅
+
+**Cache cleared automatically on first page load** (v8 ignores old v7 cache).
+
+---
+
 ## [3.4.1] - 2026-01-12
 
 ### 🐛 CRITICAL FIX: count() Error in v3.4.0

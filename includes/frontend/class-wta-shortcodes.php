@@ -760,8 +760,8 @@ class WTA_Shortcodes {
 		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
 		
-		// Cache nearby countries list (24 hours) - v7 for pre-calculated country GPS
-		$cache_key = 'wta_nearby_countries_' . $post_id . '_v7_' . intval( $atts['count'] );
+		// Cache nearby countries list (24 hours) - v8 includes draft+publish cities count
+		$cache_key = 'wta_nearby_countries_' . $post_id . '_v8_' . intval( $atts['count'] );
 		$cached_data = get_transient( $cache_key );
 		
 		if ( false !== $cached_data && is_array( $cached_data ) ) {
@@ -795,7 +795,7 @@ class WTA_Shortcodes {
 				FROM {$wpdb->posts} 
 				WHERE post_parent IN (%1s)
 				AND post_type = %s 
-				AND post_status = 'publish'
+				AND post_status IN ('publish', 'draft')
 				GROUP BY post_parent",
 				$country_ids_string,
 				WTA_POST_TYPE
