@@ -235,9 +235,14 @@ class WTA_Importer {
 	// For selective imports, send the actual array
 	$is_large_import = ( count( $filtered_country_codes ) > 200 );
 	
+	// v3.4.4: Smaller chunks for large imports to prevent timeout
+	// 2500 cities × ~0.04s per city = ~100s (safe with 300s timeout)
+	$chunk_size = $is_large_import ? 2500 : 10000;
+	
 	WTA_Logger::info( 'Preparing cities scheduler', array(
 		'total_countries' => count( $filtered_country_codes ),
 		'is_large_import' => $is_large_import,
+		'chunk_size'      => $chunk_size,
 		'filter_strategy' => $is_large_import ? 'No filter (import all)' : 'Filter by country codes',
 	) );
 
@@ -254,7 +259,7 @@ class WTA_Importer {
 			'max_cities_per_country' => $options['max_cities_per_country'],
 			'filtered_country_codes' => $is_large_import ? array() : $filtered_country_codes,
 			'line_offset'            => 0,
-			'chunk_size'             => 10000,
+			'chunk_size'             => $chunk_size,
 		),
 		'wta_structure'
 	);

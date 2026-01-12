@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           3.4.3
+ * Version:           3.4.4
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '3.3.14' );
+define( 'WTA_VERSION', '3.4.4' );
 
 /**
  * Plugin directory path.
@@ -148,8 +148,8 @@ function wta_optimize_action_scheduler() {
 	} else {
 		// 1-minute interval: Keep short to avoid overlap (83% of interval)
 		$time_limit = 50;       // 50 seconds
-		$timeout_period = 180;  // 3 minutes
-		$failure_period = 180;  // 3 minutes
+		$timeout_period = 300;  // 5 minutes (v3.4.4: increased from 180s)
+		$failure_period = 300;  // 5 minutes (v3.4.4: increased from 180s)
 	}
 	
 	// ==========================================
