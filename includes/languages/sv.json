@@ -204,7 +204,7 @@
   },
   "faq": {
     "faq1_question": "Vad är klockan i {city_name} just nu?",
-    "faq1_answer": "Klockan i {city_name} är <strong id=\"faq-live-time\">{current_time}</strong>. Staden ligger i tidszonen {timezone}{utc_offset}.",
+    "faq1_answer": "Klockan i {city_name} är {current_time}. Staden ligger i tidszonen {timezone}{utc_offset}.",
     "faq2_question": "Vilken tidszon har {city_name}?",
     "faq2_answer": "{city_name} använder tidszonen <strong>{timezone}</strong> med UTC-offset <strong>{utc_offset}</strong> ({abbr}).",
     "faq3_question": "När går solen upp och ner i {city_name}?",

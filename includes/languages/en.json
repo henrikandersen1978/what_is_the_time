@@ -195,7 +195,7 @@
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",
-    "faq1_answer": "The time in {city_name} is <strong id=\"faq-live-time\">{current_time}</strong>. The city is in the {timezone} timezone{utc_offset}.",
+    "faq1_answer": "The time in {city_name} is {current_time}. The city is in the {timezone} timezone{utc_offset}.",
     "faq2_question": "What is the timezone in {city_name}?",
     "faq2_answer": "{city_name} uses the <strong>{timezone}</strong> timezone with a UTC offset of <strong>{utc_offset}</strong> ({abbr}).",
     "faq3_question": "When does the sun rise and set in {city_name}?",

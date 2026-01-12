@@ -2,6 +2,71 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.3.15] - 2026-01-12
+
+### 🐛 FIX: JSON Template Conflict with Live FAQ Time
+
+**USER FEEDBACK:**
+"skulle der ikke være live-tid her? Eller har jeg misforstået" (viewing content imported before v3.3.14)
+
+**THE PROBLEM:**
+
+v3.3.14 introduced live time updates for FAQ #1 by wrapping time in:
+```html
+<span class="wta-live-faq-time" data-timezone="Europe/Stockholm">09:01:09</span>
+```
+
+BUT the JSON language files (da.json, sv.json, de.json, en.json) still had:
+```json
+"faq1_answer": "Klokken er <strong id=\"faq-live-time\">{current_time}</strong>..."
+```
+
+**Result:**
+```html
+<strong id="faq-live-time">
+  <span class="wta-live-faq-time" data-timezone="...">09:01:09</span>
+</strong>
+```
+
+This nested structure could prevent JavaScript from properly targeting `.wta-live-faq-time` elements.
+
+### ✅ THE FIX:
+
+**Removed old HTML wrapper from all JSON templates:**
+
+**BEFORE (all language files):**
+```json
+"faq1_answer": "... <strong id=\"faq-live-time\">{current_time}</strong> ..."
+```
+
+**AFTER (all language files):**
+```json
+"faq1_answer": "... {current_time} ..."
+```
+
+**WHY:**
+PHP code in `class-wta-faq-generator.php` (v3.3.14) already wraps `{current_time}` with proper `<span>` tag and data attributes. JSON template should just provide the placeholder!
+
+**FILES UPDATED:**
+- ✅ `includes/languages/da.json` (line 207)
+- ✅ `includes/languages/sv.json` (line 207)
+- ✅ `includes/languages/de.json` (line 198)
+- ✅ `includes/languages/en.json` (line 198)
+- ✅ `includes/helpers/class-wta-faq-generator.php` (fallback string, line 979)
+- ✅ `includes/class-wta-activator.php` (fallback default, line 610)
+
+**DEPLOYMENT:**
+1. Upload v3.3.15 plugin
+2. Go to "Timezone & Language" settings
+3. Click "🔄 Load Default Prompts for [LANGUAGE]" to reload JSON templates
+4. Re-import cities OR manually clear FAQ cache to regenerate FAQ content
+
+**RESULT:**
+- ✅ Clean HTML structure (no nested wrappers)
+- ✅ JavaScript can properly target `.wta-live-faq-time` elements
+- ✅ Live time updates work as intended
+- ✅ Consistent with v3.3.14 PHP implementation
+
 ## [3.3.14] - 2026-01-12
 
 ### ⏰ LIVE FAQ TIME - Best of Both Worlds!

@@ -607,7 +607,7 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			'wta_base_language_description' => 'Skriv på flydende dansk til danske brugere',
 			'wta_faq_strings' => array(
 				'faq1_question' => 'Hvad er klokken i {city_name} lige nu?',
-				'faq1_answer' => 'Klokken i {city_name} er <strong id="faq-live-time">{current_time}</strong>.',
+				'faq1_answer' => 'Klokken i {city_name} er {current_time}.',
 			),
 		);
 	}

@@ -976,7 +976,7 @@ private static function generate_jetlag_faq_template( $city_name, $timezone ) {
 		// Fallback to hardcoded Danish if option is empty or key not found
 		$fallback_strings = array(
 			'faq1_question' => 'Hvad er klokken i {city_name} lige nu?',
-			'faq1_answer' => 'Klokken i {city_name} er <strong id="faq-live-time">{current_time}</strong>. Byen ligger i tidszonen {timezone}{utc_offset}.',
+			'faq1_answer' => 'Klokken i {city_name} er {current_time}. Byen ligger i tidszonen {timezone}{utc_offset}.',
 			'faq2_question' => 'Hvad er tidszonen i {city_name}?',
 			'faq2_answer' => '{city_name} bruger tidszonen <strong>{timezone}</strong> med UTC offset på <strong>{utc_offset}</strong> ({abbr}).',
 			'faq3_question' => 'Hvornår går solen op og ned i {city_name}?',
