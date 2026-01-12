@@ -26,16 +26,18 @@ class WTA_Database_Maintenance {
 	 * - Deletes logs for those actions (via action_scheduler_deleted_action hook)
 	 * 
 	 * Default: 31 days (2,678,400 seconds)
-	 * Our setting: 1 hour (3,600 seconds) for fast 24-hour imports
+	 * Our setting: 10 minutes (600 seconds) for fast 24-hour imports
 	 * 
 	 * @since    3.4.8
+	 * @since    3.4.9  Reduced from 1 hour to 10 minutes for better backend performance.
 	 * @param    int $seconds Retention period in seconds.
-	 * @return   int          1 hour in seconds.
+	 * @return   int          10 minutes in seconds.
 	 */
 	public static function set_retention_period( $seconds ) {
-		// 1 hour = 3600 seconds
-		// Actions/logs older than 1 hour will be deleted automatically
-		return HOUR_IN_SECONDS;
+		// 10 minutes = 600 seconds
+		// Actions/logs older than 10 minutes will be deleted automatically
+		// Keeps Action Scheduler UI responsive during 24-hour imports
+		return 10 * MINUTE_IN_SECONDS;
 	}
 	
 	/**
