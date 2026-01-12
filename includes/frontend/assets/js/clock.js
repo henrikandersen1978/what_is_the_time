@@ -30,6 +30,9 @@
 		
 		// Global comparison times
 		updateComparisonTimes();
+		
+		// FAQ time elements (v3.3.14)
+		updateFaqTimes();
 	}
 	
 	// Update SEO Direct Answer section (TIME ONLY - date is static from PHP!)
@@ -226,6 +229,35 @@
 			} catch (error) {
 				console.error('Error updating comparison time:', error);
 				timeEl.textContent = '--:--:--';
+			}
+		});
+	}
+	
+	// Update FAQ time elements (v3.3.14)
+	// Provides live time updates in FAQ answers while maintaining SEO-friendly server-rendered times
+	function updateFaqTimes() {
+		const faqTimes = document.querySelectorAll('.wta-live-faq-time[data-timezone]');
+		
+		// Use dynamic locale from PHP (window.wtaLocale) or fallback to da-DK
+		const locale = window.wtaLocale || 'da-DK';
+		
+		faqTimes.forEach(function(timeEl) {
+			const timezone = timeEl.getAttribute('data-timezone');
+			
+			try {
+				const now = new Date();
+				const formatter = new Intl.DateTimeFormat(locale, {
+					timeZone: timezone,
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false
+				});
+				
+				timeEl.textContent = formatter.format(now);
+			} catch (error) {
+				console.error('Error updating FAQ time:', error);
+				// Keep server-rendered time on error (graceful degradation)
 			}
 		});
 	}

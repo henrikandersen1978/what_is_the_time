@@ -169,7 +169,8 @@ class WTA_FAQ_Generator {
 	 * @since    2.35.0
 	 */
 	private static function generate_current_time_faq( $city_name, $timezone ) {
-		// Get current time (will be dynamic on page load via JavaScript)
+		// Get current time - server-rendered for SEO, then updated live by JavaScript
+		// v3.3.14: Hybrid approach for best UX + SEO
 		$current_time = WTA_Timezone_Helper::get_current_time_in_timezone( $timezone, 'H:i:s' );
 		
 		// Get UTC offset
@@ -183,10 +184,15 @@ class WTA_FAQ_Generator {
 	// Format UTC offset for answer
 	$utc_offset_formatted = ! empty( $utc_offset ) ? " (UTC{$utc_offset})" : '';
 	
+	// v3.3.14: Wrap time in span for JavaScript live updates
+	// Server renders valid time (good for SEO/crawlers), JavaScript updates it live (good for users)
+	$current_time_html = '<span class="wta-live-faq-time" data-timezone="' . esc_attr( $timezone ) . '">' . 
+	                     esc_html( $current_time ) . '</span>';
+	
 	$question = self::get_faq_text( 'faq1_question', array( 'city_name' => $city_name ) );
 	$answer = self::get_faq_text( 'faq1_answer', array(
 		'city_name' => $city_name,
-		'current_time' => $current_time,
+		'current_time' => $current_time_html,
 		'timezone' => $timezone,
 		'utc_offset' => $utc_offset_formatted
 	) );
