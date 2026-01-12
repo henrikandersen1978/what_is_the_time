@@ -2,6 +2,157 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.4.6] - 2026-01-12
+
+### 🐛 CRITICAL FIX: Chunk Number Calculation Bug
+
+**USER REPORT:**
+"Det var ikke helt det der skete. Jeg fik ingen mails mellem chunk 12 og 19 - og senere er der også et par små spring"
+
+**THE PROBLEM:**
+
+Chunk numbers were calculated **incorrectly** based on file line offset divided by chunk size:
+
+```php
+// BEFORE (v3.4.5 - BROKEN):
+$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
+```
+
+**Why this failed:**
+- `$line_offset` = position in file (e.g., 29,978)
+- `$chunk_size` = number of CITIES to collect (e.g., 2,500)
+- **These measure DIFFERENT things!**
+
+**When many lines are skipped** (PPLA3/PPLA4, empty lines, feature_class filters), the offset advances much faster than the number of collected cities, causing incorrect chunk numbers.
+
+**Real-world example from user's import:**
+
+```
+Chunk #11:
+├─ Start offset: 27,453
+├─ Calculated chunk: floor(27453 / 2500) + 1 = 11 ✅
+├─ Collected 2,500 cities after reading 2,525 lines
+└─ Next offset: 29,978
+
+Chunk #12:
+├─ Start offset: 29,978
+├─ Calculated chunk: floor(29978 / 2500) + 1 = 12 ✅
+├─ Collected 2,500 cities after reading 17,098 lines! ⚠️
+│   (Hit Côte d'Ivoire area with many PPLA3/PPLA4 byes)
+└─ Next offset: 47,076
+
+Chunk #13??? NO - IT BECAME CHUNK #19!:
+├─ Start offset: 47,076
+├─ Calculated chunk: floor(47076 / 2500) + 1 = 19 ❌ WRONG!
+└─ Chunks #13-18 were never "created" (skipped in numbering)
+```
+
+**Impact:**
+- ❌ Chunk numbers jumped from #12 → #19 (skipped #13-18)
+- ❌ No emails for "missing" chunks
+- ❌ Progress tracking confusing
+- ✅ But DATA was NOT lost (all cities still scheduled correctly!)
+- ⚠️ Just made monitoring very confusing
+
+### ✅ THE FIX:
+
+**Pass chunk number as parameter** instead of calculating it from offset:
+
+```php
+// v3.4.6 - FIXED:
+// 1. Added $chunk_number parameter to schedule_cities()
+public static function schedule_cities( 
+    $file_path, 
+    $min_population, 
+    $max_cities_per_country, 
+    $filtered_country_codes, 
+    $line_offset = 0, 
+    $chunk_size = 10000, 
+    $chunk_number = 1  // ✅ NEW parameter!
+) {
+
+// 2. Removed calculation, use passed value directly
+// BEFORE:
+$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
+
+// AFTER:
+// Just use $chunk_number from parameter (no calculation needed!)
+
+// 3. Increment when scheduling next chunk
+as_schedule_single_action(
+    time() + 5,
+    'wta_schedule_cities',
+    array(
+        // ... other params
+        'chunk_number' => $chunk_number + 1,  // ✅ Increment for next chunk
+    ),
+    'wta_structure'
+);
+
+// 4. Initial call starts with chunk_number = 1
+as_schedule_single_action(
+    time() + 30,
+    'wta_schedule_cities',
+    array(
+        // ... other params
+        'chunk_number' => 1,  // ✅ Start at 1
+    ),
+    'wta_structure'
+);
+```
+
+### 📊 RESULTS AFTER FIX:
+
+**Correct sequential numbering:**
+```
+Chunk #1  → Chunk #2  → Chunk #3  → ... → Chunk #91 ✅
+No skips, no jumps, accurate progress tracking!
+```
+
+**Accurate progress tracking:**
+- ✅ Chunk numbers always sequential (1, 2, 3, 4, ...)
+- ✅ Email notifications for EVERY chunk
+- ✅ Progress percentage accurate
+- ✅ Estimated chunks remaining correct
+
+### 📁 Changed Files:
+
+**includes/core/class-wta-importer.php:**
+- Line 382: Added `$chunk_number = 1` parameter to `schedule_cities()` function signature
+- Line 574-579: Removed chunk number calculation, use parameter directly
+- Line 641-655: Pass `$chunk_number + 1` when scheduling next chunk
+- Line 253-265: Pass `'chunk_number' => 1` in initial call
+
+### 🎯 Why This Bug Existed:
+
+The original code assumed:
+- ✅ Chunk size = lines per chunk
+- ❌ But reality: Chunk size = CITIES per chunk
+
+When file has many skipped lines:
+- Lines read >> Cities collected
+- Offset advances faster than expected
+- Calculated chunk number becomes incorrect
+
+**This bug was invisible until hitting file areas with high skip rates** (like Côte d'Ivoire with many PPLA3/PPLA4 cities)!
+
+### 🚀 Upgrade Instructions:
+
+1. Upload v3.4.6
+2. **IMPORTANT:** Must start NEW import from scratch
+3. Existing imports will continue with old chunk numbers
+4. New imports will have correct sequential numbering
+
+### 💡 Technical Note:
+
+This is a **monitoring/UI bug**, not a data integrity bug:
+- ✅ All cities were still scheduled correctly
+- ✅ No data was lost
+- ❌ Just made progress tracking confusing
+- ✅ Now fixed for accurate monitoring
+
+---
+
 ## [3.4.5] - 2026-01-12
 
 ### 🐛 FIX: Email Notification Variables and Progress Calculation

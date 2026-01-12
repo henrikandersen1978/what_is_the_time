@@ -260,6 +260,7 @@ class WTA_Importer {
 			'filtered_country_codes' => $is_large_import ? array() : $filtered_country_codes,
 			'line_offset'            => 0,
 			'chunk_size'             => $chunk_size,
+			'chunk_number'           => 1,
 		),
 		'wta_structure'
 	);
@@ -378,8 +379,9 @@ private static function send_chunk_notification( $chunk_data ) {
 	 * @param    array  $filtered_country_codes Country codes to include.
 	 * @param    int    $line_offset            Line number to start from (for chunking).
 	 * @param    int    $chunk_size             Maximum cities to schedule per chunk.
+	 * @param    int    $chunk_number           Current chunk number (for accurate tracking).
 	 */
-	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes, $line_offset = 0, $chunk_size = 10000 ) {
+	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes, $line_offset = 0, $chunk_size = 10000, $chunk_number = 1 ) {
 		set_time_limit( 300 ); // 5 minutes per chunk
 
 	// v3.4.3: Log import strategy
@@ -574,7 +576,8 @@ private static function send_chunk_notification( $chunk_data ) {
 	// v3.0.70: Calculate chunk number and progress
 	// v3.2.69: Use $next_offset for all calculations
 	// v3.4.5: Use actual $total_lines instead of hardcoded 150000
-	$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
+	// v3.4.6: Use passed $chunk_number parameter instead of calculating from offset
+	// (prevents incorrect chunk numbers when many lines are skipped)
 	$estimated_total_chunks = ceil( $total_lines / $chunk_size );
 	$progress_percent = round( ( $next_offset / $total_lines ) * 100, 1 );
 
@@ -639,7 +642,8 @@ private static function send_chunk_notification( $chunk_data ) {
 	// v3.2.69: Check if we collected a full chunk (indicates more data available)
 	if ( ! $reached_eof && $collected >= $chunk_size ) {
 		WTA_Logger::info( 'Scheduling next chunk', array(
-			'next_offset' => $next_offset,
+			'next_offset'      => $next_offset,
+			'next_chunk_number' => $chunk_number + 1,
 		) );
 		
 		as_schedule_single_action(
@@ -652,6 +656,7 @@ private static function send_chunk_notification( $chunk_data ) {
 				'filtered_country_codes' => $filtered_country_codes,
 				'line_offset'            => $next_offset,
 				'chunk_size'             => $chunk_size,
+				'chunk_number'           => $chunk_number + 1,
 			),
 			'wta_structure'
 		);
