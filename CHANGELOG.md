@@ -2,6 +2,50 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.0] - 2026-01-12
+
+### 🐛 CRITICAL FIX: Infinite Structure Completion Loop (TF/GS Bug)
+
+**USER FEEDBACK:**
+"der er noget galt. create_city og country ligger side om side" + "På det svenske site kommer det aldrig videre end her"
+
+**PROBLEM:**
+Swedish site import stuck at `wta_check_structure_completion` for hours. Investigation revealed:
+- Cities for TF (French Southern Territories) and GS (South Georgia) were being scheduled
+- Their parent countries were NOT being scheduled (both are in Antarctica, which wasn't selected)
+- `wta_create_city` tried to find parent, failed, rescheduled infinitely
+- `wta_check_structure_completion` saw these pending actions and never progressed to timezone phase ❌
+
+**ROOT CAUSE (v3.4.3 workaround broke country filtering):**
+```php
+// v3.4.3 - BROKEN:
+$is_large_import = (count($filtered_country_codes) > 200);
+'filtered_country_codes' => $is_large_import ? array() : $filtered_country_codes,
+// For 6-continent import (244 countries), we sent empty array to avoid serialization limits
+// This disabled country filtering entirely! Cities from TF/GS were scheduled despite Antarctica not being selected.
+```
+
+**THE FIX (v3.5.0):**
+```php
+// v3.5.0 - FIXED:
+'filtered_country_codes' => $filtered_country_codes, // ALWAYS send actual list!
+// Now cities are filtered correctly: if TF/GS countries aren't scheduled, their cities aren't either
+```
+
+**What changed:**
+1. Removed `is_large_import ? array() : ...` workaround
+2. ALWAYS pass actual `filtered_country_codes` to `wta_schedule_cities`
+3. Existing filter in `schedule_cities()` (line 459-462) now works correctly for ALL imports
+
+**Results:**
+- ✅ 6-continent import (244 countries) works without TF/GS infinite loop
+- ✅ Structure completion detection now completes correctly
+- ✅ No more "Parent country not found, rescheduling city" infinite loops
+- ✅ Import progresses from structure → timezone → AI as expected
+
+**Note:**
+The original v3.4.3 serialization concern was invalid. 244 country codes (~600 bytes) is well within Action Scheduler limits.
+
 ## [3.4.9] - 2026-01-12
 
 ### 🔧 IMPROVEMENT: Reduced Retention Period for Better Backend Performance

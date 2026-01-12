@@ -230,9 +230,10 @@ class WTA_Importer {
 
 		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
-	// v3.4.3: For large imports (>200 countries), send empty array to avoid Action Scheduler serialization limit
-	// Empty array = import ALL countries (filter is skipped in schedule_cities when array is empty)
-	// For selective imports, send the actual array
+	// v3.5.0: ALWAYS send filtered_country_codes (even for large imports)
+	// This prevents cities from being scheduled for unselected countries
+	// Critical fix: TF/GS cities were scheduled even when Antarctica wasn't selected
+	// causing infinite "Parent country not found" reschedule loop
 	$is_large_import = ( count( $filtered_country_codes ) > 200 );
 	
 	// v3.4.4: Smaller chunks for large imports to prevent timeout
@@ -243,13 +244,14 @@ class WTA_Importer {
 		'total_countries' => count( $filtered_country_codes ),
 		'is_large_import' => $is_large_import,
 		'chunk_size'      => $chunk_size,
-		'filter_strategy' => $is_large_import ? 'No filter (import all)' : 'Filter by country codes',
+		'filter_strategy' => 'Filter by scheduled country codes',
 	) );
 
 	// Schedule a single action to process all cities
 	// v3.2.79: Reduced to 10 minutes (600s) since country AI is now delayed
 	// v3.3.12: Reduced to 30 seconds - countries complete quickly, and batch processor
 	// will wait for ALL cities to complete anyway via smart completion detection (v3.3.11)
+	// v3.5.0: ALWAYS pass filtered_country_codes (fixes TF/GS infinite loop bug)
 	as_schedule_single_action(
 		time() + 30, // 30 seconds buffer - batch processor handles the rest!
 		'wta_schedule_cities',
@@ -257,7 +259,7 @@ class WTA_Importer {
 			'file_path'              => $cities_file,
 			'min_population'         => $options['min_population'],
 			'max_cities_per_country' => $options['max_cities_per_country'],
-			'filtered_country_codes' => $is_large_import ? array() : $filtered_country_codes,
+			'filtered_country_codes' => $filtered_country_codes, // ALWAYS send actual list!
 			'line_offset'            => 0,
 			'chunk_size'             => $chunk_size,
 			'chunk_number'           => 1,
