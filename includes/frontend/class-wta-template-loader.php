@@ -930,22 +930,41 @@ if ( ! $post_id ) {
 	// Get FAQ data
 	$faq_data = get_post_meta( $post_id, 'wta_faq_data', true );
 	
-	if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+	// v3.4.0: Support both old 'faqs' key and new 'static_faqs' key
+	$static_faqs = isset( $faq_data['static_faqs'] ) ? $faq_data['static_faqs'] : ( isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array() );
+	
+	if ( empty( $static_faqs ) ) {
 		return $content;
 	}
+	
+	// v3.4.0: Generate FAQ #1 dynamically for fresh time
+	$faq1 = WTA_FAQ_Generator::generate_faq1_dynamic( $post_id );
+	
+	// Merge FAQ #1 with static FAQs for schema
+	$all_faqs = array();
+	if ( false !== $faq1 ) {
+		$all_faqs[] = $faq1;
+	}
+	$all_faqs = array_merge( $all_faqs, $static_faqs );
+	
+	// Prepare complete FAQ data for schema
+	$complete_faq_data = array(
+		'intro' => isset( $faq_data['intro'] ) ? $faq_data['intro'] : '',
+		'faqs' => $all_faqs, // Include dynamic FAQ #1 + static FAQs
+	);
 	
 // Generate and append FAQ schema
 // v3.0.20: Use get_post_field() to bypass the_title filter
 // This ensures FAQ schema uses page title (e.g., "København")
 // not H1 title (e.g., "Hvad er klokken i København, Danmark?")
 $location_name = get_post_field( 'post_title', $post_id );
-$faq_schema_tag = WTA_FAQ_Renderer::generate_faq_schema_tag( $faq_data, $location_name );
+$faq_schema_tag = WTA_FAQ_Renderer::generate_faq_schema_tag( $complete_faq_data, $location_name );
 
 // v3.2.10 DEBUG: Log FAQ schema generation
 WTA_Logger::info( '[SCHEMA DEBUG] FAQ schema generated and appended', array(
 	'post_id' => $post_id,
 	'type' => $type,
-	'faq_count' => count( $faq_data['faqs'] ),
+	'faq_count' => count( $all_faqs ),
 	'schema_tag_size' => strlen( $faq_schema_tag ),
 	'has_script_tag' => strpos( $faq_schema_tag, '<script type="application/ld+json">' ) !== false
 ) );

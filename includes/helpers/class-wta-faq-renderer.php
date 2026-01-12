@@ -35,18 +35,37 @@ class WTA_FAQ_Renderer {
 	/**
 	 * Render FAQ section HTML.
 	 *
+	 * v3.4.0: FAQ #1 generated dynamically on each render for fresh time.
+	 *
 	 * @since    2.35.0
-	 * @param    array  $faq_data FAQ data with 'intro' and 'faqs' keys.
+	 * @since    3.4.0 Added $post_id parameter for dynamic FAQ #1 generation
+	 * @param    array  $faq_data FAQ data with 'intro' and 'static_faqs' keys.
 	 * @param    string $city_name City name for heading.
+	 * @param    int    $post_id   City post ID (required for dynamic FAQ #1).
 	 * @return   string            FAQ HTML.
 	 */
-	public static function render_faq_section( $faq_data, $city_name = '' ) {
-		if ( empty( $faq_data ) || ! isset( $faq_data['faqs'] ) || empty( $faq_data['faqs'] ) ) {
+	public static function render_faq_section( $faq_data, $city_name = '', $post_id = 0 ) {
+		// v3.4.0: Support both old 'faqs' key and new 'static_faqs' key for backwards compatibility
+		$static_faqs = isset( $faq_data['static_faqs'] ) ? $faq_data['static_faqs'] : ( isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array() );
+		
+		if ( empty( $static_faqs ) ) {
 			return '';
 		}
 		
 		$intro = isset( $faq_data['intro'] ) ? $faq_data['intro'] : '';
-		$faqs = $faq_data['faqs'];
+		
+		// v3.4.0: Generate FAQ #1 dynamically on EVERY render for fresh time
+		$faq1 = false;
+		if ( ! empty( $post_id ) ) {
+			$faq1 = WTA_FAQ_Generator::generate_faq1_dynamic( $post_id );
+		}
+		
+		// Merge FAQ #1 (if available) with static FAQs
+		$faqs = array();
+		if ( false !== $faq1 ) {
+			$faqs[] = $faq1;
+		}
+		$faqs = array_merge( $faqs, $static_faqs );
 		
 		// Use city name from first FAQ question if not provided
 		if ( empty( $city_name ) && ! empty( $faqs[0]['question'] ) ) {
@@ -99,12 +118,14 @@ class WTA_FAQ_Renderer {
 								$answer = str_replace( array( '<br>', '<br/>', '<br />', '<br/ >' ), ' ', $answer );
 								
 								// Allow only safe HTML tags
+								// v3.4.0: Added 'span' for dynamic FAQ #1 time with data-timezone attribute
 								$allowed_html = array(
 									'strong' => array(),
 									'b'      => array(),
 									'em'     => array(),
 									'i'      => array(),
 									'a'      => array( 'href' => array(), 'title' => array() ),
+									'span'   => array( 'class' => array(), 'data-timezone' => array() ),
 								);
 								
 								echo wp_kses( $answer, $allowed_html ); 

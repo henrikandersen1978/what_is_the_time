@@ -47,12 +47,13 @@ class WTA_AI_Processor {
 				$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
 				
 				if ( false !== $faq_data && ! empty( $faq_data ) ) {
-					// Save FAQ data for schema
+					// v3.4.0: Save static FAQ data (intro + FAQ #2-12)
+					// FAQ #1 (current time) is generated dynamically on each render
 					update_post_meta( $post_id, 'wta_faq_data', $faq_data );
 					
 					// Render FAQ HTML and append to post content
 					$city_name = get_the_title( $post_id );
-					$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+					$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name, $post_id );
 					
 					if ( ! empty( $faq_html ) ) {
 						$result['content'] .= "\n\n" . $faq_html;
@@ -250,12 +251,12 @@ class WTA_AI_Processor {
 						$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $test_mode );
 						
 						if ( false !== $faq_data && ! empty( $faq_data ) ) {
-							// Save FAQ data for schema
+							// v3.4.0: Save static FAQ data
 							update_post_meta( $post_id, 'wta_faq_data', $faq_data );
 							
 							// Render FAQ HTML and append to existing post content
 							$city_name = get_the_title( $post_id );
-							$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+							$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name, $post_id );
 							
 							if ( ! empty( $faq_html ) ) {
 								$existing_content = get_post_field( 'post_content', $post_id );
@@ -332,12 +333,12 @@ class WTA_AI_Processor {
 			$faq_data = WTA_FAQ_Generator::generate_city_faq( $post_id, $use_test_mode );
 			
 			if ( false !== $faq_data && ! empty( $faq_data ) ) {
-				// Save FAQ data for schema
+				// v3.4.0: Save static FAQ data
 				update_post_meta( $post_id, 'wta_faq_data', $faq_data );
 				
 				// Render FAQ HTML and append to post content
 				$city_name = get_the_title( $post_id );
-				$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name );
+				$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name, $post_id );
 				
 				if ( ! empty( $faq_html ) ) {
 					$result['content'] .= "\n\n" . $faq_html;

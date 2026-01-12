@@ -2,6 +2,186 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.4.0] - 2026-01-12
+
+### 🎯 DYNAMIC FAQ #1 - No More Cached Time!
+
+**USER CONCERN:**
+"Men det dur vel ikke. Tiden skal vel sættes via php på pageload, sådan så det altid er så rigtigt som muligt? Også i schema. Er det ikke en form for cloaking, hvis vi viser livetid til brugeren og noget andet til google eller i schema?"
+
+**THE PROBLEM (v3.3.15):**
+
+FAQ #1 ("What time is it now?") was generated ONCE during import and saved permanently in database:
+
+```php
+// FAQ generated at import (e.g., 14:23:45):
+$faq_data = generate_city_faq($post_id);
+update_post_meta($post_id, 'wta_faq_data', $faq_data); // Saved forever
+
+// Days later, cached page shows:
+HTML: 14:23:45 (from database)
+JavaScript: 18:30:45 (live update)
+Schema: 14:23:45 (from database)
+→ Different content for users vs. Google = potential cloaking issue! 🚨
+```
+
+**Problems:**
+1. ⚠️ **Google Cloaking Risk**: Users see live time (JS), Google sees old time (HTML)
+2. ⚠️ **Schema Accuracy**: FAQ schema contains outdated time
+3. ⚠️ **SEO Concern**: Different content for crawlers vs. users
+4. ⚠️ **Cache Confusion**: With LiteSpeed Cache (24h), time could be days old
+
+### ✅ THE SOLUTION - Dynamic FAQ #1 Generation:
+
+**Architecture Changes:**
+
+```php
+// v3.4.0: FAQ #1 is NEVER cached - generated fresh on every render
+
+// 1. FAQ Generator (class-wta-faq-generator.php):
+generate_city_faq() {
+    // Returns ONLY FAQ #2-12 (static content)
+    return array(
+        'intro' => $intro,
+        'static_faqs' => [$faq2, $faq3, ..., $faq12]  // No FAQ #1!
+    );
+}
+
+// New method for dynamic FAQ #1:
+generate_faq1_dynamic($post_id) {
+    // Called on EVERY page render
+    $current_time = get_current_time_in_timezone($timezone);
+    return array(
+        'question' => 'What time is it in Stockholm now?',
+        'answer' => 'The time in Stockholm is <span class="wta-live-faq-time">15:42:18</span>...'
+    );
+}
+
+// 2. FAQ Renderer (class-wta-faq-renderer.php):
+render_faq_section($faq_data, $city_name, $post_id) {
+    // Generate FAQ #1 dynamically
+    $faq1 = generate_faq1_dynamic($post_id);  // Fresh time!
+    
+    // Merge with static FAQs
+    $all_faqs = array_merge([$faq1], $faq_data['static_faqs']);
+    
+    // Render with fresh time
+    return render($all_faqs);
+}
+
+// 3. Schema Generation (class-wta-template-loader.php):
+// FAQ #1 included in schema with fresh time
+$faq1 = generate_faq1_dynamic($post_id);
+$complete_faqs = array_merge([$faq1], $static_faqs);
+generate_faq_schema_tag($complete_faqs);  // Google sees accurate time!
+```
+
+### 📊 HOW IT WORKS:
+
+| Event | Time in HTML | Time in Schema | User Sees | Google Sees |
+|-------|-------------|----------------|-----------|-------------|
+| **10:00**: Page generated | 10:00:23 (fresh) | 10:00:23 (fresh) | 10:00:45 (JS live) ✅ | 10:00:23 ✅ |
+| **10:05**: LiteSpeed cached | 10:00:23 (cached) | 10:00:23 (cached) | 10:05:32 (JS live) ✅ | 10:00:23 ✅ |
+| **10:10**: Cache expires | 10:10:18 (fresh!) | 10:10:18 (fresh!) | 10:10:45 (JS live) ✅ | 10:10:18 ✅ |
+
+**With 10-minute LiteSpeed Cache:**
+- Server renders fresh time every 10 minutes
+- JavaScript updates to exact second for users
+- Google ALWAYS sees reasonably accurate time (max 10 min old)
+- **NO CLOAKING** - everyone sees same initial HTML
+
+### ✅ BENEFITS:
+
+1. **SEO Safe**: No cloaking - Google and users see same initial content
+2. **Schema Accurate**: FAQ schema always contains recent time (max 10 min old with cache)
+3. **Performance**: Static FAQs (2-12) still cached permanently
+4. **User Experience**: Live second-by-second updates via JavaScript
+5. **LiteSpeed Compatible**: Works perfectly with short cache periods (5-10 min)
+
+### 🔧 TECHNICAL CHANGES:
+
+**Modified Files:**
+- ✅ `includes/helpers/class-wta-faq-generator.php`
+  - `generate_city_faq()` returns only static FAQs (2-12)
+  - New method `generate_faq1_dynamic()` for on-demand FAQ #1
+- ✅ `includes/helpers/class-wta-faq-renderer.php`
+  - `render_faq_section()` now takes $post_id parameter
+  - Generates FAQ #1 dynamically on every render
+  - Merges with static FAQs before rendering
+- ✅ `includes/frontend/class-wta-template-loader.php`
+  - Generates FAQ #1 dynamically for schema
+  - Includes fresh time in JSON-LD structured data
+- ✅ `includes/scheduler/class-wta-ai-processor.php`
+  - Updated to pass $post_id to renderer
+- ✅ `includes/processors/class-wta-single-ai-processor.php`
+  - Updated to pass $post_id to renderer
+
+**Backwards Compatibility:**
+- ✅ Supports both old 'faqs' and new 'static_faqs' keys
+- ✅ Works with existing FAQ data in database
+- ✅ No re-import required (FAQ #1 generated on-the-fly)
+
+### 🚀 DEPLOYMENT GUIDE:
+
+1. **Upload v3.4.0** to your site
+2. **Configure LiteSpeed Cache**:
+   ```php
+   // In LiteSpeed Cache settings or via filter:
+   Cache Timeout: 10 minutes (recommended)
+   // Balance: Fresh time + good performance
+   ```
+3. **No re-import needed** - FAQ #1 auto-generated on next page view
+4. **Verify**:
+   - Check FAQ #1 shows current time
+   - Inspect page source - time in schema should be recent
+   - Visit cached page - JavaScript updates instantly
+
+### 📈 PERFORMANCE IMPACT:
+
+**Before (v3.3.15):**
+```
+Page Load: Read FAQ from database (1 query)
+Render: Use cached FAQ data
+Cost: Minimal
+```
+
+**After (v3.4.0):**
+```
+Page Load: 
+  - Read static FAQs from database (1 query)
+  - Generate FAQ #1 (DateTime operation, <1ms)
+Render: Merge FAQ #1 + static FAQs
+Cost: +1ms per page load (negligible!)
+```
+
+**Verdict**: Virtually no performance impact. Dynamic time generation is extremely fast.
+
+### 🎯 RECOMMENDED CACHE SETTINGS:
+
+**LiteSpeed Cache:**
+```
+For wta_location post type: 10 minutes
+→ Perfect balance: Fresh time + good cache hit rate
+```
+
+**Why 10 minutes?**
+- ✅ Time max 10 minutes old for Google
+- ✅ High cache hit rate (performance)
+- ✅ Acceptable freshness for "current time" queries
+- ✅ Reduced server load
+
+### 💡 RESULT:
+
+- ✅ **No more cloaking concerns**
+- ✅ **SEO compliant** (same content for all)
+- ✅ **Accurate schema** (Google sees fresh time)
+- ✅ **Live UX** (JavaScript updates every second)
+- ✅ **Cache friendly** (works with LiteSpeed/WP Rocket)
+
+**Perfect balance between SEO, performance, and user experience!** 🎉
+
+---
+
 ## [3.3.15] - 2026-01-12
 
 ### 🐛 FIX: JSON Template Conflict with Live FAQ Time

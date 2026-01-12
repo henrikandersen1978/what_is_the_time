@@ -17,12 +17,14 @@ class WTA_FAQ_Generator {
 	/**
 	 * Generate complete FAQ for a city.
 	 *
-	 * Returns 12 FAQ items with intro text.
+	 * v3.4.0: Returns intro + static FAQs (2-12) only.
+	 * FAQ #1 (current time) is generated dynamically on each render.
 	 *
 	 * @since    2.35.0
+	 * @since    3.4.0 FAQ #1 excluded from return (generated dynamically)
 	 * @param    int   $post_id  City post ID.
 	 * @param    bool  $test_mode Whether in test mode (no AI calls).
-	 * @return   array|false     FAQ data or false on failure.
+	 * @return   array|false     FAQ data with 'intro' and 'static_faqs' keys, or false on failure.
 	 */
 	public static function generate_city_faq( $post_id, $test_mode = false ) {
 		// Get city data
@@ -45,52 +47,73 @@ class WTA_FAQ_Generator {
 			? self::generate_template_intro( $city_name )
 			: self::generate_ai_intro( $city_name );
 		
-		// Generate FAQ items
-		$faqs = array();
+		// Generate STATIC FAQ items (FAQ #2-12)
+		// v3.4.0: FAQ #1 is NOT included here - it's generated dynamically on each render
+		$static_faqs = array();
 		
-		// TIER 1: Template-based FAQ (5 items)
-		$faqs[] = self::generate_current_time_faq( $city_name, $timezone );
-		$faqs[] = self::generate_timezone_faq( $city_name, $timezone );
-		$faqs[] = self::generate_sun_times_faq( $city_name, $latitude, $longitude );
-		$faqs[] = self::generate_moon_phase_faq( $city_name );
-		$faqs[] = self::generate_geography_faq( $city_name, $latitude, $longitude, $country_name );
+		// TIER 1: Template-based FAQ (4 items) - SKIP FAQ #1
+		$static_faqs[] = self::generate_timezone_faq( $city_name, $timezone );
+		$static_faqs[] = self::generate_sun_times_faq( $city_name, $latitude, $longitude );
+		$static_faqs[] = self::generate_moon_phase_faq( $city_name );
+		$static_faqs[] = self::generate_geography_faq( $city_name, $latitude, $longitude, $country_name );
 		
 		// TIER 2: Light AI FAQ (3 items) - only if not test mode
 		if ( ! $test_mode ) {
-			$faqs[] = self::generate_time_difference_faq( $city_name, $timezone, $test_mode );
-			$faqs[] = self::generate_season_faq( $city_name, $latitude, $test_mode );
-			$faqs[] = self::generate_dst_faq( $city_name, $timezone, $test_mode );
+			$static_faqs[] = self::generate_time_difference_faq( $city_name, $timezone, $test_mode );
+			$static_faqs[] = self::generate_season_faq( $city_name, $latitude, $test_mode );
+			$static_faqs[] = self::generate_dst_faq( $city_name, $timezone, $test_mode );
 		} else {
 			// Template fallbacks for test mode
-			$faqs[] = self::generate_time_difference_faq_template( $city_name, $timezone );
-			$faqs[] = self::generate_season_faq_template( $city_name, $latitude );
-			$faqs[] = self::generate_dst_faq_template( $city_name, $timezone );
+			$static_faqs[] = self::generate_time_difference_faq_template( $city_name, $timezone );
+			$static_faqs[] = self::generate_season_faq_template( $city_name, $latitude );
+			$static_faqs[] = self::generate_dst_faq_template( $city_name, $timezone );
 		}
 		
 		// TIER 3: Full AI FAQ (4 items) - batched in single call
 		if ( ! $test_mode ) {
 			$ai_faqs = self::generate_ai_faqs_batch( $city_name, $country_name, $timezone );
 			if ( ! empty( $ai_faqs ) ) {
-				$faqs = array_merge( $faqs, $ai_faqs );
+				$static_faqs = array_merge( $static_faqs, $ai_faqs );
 			} else {
 				// Fallback to template if AI fails
-				$faqs[] = self::generate_calling_hours_faq_template( $city_name, $timezone );
-				$faqs[] = self::generate_jetlag_faq_template( $city_name, $timezone );
-				$faqs[] = self::generate_culture_faq_template( $city_name, $country_name );
-				$faqs[] = self::generate_travel_time_faq_template( $city_name, $latitude );
+				$static_faqs[] = self::generate_calling_hours_faq_template( $city_name, $timezone );
+				$static_faqs[] = self::generate_jetlag_faq_template( $city_name, $timezone );
+				$static_faqs[] = self::generate_culture_faq_template( $city_name, $country_name );
+				$static_faqs[] = self::generate_travel_time_faq_template( $city_name, $latitude );
 			}
 		} else {
 			// Test mode: template versions
-			$faqs[] = self::generate_calling_hours_faq_template( $city_name, $timezone );
-			$faqs[] = self::generate_jetlag_faq_template( $city_name, $timezone );
-			$faqs[] = self::generate_culture_faq_template( $city_name, $country_name );
-			$faqs[] = self::generate_travel_time_faq_template( $city_name, $latitude );
+			$static_faqs[] = self::generate_calling_hours_faq_template( $city_name, $timezone );
+			$static_faqs[] = self::generate_jetlag_faq_template( $city_name, $timezone );
+			$static_faqs[] = self::generate_culture_faq_template( $city_name, $country_name );
+			$static_faqs[] = self::generate_travel_time_faq_template( $city_name, $latitude );
 		}
 		
 		return array(
 			'intro' => $intro,
-			'faqs'  => $faqs,
+			'static_faqs' => $static_faqs, // v3.4.0: Renamed from 'faqs' to be explicit
 		);
+	}
+
+	/**
+	 * Generate FAQ #1 (current time) dynamically.
+	 *
+	 * v3.4.0: This is called on EVERY page render to show fresh time.
+	 * No caching - always returns current time for SEO and UX.
+	 *
+	 * @since    3.4.0
+	 * @param    int $post_id City post ID.
+	 * @return   array|false  FAQ #1 data or false on failure.
+	 */
+	public static function generate_faq1_dynamic( $post_id ) {
+		$city_name = get_the_title( $post_id );
+		$timezone = get_post_meta( $post_id, 'wta_timezone', true );
+		
+		if ( empty( $city_name ) || empty( $timezone ) ) {
+			return false;
+		}
+		
+		return self::generate_current_time_faq( $city_name, $timezone );
 	}
 
 	/**
