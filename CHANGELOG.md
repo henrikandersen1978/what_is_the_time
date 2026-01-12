@@ -46,7 +46,72 @@ $is_large_import = (count($filtered_country_codes) > 200);
 **Note:**
 The original v3.4.3 serialization concern was invalid. 244 country codes (~600 bytes) is well within Action Scheduler limits.
 
-## [3.4.9] - 2026-01-12
+## [3.5.1] - 2026-01-13
+
+### 🛡️ CRITICAL FIX: Timezone Fallback Strategy + Import Resilience
+
+**PROBLEM:**
+Import blev blokeret hvis blot 1 by fejlede timezone lookup:
+- "San Juan Bautista" (Chile) - koordinater på afsides ø returnerede "Record not found" fra TimezoneDB
+- Efter 3 retries blev byen markeret som 'failed'
+- `check_timezone_completion()` ventede på at ALLE cities fik timezone
+- 1 failed city = 151,415 cities i draft uden AI content! ❌
+
+**ROOT CAUSE:**
+All-or-nothing completion check:
+```php
+// OLD: Blokerede hvis ANY city ikke havde 'resolved' status
+AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value != 'resolved')
+```
+
+**THE FIX (v3.5.1):**
+
+1. **Fallback Timezone Strategy:**
+   - Efter 3 failed retries → brug landets primære timezone
+   - Hvis landet har flere timezones → brug UTC
+   - Marker som 'resolved' (så import fortsætter!)
+   - Sæt `wta_timezone_fallback = true` flag for senere review
+
+2. **Enhanced Logging:**
+   ```php
+   WTA_Logger::warning( '⚠️ Timezone fallback used', array(
+       'city_name'    => 'San Juan Bautista',
+       'country_code' => 'CL',
+       'coordinates'  => '-33.63706, -78.83368',
+       'fallback_tz'  => 'America/Santiago',
+       'edit_link'    => 'https://...',
+   ));
+   ```
+
+3. **Email Summary:**
+   - Samler alle fallback cities under import
+   - Sender ÉN email ved timezone phase completion
+   - Inkluderer by navn, land, coordinates, edit links
+
+4. **Completion Check Fix:**
+   ```php
+   // NEW: Kun kig efter 'pending' status
+   AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value = 'pending')
+   // 'resolved' (inkl. fallback) tæller som done ✅
+   ```
+
+**BONUS FIX: Log Retention:**
+- Ændret fra "slet alle gamle logs" til "behold sidste 5 dage"
+- Giver bedre debugging muligheder
+
+**RESULTS:**
+- ✅ Import fortsætter selvom enkelte cities fejler timezone lookup
+- ✅ Failed cities får fallback timezone (country default eller UTC)
+- ✅ Detaljeret logging med by navn, land, coordinates
+- ✅ Email summary med alle problemer til manual review
+- ✅ 5 dages log retention i stedet for kun dagens log
+
+**FILES CHANGED:**
+- `includes/processors/class-wta-single-timezone-processor.php` - Fallback logic
+- `includes/processors/class-wta-batch-processor.php` - Completion check + email
+- `includes/helpers/class-wta-log-cleaner.php` - 5 dages retention
+
+## [3.4.9] - 2026-01-12 (OLD VERSION)
 
 ### 🔧 IMPROVEMENT: Reduced Retention Period for Better Backend Performance
 

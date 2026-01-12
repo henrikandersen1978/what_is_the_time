@@ -14,10 +14,11 @@ class WTA_Log_Cleaner {
 	/**
 	 * Clean up old log files.
 	 *
-	 * Deletes all log files except today's log.
+	 * Deletes log files older than 5 days.
 	 * Runs daily at 04:00 via Action Scheduler.
 	 *
 	 * @since    2.35.7
+	 * @since    3.4.9 Changed from deleting all old logs to keeping last 5 days
 	 * @return   array  Cleanup statistics.
 	 */
 	public static function cleanup_old_logs() {
@@ -36,9 +37,9 @@ class WTA_Log_Cleaner {
 			);
 		}
 
-		// Get today's date for comparison
-		$today = date( 'Y-m-d' );
-		$today_log = $today . '-log.txt';
+		// Calculate cutoff date (5 days ago)
+		$cutoff_timestamp = strtotime( '-5 days', current_time( 'timestamp' ) );
+		$cutoff_date = date( 'Y-m-d', $cutoff_timestamp );
 
 		$deleted = 0;
 		$kept = 0;
@@ -56,21 +57,26 @@ class WTA_Log_Cleaner {
 			$file_path = $logs_dir . '/' . $file;
 
 			// Only process log files
-			if ( ! is_file( $file_path ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}-log\.txt$/', $file ) ) {
+			if ( ! is_file( $file_path ) || ! preg_match( '/^(\d{4}-\d{2}-\d{2})-log\.txt$/', $file, $matches ) ) {
 				continue;
 			}
 
-			// Keep today's log
-			if ( $file === $today_log ) {
+			// Extract date from filename
+			$file_date = $matches[1];
+
+			// Keep files from the last 5 days
+			if ( $file_date >= $cutoff_date ) {
 				$kept++;
 				continue;
 			}
 
-			// Delete old log
+			// Delete old log (older than 5 days)
 			if ( unlink( $file_path ) ) {
 				$deleted++;
 				WTA_Logger::debug( 'Old log file deleted', array(
 					'file' => $file,
+					'file_date' => $file_date,
+					'cutoff_date' => $cutoff_date,
 				) );
 			} else {
 				$errors++;
@@ -85,6 +91,8 @@ class WTA_Log_Cleaner {
 			'deleted' => $deleted,
 			'kept'    => $kept,
 			'errors'  => $errors,
+			'retention_days' => 5,
+			'cutoff_date' => $cutoff_date,
 		) );
 
 		return array(

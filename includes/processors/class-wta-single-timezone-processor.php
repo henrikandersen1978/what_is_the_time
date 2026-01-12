@@ -111,18 +111,61 @@ class WTA_Single_Timezone_Processor {
 					array( $post_id, $lat, $lng ),
 					'wta_timezone'
 				);
-				} else {
-					// Max retries reached
-					WTA_Logger::error( 'Timezone resolution failed after 3 retries', array(
-						'post_id' => $post_id,
-						'lat'     => $lat,
-						'lng'     => $lng,
-					) );
+			} else {
+				// Max retries reached - use fallback timezone
+				WTA_Logger::error( 'Timezone resolution failed after 3 retries', array(
+					'post_id' => $post_id,
+					'lat'     => $lat,
+					'lng'     => $lng,
+				) );
 
-					update_post_meta( $post_id, 'wta_timezone_status', 'failed' );
-					delete_post_meta( $post_id, '_wta_timezone_retry_count' );
+				// Get country code for fallback
+				$country_code = get_post_meta( $post_id, 'wta_country_code', true );
+				$city_name = get_the_title( $post_id );
+				
+				// Try to get country's primary timezone as fallback
+				$fallback_timezone = WTA_Timezone_Helper::get_country_timezone( $country_code );
+				
+				if ( ! $fallback_timezone ) {
+					// Country has multiple timezones, use UTC as last resort
+					$fallback_timezone = 'UTC';
 				}
+				
+				// Set fallback timezone
+				update_post_meta( $post_id, 'wta_timezone', $fallback_timezone );
+				update_post_meta( $post_id, 'wta_timezone_status', 'resolved' ); // Mark as resolved so completion continues!
+				update_post_meta( $post_id, 'wta_has_timezone', 1 );
+				update_post_meta( $post_id, 'wta_timezone_fallback', true ); // Flag for later review
+				delete_post_meta( $post_id, '_wta_timezone_retry_count' );
+				
+				// Enhanced logging with all details for manual review
+				WTA_Logger::warning( '⚠️ Timezone fallback used - manual review recommended', array(
+					'post_id'        => $post_id,
+					'city_name'      => $city_name,
+					'country_code'   => $country_code,
+					'coordinates'    => $lat . ', ' . $lng,
+					'fallback_tz'    => $fallback_timezone,
+					'reason'         => 'API failed after 3 retries',
+					'edit_link'      => get_edit_post_link( $post_id, 'raw' ),
+				) );
+				
+				// Store in daily summary for email notification
+				$fallbacks = get_option( 'wta_timezone_fallbacks_' . date('Y-m-d'), array() );
+				$fallbacks[] = array(
+					'post_id'      => $post_id,
+					'city'         => $city_name,
+					'country'      => $country_code,
+					'lat'          => $lat,
+					'lng'          => $lng,
+					'fallback_tz'  => $fallback_timezone,
+					'timestamp'    => time(),
+				);
+				update_option( 'wta_timezone_fallbacks_' . date('Y-m-d'), $fallbacks, false );
+				
+				// Continue processing - don't block the import!
 				return;
+			}
+			return;
 			}
 
 		// Success - save timezone

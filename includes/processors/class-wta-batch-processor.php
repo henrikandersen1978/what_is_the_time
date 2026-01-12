@@ -252,6 +252,7 @@ class WTA_Batch_Processor {
 
 		// v3.3.11: SECONDARY CHECK - Database meta keys (backup check)
 		// Count cities without resolved timezone
+		// v3.4.9: Only count 'pending' status - allow fallback timezones to continue
 		$pending_timezone = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*)
@@ -260,7 +261,7 @@ class WTA_Batch_Processor {
 				 LEFT JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone_status'
 				 WHERE p.post_type = %s
 				 AND p.post_status IN ('publish', 'draft')
-				 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value != 'resolved')",
+				 AND (pm_tz.meta_value IS NULL OR pm_tz.meta_value = 'pending')",
 				WTA_POST_TYPE
 			)
 		);
@@ -302,6 +303,44 @@ class WTA_Batch_Processor {
 
 		// v3.3.11: Timezone phase complete! Trigger City AI batch
 		WTA_Logger::info( '✅ Timezone phase COMPLETE! Triggering City AI batch...' );
+
+		// v3.4.9: Send email summary if any cities used fallback timezones
+		$fallbacks = get_option( 'wta_timezone_fallbacks_' . date('Y-m-d'), array() );
+		if ( ! empty( $fallbacks ) ) {
+			$admin_email = get_option( 'admin_email' );
+			$site_name = get_bloginfo( 'name' );
+			
+			$message = "World Time AI Import - Timezone Fallback Report\n\n";
+			$message .= "The following " . count($fallbacks) . " cities could not get timezone from API and used fallback timezones:\n\n";
+			$message .= "These cities may need manual review to ensure correct timezone.\n\n";
+			$message .= str_repeat( '=', 70 ) . "\n\n";
+			
+			foreach ( $fallbacks as $fb ) {
+				$message .= "City: {$fb['city']} ({$fb['country']})\n";
+				$message .= "Coordinates: {$fb['lat']}, {$fb['lng']}\n";
+				$message .= "Fallback Timezone: {$fb['fallback_tz']}\n";
+				$message .= "Edit: " . get_edit_post_link( $fb['post_id'] ) . "\n";
+				$message .= "Time: " . date( 'Y-m-d H:i:s', $fb['timestamp'] ) . "\n\n";
+			}
+			
+			$message .= str_repeat( '=', 70 ) . "\n";
+			$message .= "Site: " . get_site_url() . "\n";
+			$message .= "Report generated: " . current_time( 'Y-m-d H:i:s' ) . "\n";
+			
+			wp_mail(
+				$admin_email,
+				'[' . $site_name . '] World Time AI: Timezone Fallback Report',
+				$message
+			);
+			
+			WTA_Logger::info( '📧 Timezone fallback email sent', array(
+				'fallback_count' => count( $fallbacks ),
+				'recipient' => $admin_email,
+			) );
+			
+			// Clean up the option after sending email
+			delete_option( 'wta_timezone_fallbacks_' . date('Y-m-d') );
+		}
 
 		as_schedule_single_action(
 			time() + 30, // Small buffer
