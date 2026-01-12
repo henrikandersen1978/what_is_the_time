@@ -2,6 +2,104 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.4.7] - 2026-01-12
+
+### 🐛 HOTFIX: Missing Hook Parameter for Chunk Number
+
+**USER REPORT:**
+"Email 3 har dette emne: ✅ World Time AI - Chunk #1 Complete (5.4%) - Men det skulle være Chunk #2!"
+
+**THE PROBLEM:**
+
+In v3.4.6, I added a new `$chunk_number` parameter to the `schedule_cities()` function, but **forgot to update the Action Scheduler hook registration** to accept 7 parameters instead of 6!
+
+```php
+// includes/class-wta-core.php (v3.4.6 - BROKEN):
+$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 6 );
+//                                                                                        ^
+//                                                                                        Only accepts 6 params!
+
+// But schedule_cities() function now has 7 parameters:
+public static function schedule_cities( 
+    $file_path,              // 1
+    $min_population,         // 2
+    $max_cities_per_country, // 3
+    $filtered_country_codes, // 4
+    $line_offset = 0,        // 5
+    $chunk_size = 10000,     // 6
+    $chunk_number = 1        // 7 ← NOT BEING PASSED BY HOOK!
+)
+```
+
+**Impact:**
+- ❌ The 7th parameter (`$chunk_number`) was **never passed** to the function
+- ❌ It always used the default value `= 1`
+- ❌ ALL chunk emails showed "Chunk #1" regardless of actual chunk
+- ❌ Made v3.4.6 worse than v3.4.5 (which at least had different chunk numbers, even if inaccurate)
+
+**Before v3.4.6:**
+```
+Email #2: Chunk #11 (13.2%)  ✅ Different numbers
+Email #3: Chunk #12 (20.8%)  ✅ Different numbers
+Email #4: Chunk #19 (21.9%)  ⚠️ Jumped (but at least different!)
+```
+
+**v3.4.6 (broken):**
+```
+Email #2: Chunk #1 (3.1%)    ❌ All say "Chunk #1"
+Email #3: Chunk #1 (5.4%)    ❌ All say "Chunk #1"
+Email #4: Chunk #1 (?)       ❌ All say "Chunk #1"
+```
+
+### ✅ THE FIX:
+
+**Updated hook registration to accept 7 parameters:**
+
+```php
+// v3.4.7 - FIXED:
+$this->loader->add_action( 'wta_schedule_cities', 'WTA_Importer', 'schedule_cities', 10, 7 );
+//                                                                                        ^
+//                                                                                        Changed from 6 to 7!
+```
+
+**Now the `$chunk_number` parameter is correctly passed through the hook!**
+
+### 📊 RESULTS AFTER FIX:
+
+**v3.4.7 (correct):**
+```
+Email #2: Chunk #1 (3.1%)    ✅ Correct!
+Email #3: Chunk #2 (5.4%)    ✅ Correct!
+Email #4: Chunk #3 (8.2%)    ✅ Correct!
+...
+Email #92: Chunk #91 (100%)  ✅ Sequential and accurate!
+```
+
+### 📁 Changed Files:
+
+**includes/class-wta-core.php:**
+- Line 326: Changed parameter count from `6` to `7` in `add_action()` call
+
+### 💡 Lesson Learned:
+
+When adding new parameters to Action Scheduler callback functions:
+1. ✅ Add parameter to function signature
+2. ✅ Pass parameter when scheduling action
+3. ✅ **UPDATE HOOK REGISTRATION** with correct parameter count ← Forgot this!
+
+### 🚀 Upgrade Instructions:
+
+1. Upload v3.4.7
+2. **MUST start NEW import from scratch** (old chunks have wrong numbering)
+3. Clear OpCache if available
+4. New imports will now have correct sequential chunk numbering
+
+### 🙏 Apology:
+
+My fault for incomplete implementation in v3.4.6! The fix for chunk numbering was correct conceptually, but I forgot to update the hook registration. v3.4.7 completes the fix properly.
+
+---
+
 ## [3.4.6] - 2026-01-12
 
 ### 🐛 CRITICAL FIX: Chunk Number Calculation Bug
