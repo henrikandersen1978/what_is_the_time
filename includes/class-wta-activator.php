@@ -380,6 +380,14 @@ Max 40-50 ord. Generisk og inspirerende.' );
 			$tomorrow_4am = strtotime( 'tomorrow 04:00:00' );
 			as_schedule_recurring_action( $tomorrow_4am, DAY_IN_SECONDS, 'wta_cleanup_old_logs', array(), 'world-time-ai' );
 		}
+
+		// 6-hour table optimization (v3.4.8)
+		// OPTIMIZE tables to reclaim disk space after Action Scheduler's cleanup
+		// Action Scheduler handles action/log deletion automatically (1-hour retention)
+		if ( false === as_next_scheduled_action( 'wta_optimize_tables' ) ) {
+			$next_run = strtotime( '+6 hours' );
+			as_schedule_recurring_action( $next_run, 6 * HOUR_IN_SECONDS, 'wta_optimize_tables', array(), 'world-time-ai' );
+		}
 	}
 
 	/**

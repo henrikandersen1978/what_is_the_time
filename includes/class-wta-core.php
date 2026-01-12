@@ -44,11 +44,6 @@ class WTA_Core {
 		// Auto-heal: Ensure Action Scheduler actions are scheduled
 		add_action( 'admin_init', array( $this, 'ensure_actions_scheduled' ) );
 		
-		// Aggressive cleanup for completed actions (v3.0.57)
-		add_filter( 'action_scheduler_retention_period', array( $this, 'set_retention_period' ), 10 );
-		add_action( 'init', array( $this, 'schedule_cleanup' ) );
-		add_action( 'wta_cleanup_completed_actions', array( $this, 'cleanup_completed_actions' ) );
-		
 		// Monitor stuck timezone lookups (v3.0.58)
 		add_action( 'init', array( $this, 'schedule_timezone_monitor' ) );
 		add_action( 'wta_monitor_stuck_timezones', array( $this, 'monitor_stuck_timezones' ) );
@@ -81,6 +76,7 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-generator.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-faq-renderer.php'; // v2.35.0
 	require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-log-cleaner.php'; // v2.35.7
+		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-database-maintenance.php'; // v3.4.8
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-country-gps-migration.php'; // v2.35.73
 
 		// Action Scheduler Processors (v3.0.43 - Pilanto-AI Model)
@@ -347,6 +343,16 @@ class WTA_Core {
 
 		// Log cleanup (v2.35.7) - Runs daily at 04:00
 		$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
+
+		// Database maintenance (v3.4.8) - Leverage Action Scheduler's built-in cleanup
+		// Set aggressive 1-hour retention period (instead of default 31 days)
+		$this->loader->add_filter( 'action_scheduler_retention_period', 'WTA_Database_Maintenance', 'set_retention_period' );
+		
+		// Optimize tables every 6 hours to reclaim disk space
+		$this->loader->add_action( 'wta_optimize_tables', 'WTA_Database_Maintenance', 'run_optimization' );
+		
+		// Disable revisions for wta_location posts (prevents GB bloat)
+		$this->loader->add_filter( 'wp_revisions_to_keep', 'WTA_Database_Maintenance', 'disable_revisions_for_locations', 10, 2 );
 	}
 
 	/**
@@ -377,6 +383,13 @@ class WTA_Core {
 			$tomorrow_4am = strtotime( 'tomorrow 04:00:00' );
 			as_schedule_recurring_action( $tomorrow_4am, DAY_IN_SECONDS, 'wta_cleanup_old_logs', array(), 'world-time-ai' );
 			WTA_Logger::info( 'Auto-scheduled missing action: wta_cleanup_old_logs' );
+		}
+
+		// Ensure 6-hour table optimization is scheduled (v3.4.8)
+		if ( false === as_next_scheduled_action( 'wta_optimize_tables' ) ) {
+			$next_run = strtotime( '+6 hours' );
+			as_schedule_recurring_action( $next_run, 6 * HOUR_IN_SECONDS, 'wta_optimize_tables', array(), 'world-time-ai' );
+			WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_tables (every 6 hours)' );
 		}
 	}
 	
@@ -673,58 +686,6 @@ class WTA_Core {
 		<?php
 	}
 
-	/**
-	 * Set aggressive retention period for completed actions.
-	 * 
-	 * @since    3.0.57
-	 * @since    3.0.65  Increased from 1 to 5 minutes for scheduling safety.
-	 * @return   int Retention period in seconds (5 minutes).
-	 */
-	public function set_retention_period() {
-		return 5 * MINUTE_IN_SECONDS; // Keep 5 minutes (safety buffer for pending actions)
-	}
-
-	/**
-	 * Schedule cleanup job to run every minute.
-	 * 
-	 * @since    3.0.57
-	 */
-	public function schedule_cleanup() {
-		if ( ! function_exists( 'as_next_scheduled_action' ) ) {
-			return;
-		}
-		
-		if ( ! as_next_scheduled_action( 'wta_cleanup_completed_actions' ) ) {
-			as_schedule_recurring_action( 
-				time(), 
-				60, // Every 1 minute
-				'wta_cleanup_completed_actions'
-			);
-		}
-	}
-
-	/**
-	 * Cleanup completed actions older than 5 minutes.
-	 * Runs every 1 minute, but only deletes actions completed 5+ minutes ago.
-	 * Deletes up to 250k records per run.
-	 * 
-	 * @since    3.0.57
-	 * @since    3.0.66  Changed from 1 to 5 minutes to prevent race conditions.
-	 */
-	public function cleanup_completed_actions() {
-		global $wpdb;
-		
-		$deleted = $wpdb->query(
-			"DELETE FROM {$wpdb->prefix}actionscheduler_actions 
-			WHERE status = 'complete' 
-			AND scheduled_date_gmt < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-			LIMIT 250000"
-		);
-		
-		if ( $deleted > 0 ) {
-			WTA_Logger::debug( "Cleanup: Deleted $deleted completed actions (5min+ old)" );
-		}
-	}
 
 	/**
 	 * Schedule timezone monitoring job (every 30 minutes).

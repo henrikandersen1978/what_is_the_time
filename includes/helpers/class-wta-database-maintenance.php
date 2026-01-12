@@ -1,0 +1,91 @@
+<?php
+/**
+ * Database Maintenance - Leverage Action Scheduler's built-in cleanup
+ * 
+ * Action Scheduler has its own QueueCleaner that deletes:
+ * - Complete and canceled actions
+ * - Logs for deleted actions (automatically via 'action_scheduler_deleted_action' hook)
+ * 
+ * We just need to:
+ * 1. Set aggressive retention period (1 hour instead of default 31 days)
+ * 2. Disable revisions for wta_location posts (prevents GB bloat)
+ * 3. OPTIMIZE tables periodically to reclaim disk space
+ * 
+ * @package    WorldTimeAI
+ * @subpackage WorldTimeAI/includes/helpers
+ * @since      3.4.8
+ */
+
+class WTA_Database_Maintenance {
+
+	/**
+	 * Set aggressive retention period for Action Scheduler cleanup.
+	 * 
+	 * Action Scheduler's built-in QueueCleaner automatically:
+	 * - Deletes complete/canceled actions older than retention period
+	 * - Deletes logs for those actions (via action_scheduler_deleted_action hook)
+	 * 
+	 * Default: 31 days (2,678,400 seconds)
+	 * Our setting: 1 hour (3,600 seconds) for fast 24-hour imports
+	 * 
+	 * @since    3.4.8
+	 * @param    int $seconds Retention period in seconds.
+	 * @return   int          1 hour in seconds.
+	 */
+	public static function set_retention_period( $seconds ) {
+		// 1 hour = 3600 seconds
+		// Actions/logs older than 1 hour will be deleted automatically
+		return HOUR_IN_SECONDS;
+	}
+	
+	/**
+	 * Run periodic table optimization.
+	 * 
+	 * OPTIMIZE reclaims disk space after DELETE operations.
+	 * Runs every 6 hours to balance performance vs overhead.
+	 * 
+	 * Scheduled via Action Scheduler to run every 6 hours.
+	 *
+	 * @since    3.4.8
+	 * @return   array  Optimization statistics.
+	 */
+	public static function run_optimization() {
+		global $wpdb;
+		
+		$stats = array(
+			'optimized_tables' => 0,
+			'execution_time' => 0,
+		);
+		
+		$start_time = microtime( true );
+		
+		// OPTIMIZE Action Scheduler tables to reclaim disk space
+		$wpdb->query( "OPTIMIZE TABLE {$wpdb->prefix}actionscheduler_logs" );
+		$wpdb->query( "OPTIMIZE TABLE {$wpdb->prefix}actionscheduler_actions" );
+		$stats['optimized_tables'] = 2;
+		
+		$stats['execution_time'] = round( microtime( true ) - $start_time, 3 );
+		
+		WTA_Logger::info( 'Database optimization completed', $stats );
+		
+		return $stats;
+	}
+	
+	/**
+	 * Disable revisions for wta_location posts.
+	 * 
+	 * We generate 200k+ posts - revisions would bloat wp_posts to GB.
+	 * This filter prevents revision creation entirely for our post type.
+	 * 
+	 * @since    3.4.8
+	 * @param    int     $num  Number of revisions to keep.
+	 * @param    WP_Post $post Post object.
+	 * @return   int|bool      0 to disable revisions for wta_location.
+	 */
+	public static function disable_revisions_for_locations( $num, $post ) {
+		if ( isset( $post->post_type ) && $post->post_type === 'wta_location' ) {
+			return 0; // Disable revisions completely
+		}
+		return $num;
+	}
+}
