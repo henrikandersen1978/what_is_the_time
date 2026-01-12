@@ -292,6 +292,8 @@ private static function send_chunk_notification( $chunk_data ) {
 	$first_city = $chunk_data['first_city'];
 	$last_city = $chunk_data['last_city'];
 	$progress_pct = $chunk_data['progress_percent'];
+	$total_lines = isset( $chunk_data['total_lines'] ) ? $chunk_data['total_lines'] : 0;
+	$estimated_total_chunks = isset( $chunk_data['estimated_total_chunks'] ) ? $chunk_data['estimated_total_chunks'] : 0;
 	$is_stuck = isset( $chunk_data['is_stuck'] ) ? $chunk_data['is_stuck'] : false;
 	
 	$subject = $is_stuck 
@@ -327,8 +329,9 @@ private static function send_chunk_notification( $chunk_data ) {
 	
 	$message .= "PROGRESS:\n";
 	$message .= "  Overall: {$progress_pct}% complete\n";
-	$message .= "  Chunk #{$chunk_num} of ~15 total chunks\n";
-	$message .= "  Estimated chunks remaining: " . ( 15 - $chunk_num ) . "\n\n";
+	$message .= "  Total lines in file: " . number_format( $total_lines ) . "\n";
+	$message .= "  Chunk #{$chunk_num} of ~{$estimated_total_chunks} total chunks\n";
+	$message .= "  Estimated chunks remaining: " . ( $estimated_total_chunks - $chunk_num ) . "\n\n";
 	
 	if ( ! $is_stuck ) {
 		$message .= "WHAT TO CHECK:\n";
@@ -570,8 +573,10 @@ private static function send_chunk_notification( $chunk_data ) {
 
 	// v3.0.70: Calculate chunk number and progress
 	// v3.2.69: Use $next_offset for all calculations
+	// v3.4.5: Use actual $total_lines instead of hardcoded 150000
 	$chunk_number = ( $line_offset === 0 ) ? 1 : ( floor( $line_offset / $chunk_size ) + 1 );
-	$progress_percent = round( ( $next_offset / 150000 ) * 100, 1 ); // Approximate total lines
+	$estimated_total_chunks = ceil( $total_lines / $chunk_size );
+	$progress_percent = round( ( $next_offset / $total_lines ) * 100, 1 );
 
 	WTA_Logger::info( 'Cities scheduling chunk complete', array(
 		'chunk_number'   => $chunk_number,
@@ -598,15 +603,17 @@ private static function send_chunk_notification( $chunk_data ) {
 		
 		// Send emergency email
 		self::send_chunk_notification( array(
-			'chunk_number'      => $chunk_number,
-			'prev_offset'       => $line_offset,
-			'next_offset'       => $next_offset,
-			'scheduled'         => $scheduled,
-			'skipped'           => $skipped,
-			'first_city'        => $first_city_in_chunk,
-			'last_city'         => isset( $name ) ? $name : 'unknown',
-			'progress_percent'  => $progress_percent,
-			'is_stuck'          => true,
+			'chunk_number'         => $chunk_number,
+			'prev_offset'          => $line_offset,
+			'next_offset'          => $next_offset,
+			'scheduled'            => $scheduled,
+			'skipped'              => $skipped,
+			'first_city'           => $first_city_in_chunk,
+			'last_city'            => isset( $name ) ? $name : 'unknown',
+			'progress_percent'     => $progress_percent,
+			'total_lines'          => $total_lines,
+			'estimated_total_chunks' => $estimated_total_chunks,
+			'is_stuck'             => true,
 		) );
 		
 		// DO NOT schedule next chunk - STOP HERE
@@ -615,15 +622,17 @@ private static function send_chunk_notification( $chunk_data ) {
 
 	// v3.0.70: Send email notification after EVERY chunk
 	self::send_chunk_notification( array(
-		'chunk_number'      => $chunk_number,
-		'prev_offset'       => $line_offset,
-		'next_offset'       => $next_offset,
-		'scheduled'         => $scheduled,
-		'skipped'           => $skipped,
-		'first_city'        => $first_city_in_chunk,
-		'last_city'         => isset( $name ) ? $name : 'unknown',
-		'progress_percent'  => $progress_percent,
-		'is_stuck'          => false,
+		'chunk_number'         => $chunk_number,
+		'prev_offset'          => $line_offset,
+		'next_offset'          => $next_offset,
+		'scheduled'            => $scheduled,
+		'skipped'              => $skipped,
+		'first_city'           => $first_city_in_chunk,
+		'last_city'            => isset( $name ) ? $name : 'unknown',
+		'progress_percent'     => $progress_percent,
+		'total_lines'          => $total_lines,
+		'estimated_total_chunks' => $estimated_total_chunks,
+		'is_stuck'             => false,
 	) );
 	
 	// v3.0.69: If more cities remain, schedule next chunk
