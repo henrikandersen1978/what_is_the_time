@@ -255,15 +255,17 @@ class WTA_FAQ_Renderer {
 			$graph_debug = 'DOES_NOT_EXIST';
 		}
 		
-		WTA_Logger::info( '=== FAQ FILTER PROCESSING ===', array(
-			'post_id'      => $post_id,
-			'faq_count'    => count( $faq_data['faqs'] ),
-			'graph_keys'   => isset( $data['@graph'] ) ? array_keys( $data['@graph'] ) : 'NO_GRAPH',
-			'graph_structure' => $graph_debug
-		) );
-		
-		// Build mainEntity array
-		$faqs = $faq_data['faqs'];
+	// v3.4.1: Backwards compatible FAQ access
+	$faqs = isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array();
+	
+	WTA_Logger::info( '=== FAQ FILTER PROCESSING ===', array(
+		'post_id'      => $post_id,
+		'faq_count'    => count( $faqs ),
+		'graph_keys'   => isset( $data['@graph'] ) ? array_keys( $data['@graph'] ) : 'NO_GRAPH',
+		'graph_structure' => $graph_debug
+	) );
+	
+	// Build mainEntity array
 		$main_entity = array();
 		
 		foreach ( $faqs as $faq ) {

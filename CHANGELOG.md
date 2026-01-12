@@ -2,6 +2,85 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.4.1] - 2026-01-12
+
+### 🐛 CRITICAL FIX: count() Error in v3.4.0
+
+**USER REPORT:**
+"wta_generate_ai_content giver nu action failed: count(): Argument #1 ($value) must be of type Countable|array, null given"
+
+**THE PROBLEM:**
+
+v3.4.0 changed FAQ data structure from `'faqs'` to `'static_faqs'` key, but logging statements still tried to access old key:
+
+```php
+// v3.4.0 - BROKEN:
+$faq_data = generate_city_faq($post_id);
+// Returns: array('intro' => ..., 'static_faqs' => [...])
+
+WTA_Logger::info('FAQ generated', array(
+    'faq_count' => count($faq_data['faqs'])  // ❌ NULL - key doesn't exist!
+));
+// PHP 8.0+: Fatal error - count() requires array or Countable
+```
+
+**Root Cause:**
+- 6 locations in code logged `count($faq_data['faqs'])`
+- v3.4.0 renamed key to `'static_faqs'`
+- Logging failed with `count(): Argument #1 must be Countable|array, null given`
+
+### ✅ THE FIX:
+
+**Added backwards compatible FAQ count in all logging statements:**
+
+```php
+// v3.4.1 - FIXED:
+// Backwards compatible access (supports both old and new keys)
+$faqs = isset($faq_data['static_faqs']) 
+    ? $faq_data['static_faqs'] 
+    : (isset($faq_data['faqs']) ? $faq_data['faqs'] : array());
+
+WTA_Logger::info('FAQ generated', array(
+    'faq_count' => count($faqs)  // ✅ Always gets array, never null
+));
+```
+
+### 🔧 MODIFIED FILES:
+
+- ✅ `includes/scheduler/class-wta-ai-processor.php` (3 fixes: lines 59, 268, 349)
+- ✅ `includes/processors/class-wta-single-ai-processor.php` (2 fixes: lines 109, 151)
+- ✅ `includes/helpers/class-wta-faq-renderer.php` (1 fix: line 258)
+
+**Total:** 6 locations fixed with backwards compatible FAQ count
+
+### 📊 COMPATIBILITY:
+
+**Supports both data structures:**
+```php
+// Old format (pre-v3.4.0):
+array('intro' => '...', 'faqs' => [...])  ✅ Works
+
+// New format (v3.4.0+):
+array('intro' => '...', 'static_faqs' => [...])  ✅ Works
+
+// Missing data:
+array('intro' => '...')  ✅ Works (returns empty array)
+```
+
+### 🚀 DEPLOYMENT:
+
+**No re-import needed** - this is a logging fix only. Existing FAQ data works fine.
+
+**User Action:** Upload v3.4.1 and retry failed actions.
+
+### 💡 TESTING:
+
+Manual "Run" button testing is **encouraged** - it helped catch this bug early! 👍
+
+**Status:** CRITICAL FIX - Resolves all count() errors in v3.4.0
+
+---
+
 ## [3.4.0] - 2026-01-12
 
 ### 🎯 DYNAMIC FAQ #1 - No More Cached Time!

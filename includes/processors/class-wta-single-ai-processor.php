@@ -99,18 +99,20 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 								$city_name = get_the_title( $post_id );
 								$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name, $post_id );
 								
-								if ( ! empty( $faq_html ) ) {
-									$existing_content = get_post_field( 'post_content', $post_id );
-									wp_update_post( array(
-										'ID'           => $post_id,
-										'post_content' => $existing_content . "\n\n" . $faq_html,
-									) );
-									
-									WTA_Logger::info( 'FAQ generated and appended to existing content', array( 
-										'post_id'   => $post_id,
-										'faq_count' => count( $faq_data['faqs'] ),
-									) );
-								}
+							if ( ! empty( $faq_html ) ) {
+								$existing_content = get_post_field( 'post_content', $post_id );
+								wp_update_post( array(
+									'ID'           => $post_id,
+									'post_content' => $existing_content . "\n\n" . $faq_html,
+								) );
+								
+								// v3.4.1: Backwards compatible FAQ count
+								$faqs = isset( $faq_data['static_faqs'] ) ? $faq_data['static_faqs'] : ( isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array() );
+								WTA_Logger::info( 'FAQ generated and appended to existing content', array( 
+									'post_id'   => $post_id,
+									'faq_count' => count( $faqs ),
+								) );
+							}
 							}
 						}
 					}
@@ -144,14 +146,16 @@ class WTA_Single_AI_Processor extends WTA_AI_Processor {
 					$city_name = get_the_title( $post_id );
 					$faq_html = WTA_FAQ_Renderer::render_faq_section( $faq_data, $city_name, $post_id );
 					
-					if ( ! empty( $faq_html ) ) {
-						$result['content'] .= "\n\n" . $faq_html;
-						WTA_Logger::info( 'FAQ generated and appended to content', array( 
-							'post_id'   => $post_id, 
-							'force_ai'  => $force_ai,
-							'faq_count' => count( $faq_data['faqs'] ),
-						) );
-					}
+				if ( ! empty( $faq_html ) ) {
+					$result['content'] .= "\n\n" . $faq_html;
+					// v3.4.1: Backwards compatible FAQ count
+					$faqs = isset( $faq_data['static_faqs'] ) ? $faq_data['static_faqs'] : ( isset( $faq_data['faqs'] ) ? $faq_data['faqs'] : array() );
+					WTA_Logger::info( 'FAQ generated and appended to content', array( 
+						'post_id'   => $post_id, 
+						'force_ai'  => $force_ai,
+						'faq_count' => count( $faqs ),
+					) );
+				}
 				} else {
 					WTA_Logger::warning( 'Failed to generate FAQ', array( 'post_id' => $post_id ) );
 				}
