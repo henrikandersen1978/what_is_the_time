@@ -7,11 +7,16 @@
  * 
  * v3.3.8: Staggered API scheduling to prevent TimezoneDB overload.
  * Spreads API calls over time (10 req/s) instead of bursting all at once.
+ * 
+ * v3.3.11: SMART COMPLETION DETECTION - No more race conditions!
+ * Checks Action Scheduler for pending/in-progress actions to determine true completion.
+ * Dynamic recheck intervals based on remaining work (30s-5min).
  *
  * @package    WorldTimeAI
  * @subpackage WorldTimeAI/includes/processors
  * @since      3.3.0
  * @since      3.3.8 Added staggered scheduling for timezone API calls
+ * @since      3.3.11 Smart completion detection with Action Scheduler state checks
  */
 
 class WTA_Batch_Processor {
@@ -19,16 +24,33 @@ class WTA_Batch_Processor {
 	/**
 	 * Check if structure phase is complete and trigger timezone batch.
 	 *
-	 * This runs periodically (every 2 min) during structure phase to detect completion.
+	 * v3.3.11: SMART COMPLETION DETECTION - No more race conditions!
+	 * Checks Action Scheduler for pending/in-progress actions instead of just meta keys.
+	 * Dynamically adjusts recheck interval based on remaining work.
+	 *
+	 * This runs periodically during structure phase to detect completion.
 	 * When all cities are created, schedules timezone resolution for all pending cities.
 	 *
 	 * @since 3.3.0
+	 * @since 3.3.11 Smart completion detection (checks Action Scheduler state)
 	 */
 	public function check_structure_completion() {
 		global $wpdb;
 
+		// v3.3.11: PRIMARY CHECK - Action Scheduler pending/in-progress actions
+		// This is the DEFINITIVE check because it reflects actual work being done
+		$as_table = $wpdb->prefix . 'actionscheduler_actions';
+		$pending_actions = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$as_table}
+				 WHERE hook = %s
+				 AND status IN ('pending', 'in-progress')",
+				'wta_create_city'
+			)
+		);
+
+		// v3.3.11: SECONDARY CHECK - Database meta keys (backup check)
 		// Count cities without structure_complete flag (still being created)
-		// v3.3.7: Use WTA_POST_TYPE constant (was hardcoded wrong type!)
 		$pending_structure = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*)
@@ -45,14 +67,35 @@ class WTA_Batch_Processor {
 			)
 		);
 
+		// v3.3.11: Calculate total pending (either check can indicate pending work)
+		$total_pending = max( $pending_actions, $pending_structure );
+
 		WTA_Logger::info( '🔍 Structure completion check', array(
-			'pending_structure' => $pending_structure,
+			'pending_actions'   => $pending_actions,  // Action Scheduler queue
+			'pending_structure' => $pending_structure, // Database meta check
+			'total_pending'     => $total_pending,    // Max of both
 		) );
 
-		if ( $pending_structure > 0 ) {
-			// Still creating cities - schedule next check in 2 minutes
+		if ( $total_pending > 0 ) {
+			// v3.3.11: DYNAMIC RECHECK INTERVAL based on remaining work
+			// Close to completion: Check frequently
+			// Far from completion: Check less frequently to reduce overhead
+			if ( $total_pending < 100 ) {
+				$recheck_delay = 30;  // 30 seconds - almost done!
+			} elseif ( $total_pending < 1000 ) {
+				$recheck_delay = 60;  // 1 minute - moderate amount left
+			} else {
+				$recheck_delay = 120; // 2 minutes - lots of work remaining
+			}
+
+			WTA_Logger::info( '⏳ Structure phase in progress', array(
+				'next_check_in' => $recheck_delay . 's',
+				'reason'        => $total_pending < 100 ? 'Almost done!' : 
+				                   ( $total_pending < 1000 ? 'Moderate work' : 'Large import' ),
+			) );
+
 			as_schedule_single_action(
-				time() + 120,
+				time() + $recheck_delay,
 				'wta_check_structure_completion',
 				array(),
 				'wta_structure'
@@ -60,7 +103,7 @@ class WTA_Batch_Processor {
 			return;
 		}
 
-		// Structure phase complete! Trigger TWO things:
+		// v3.3.11: Structure phase complete! Trigger TWO things:
 		WTA_Logger::info( '✅ Structure phase COMPLETE!' );
 		
 		// 1. AI for continents + countries (no timezone needed!)
@@ -182,16 +225,33 @@ class WTA_Batch_Processor {
 	/**
 	 * Check if timezone phase is complete and trigger AI batch.
 	 *
-	 * This runs periodically (every 5 min) during timezone phase to detect completion.
+	 * v3.3.11: SMART COMPLETION DETECTION - No more race conditions!
+	 * Checks Action Scheduler for pending/in-progress actions instead of just meta keys.
+	 * Dynamically adjusts recheck interval based on remaining work.
+	 *
+	 * This runs periodically during timezone phase to detect completion.
 	 * When all timezones are resolved, schedules AI generation for all cities.
 	 *
 	 * @since 3.3.0
+	 * @since 3.3.11 Smart completion detection (checks Action Scheduler state)
 	 */
 	public function check_timezone_completion() {
 		global $wpdb;
 
+		// v3.3.11: PRIMARY CHECK - Action Scheduler pending/in-progress actions
+		// This is the DEFINITIVE check because it reflects actual work being done
+		$as_table = $wpdb->prefix . 'actionscheduler_actions';
+		$pending_actions = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$as_table}
+				 WHERE hook = %s
+				 AND status IN ('pending', 'in-progress')",
+				'wta_lookup_timezone'
+			)
+		);
+
+		// v3.3.11: SECONDARY CHECK - Database meta keys (backup check)
 		// Count cities without resolved timezone
-		// v3.3.7: Use WTA_POST_TYPE constant (was hardcoded wrong type!)
 		$pending_timezone = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*)
@@ -205,14 +265,34 @@ class WTA_Batch_Processor {
 			)
 		);
 
+		// v3.3.11: Calculate total pending (either check can indicate pending work)
+		$total_pending = max( $pending_actions, $pending_timezone );
+
 		WTA_Logger::info( '🔍 Timezone completion check', array(
-			'pending_timezone' => $pending_timezone,
+			'pending_actions'  => $pending_actions,  // Action Scheduler queue
+			'pending_timezone' => $pending_timezone, // Database meta check
+			'total_pending'    => $total_pending,    // Max of both
 		) );
 
-		if ( $pending_timezone > 0 ) {
-			// Still resolving timezones - schedule next check in 5 minutes
+		if ( $total_pending > 0 ) {
+			// v3.3.11: DYNAMIC RECHECK INTERVAL based on remaining work
+			// Timezone lookups are slower (API calls), so use longer intervals
+			if ( $total_pending < 50 ) {
+				$recheck_delay = 60;  // 1 minute - almost done!
+			} elseif ( $total_pending < 500 ) {
+				$recheck_delay = 180; // 3 minutes - moderate amount left
+			} else {
+				$recheck_delay = 300; // 5 minutes - lots of work remaining
+			}
+
+			WTA_Logger::info( '⏳ Timezone phase in progress', array(
+				'next_check_in' => $recheck_delay . 's',
+				'reason'        => $total_pending < 50 ? 'Almost done!' : 
+				                   ( $total_pending < 500 ? 'Moderate work' : 'Large import' ),
+			) );
+
 			as_schedule_single_action(
-				time() + 300,
+				time() + $recheck_delay,
 				'wta_check_timezone_completion',
 				array(),
 				'wta_timezone'
@@ -220,7 +300,7 @@ class WTA_Batch_Processor {
 			return;
 		}
 
-		// Timezone phase complete! Trigger City AI batch
+		// v3.3.11: Timezone phase complete! Trigger City AI batch
 		WTA_Logger::info( '✅ Timezone phase COMPLETE! Triggering City AI batch...' );
 
 		as_schedule_single_action(

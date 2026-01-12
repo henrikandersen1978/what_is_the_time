@@ -621,7 +621,7 @@ class WTA_Core {
 		$test_mode = get_option( 'wta_test_mode', 0 );
 		$setting_value = $test_mode 
 			? intval( get_option( 'wta_concurrent_test_mode', 10 ) )
-			: intval( get_option( 'wta_concurrent_normal_mode', 5 ) );
+			: intval( get_option( 'wta_concurrent_normal_mode', 10 ) );
 		
 		WTA_Logger::info( '🚀 Queue runner starting', array(
 			'pending_wta_actions' => $pending_count,
