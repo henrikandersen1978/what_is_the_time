@@ -11,7 +11,7 @@
  * Plugin Name:       World Time AI
  * Plugin URI:        https://github.com/henrikandersen1978/what_is_the_time
  * Description:       Display current local time worldwide with AI-generated Danish content and hierarchical location pages.
- * Version:           3.3.12
+ * Version:           3.3.13
  * Requires at least: 6.8
  * Requires PHP:      8.4
  * Author:            Henrik Andersen
@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WTA_VERSION', '3.3.12' );
+define( 'WTA_VERSION', '3.3.13' );
 
 /**
  * Plugin directory path.
@@ -153,28 +153,19 @@ function wta_optimize_action_scheduler() {
 	}
 	
 	// ==========================================
-	// OPTIMIZED FOR 2 CONCURRENT RUNNERS (v2.35.32)
-	// Action Scheduler's concurrent_batches is GLOBAL across all runners
-	// Reality: ~2 runners active (1 from WP-Cron + 1 from occasional async)
-	// Strategy: Optimize these 2 runners for maximum throughput within API limits
+	// v3.3.13: REMOVED HARDCODED FILTERS
+	// Now using DYNAMIC settings from class-wta-core.php
+	// Admin configurable via: Data & Import > Concurrent Processing
 	// ==========================================
-	
-	add_filter( 'action_scheduler_queue_runner_concurrent_batches', function( $batches ) {
-		return 2; // Realistic: WP-Cron + occasional async
-	}, 999 );
-	
+	// 
+	// CONCURRENT BATCHES: Managed by set_concurrent_batches() in class-wta-core.php
+	// - Uses admin setting: wta_concurrent_test_mode or wta_concurrent_normal_mode
+	// - Default: 10 for Normal Mode (perfect for Premium tier APIs)
+	// 
+	// BATCH SIZE: Managed by increase_batch_size() in class-wta-core.php
+	// - Calculated dynamically based on concurrent setting
+	// - Formula: concurrent × 25 = batch size
 	// ==========================================
-	// BATCH SIZE - Maximize throughput per runner
-	// ==========================================
-	// With 2 runners × 300 batch size = 600 actions per cycle
-	// Respecting API rate limits:
-	// - Wikidata: 5 req/s per processor (0.2s delay) = safe under 200 req/s limit
-	// - TimeZoneDB: 0.4 req/s per processor (2.5s avg) = safe under 1 req/s limit  
-	// - OpenAI: Parallel API calls with Tier 5 limits
-	
-	add_filter( 'action_scheduler_queue_runner_batch_size', function( $size ) {
-		return 300; // 12× default
-	}, 999 );
 	
 	// ==========================================
 	// TIME LIMIT - Dynamic based on cron interval
