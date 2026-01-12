@@ -230,6 +230,17 @@ class WTA_Importer {
 
 		$filtered_country_codes = array_column( $filtered_countries, 'iso2' );
 
+	// v3.4.3: For large imports (>200 countries), send empty array to avoid Action Scheduler serialization limit
+	// Empty array = import ALL countries (filter is skipped in schedule_cities when array is empty)
+	// For selective imports, send the actual array
+	$is_large_import = ( count( $filtered_country_codes ) > 200 );
+	
+	WTA_Logger::info( 'Preparing cities scheduler', array(
+		'total_countries' => count( $filtered_country_codes ),
+		'is_large_import' => $is_large_import,
+		'filter_strategy' => $is_large_import ? 'No filter (import all)' : 'Filter by country codes',
+	) );
+
 	// Schedule a single action to process all cities
 	// v3.2.79: Reduced to 10 minutes (600s) since country AI is now delayed
 	// v3.3.12: Reduced to 30 seconds - countries complete quickly, and batch processor
@@ -241,7 +252,7 @@ class WTA_Importer {
 			'file_path'              => $cities_file,
 			'min_population'         => $options['min_population'],
 			'max_cities_per_country' => $options['max_cities_per_country'],
-			'filtered_country_codes' => $filtered_country_codes,
+			'filtered_country_codes' => $is_large_import ? array() : $filtered_country_codes,
 			'line_offset'            => 0,
 			'chunk_size'             => 10000,
 		),
@@ -363,13 +374,17 @@ private static function send_chunk_notification( $chunk_data ) {
 	public static function schedule_cities( $file_path, $min_population, $max_cities_per_country, $filtered_country_codes, $line_offset = 0, $chunk_size = 10000 ) {
 		set_time_limit( 300 ); // 5 minutes per chunk
 
+	// v3.4.3: Log import strategy
+	$import_all_countries = empty( $filtered_country_codes );
+	
 	WTA_Logger::info( 'Starting cities scheduling', array(
 		'file'                   => basename( $file_path ),
 		'min_population'         => $min_population,
 		'max_cities_per_country' => $max_cities_per_country,
-		'filtered_countries'     => count( $filtered_country_codes ),
+		'filtered_countries'     => $import_all_countries ? 'ALL (no filter)' : count( $filtered_country_codes ),
 		'chunk_offset'           => $line_offset,
 		'chunk_size'             => $chunk_size,
+		'import_strategy'        => $import_all_countries ? 'Full import (empty filter)' : 'Selective import',
 	) );
 
 	// v3.2.69: Load entire file into memory (37MB cities500.txt fits easily in 1024MB)
