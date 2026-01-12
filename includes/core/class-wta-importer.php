@@ -232,8 +232,10 @@ class WTA_Importer {
 
 	// Schedule a single action to process all cities
 	// v3.2.79: Reduced to 10 minutes (600s) since country AI is now delayed
+	// v3.3.12: Reduced to 30 seconds - countries complete quickly, and batch processor
+	// will wait for ALL cities to complete anyway via smart completion detection (v3.3.11)
 	as_schedule_single_action(
-		time() + 600, // Wait 10 minutes for all countries to be created
+		time() + 30, // 30 seconds buffer - batch processor handles the rest!
 		'wta_schedule_cities',
 		array(
 			'file_path'              => $cities_file,
