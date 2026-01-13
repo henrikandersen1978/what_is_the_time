@@ -2,6 +2,27 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.2] - 2026-01-13
+
+### Fixed
+- **Import Filter Enhancement**: Added PPLX feature code to excluded list
+  - PPLX = "Section of populated place" (city districts, arrondissements, boroughs)
+  - Prevents import of administrative subdivisions like:
+    - "Paris 12e Arrondissement"
+    - "Lyon 03"
+    - "Marseille 13"
+    - NYC boroughs and similar city sections
+  - Real cities with hyphens/special names remain unaffected:
+    - "L'Hospitalet de Llobregat" (PPL) ✅
+    - "La Seyne-sur-Mer" (PPL) ✅
+    - "Fontenay-sous-Bois" (PPL) ✅
+
+### Technical Details
+- Updated `class-wta-importer.php` line 480
+- Excluded feature codes now: `PPLA3`, `PPLA4`, `PPLX`
+- Uses GeoNames official classification system (more reliable than name-based filtering)
+- Only affects new imports - existing posts remain unchanged
+
 ## [3.5.0] - 2026-01-12
 
 ### 🐛 CRITICAL FIX: Infinite Structure Completion Loop (TF/GS Bug)
