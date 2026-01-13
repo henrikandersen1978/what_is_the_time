@@ -95,11 +95,11 @@ $complex_countries = get_option( 'wta_complex_countries', 'US,CA,BR,RU,AU,MX,ID,
 							<option value="us" <?php selected( $site_language, 'us' ); ?>>🇺🇸 English (US)</option>
 							<option value="de" <?php selected( $site_language, 'de' ); ?>>🇩🇪 Deutsch</option>
 							<option value="sv" <?php selected( $site_language, 'sv' ); ?>>🇸🇪 Svenska</option>
-							<option value="fr" <?php selected( $site_language, 'fr' ); ?> disabled>🇫🇷 Français (Coming soon)</option>
-							<option value="pt" <?php selected( $site_language, 'pt' ); ?> disabled>🇵🇹 Português (Coming soon)</option>
-							<option value="it" <?php selected( $site_language, 'it' ); ?> disabled>🇮🇹 Italiano (Coming soon)</option>
-							<option value="nl" <?php selected( $site_language, 'nl' ); ?> disabled>🇳🇱 Nederlands (Coming soon)</option>
-							<option value="pl" <?php selected( $site_language, 'pl' ); ?> disabled>🇵🇱 Polski (Coming soon)</option>
+							<option value="fr" <?php selected( $site_language, 'fr' ); ?>>🇫🇷 Français</option>
+							<option value="pt" <?php selected( $site_language, 'pt' ); ?> disabled>🇵🇹 Português (In progress)</option>
+							<option value="it" <?php selected( $site_language, 'it' ); ?> disabled>🇮🇹 Italiano (In progress)</option>
+							<option value="nl" <?php selected( $site_language, 'nl' ); ?> disabled>🇳🇱 Nederlands (In progress)</option>
+							<option value="pl" <?php selected( $site_language, 'pl' ); ?> disabled>🇵🇱 Polski (In progress)</option>
 						</select>
 							<p class="description"><?php esc_html_e( 'Select your site language for AI prompts and FAQ strings.', WTA_TEXT_DOMAIN ); ?></p>
 							<p class="description"><strong><?php echo sprintf( esc_html__( 'Current language: %s', WTA_TEXT_DOMAIN ), $site_language ); ?></strong></p>
