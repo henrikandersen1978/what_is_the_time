@@ -2,6 +2,34 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.4] - 2026-01-15
+
+### Added
+- **🇪🇸 Español (Spanish)** - Complete Spanish translation (`es.json`)
+  - Base country: España
+  - Base timezone: Europe/Madrid
+  - All AI prompts, templates, and FAQ in Spanish
+  - 54 prompts, 127 templates, 28 FAQ entries
+
+### Changed
+- **Language Dropdown**: Updated to show all 11 available languages alphabetically
+  - Removed "In progress" labels from pt, it, nl, pl (now fully complete)
+  - Added Español to dropdown
+  - Sorted alphabetically for better UX
+
+### Fixed
+- **Language Files Consistency**: All 11 language files now have identical structure
+  - Added missing prompts: `comparison_intro_system`, `comparison_intro_user`
+  - Added missing templates: `comparison_heading`, `hour_plural`, `hour_singular`, `table_header_city`, `table_header_country`, `table_header_local_time`, `table_header_time_diff`
+  - All language files updated to version 3.5.4
+  - Verified: 54 prompts, 127 templates, 28 FAQ entries in each file
+
+### Technical Details
+- **New file**: `includes/languages/es.json` - Complete Spanish translation
+- **Updated**: All 11 language JSON files to version 3.5.4
+- **Updated**: `includes/admin/views/timezone-language.php` - Language dropdown
+- All translations professionally verified and complete
+
 ## [3.5.3] - 2026-01-13
 
 ### Added

@@ -3,7 +3,7 @@
     "language": "de",
     "language_name": "Deutsch",
     "flag": "🇩🇪",
-    "version": "3.2.0"
+    "version": "3.5.3"
   },
   "base_settings": {
     "base_country_name": "Deutschland",
@@ -63,7 +63,9 @@
     "faq_intro_system": "Sie schreiben kurze, hilfreiche Einleitungen zu FAQ-Bereichen auf Deutsch. Keine Platzhalter.",
     "faq_intro_user": "Schreiben Sie 2-3 kurze Sätze, die den FAQ-Bereich über die Zeit in {city_name} vorstellen. Erklären Sie kurz, worauf Benutzer Antworten finden können (Zeitzone, Zeitunterschied, praktische Tipps). Ton: Hilfreich und direkt. Max 50 Wörter. KEINE Platzhalter.",
     "faq_ai_batch_system": "Sie sind Experte im Schreiben von FAQ-Antworten auf Deutsch. Antworten sollten praktisch und hilfreich sein. KEINE Platzhalter. Return ONLY pure JSON, no markdown code blocks.",
-    "faq_ai_batch_user": "Schreiben Sie FAQ-Antworten für {city_name}, {country_name}.\\n\\nFAQ 1: Wann soll ich {city_name} aus Deutschland anrufen?\\nZeitunterschied: {diff_hours} Stunden. Schreiben Sie 2-3 praktische Sätze (max 60 Wörter).\\n\\nFAQ 2: Was sollte ich über die Zeitkultur in {city_name} wissen?\\nSchreiben Sie 2-3 Sätze über Arbeitszeiten, Essenszeiten, lokale Zeitgewohnheiten (max 60 Wörter).\\n\\nFAQ 3: Wie vermeide ich Jetlag nach {city_name}?\\nZeitunterschied: {diff_hours} Stunden. Schreiben Sie 2 Jetlag-Tipps (max 50 Wörter).\\n\\nFAQ 4: Was ist die beste Zeit, um {city_name} zu besuchen?\\nSchreiben Sie 2 Sätze über Wetter und Touristensaison (max 50 Wörter).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nKEINE Platzhalter. NUR tatsächlicher Inhalt. NO markdown formatting."
+    "faq_ai_batch_user": "Schreiben Sie FAQ-Antworten für {city_name}, {country_name}.\\n\\nFAQ 1: Wann soll ich {city_name} aus Deutschland anrufen?\\nZeitunterschied: {diff_hours} Stunden. Schreiben Sie 2-3 praktische Sätze (max 60 Wörter).\\n\\nFAQ 2: Was sollte ich über die Zeitkultur in {city_name} wissen?\\nSchreiben Sie 2-3 Sätze über Arbeitszeiten, Essenszeiten, lokale Zeitgewohnheiten (max 60 Wörter).\\n\\nFAQ 3: Wie vermeide ich Jetlag nach {city_name}?\\nZeitunterschied: {diff_hours} Stunden. Schreiben Sie 2 Jetlag-Tipps (max 50 Wörter).\\n\\nFAQ 4: Was ist die beste Zeit, um {city_name} zu besuchen?\\nSchreiben Sie 2 Sätze über Wetter und Touristensaison (max 50 Wörter).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nKEINE Platzhalter. NUR tatsächlicher Inhalt. NO markdown formatting.",
+    "comparison_intro_system": "Sie sind SEO-Experte. Schreiben Sie NUR den Text, keine Anführungszeichen, keine zusätzlichen Erklärungen.",
+    "comparison_intro_user": "Schreiben Sie genau 40-50 Wörter darüber, warum eine Weltuhr nützlich ist, um Zeitunterschiede zwischen %s und anderen internationalen Städten zu vergleichen. Verwenden Sie die Schlüsselwörter \"Zeitunterschied\", \"Zeitunterschiede\" und \"Weltuhr\". Fokussieren Sie auf Reiseplanung und internationale Meetings. NUR der Text."
   },
   "templates": {
     "continent_h1": "Aktuelle Uhrzeit in Ländern und Städten in %s",
@@ -191,7 +193,14 @@
     "time_at": "um",
     "schema_time_city": "Aktuelle Uhrzeit und Zeitzone für %s",
     "schema_time_city_country": "Aktuelle Uhrzeit und Zeitzone für %s, %s",
-    "schema_time_continent": "Zeitzonen und aktuelle Uhrzeit in %s"
+    "schema_time_continent": "Zeitzonen und aktuelle Uhrzeit in %s",
+    "comparison_heading": "Zeitunterschied: Vergleichen Sie %s mit Weltuhr in anderen Städten",
+    "hour_plural": "Stunden",
+    "hour_singular": "Stunde",
+    "table_header_city": "Stadt",
+    "table_header_country": "Land",
+    "table_header_local_time": "Ortszeit",
+    "table_header_time_diff": "Zeitunterschied"
   },
   "faq": {
     "faq1_question": "Wie spät ist es gerade in {city_name}?",

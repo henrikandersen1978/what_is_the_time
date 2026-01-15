@@ -63,7 +63,9 @@
     "faq_intro_system": "You write short, helpful introductions to FAQ sections in English. No placeholders.",
     "faq_intro_user": "Write 2-3 short sentences introducing the FAQ section about time in {city_name}. Briefly explain what users can find answers to (timezone, time difference, practical tips). Tone: Helpful and direct. Max 50 words. NO placeholders.",
     "faq_ai_batch_system": "You are an expert at writing FAQ answers in English. Answers should be practical and helpful. NO placeholders. Return ONLY pure JSON, no markdown code blocks.",
-    "faq_ai_batch_user": "Write FAQ answers for {city_name}, {country_name}.\\n\\nFAQ 1: When should I call {city_name} from the US?\\nTime difference: {diff_hours} hours. Write 2-3 practical sentences (max 60 words).\\n\\nFAQ 2: What should I know about time culture in {city_name}?\\nWrite 2-3 sentences about working hours, meal times, local time customs (max 60 words).\\n\\nFAQ 3: How do I avoid jetlag to {city_name}?\\nTime difference: {diff_hours} hours. Write 2 jetlag tips (max 50 words).\\n\\nFAQ 4: What is the best time to visit {city_name}?\\nWrite 2 sentences about weather and tourist season (max 50 words).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nNO placeholders. ONLY actual content. NO markdown formatting."
+    "faq_ai_batch_user": "Write FAQ answers for {city_name}, {country_name}.\\n\\nFAQ 1: When should I call {city_name} from the US?\\nTime difference: {diff_hours} hours. Write 2-3 practical sentences (max 60 words).\\n\\nFAQ 2: What should I know about time culture in {city_name}?\\nWrite 2-3 sentences about working hours, meal times, local time customs (max 60 words).\\n\\nFAQ 3: How do I avoid jetlag to {city_name}?\\nTime difference: {diff_hours} hours. Write 2 jetlag tips (max 50 words).\\n\\nFAQ 4: What is the best time to visit {city_name}?\\nWrite 2 sentences about weather and tourist season (max 50 words).\\n\\nIMPORTANT: Return ONLY the JSON object below, no markdown code blocks (```json), no extra text:\\n{\\n  \\\"faq1\\\": \\\"...\\\",\\n  \\\"faq2\\\": \\\"...\\\",\\n  \\\"faq3\\\": \\\"...\\\",\\n  \\\"faq4\\\": \\\"...\\\"\\n}\\n\\nNO placeholders. ONLY actual content. NO markdown formatting.",
+    "comparison_intro_system": "You are an SEO expert. Write ONLY the text, no quotation marks, no extra explanations.",
+    "comparison_intro_user": "Write exactly 40-50 words about why a world clock is useful for comparing time differences between %s and other international cities. Include the keywords \"time difference\", \"time differences\" and \"world clock\". Focus on travel planning and international meetings. ONLY the text."
   },
   "templates": {
     "continent_h1": "Current time in countries and cities in %s",
@@ -191,7 +193,14 @@
     "time_at": "at",
     "schema_time_city": "Current time and timezone for %s",
     "schema_time_city_country": "Current time and timezone for %s, %s",
-    "schema_time_continent": "Timezones and current time in %s"
+    "schema_time_continent": "Timezones and current time in %s",
+    "comparison_heading": "Time difference: Compare %s with world clock in other cities",
+    "hour_plural": "hours",
+    "hour_singular": "hour",
+    "table_header_city": "City",
+    "table_header_country": "Country",
+    "table_header_local_time": "Local time",
+    "table_header_time_diff": "Time difference"
   },
   "faq": {
     "faq1_question": "What time is it in {city_name} right now?",
