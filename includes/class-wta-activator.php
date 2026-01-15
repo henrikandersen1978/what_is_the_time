@@ -506,12 +506,18 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		// Map language codes to locale codes
 		$base_language_map = array(
 			'da' => 'da-DK',
-			'sv' => 'sv-SE',
-			'en' => 'en-GB',
 			'de' => 'de-DE',
+			'en' => 'en-GB',
+			'us' => 'en-US',
+			'es' => 'es-ES',
+			'fr' => 'fr-FR',
+			'it' => 'it-IT',
+			'nl' => 'nl-NL',
+			'pl' => 'pl-PL',
+			'pt' => 'pt-PT',
+			'sv' => 'sv-SE',
 			'no' => 'nb-NO',
 			'fi' => 'fi-FI',
-			'nl' => 'nl-NL',
 		);
 		
 		if ( isset( $base_language_map[ $lang ] ) ) {
@@ -521,12 +527,18 @@ Max 40-50 ord. Generisk og inspirerende.' );
 		// Update base language description for AI context
 		$language_descriptions = array(
 			'da' => 'Skriv på flydende dansk til danske brugere',
-			'sv' => 'Skriv på flytande svenska till svenska användare',
-			'en' => 'Write in fluent English for English-speaking users',
 			'de' => 'Schreiben Sie fließend auf Deutsch für deutschsprachige Benutzer',
+			'en' => 'Write in fluent English for English-speaking users',
+			'us' => 'Write in fluent, clear English for an international audience',
+			'es' => 'Escribe en español fluido para usuarios de habla hispana',
+			'fr' => 'Écrivez en français courant pour les utilisateurs francophones',
+			'it' => 'Scrivi in italiano fluente per utenti di lingua italiana',
+			'nl' => 'Schrijf in vloeiend Nederlands voor Nederlandstalige gebruikers',
+			'pl' => 'Pisz płynnie po polsku dla polskich użytkowników',
+			'pt' => 'Escreva em português fluente para usuários de língua portuguesa',
+			'sv' => 'Skriv på flytande svenska till svenska användare',
 			'no' => 'Skriv på flytende norsk til norske brukere',
 			'fi' => 'Kirjoita sujuvaa suomea suomalaisille käyttäjille',
-			'nl' => 'Schrijf in vloeiend Nederlands voor Nederlandstalige gebruikers',
 		);
 		
 		if ( isset( $language_descriptions[ $lang ] ) ) {
@@ -548,7 +560,7 @@ Max 40-50 ord. Generisk og inspirerende.' );
 	 */
 	private static function load_language_json( $lang ) {
 		// Security: Whitelist allowed languages
-		$allowed_langs = array( 'da', 'en', 'de', 'sv', 'no', 'fi', 'nl' );
+		$allowed_langs = array( 'da', 'de', 'en', 'us', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'no', 'fi' );
 		if ( ! in_array( $lang, $allowed_langs, true ) ) {
 			return self::get_fallback_defaults();
 		}

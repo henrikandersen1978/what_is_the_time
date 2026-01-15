@@ -2,6 +2,21 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.5] - 2026-01-15
+
+### Fixed
+- **CRITICAL**: "Load Default Prompts" button now works correctly for all languages
+  - Fixed: `us`, `es`, `pt`, `it`, `pl`, `fr` were missing from language whitelist in `load_language_json()`
+  - Fixed: `us`, `es`, `pt`, `it`, `pl`, `fr` were missing from `$base_language_map` in `load_language_defaults()`
+  - Fixed: `us`, `es`, `pt`, `it`, `pl`, `fr` were missing from `$language_descriptions` in `load_language_defaults()`
+  - **Impact**: When clicking "Load Default Prompts for US/ES/etc", settings would revert to Danish defaults instead of loading correct language
+  - **Symptoms**: GeoNames would import Danish city names even on English/Spanish sites
+  - This bug has been present since these languages were added in v3.5.3/3.5.4
+
+### Technical Details
+- **Updated**: `includes/class-wta-activator.php` - Added all 11 languages to whitelists and mappings
+- **Languages now fully supported**: da, de, en, us, es, fr, it, nl, pl, pt, sv (+ no, fi)
+
 ## [3.5.4] - 2026-01-15
 
 ### Added
