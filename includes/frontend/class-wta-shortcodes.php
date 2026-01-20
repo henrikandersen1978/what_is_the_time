@@ -835,14 +835,15 @@ class WTA_Shortcodes {
 		) );
 	}
 	
-	// Build OBJECT_K result from cached map (compatible with existing code)
-	$city_counts = new stdClass();
+	// Build array result from cached map (compatible with existing code)
+	// OBJECT_K format: array with country_id as keys, objects as values
+	$city_counts = array();
 	foreach ( $nearby_countries as $country_id ) {
 		if ( isset( $city_counts_map[ $country_id ] ) && $city_counts_map[ $country_id ] > 0 ) {
 			$obj = new stdClass();
 			$obj->post_parent = $country_id;
 			$obj->city_count = $city_counts_map[ $country_id ];
-			$city_counts->$country_id = $obj;
+			$city_counts[ $country_id ] = $obj;
 		}
 	}
 		
