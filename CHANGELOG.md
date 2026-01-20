@@ -2,6 +2,37 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.26] - 2026-01-20
+
+### 🔧 CRITICAL FIX - Race Condition in Comparison Intro Processor
+
+**Problem:**
+When `wta_process_comparison_intros` action ran, it caused thousands of `wta_generate_ai_content` actions to fail with "Scheduled action will not be executed as no callbacks are registered".
+
+**Root Cause:**
+- `class-wta-comparison-intro-processor.php` used `WTA_POST_TYPE` constant in SQL queries
+- Due to Action Scheduler's execution timing, the constant wasn't always defined when the processor ran
+- This caused a fatal error that crashed plugin initialization
+- When plugin didn't initialize properly, no hooks were registered → all actions failed
+
+**The Fix:**
+Hardcoded `'wta_location'` instead of using `WTA_POST_TYPE` constant in two locations:
+1. `get_cities_without_intro()` method (line 130)
+2. `get_stats()` static method (line 285)
+
+This eliminates the race condition and ensures the processor always works, regardless of Action Scheduler timing.
+
+**Changed Files:**
+- `includes/scheduler/class-wta-comparison-intro-processor.php`
+
+**Impact:**
+- ✅ No more mass action failures
+- ✅ Comparison intro job runs smoothly
+- ✅ Main AI content import unaffected
+- ✅ All scheduled actions execute successfully
+
+---
+
 ## [3.5.25] - 2026-01-20
 
 ### 🚀 MAJOR PERFORMANCE WIN - Background Comparison Intro Generation

@@ -121,17 +121,17 @@ class WTA_Comparison_Intro_Processor {
 	private function get_cities_without_intro( $limit ) {
 		global $wpdb;
 
+		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
 		$cities = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title
 			FROM {$wpdb->posts} p
 			LEFT JOIN {$wpdb->prefix}wta_cache c 
 				ON c.cache_key = CONCAT('wta_comparison_intro_', p.ID)
 				AND c.expires > UNIX_TIMESTAMP()
-			WHERE p.post_type = %s
+			WHERE p.post_type = 'wta_location'
 			AND p.post_status = 'publish'
 			AND c.cache_key IS NULL
 			LIMIT %d",
-			WTA_POST_TYPE,
 			$limit
 		) );
 
@@ -277,13 +277,13 @@ class WTA_Comparison_Intro_Processor {
 	public static function get_stats() {
 		global $wpdb;
 
-		$total_cities = $wpdb->get_var( $wpdb->prepare(
+		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
+		$total_cities = $wpdb->get_var(
 			"SELECT COUNT(*)
 			FROM {$wpdb->posts}
-			WHERE post_type = %s
-			AND post_status = 'publish'",
-			WTA_POST_TYPE
-		) );
+			WHERE post_type = 'wta_location'
+			AND post_status = 'publish'"
+		);
 
 		$cities_with_intro = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(DISTINCT SUBSTRING(c.cache_key, 24))
