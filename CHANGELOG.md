@@ -2,6 +2,34 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.27] - 2026-01-20
+
+### 🐛 BUG FIX - Comparison Intro Only for Cities
+
+**Problem:**
+`wta_process_comparison_intros` generated intro text for **all** locations (continents, countries AND cities), but the `[wta_global_time_comparison]` shortcode only displays on city pages. This wasted API calls on non-city locations.
+
+**The Fix:**
+Added `wta_location_type = 'city'` filter to SQL queries in:
+1. `get_cities_without_intro()` - Only fetch cities (line 127-131)
+2. `get_stats()` - Only count cities (line 286-290)
+
+**Impact:**
+- ✅ Only generates intro for cities (where shortcode is displayed)
+- ✅ Saves OpenAI API costs on continents/countries
+- ✅ Faster completion (fewer items to process)
+- ✅ More accurate progress statistics
+
+**Before:**
+- Processing: ~150,000 locations (continents + countries + cities)
+- Many wasted API calls
+
+**After:**
+- Processing: ~146,000 cities only
+- No wasted API calls
+
+---
+
 ## [3.5.26] - 2026-01-20
 
 ### 🔧 CRITICAL FIX - Race Condition in Comparison Intro Processor
