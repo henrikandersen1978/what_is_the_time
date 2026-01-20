@@ -124,15 +124,19 @@ class WTA_Comparison_Intro_Processor {
 		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
 		// v3.5.27: Filter to only process cities (not continents/countries)
 		// v3.5.28: Use post_parent > 0 instead of meta (meta doesn't exist in DB)
+		// v3.5.29: CORRECT FIX - Only cities have parent.post_parent > 0
+		//          Cities: post_parent = country_id AND country.post_parent = continent_id > 0
+		//          Countries: post_parent = continent_id AND continent.post_parent = 0
 		$cities = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title
 			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->posts} parent ON parent.ID = p.post_parent
 			LEFT JOIN {$wpdb->prefix}wta_cache c 
 				ON c.cache_key = CONCAT('wta_comparison_intro_', p.ID)
 				AND c.expires > UNIX_TIMESTAMP()
 			WHERE p.post_type = 'wta_location'
 			AND p.post_status = 'publish'
-			AND p.post_parent > 0
+			AND parent.post_parent > 0
 			AND c.cache_key IS NULL
 			LIMIT %d",
 			$limit
@@ -283,19 +287,26 @@ class WTA_Comparison_Intro_Processor {
 		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
 		// v3.5.27: Count only cities (not continents/countries)
 		// v3.5.28: Use post_parent > 0 instead of meta (meta doesn't exist in DB)
+		// v3.5.29: CORRECT FIX - Only cities have parent.post_parent > 0
+		//          Cities: post_parent = country_id AND country.post_parent = continent_id > 0
+		//          Countries: post_parent = continent_id AND continent.post_parent = 0
 		$total_cities = $wpdb->get_var(
 			"SELECT COUNT(*)
-			FROM {$wpdb->posts}
-			WHERE post_type = 'wta_location'
-			AND post_status = 'publish'
-			AND post_parent > 0"
+			FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->posts} parent ON parent.ID = p.post_parent
+			WHERE p.post_type = 'wta_location'
+			AND p.post_status = 'publish'
+			AND parent.post_parent > 0"
 		);
 
 		$cities_with_intro = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(DISTINCT SUBSTRING(c.cache_key, 24))
 			FROM {$wpdb->prefix}wta_cache c
+			INNER JOIN {$wpdb->posts} p ON p.ID = SUBSTRING(c.cache_key, 24)
+			INNER JOIN {$wpdb->posts} parent ON parent.ID = p.post_parent
 			WHERE c.cache_key LIKE %s
-			AND c.expires > UNIX_TIMESTAMP()",
+			AND c.expires > UNIX_TIMESTAMP()
+			AND parent.post_parent > 0",
 			'wta_comparison_intro_%'
 		) );
 

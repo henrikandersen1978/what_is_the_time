@@ -2,6 +2,56 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.29] - 2026-01-20
+
+### 🐛 CRITICAL FIX - Correct City Filtering (Countries vs Cities)
+
+**Problem:**
+v3.5.28 used `p.post_parent > 0` to identify cities, but this matches **BOTH countries AND cities**!
+
+**WordPress Hierarchy Reality:**
+```
+Continents: post_parent = 0              (e.g., Europa, ID 702831)
+Countries:  post_parent = continent_id   (e.g., Portugal, ID 702841, parent = 702831)
+                                          → post_parent > 0 ✅ (but NOT a city!)
+Cities:     post_parent = country_id     (e.g., Andorra la Vella, ID 703065, parent = 703057)
+                                          → post_parent > 0 ✅ (and IS a city!)
+```
+
+**The Bug:**
+v3.5.28 processed **countries** (Nordmakedonien, Mauritius, Nigeria, Peru, Portugal, etc.) instead of **cities**!
+
+**The Fix:**
+Cities are identified by: `parent.post_parent > 0` (their parent has a parent).
+- **Cities**: `p.post_parent = country_id` AND `country.post_parent = continent_id > 0` ✅
+- **Countries**: `p.post_parent = continent_id` AND `continent.post_parent = 0` ❌
+
+**Changes:**
+1. `get_cities_without_intro()` - Added `INNER JOIN wp_posts parent ON parent.ID = p.post_parent` and changed `p.post_parent > 0` to `parent.post_parent > 0`
+2. `get_stats()` - Same JOIN logic to correctly count only cities
+
+**Verification:**
+SQL test in Adminer returned **only cities** (Andorra la Vella, les Escaldes, Encamp, etc.), no countries.
+
+**Impact:**
+- ✅ Now processes **ONLY cities** (70,125 locations)
+- ✅ No wasted API calls on countries
+- ✅ Accurate statistics
+
+**Before v3.5.29:**
+```
+[2026-01-20 23:43:14] DEBUG: Comparison intro generated
+Context: { "post_id": "702837", "city_name": "Nordmakedonien" }  ← COUNTRY!
+```
+
+**After v3.5.29:**
+```
+[2026-01-20 XX:XX:XX] DEBUG: Comparison intro generated
+Context: { "post_id": "703065", "city_name": "Andorra la Vella" }  ← CITY!
+```
+
+---
+
 ## [3.5.28] - 2026-01-20
 
 ### 🐛 CRITICAL FIX - Use post_parent Instead of Non-Existent Meta
