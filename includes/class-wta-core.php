@@ -80,11 +80,12 @@ class WTA_Core {
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-database-maintenance.php'; // v3.4.8
 		require_once WTA_PLUGIN_DIR . 'includes/helpers/class-wta-country-gps-migration.php'; // v2.35.73
 
-		// Action Scheduler Processors (v3.0.43 - Pilanto-AI Model)
-		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-structure-processor.php';
-		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-timezone-processor.php';
-		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-ai-processor.php';
-		require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-batch-processor.php'; // v3.3.0
+	// Action Scheduler Processors (v3.0.43 - Pilanto-AI Model)
+	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-structure-processor.php';
+	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-timezone-processor.php';
+	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-ai-processor.php';
+	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-batch-processor.php'; // v3.3.0
+	require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-comparison-intro-processor.php'; // v3.5.25
 
 		// Admin
 		if ( is_admin() ) {
@@ -339,12 +340,18 @@ class WTA_Core {
 		$timezone_processor = new WTA_Single_Timezone_Processor();
 		$this->loader->add_action( 'wta_lookup_timezone', $timezone_processor, 'lookup_timezone', 10, 3 );
 
-		// Single AI Processor (v3.0.43 - Pilanto-AI Model)
-		$ai_processor = new WTA_Single_AI_Processor();
-		$this->loader->add_action( 'wta_generate_ai_content', $ai_processor, 'generate_content', 10, 3 );
+	// Single AI Processor (v3.0.43 - Pilanto-AI Model)
+	$ai_processor = new WTA_Single_AI_Processor();
+	$this->loader->add_action( 'wta_generate_ai_content', $ai_processor, 'generate_content', 10, 3 );
 
-		// Log cleanup (v2.35.7) - Runs daily at 04:00
-		$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
+	// Comparison Intro Processor (v3.5.25)
+	// Generates AI intro text for global_time_comparison shortcode in background
+	// Prevents 1.9-second API calls on page load
+	$comparison_intro_processor = new WTA_Comparison_Intro_Processor();
+	$this->loader->add_action( 'wta_process_comparison_intros', $comparison_intro_processor, 'process_batch' );
+
+	// Log cleanup (v2.35.7) - Runs daily at 04:00
+	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
 
 		// Database maintenance (v3.4.8) - Leverage Action Scheduler's built-in cleanup
 		// Set aggressive 10-minute retention period (instead of default 31 days)
@@ -411,16 +418,69 @@ class WTA_Core {
 			WTA_Logger::info( 'Auto-scheduled missing action: wta_cleanup_expired_cache (hourly)' );
 		}
 
-		// Ensure daily cache optimization is scheduled (v3.5.7)
-		if ( false === as_next_scheduled_action( 'wta_optimize_cache' ) ) {
-			$tomorrow_2am = strtotime( 'tomorrow 02:00:00' );
-			as_schedule_recurring_action( $tomorrow_2am, DAY_IN_SECONDS, 'wta_optimize_cache', array(), 'world-time-ai' );
-			WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_cache (daily at 02:00)' );
-		}
+	// Ensure daily cache optimization is scheduled (v3.5.7)
+	if ( false === as_next_scheduled_action( 'wta_optimize_cache' ) ) {
+		$tomorrow_2am = strtotime( 'tomorrow 02:00:00' );
+		as_schedule_recurring_action( $tomorrow_2am, DAY_IN_SECONDS, 'wta_optimize_cache', array(), 'world-time-ai' );
+		WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_cache (daily at 02:00)' );
+	}
+
+	// Auto-start comparison intro generation if needed (v3.5.25)
+	// Checks if there are cities without intro text and starts background job
+	$this->maybe_start_comparison_intro_job();
+}
+
+/**
+ * Maybe start comparison intro background job.
+ * 
+ * Auto-starts if:
+ * - Job is not already running
+ * - There are cities without comparison intro text
+ * 
+ * @since 3.5.25
+ */
+private function maybe_start_comparison_intro_job() {
+	// Check if job is already scheduled/running
+	$running = as_next_scheduled_action( 'wta_process_comparison_intros' );
+	
+	if ( $running ) {
+		return; // Already running
 	}
 	
-	/**
-	 * Reschedule recurring actions when cron interval setting changes.
+	// Count cities without intro (quick check)
+	global $wpdb;
+	$count = $wpdb->get_var( "
+		SELECT COUNT(p.ID)
+		FROM {$wpdb->posts} p
+		LEFT JOIN {$wpdb->prefix}wta_cache c 
+			ON c.cache_key = CONCAT('wta_comparison_intro_', p.ID)
+			AND c.expires > UNIX_TIMESTAMP()
+		WHERE p.post_type = 'wta_location'
+		AND p.post_status = 'publish'
+		AND c.cache_key IS NULL
+		LIMIT 1
+	" );
+	
+	if ( $count > 0 ) {
+		// Start the job in 5 minutes (don't block plugin activation)
+		$next_run = time() + 300;
+		
+		as_schedule_single_action(
+			$next_run,
+			'wta_process_comparison_intros',
+			array(),
+			'world-time-ai'
+		);
+		
+		WTA_Logger::info( 'Comparison intro job auto-started', array(
+			'next_run' => date( 'Y-m-d H:i:s', $next_run ),
+			'note' => 'Background job will generate intro text for global_time_comparison shortcode'
+		) );
+	}
+}
+
+/**
+ * Reschedule recurring actions when cron interval setting changes.
 	 * 
 	 * v3.0.43: Pilanto-AI Model - No recurring actions to reschedule.
 	 * Settings are applied dynamically via filters.
