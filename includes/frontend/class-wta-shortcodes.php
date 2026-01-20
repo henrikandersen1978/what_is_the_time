@@ -827,15 +827,15 @@ class WTA_Shortcodes {
 	
 	if ( false === $city_counts_map ) {
 		// Count cities for ALL countries in one query (runs once per week!)
-		$city_counts_data = $wpdb->get_results( 
+		$city_counts_data = $wpdb->get_results( $wpdb->prepare(
 			"SELECT post_parent, COUNT(*) as city_count 
 			FROM {$wpdb->posts} 
-			WHERE post_type = 'world_time_location'
+			WHERE post_type = %s
 			AND post_status IN ('publish', 'draft')
 			AND post_parent > 0
 			GROUP BY post_parent",
-			ARRAY_A
-		);
+			WTA_POST_TYPE
+		), ARRAY_A );
 		
 		// Convert to map for fast lookup
 		$city_counts_map = array();
@@ -1222,10 +1222,17 @@ class WTA_Shortcodes {
 				continue; // Skip current city
 			}
 			
-			$city_lat = isset( $city_data['latitude'] ) ? floatval( $city_data['latitude'] ) : 0;
-			$city_lon = isset( $city_data['longitude'] ) ? floatval( $city_data['longitude'] ) : 0;
+			// v3.5.19: Fix empty() bug - empty(0) returns TRUE in PHP!
+			// We need to check if lat/lon exist AND are not both exactly 0
+			if ( ! isset( $city_data['latitude'] ) || ! isset( $city_data['longitude'] ) ) {
+				continue; // Skip if GPS data missing
+			}
 			
-			if ( empty( $city_lat ) || empty( $city_lon ) ) {
+			$city_lat = floatval( $city_data['latitude'] );
+			$city_lon = floatval( $city_data['longitude'] );
+			
+			// Only skip if BOTH are exactly 0.0 (invalid GPS)
+			if ( $city_lat === 0.0 && $city_lon === 0.0 ) {
 				continue;
 			}
 			
@@ -1347,8 +1354,17 @@ class WTA_Shortcodes {
 				}
 			}
 			
-			if ( empty( $country_lat ) || empty( $country_lon ) ) {
-				continue;
+			// v3.5.19: Fix empty() bug - empty(0) returns TRUE!
+			// Check for null (not found) OR both coordinates are 0
+			if ( $country_lat === null || $country_lon === null ) {
+				continue; // GPS data not found
+			}
+			
+			$country_lat = floatval( $country_lat );
+			$country_lon = floatval( $country_lon );
+			
+			if ( $country_lat === 0.0 && $country_lon === 0.0 ) {
+				continue; // Invalid GPS (both exactly 0)
 			}
 			
 			$distance = $this->calculate_distance( $current_lat, $current_lon, $country_lat, $country_lon );
@@ -1967,7 +1983,7 @@ class WTA_Shortcodes {
 		
 		// Single query to get top 50 cities for EACH continent
 		// (50 per continent = covers default 30 + room for growth)
-		$results = $wpdb->get_results( "
+		$results = $wpdb->get_results( $wpdb->prepare( "
 			SELECT 
 				pm_cont.meta_value as continent_code,
 				p.ID,
@@ -1979,12 +1995,12 @@ class WTA_Shortcodes {
 				ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 			INNER JOIN {$wpdb->postmeta} pm_cont 
 				ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
-			WHERE p.post_type = 'world_time_location'
+			WHERE p.post_type = %s
 			AND p.post_status = 'publish'
 			AND pm_type.meta_value = 'city'
 			AND pm_cont.meta_value IN ('EU','AS','NA','SA','AF','OC')
 			ORDER BY pm_cont.meta_value ASC, population DESC
-		", ARRAY_A );
+		", WTA_POST_TYPE ), ARRAY_A );
 		
 		// Group by continent and limit to top 50 per continent
 		$continent_cities = array();
@@ -2070,10 +2086,10 @@ class WTA_Shortcodes {
 			FROM {$wpdb->posts} p
 			LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
 			WHERE p.post_parent = %d
-			AND p.post_type = 'world_time_location'
+			AND p.post_type = %s
 			AND p.post_status = 'publish'
 			GROUP BY p.ID, p.post_title
-		", $country_id ), ARRAY_A );
+		", $country_id, WTA_POST_TYPE ), ARRAY_A );
 		
 		// Convert to map for instant lookup by ID
 		$city_map = array();

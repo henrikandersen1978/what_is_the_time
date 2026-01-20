@@ -2,6 +2,219 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.19] - 2026-01-20
+
+### 🚨 CRITICAL BUGFIX - Wrong Post Type + empty() Bug
+
+**Problem in v3.5.18:**
+Two critical bugs prevented ALL optimized shortcodes from working:
+
+1. **Wrong post_type in 3 queries** → Returned NO data → Empty shortcodes
+2. **empty() bug with GPS coordinates** → Skipped valid cities with lat/lon = 0
+
+**User Impact:**
+- ❌ `[wta_nearby_cities]` showed: "Der er ingen andre byer i databasen endnu"
+- ❌ `[wta_global_time_comparison]` showed only 1 city instead of 24
+- ❌ Performance was better (3.2s) but functionality broken
+
+---
+
+### **🔍 ROOT CAUSE ANALYSIS:**
+
+#### **Bug #1: Wrong Post Type (3 locations)**
+
+**The Problem:**
+In v3.5.18, I hardcoded `'world_time_location'` in 3 database queries, but the actual post type is `'wta_location'` (defined in `WTA_POST_TYPE` constant).
+
+**Result:** All queries returned ZERO rows → Empty caches → Broken shortcodes
+
+**Affected Queries:**
+
+1. **Line 833** - `nearby_countries_shortcode`:
+```php
+WHERE post_type = 'world_time_location'  // ❌ WRONG!
+// Should be: WHERE post_type = 'wta_location' ✅
+```
+→ City count query returned 0 → Empty country lists
+
+2. **Line 1982** - `get_all_continent_top_cities_cache`:
+```php
+WHERE p.post_type = 'world_time_location'  // ❌ WRONG!
+// Should be: WHERE p.post_type = 'wta_location' ✅
+```
+→ Continent cache empty → `global_time_comparison` found no cities
+
+3. **Line 2073** - `get_country_cities_master_cache`:
+```php
+AND p.post_type = 'world_time_location'  // ❌ WRONG!
+// Should be: AND p.post_type = 'wta_location' ✅
+```
+→ Country master cache empty → `nearby_cities` found no cities
+
+---
+
+#### **Bug #2: empty() with Numeric Values**
+
+**The Problem:**
+PHP's `empty()` function returns `TRUE` for numeric 0, including `0.0` floats!
+
+```php
+empty(0)     // TRUE ❌
+empty(0.0)   // TRUE ❌
+empty("0")   // TRUE ❌
+empty(null)  // TRUE ✅
+```
+
+**Affected Code (Line 1228):**
+```php
+$city_lat = floatval( $city_data['latitude'] );  // Could be 0.0
+$city_lon = floatval( $city_data['longitude'] ); // Could be 0.0
+
+if ( empty( $city_lat ) || empty( $city_lon ) ) {
+    continue; // ❌ SKIPS ALL CITIES if either is 0!
+}
+```
+
+**Real-World Impact:**
+- Cities at latitude 0° (Equator) were skipped
+- Cities at longitude 0° (Prime Meridian, UK/Ghana) were skipped
+- If either GPS coordinate was missing/invalid and became 0.0, city was skipped
+- **Result:** Most/all cities were filtered out! 😢
+
+---
+
+### **✅ ALL FIXES (v3.5.19):**
+
+#### **Fix #1: Use WTA_POST_TYPE Constant**
+
+**Changed 3 queries to use prepared statements:**
+
+```php
+// Before (v3.5.18):
+WHERE post_type = 'world_time_location'  // ❌ Hardcoded, wrong!
+
+// After (v3.5.19):
+WHERE post_type = %s", WTA_POST_TYPE  // ✅ Uses correct constant
+```
+
+**Applied to:**
+- `nearby_countries_shortcode` city count query
+- `get_all_continent_top_cities_cache` query
+- `get_country_cities_master_cache` query
+
+---
+
+#### **Fix #2: Replace empty() with Proper Checks**
+
+**Before (v3.5.18):**
+```php
+$city_lat = isset( $city_data['latitude'] ) ? floatval( $city_data['latitude'] ) : 0;
+$city_lon = isset( $city_data['longitude'] ) ? floatval( $city_data['longitude'] ) : 0;
+
+if ( empty( $city_lat ) || empty( $city_lon ) ) {
+    continue; // ❌ Skips valid cities with 0 coordinates!
+}
+```
+
+**After (v3.5.19):**
+```php
+// Check if GPS data exists
+if ( ! isset( $city_data['latitude'] ) || ! isset( $city_data['longitude'] ) ) {
+    continue; // Skip if data missing
+}
+
+$city_lat = floatval( $city_data['latitude'] );
+$city_lon = floatval( $city_data['longitude'] );
+
+// Only skip if BOTH are exactly 0.0 (invalid GPS)
+if ( $city_lat === 0.0 && $city_lon === 0.0 ) {
+    continue;
+}
+```
+
+**Applied to:**
+- `find_nearby_cities()` function
+- `find_nearby_countries()` function
+
+---
+
+## **📊 EXPECTED RESULTS (v3.5.19):**
+
+### **Before (v3.5.18):**
+```
+[wta_nearby_cities]: "Der er ingen andre byer i databasen endnu" ❌
+[wta_global_time_comparison]: Shows 1 city (old cached) ❌
+[wta_regional_centres]: Empty or broken ❌
+[wta_nearby_countries]: Empty or broken ❌
+
+Performance: 3.2 seconds (better but broken!)
+```
+
+### **After (v3.5.19):**
+```
+[wta_nearby_cities]: Shows nearby cities ✅
+[wta_global_time_comparison]: Shows 24 cities ✅
+[wta_regional_centres]: Shows regional centres ✅
+[wta_nearby_countries]: Shows nearby countries ✅
+
+Performance: ~1 second first load, 0.05s subsequent ✅
+```
+
+---
+
+## **🔧 DEPLOYMENT NOTES:**
+
+**IMPORTANT - Cache Must Be Flushed!**
+
+After deploying v3.5.19, you MUST flush the custom cache because v3.5.18 cached EMPTY RESULTS from the wrong queries:
+
+```
+WordPress Admin → Tools & Maintenance → Flush ALL Custom Cache
+```
+
+This will force all caches to rebuild with the correct post_type.
+
+**Safe to Deploy:**
+- ✅ No database structure changes
+- ✅ No breaking changes
+- ✅ Only fixes broken functionality from v3.5.18
+- ✅ Zero downtime (after cache flush)
+
+---
+
+## **📁 FILES CHANGED:**
+
+- `includes/frontend/class-wta-shortcodes.php`:
+  - Fixed post_type in 3 queries (lines 833, 1982, 2073)
+  - Fixed empty() bug in `find_nearby_cities()` (line 1228)
+  - Fixed empty() bug in `find_nearby_countries()` (line 1357)
+- `time-zone-clock.php` - version bump to 3.5.19
+- `CHANGELOG.md` - documentation
+
+---
+
+## **✅ VERIFICATION CHECKLIST:**
+
+After deployment + cache flush:
+- [ ] Visit a Canadian city page
+- [ ] Check `[wta_nearby_cities]` shows nearby cities (not error message)
+- [ ] Check `[wta_global_time_comparison]` shows 24 cities (not just 1)
+- [ ] Check `[wta_regional_centres]` shows grid of cities
+- [ ] Check `[wta_nearby_countries]` shows countries list
+- [ ] Verify page loads in ~1 second (first load per country)
+- [ ] Verify subsequent loads in ~0.05 seconds
+
+---
+
+## **🎯 LESSONS LEARNED:**
+
+1. **Always use constants** - Never hardcode post types or other WordPress constants
+2. **Be careful with empty()** - It returns TRUE for 0, "0", false, null, "", and []
+3. **Test after optimization** - v3.5.18 was faster but non-functional
+4. **Cache can hide bugs** - Empty caches looked like performance issues
+
+---
+
 ## [3.5.18] - 2026-01-20
 
 ### 🚨 CRITICAL HOTFIX - Complete Master Cache Implementation
