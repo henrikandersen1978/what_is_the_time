@@ -356,6 +356,13 @@ class WTA_Core {
 		
 		// Disable revisions for wta_location posts (prevents GB bloat)
 		$this->loader->add_filter( 'wp_revisions_to_keep', 'WTA_Database_Maintenance', 'disable_revisions_for_locations', 10, 2 );
+		
+		// Custom cache maintenance (v3.5.7) - Prevents database bloat while maintaining performance
+		// Hourly: Delete expired cache entries
+		$this->loader->add_action( 'wta_cleanup_expired_cache', 'WTA_Cache', 'cleanup_expired' );
+		
+		// Daily: Optimize cache table and manage size (max 1 GB)
+		$this->loader->add_action( 'wta_optimize_cache', 'WTA_Cache', 'optimize' );
 	}
 
 	/**
@@ -393,6 +400,20 @@ class WTA_Core {
 			$next_run = strtotime( '+6 hours' );
 			as_schedule_recurring_action( $next_run, 6 * HOUR_IN_SECONDS, 'wta_optimize_tables', array(), 'world-time-ai' );
 			WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_tables (every 6 hours)' );
+		}
+
+		// Ensure hourly cache cleanup is scheduled (v3.5.7)
+		if ( false === as_next_scheduled_action( 'wta_cleanup_expired_cache' ) ) {
+			$next_run = strtotime( '+1 hour' );
+			as_schedule_recurring_action( $next_run, HOUR_IN_SECONDS, 'wta_cleanup_expired_cache', array(), 'world-time-ai' );
+			WTA_Logger::info( 'Auto-scheduled missing action: wta_cleanup_expired_cache (hourly)' );
+		}
+
+		// Ensure daily cache optimization is scheduled (v3.5.7)
+		if ( false === as_next_scheduled_action( 'wta_optimize_cache' ) ) {
+			$tomorrow_2am = strtotime( 'tomorrow 02:00:00' );
+			as_schedule_recurring_action( $tomorrow_2am, DAY_IN_SECONDS, 'wta_optimize_cache', array(), 'world-time-ai' );
+			WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_cache (daily at 02:00)' );
 		}
 	}
 	

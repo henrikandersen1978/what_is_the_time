@@ -68,6 +68,9 @@ class WTA_Activator {
 		// Add claim_id column to queue table (v3.0.41)
 		self::add_claim_id_column();
 
+		// Create custom cache table (v3.5.7 - prevents wp_options bloat)
+		self::create_cache_table();
+
 		// Update plugin version
 		update_option( 'wta_plugin_version', WTA_VERSION );
 	}
@@ -630,6 +633,52 @@ Max 40-50 ord. Generisk og inspirerende.' );
 				'faq1_answer' => 'Klokken i {city_name} er {current_time}.',
 			),
 		);
+	}
+
+	/**
+	 * Create custom cache table for WTA.
+	 * 
+	 * v3.5.7: Custom cache table prevents wp_options bloat while maintaining performance.
+	 * Transients are stored in dedicated table instead of wp_options.
+	 * 
+	 * Design decisions:
+	 * - ROW_FORMAT=COMPRESSED: Saves ~40% disk space
+	 * - cache_type column: Allows targeted cleanup by type
+	 * - created column: Enables LRU (Least Recently Used) deletion
+	 * - Indices optimized for common query patterns
+	 * 
+	 * Expected size: 200-500 MB for active pages (vs 43 GB in wp_options!)
+	 * 
+	 * @since 3.5.7
+	 */
+	private static function create_cache_table() {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'wta_cache';
+		$charset_collate = $wpdb->get_charset_collate();
+		
+		$sql = "CREATE TABLE IF NOT EXISTS $table_name (
+			cache_key VARCHAR(191) NOT NULL,
+			cache_value LONGTEXT NOT NULL,
+			cache_type VARCHAR(50) NOT NULL DEFAULT 'default',
+			expires INT UNSIGNED NOT NULL,
+			created INT UNSIGNED NOT NULL,
+			PRIMARY KEY (cache_key),
+			INDEX idx_expires (expires),
+			INDEX idx_type_expires (cache_type, expires),
+			INDEX idx_created (created)
+		) ENGINE=InnoDB ROW_FORMAT=COMPRESSED $charset_collate;";
+		
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
+		
+		// Log creation
+		if ( class_exists( 'WTA_Logger' ) ) {
+			WTA_Logger::info( 'Custom cache table created', array(
+				'table' => $table_name,
+				'version' => WTA_VERSION
+			));
+		}
 	}
 }
 

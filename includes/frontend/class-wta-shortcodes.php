@@ -32,33 +32,6 @@ class WTA_Shortcodes {
 	}
 
 	/**
-	 * Check if transient caching is enabled for shortcodes.
-	 * 
-	 * v3.5.6: Disabled by default as LiteSpeed Cache/WP Super Cache handles all caching.
-	 * Transient caching caused massive database bloat (millions of transients with 200k+ posts).
-	 * 
-	 * Only enable if:
-	 * - You are NOT using server-level page cache (LiteSpeed, Varnish, etc.)
-	 * - You are NOT using object cache (Redis, Memcached)
-	 * - You specifically need database-level caching
-	 * 
-	 * @since    3.5.6
-	 * @return   bool  False by default (disabled).
-	 */
-	private function is_transient_caching_enabled() {
-		/**
-		 * Filter to enable/disable transient caching for shortcodes.
-		 * 
-		 * WARNING: Enabling this with 200k+ posts will create millions of transients!
-		 * Only enable if you understand the database implications.
-		 * 
-		 * @since 3.5.6
-		 * @param bool $enabled Whether transient caching is enabled. Default false.
-		 */
-		return apply_filters( 'wta_enable_shortcode_transient_caching', false );
-	}
-
-	/**
 	 * Register shortcodes.
 	 *
 	 * @since    2.9.0
@@ -136,14 +109,12 @@ class WTA_Shortcodes {
 			'count' => $default_count, // Now respects backend settings!
 		), $atts );
 		
-		// Check cache first (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
+		// v3.5.7: Custom cache (prevents wp_options bloat)
 		$cache_key = 'wta_major_cities_' . $post_id . '_' . intval( $atts['count'] );
+		$cached = WTA_Cache::get( $cache_key );
 		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached = get_transient( $cache_key );
-			if ( false !== $cached ) {
-				return $cached;
-			}
+		if ( false !== $cached ) {
+			return $cached;
 		}
 		
 		// Get major cities using optimized SQL query
@@ -273,10 +244,8 @@ class WTA_Shortcodes {
 		$schema_description = sprintf( self::get_template( 'see_time_largest_cities' ) ?: 'Se hvad klokken er i de største byer i %s', $parent_name );
 		$output .= $this->generate_item_list_schema( $major_cities, $schema_name, $schema_description );
 		
-		// Cache for 24 hours - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
-		if ( $this->is_transient_caching_enabled() ) {
-			set_transient( $cache_key, $output, DAY_IN_SECONDS );
-		}
+		// v3.5.7: Cache using custom table
+		WTA_Cache::set( $cache_key, $output, DAY_IN_SECONDS, 'major_cities' );
 		
 		return $output;
 	}
@@ -414,14 +383,12 @@ class WTA_Shortcodes {
 			'limit'    => $default_limit,
 		), $atts );
 		
-		// Check cache first (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
+		// v3.5.7: Custom cache
 		$cache_key = 'wta_child_locations_' . $post->ID . '_' . md5( serialize( $atts ) );
+		$cached = WTA_Cache::get( $cache_key );
 		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached = get_transient( $cache_key );
-			if ( false !== $cached ) {
-				return $cached;
-			}
+		if ( false !== $cached ) {
+			return $cached;
 		}
 		
 		// Get child locations
@@ -590,10 +557,8 @@ class WTA_Shortcodes {
 		
 		$output .= $this->generate_item_list_schema( $children, $schema_name, $schema_description );
 		
-		// Cache for 24 hours - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
-		if ( $this->is_transient_caching_enabled() ) {
-			set_transient( $cache_key, $output, DAY_IN_SECONDS );
-		}
+		// v3.5.7: Cache using custom table
+		WTA_Cache::set( $cache_key, $output, DAY_IN_SECONDS, 'child_locations' );
 		
 		return $output;
 	}
@@ -638,14 +603,12 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Cache nearby cities list (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
-		$cache_key = 'wta_nearby_cities_' . $post_id . '_v2';  // v2 = dynamic density-based
+		// v3.5.7: Custom cache
+		$cache_key = 'wta_nearby_cities_' . $post_id . '_v2';
+		$cached_data = WTA_Cache::get( $cache_key );
 		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached_data = get_transient( $cache_key );
-			if ( false !== $cached_data && is_array( $cached_data ) ) {
-				return $cached_data['output'];
-			}
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			return $cached_data['output'];
 		}
 		
 		// Phase 1: Find cities within 500km (no limit)
@@ -735,10 +698,8 @@ class WTA_Shortcodes {
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
 		
-		// Cache the output (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
-		if ( $this->is_transient_caching_enabled() ) {
-			set_transient( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS );
-		}
+		// v3.5.7: Cache using custom table
+		WTA_Cache::set( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS, 'nearby_cities' );
 		
 		return $output;
 	}
@@ -799,14 +760,12 @@ class WTA_Shortcodes {
 		// Get continent for fallback (if needed)
 		$parent_continent_id = wp_get_post_parent_id( $parent_country_id );
 		
-		// Cache nearby countries list (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
+		// v3.5.7: Custom cache
 		$cache_key = 'wta_nearby_countries_' . $post_id . '_v8_' . intval( $atts['count'] );
+		$cached_data = WTA_Cache::get( $cache_key );
 		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached_data = get_transient( $cache_key );
-			if ( false !== $cached_data && is_array( $cached_data ) ) {
-				return $cached_data['output'];
-			}
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			return $cached_data['output'];
 		}
 		
 		// Find nearby countries - GLOBAL search (cross-continent)
@@ -892,8 +851,8 @@ class WTA_Shortcodes {
 		
 		$output .= $this->generate_item_list_schema( $nearby_posts, $schema_name );
 		
-		// Cache the output (24 hours)
-		set_transient( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS );
+		// v3.5.7: Cache using custom table
+		WTA_Cache::set( $cache_key, array( 'output' => $output ), DAY_IN_SECONDS, 'nearby_countries_alt' );
 		
 		return $output;
 	}
@@ -927,19 +886,17 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-		// Cache regional centres list (24 hours) - v3.5.6: Disabled by default (use LiteSpeed Cache instead)
+		// v3.5.7: Custom cache
 		$cache_key = 'wta_regional_centres_' . $country_id;
+		$cached_data = WTA_Cache::get( $cache_key );
 		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached_data = get_transient( $cache_key );
-			if ( false !== $cached_data && is_array( $cached_data ) ) {
-				// Filter out current city
-				$filtered_ids = array_diff( $cached_data['ids'], array( $post_id ) );
-				if ( empty( $filtered_ids ) ) {
-					return '';
-				}
-				return $this->render_regional_centres( $filtered_ids, $post_id, $country_id );
+		if ( false !== $cached_data && is_array( $cached_data ) ) {
+			// Filter out current city
+			$filtered_ids = array_diff( $cached_data['ids'], array( $post_id ) );
+			if ( empty( $filtered_ids ) ) {
+				return '';
 			}
+			return $this->render_regional_centres( $filtered_ids, $post_id, $country_id );
 		}
 		
 		// v3.0.19: Simplified query using post_parent instead of meta join
@@ -1017,10 +974,8 @@ class WTA_Shortcodes {
 		// Remove duplicates
 		$grid_cities = array_unique( $grid_cities );
 		
-		// Cache the grid cities for this country (shared across all cities) - v3.5.6: Disabled by default
-		if ( $this->is_transient_caching_enabled() ) {
-			set_transient( $cache_key, array( 'ids' => $grid_cities ), DAY_IN_SECONDS );
-		}
+		// v3.5.7: Cache using custom table (shared across all cities in country)
+		WTA_Cache::set( $cache_key, array( 'ids' => $grid_cities ), DAY_IN_SECONDS, 'regional_centres' );
 		
 		// Filter out current city
 		$grid_cities = array_diff( $grid_cities, array( $post_id ) );
@@ -1488,22 +1443,14 @@ class WTA_Shortcodes {
 			return '';
 		}
 		
-	// Get globally distributed cities - v3.5.6: Transient caching disabled by default (use LiteSpeed Cache instead)
-	// Transient caching caused massive database bloat with 200k+ posts
+	// v3.5.7: Custom cache for globally distributed cities
 	$cache_key = 'wta_global_cities_' . $post_id . '_' . date( 'Ymd' );
-	$comparison_cities = false;
-	
-	if ( $this->is_transient_caching_enabled() ) {
-		$comparison_cities = get_transient( $cache_key );
-	}
+	$comparison_cities = WTA_Cache::get( $cache_key );
 	
 	if ( false === $comparison_cities ) {
-		// First load: select, batch prefetch, sort, then cache (all in select_global_cities)
+		// First load: select, batch prefetch, sort, then cache
 		$comparison_cities = $this->select_global_cities( $post_id, $current_timezone );
-		
-		if ( $this->is_transient_caching_enabled() ) {
-			set_transient( $cache_key, $comparison_cities, DAY_IN_SECONDS );
-		}
+		WTA_Cache::set( $cache_key, $comparison_cities, DAY_IN_SECONDS, 'global_comparison' );
 	} else {
 		// PERFORMANCE (v2.35.43): Cached hit - refresh meta cache for fast access
 		// This prevents WordPress from re-querying meta one-by-one in table loop
@@ -1534,18 +1481,14 @@ class WTA_Shortcodes {
 			// Test mode: use dummy text (no AI costs)
 			$intro_text = 'Dummy tekst om tidsforskelle og verdensur. Test mode aktiveret.';
 		} else {
-			// Normal mode: AI-generated intro text - v3.5.6: Transient caching disabled by default
+			// v3.5.7: AI-generated intro text cached in custom table
 			$intro_cache_key = 'wta_comparison_intro_' . $post_id;
-			$intro_text = false;
-			
-			if ( $this->is_transient_caching_enabled() ) {
-				$intro_text = get_transient( $intro_cache_key );
-			}
+			$intro_text = WTA_Cache::get( $intro_cache_key );
 			
 			if ( false === $intro_text ) {
 				$intro_text = $this->generate_comparison_intro( $current_city_name );
-				if ( ! empty( $intro_text ) && $this->is_transient_caching_enabled() ) {
-					set_transient( $intro_cache_key, $intro_text, MONTH_IN_SECONDS );
+				if ( ! empty( $intro_text ) ) {
+					WTA_Cache::set( $intro_cache_key, $intro_text, MONTH_IN_SECONDS, 'comparison_intro' );
 				}
 			}
 		}
@@ -1739,66 +1682,61 @@ class WTA_Shortcodes {
 	 * @return   array                   Array of WP_Post objects.
 	 */
 	private function get_cities_for_continent( $continent_code, $current_tz, $current_post_id, $count ) {
-		// PERFORMANCE (v2.35.45): Cache continent data across ALL pages (not per-page)
-		// v3.5.6: Transient caching disabled by default (use LiteSpeed Cache instead)
+		// v3.5.7: Custom cache table prevents wp_options bloat
+		// Cache shared across ALL pages for performance
 		$cache_key = 'wta_continent_' . $continent_code . '_' . date( 'Ymd' );
-		$cached_data = false;
-		
-		if ( $this->is_transient_caching_enabled() ) {
-			$cached_data = get_transient( $cache_key );
-		}
+		$cached_data = WTA_Cache::get( $cache_key );
 		
 		if ( false === $cached_data ) {
-			// First load: Build country->cities map for entire continent
+			// v3.5.7: OPTIMIZED - 1 query instead of N+1 queries (reduced 442→1 queries!)
+			// Previous: 1 query for countries + 50+ queries for cities = 51+ queries per continent
+			// Now: 1 single query fetches ALL data at once using subquery for ranking
 			global $wpdb;
 			
-			// Get ALL countries in continent
-			// v3.0.17: Changed LEFT JOIN to INNER JOIN to ensure valid meta values
-			$all_countries = $wpdb->get_col( $wpdb->prepare( "
-				SELECT DISTINCT pm_cc.meta_value as country_code
-				FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
-				INNER JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
-				INNER JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
-				WHERE p.post_type = %s
-				AND p.post_status = 'publish'
-				AND pm_type.meta_value = 'city'
-				AND pm_cont.meta_value = %s
-				AND pm_cc.meta_value IS NOT NULL
-			", WTA_POST_TYPE, $continent_code ) );
-			
-			// Build map of country -> [city IDs with timezone]
-			$country_cities_map = array();
-			
-			foreach ( $all_countries as $country_code ) {
-				// Get top 20 cities per country (to have selection pool)
-				// v3.0.17: Changed LEFT JOIN to INNER JOIN to ensure valid meta values
-				$cities = $wpdb->get_results( $wpdb->prepare( "
-					SELECT p.ID, pm_tz.meta_value as timezone
+			// Fetch top 20 cities per country in ONE query using window functions (MySQL 8.0+)
+			// Or use subquery approach for MySQL 5.7 compatibility
+			$all_cities = $wpdb->get_results( $wpdb->prepare( "
+				SELECT sub.ID, sub.country_code, sub.timezone, sub.row_num
+				FROM (
+					SELECT 
+						p.ID,
+						pm_cc.meta_value as country_code,
+						pm_tz.meta_value as timezone,
+						@row_num := IF(@prev_country = pm_cc.meta_value, @row_num + 1, 1) as row_num,
+						@prev_country := pm_cc.meta_value as prev_country
 					FROM {$wpdb->posts} p
+					INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+					INNER JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
 					INNER JOIN {$wpdb->postmeta} pm_cc ON p.ID = pm_cc.post_id AND pm_cc.meta_key = 'wta_country_code'
 					INNER JOIN {$wpdb->postmeta} pm_pop ON p.ID = pm_pop.post_id AND pm_pop.meta_key = 'wta_population'
 					INNER JOIN {$wpdb->postmeta} pm_tz ON p.ID = pm_tz.post_id AND pm_tz.meta_key = 'wta_timezone'
-					INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
+					CROSS JOIN (SELECT @row_num := 0, @prev_country := '') as vars
 					WHERE p.post_type = %s
 					AND p.post_status = 'publish'
 					AND pm_type.meta_value = 'city'
-					AND pm_cc.meta_value = %s
+					AND pm_cont.meta_value = %s
+					AND pm_cc.meta_value IS NOT NULL
 					AND pm_tz.meta_value IS NOT NULL
 					AND pm_tz.meta_value != 'multiple'
-					ORDER BY CAST(pm_pop.meta_value AS UNSIGNED) DESC
-					LIMIT 20
-				", WTA_POST_TYPE, $country_code ) );
-				
-				if ( ! empty( $cities ) ) {
-					$country_cities_map[ $country_code ] = $cities;
+					ORDER BY pm_cc.meta_value, CAST(pm_pop.meta_value AS UNSIGNED) DESC
+				) as sub
+				WHERE sub.row_num <= 20
+			", WTA_POST_TYPE, $continent_code ) );
+			
+			// Group cities by country
+			$country_cities_map = array();
+			foreach ( $all_cities as $city ) {
+				if ( ! isset( $country_cities_map[ $city->country_code ] ) ) {
+					$country_cities_map[ $city->country_code ] = array();
 				}
+				$country_cities_map[ $city->country_code ][] = (object) array(
+					'ID' => $city->ID,
+					'timezone' => $city->timezone
+				);
 			}
 			
-			// Cache for 24 hours, shared across ALL pages - v3.5.6: Disabled by default
-			if ( $this->is_transient_caching_enabled() ) {
-				set_transient( $cache_key, $country_cities_map, DAY_IN_SECONDS );
-			}
+			// Cache using custom cache table (v3.5.7)
+			WTA_Cache::set( $cache_key, $country_cities_map, DAY_IN_SECONDS, 'continent' );
 			$cached_data = $country_cities_map;
 		}
 		
