@@ -94,18 +94,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div id="wta-translation-cache-result"></div>
 		</div>
 
-		<!-- Shortcode Cache -->
-		<div class="wta-card">
-			<h2><?php esc_html_e( 'Shortcode Cache', WTA_TEXT_DOMAIN ); ?></h2>
-			<p><?php esc_html_e( 'Clear cached shortcode data (child locations, nearby cities, major cities, etc.). Use this after updating the plugin or if shortcodes show old data.', WTA_TEXT_DOMAIN ); ?></p>
-			<p>
-				<button type="button" class="button" id="wta-clear-shortcode-cache"><?php esc_html_e( 'Clear Shortcode Cache', WTA_TEXT_DOMAIN ); ?></button>
-				<span class="spinner"></span>
-			</p>
-			<div id="wta-shortcode-cache-result"></div>
-		</div>
+	<!-- Shortcode Cache -->
+	<div class="wta-card">
+		<h2><?php esc_html_e( 'Shortcode Cache', WTA_TEXT_DOMAIN ); ?></h2>
+		<p><?php esc_html_e( 'Clear cached shortcode data (child locations, nearby cities, major cities, etc.). Use this after updating the plugin or if shortcodes show old data.', WTA_TEXT_DOMAIN ); ?></p>
+		<p>
+			<button type="button" class="button" id="wta-clear-shortcode-cache"><?php esc_html_e( 'Clear Shortcode Cache', WTA_TEXT_DOMAIN ); ?></button>
+			<span class="spinner"></span>
+		</p>
+		<div id="wta-shortcode-cache-result"></div>
+	</div>
 
-		<!-- v3.0.19: Country GPS Migration removed - no longer needed -->
+	<!-- Flush ALL Cache (v3.5.9) -->
+	<div class="wta-card">
+		<h2><?php esc_html_e( 'Flush ALL Custom Cache', WTA_TEXT_DOMAIN ); ?></h2>
+		<p><?php esc_html_e( 'Completely flush the custom cache table (wp_wta_cache). This removes ALL cached data for ALL pages.', WTA_TEXT_DOMAIN ); ?></p>
+		<?php
+		// Get cache stats
+		$cache_stats = WTA_Cache::get_stats();
+		$total_entries = isset( $cache_stats['total_entries'] ) ? intval( $cache_stats['total_entries'] ) : 0;
+		$active_entries = isset( $cache_stats['active_entries'] ) ? intval( $cache_stats['active_entries'] ) : 0;
+		$table_size_mb = isset( $cache_stats['table_size_mb'] ) ? floatval( $cache_stats['table_size_mb'] ) : 0;
+		?>
+		<p class="description">
+			<strong><?php esc_html_e( 'Current Cache Stats:', WTA_TEXT_DOMAIN ); ?></strong><br>
+			• <?php printf( esc_html__( 'Total entries: %s', WTA_TEXT_DOMAIN ), number_format( $total_entries ) ); ?><br>
+			• <?php printf( esc_html__( 'Active entries: %s', WTA_TEXT_DOMAIN ), number_format( $active_entries ) ); ?><br>
+			• <?php printf( esc_html__( 'Table size: %.2f MB', WTA_TEXT_DOMAIN ), $table_size_mb ); ?>
+		</p>
+		<p class="description">
+			<strong><?php esc_html_e( 'When to use:', WTA_TEXT_DOMAIN ); ?></strong><br>
+			• <?php esc_html_e( 'After plugin update to force fresh cache', WTA_TEXT_DOMAIN ); ?><br>
+			• <?php esc_html_e( 'Testing performance optimizations', WTA_TEXT_DOMAIN ); ?><br>
+			• <?php esc_html_e( 'Cache contains stale data', WTA_TEXT_DOMAIN ); ?>
+		</p>
+		<p>
+			<button type="button" class="button button-secondary" id="wta-flush-all-cache"><?php esc_html_e( 'Flush ALL Cache', WTA_TEXT_DOMAIN ); ?></button>
+			<span class="spinner"></span>
+		</p>
+		<div id="wta-flush-cache-result"></div>
+	</div>
+
+	<!-- v3.0.19: Country GPS Migration removed - no longer needed -->
 		<!-- GeoNames migration uses post_parent hierarchy, shortcodes work directly with city GPS -->
 
 		<!-- Permalink Regeneration -->
@@ -294,6 +324,48 @@ jQuery(document).ready(function($) {
 			success: function(response) {
 				if (response.success) {
 					$result.html('<div class="notice notice-success"><p>✅ ' + response.data.message + '</p></div>');
+				} else {
+					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
+				}
+			},
+			error: function() {
+				$result.html('<div class="notice notice-error"><p>❌ Request failed</p></div>');
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			}
+		});
+	});
+
+	// Flush ALL cache (v3.5.9)
+	$('#wta-flush-all-cache').on('click', function() {
+		if (!confirm('<?php echo esc_js( __( 'Are you sure you want to flush ALL custom cache? This will clear cache for ALL pages (master cache, shortcode cache, comparison cache, etc.). All pages will need to regenerate on next visit.', WTA_TEXT_DOMAIN ) ); ?>')) {
+			return;
+		}
+		
+		var $button = $(this);
+		var $spinner = $button.next('.spinner');
+		var $result = $('#wta-flush-cache-result');
+		
+		$button.prop('disabled', true);
+		$spinner.addClass('is-active');
+		$result.html('<div class="notice notice-info"><p>⏳ Flushing cache table...</p></div>');
+		
+		$.ajax({
+			url: wtaAdmin.ajaxUrl,
+			type: 'POST',
+			data: {
+				action: 'wta_flush_all_cache',
+				nonce: wtaAdmin.nonce
+			},
+			success: function(response) {
+				if (response.success) {
+					$result.html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+					// Reload page after 2 seconds to show updated stats
+					setTimeout(function() {
+						location.reload();
+					}, 2000);
 				} else {
 					$result.html('<div class="notice notice-error"><p>❌ ' + response.data.message + '</p></div>');
 				}

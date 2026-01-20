@@ -915,18 +915,64 @@ class WTA_Admin {
 		OR option_name LIKE '_transient_timeout_wta_nearby_countries_%'
 	" );
 
-		WTA_Logger::info( 'Shortcode cache cleared by user (' . $deleted . ' entries)' );
+	WTA_Logger::info( 'Shortcode cache cleared by user (' . $deleted . ' entries)' );
 
-		wp_send_json_success( array(
-			'message' => 'Shortcode cache has been cleared (' . $deleted . ' entries). Pages will regenerate on next visit.',
-		) );
+	wp_send_json_success( array(
+		'message' => 'Shortcode cache has been cleared (' . $deleted . ' entries). Pages will regenerate on next visit.',
+	) );
+}
+
+/**
+ * AJAX: Flush ALL custom cache (TRUNCATE wp_wta_cache).
+ *
+ * @since    3.5.9
+ */
+public function ajax_flush_all_cache() {
+	check_ajax_referer( 'wta-admin-nonce', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 	}
 
-	/**
-	 * AJAX: Regenerate all permalinks for location posts.
-	 *
-	 * @since    2.28.7
-	 */
+	// Get stats before flush
+	$stats_before = WTA_Cache::get_stats();
+	$entries_before = isset( $stats_before['total_entries'] ) ? $stats_before['total_entries'] : 0;
+	$size_before_mb = isset( $stats_before['table_size_mb'] ) ? $stats_before['table_size_mb'] : 0;
+	
+	// Flush entire cache table
+	$result = WTA_Cache::flush();
+	
+	if ( $result === false ) {
+		wp_send_json_error( array(
+			'message' => 'Failed to flush cache. Check if wp_wta_cache table exists.'
+		) );
+	}
+	
+	// Also clear WordPress object cache
+	wp_cache_flush();
+	
+	WTA_Logger::info( 'ALL custom cache flushed by user', array(
+		'entries_deleted' => $entries_before,
+		'size_freed_mb' => $size_before_mb,
+		'method' => 'TRUNCATE TABLE'
+	) );
+
+	wp_send_json_success( array(
+		'message' => sprintf(
+			'✅ ALL cache has been flushed! Deleted %s entries (%.2f MB freed). All pages will regenerate on next visit.',
+			number_format( $entries_before ),
+			$size_before_mb
+		),
+		'deleted' => $entries_before,
+		'size_freed_mb' => $size_before_mb
+	) );
+}
+
+/**
+ * AJAX: Regenerate all permalinks for location posts.
+ *
+ * @since    2.28.7
+ */
 	public function ajax_regenerate_permalinks() {
 		check_ajax_referer( 'wta-admin-nonce', 'nonce' );
 

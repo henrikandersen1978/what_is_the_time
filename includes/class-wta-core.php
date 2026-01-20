@@ -205,9 +205,10 @@ class WTA_Core {
 		$this->loader->add_action( 'wp_ajax_wta_retry_failed_items', $admin, 'ajax_retry_failed_items' );
 		$this->loader->add_action( 'wp_ajax_wta_regenerate_all_ai', $admin, 'ajax_regenerate_all_ai' ); // v2.34.20
 		$this->loader->add_action( 'wp_ajax_wta_get_logs', $admin, 'ajax_get_logs' );
-		$this->loader->add_action( 'wp_ajax_wta_clear_translation_cache', $admin, 'ajax_clear_translation_cache' );
-		$this->loader->add_action( 'wp_ajax_wta_clear_shortcode_cache', $admin, 'ajax_clear_shortcode_cache' ); // v2.35.51
-		$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
+	$this->loader->add_action( 'wp_ajax_wta_clear_translation_cache', $admin, 'ajax_clear_translation_cache' );
+	$this->loader->add_action( 'wp_ajax_wta_clear_shortcode_cache', $admin, 'ajax_clear_shortcode_cache' ); // v2.35.51
+	$this->loader->add_action( 'wp_ajax_wta_flush_all_cache', $admin, 'ajax_flush_all_cache' ); // v3.5.9
+	$this->loader->add_action( 'wp_ajax_wta_regenerate_permalinks', $admin, 'ajax_regenerate_permalinks' );
 		$this->loader->add_action( 'wp_ajax_wta_force_reschedule', $admin, 'ajax_force_reschedule' ); // v2.35.33
 		// v3.0.19: Country GPS migration removed - no longer needed with GeoNames
 

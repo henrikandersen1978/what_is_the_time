@@ -2,6 +2,31 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.10] - 2026-01-20
+
+### Added
+- **Flush ALL Cache Button** in admin Tools page
+  - Completely flushes wp_wta_cache table (TRUNCATE)
+  - Shows cache statistics before flush (entries, size)
+  - Confirmation dialog to prevent accidental flush
+  - Auto-reloads page after flush to show updated stats
+  - Accessible at: Tools & Maintenance → Flush ALL Custom Cache
+
+### Changed
+- Admin Tools page now displays real-time cache statistics
+  - Total entries in cache
+  - Active vs expired entries
+  - Table size in MB
+  - Updated after each flush operation
+
+### Technical Details
+- New AJAX handler: `ajax_flush_all_cache()` in `class-wta-admin.php`
+- Uses `WTA_Cache::flush()` method (TRUNCATE TABLE)
+- Also flushes WordPress object cache (`wp_cache_flush()`)
+- Logs flush operation with statistics in plugin logs
+
+---
+
 ## [3.5.9] - 2026-01-20
 
 ### CRITICAL PERFORMANCE FIX - Continent Page Query Optimization
