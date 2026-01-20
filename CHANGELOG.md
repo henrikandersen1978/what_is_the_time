@@ -2,6 +2,50 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.28] - 2026-01-20
+
+### 🐛 CRITICAL FIX - Use post_parent Instead of Non-Existent Meta
+
+**Problem:**
+v3.5.27 tried to filter cities using `wta_location_type = 'city'` meta, but this meta key **doesn't exist** in the database! All locations returned `NULL` for this meta, causing the processor to find 0 cities and complete in under 1 second.
+
+**Database Reality:**
+- ❌ `wta_location_type` meta: **Does NOT exist** (70,125 locations have NULL)
+- ✅ `post_parent > 0`: **Reliable way** to identify cities
+
+**WordPress Hierarchy:**
+```
+Continents: post_parent = 0  (6 locations)
+Countries:  post_parent = 0  (included in 6)
+Cities:     post_parent > 0  (70,130 locations) ← These have a country as parent
+```
+
+**The Fix:**
+Replaced meta-based filter with `post_parent > 0` check in:
+1. `get_cities_without_intro()` - Now correctly finds cities (line 133)
+2. `get_stats()` - Now correctly counts cities (line 290)
+
+**Impact:**
+- ✅ **70,130 cities** will now be processed (instead of 0)
+- ✅ Processor starts working immediately
+- ✅ Accurate progress statistics
+- ✅ No dependency on non-existent meta data
+
+**Before v3.5.28:**
+```
+[2026-01-20 23:32:11] INFO: Comparison intro processor: No cities pending
+→ Completed in <1 second (found 0 cities due to NULL meta)
+```
+
+**After v3.5.28:**
+```
+[2026-01-20 XX:XX:XX] INFO: Comparison intro processor started
+Context: { "cities_found": 10, "batch_size": 10 }
+→ Processes 10 cities per minute correctly
+```
+
+---
+
 ## [3.5.27] - 2026-01-20
 
 ### 🐛 BUG FIX - Comparison Intro Only for Cities

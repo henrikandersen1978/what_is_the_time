@@ -123,18 +123,16 @@ class WTA_Comparison_Intro_Processor {
 
 		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
 		// v3.5.27: Filter to only process cities (not continents/countries)
+		// v3.5.28: Use post_parent > 0 instead of meta (meta doesn't exist in DB)
 		$cities = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title
 			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm 
-				ON p.ID = pm.post_id 
-				AND pm.meta_key = 'wta_location_type' 
-				AND pm.meta_value = 'city'
 			LEFT JOIN {$wpdb->prefix}wta_cache c 
 				ON c.cache_key = CONCAT('wta_comparison_intro_', p.ID)
 				AND c.expires > UNIX_TIMESTAMP()
 			WHERE p.post_type = 'wta_location'
 			AND p.post_status = 'publish'
+			AND p.post_parent > 0
 			AND c.cache_key IS NULL
 			LIMIT %d",
 			$limit
@@ -284,15 +282,13 @@ class WTA_Comparison_Intro_Processor {
 
 		// v3.5.26: Hardcoded post type to avoid race condition with constant definition
 		// v3.5.27: Count only cities (not continents/countries)
+		// v3.5.28: Use post_parent > 0 instead of meta (meta doesn't exist in DB)
 		$total_cities = $wpdb->get_var(
 			"SELECT COUNT(*)
-			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm 
-				ON p.ID = pm.post_id 
-				AND pm.meta_key = 'wta_location_type' 
-				AND pm.meta_value = 'city'
-			WHERE p.post_type = 'wta_location'
-			AND p.post_status = 'publish'"
+			FROM {$wpdb->posts}
+			WHERE post_type = 'wta_location'
+			AND post_status = 'publish'
+			AND post_parent > 0"
 		);
 
 		$cities_with_intro = $wpdb->get_var( $wpdb->prepare(
