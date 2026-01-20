@@ -41,6 +41,23 @@ class WTA_Database_Maintenance {
 	}
 	
 	/**
+	 * Increase Action Scheduler cleanup batch size for faster cleanup.
+	 * 
+	 * Default: 20 actions per cleanup run
+	 * Our setting: 500 actions per cleanup run
+	 * 
+	 * This allows Action Scheduler to delete 500 actions at once instead of 20,
+	 * preventing database bloat during high-volume processing.
+	 * 
+	 * @since    3.4.10
+	 * @param    int $batch_size Batch size for cleanup.
+	 * @return   int             500 actions per cleanup.
+	 */
+	public static function set_cleanup_batch_size( $batch_size ) {
+		return 500;
+	}
+	
+	/**
 	 * Run periodic table optimization.
 	 * 
 	 * OPTIMIZE reclaims disk space after DELETE operations.
@@ -49,6 +66,7 @@ class WTA_Database_Maintenance {
 	 * Scheduled via Action Scheduler to run every 6 hours.
 	 *
 	 * @since    3.4.8
+	 * @since    3.5.6  Added wp_options optimization (reclaims space from deleted transients).
 	 * @return   array  Optimization statistics.
 	 */
 	public static function run_optimization() {
@@ -64,7 +82,12 @@ class WTA_Database_Maintenance {
 		// OPTIMIZE Action Scheduler tables to reclaim disk space
 		$wpdb->query( "OPTIMIZE TABLE {$wpdb->prefix}actionscheduler_logs" );
 		$wpdb->query( "OPTIMIZE TABLE {$wpdb->prefix}actionscheduler_actions" );
-		$stats['optimized_tables'] = 2;
+		
+		// v3.5.6: Also optimize wp_options to reclaim space from deleted transients
+		// This prevents database bloat after massive transient deletions
+		$wpdb->query( "OPTIMIZE TABLE {$wpdb->options}" );
+		
+		$stats['optimized_tables'] = 3;
 		
 		$stats['execution_time'] = round( microtime( true ) - $start_time, 3 );
 		

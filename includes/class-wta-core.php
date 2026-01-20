@@ -345,8 +345,11 @@ class WTA_Core {
 		$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
 
 		// Database maintenance (v3.4.8) - Leverage Action Scheduler's built-in cleanup
-		// Set aggressive 1-hour retention period (instead of default 31 days)
+		// Set aggressive 10-minute retention period (instead of default 31 days)
 		$this->loader->add_filter( 'action_scheduler_retention_period', 'WTA_Database_Maintenance', 'set_retention_period' );
+		
+		// Increase cleanup batch size from 20 to 500 (v3.4.10 - prevents database bloat)
+		$this->loader->add_filter( 'action_scheduler_cleanup_batch_size', 'WTA_Database_Maintenance', 'set_cleanup_batch_size' );
 		
 		// Optimize tables every 6 hours to reclaim disk space
 		$this->loader->add_action( 'wta_optimize_tables', 'WTA_Database_Maintenance', 'run_optimization' );

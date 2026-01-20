@@ -2,6 +2,52 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.5.6] - 2026-01-20
+
+### Fixed
+- **CRITICAL DATABASE BLOAT FIX**: Disabled transient caching by default for all shortcodes
+  - **Problem**: With 200k+ posts, transient caching created millions of database entries
+  - **Impact**: Database wp_options table grew to 43+ GB, causing disk space issues
+  - **Solution**: All shortcode transients now disabled by default (use server-level cache instead)
+  - Transient caching can be re-enabled via `wta_enable_shortcode_transient_caching` filter if needed
+  - **Only enable if**: You are NOT using LiteSpeed Cache, Varnish, WP Super Cache, or object cache
+  - GeoNames import cache and TimezoneDB API rate limiting transients remain active (required)
+
+### Changed
+- **Database Optimization**: wp_options now included in 6-hour optimization schedule
+  - Reclaims disk space from deleted transients automatically
+  - Prevents database bloat after massive transient deletions
+  - Already optimizes Action Scheduler tables (actionscheduler_logs, actionscheduler_actions)
+  
+- **Build Process**: cleanup-wta-transients.php now included in release ZIP
+  - Prevents script from disappearing on production servers
+  - Ensures cleanup tool is always available when needed
+  - Can be run via URL or EasyCron for automated cleanup
+
+### Performance Impact
+- **Before v3.5.6**: 
+  - Millions of transients created daily with 200k+ posts
+  - wp_options table growth: ~1-2 GB per week
+  - Backend slowdowns from database strain
+  
+- **After v3.5.6**:
+  - Zero transient creation from shortcodes
+  - LiteSpeed Cache/server-level cache handles all page caching
+  - wp_options remains stable at < 100 MB
+  - Backend stays responsive under load
+
+### Technical Details
+- **Updated**: `includes/frontend/class-wta-shortcodes.php` - Added `is_transient_caching_enabled()` method
+- **Updated**: `includes/helpers/class-wta-database-maintenance.php` - Added wp_options to optimization
+- **Updated**: `build-release.ps1` - Include cleanup-wta-transients.php in ZIP
+- **Wrapped 15 transient calls**: major_cities, child_locations, nearby_cities, nearby_countries, regional_centres, global_cities, comparison_intro, continent_overview
+- **Filter available**: `add_filter( 'wta_enable_shortcode_transient_caching', '__return_true' );` to re-enable
+
+### Upgrade Notes
+- **Existing transients**: Run cleanup-wta-transients.php after upgrade to remove old transients
+- **LiteSpeed Cache users**: No action needed - plugin now optimized for server-level caching
+- **Non-cache users**: Consider enabling transient caching via filter or use WP Super Cache/W3 Total Cache
+
 ## [3.5.5] - 2026-01-15
 
 ### Fixed

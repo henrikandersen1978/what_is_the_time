@@ -47,6 +47,9 @@ Copy-Item -Path "time-zone-clock.php" -Destination $PluginTempDir -Force
 # Copy includes directory
 Copy-Item -Path "includes" -Destination "$PluginTempDir\includes" -Recurse -Force
 
+# Copy cleanup script (v3.5.6 - prevents script from disappearing on production)
+Copy-Item -Path "cleanup-wta-transients.php" -Destination $PluginTempDir -Force
+
 Write-Host "Creating zip with Windows tar..." -ForegroundColor Yellow
 
 # Delete old zip if exists
