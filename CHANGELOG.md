@@ -2,7 +2,23 @@
 
 All notable changes to World Time AI will be documented in this file.
 
-## [3.5.12] - 2026-01-20
+## [3.5.12] - 2026-01-20 (HOTFIX Applied)
+
+### 🚨 CRITICAL HOTFIX (2026-01-20)
+
+**Fixed:** Fatal PHP error "Cannot use object of type stdClass as array" in `nearby_countries_shortcode`
+
+**Issue:** 
+- Global city counts cache was incorrectly structured as stdClass object
+- Code expected OBJECT_K format (array with object values)
+- Caused site crash on all city pages
+
+**Solution:**
+- Changed `$city_counts = new stdClass()` → `$city_counts = array()`
+- Changed `$city_counts->$country_id = $obj` → `$city_counts[ $country_id ] = $obj`
+- Maintains OBJECT_K compatibility (array with object values)
+
+**Commit:** 7a494e7
 
 ### CRITICAL PERFORMANCE FIX - Query Optimization for City Pages
 
