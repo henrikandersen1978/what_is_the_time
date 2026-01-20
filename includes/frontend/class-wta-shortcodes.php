@@ -1896,6 +1896,7 @@ class WTA_Shortcodes {
 		
 		// ONE QUERY for ALL 6 continents (EU, AS, NA, SA, AF, OC)
 		// Fetches top 20 cities per country across all continents
+		// v3.5.20: Fixed collation issue for MySQL 8.0+ compatibility
 		$all_cities = $wpdb->get_results( $wpdb->prepare( "
 			SELECT sub.ID, sub.continent_code, sub.country_code, sub.timezone, sub.row_num
 			FROM (
@@ -1904,8 +1905,8 @@ class WTA_Shortcodes {
 					pm_cont.meta_value as continent_code,
 					pm_cc.meta_value as country_code,
 					pm_tz.meta_value as timezone,
-					@row_num := IF(@prev_country = pm_cc.meta_value, @row_num + 1, 1) as row_num,
-					@prev_country := pm_cc.meta_value as prev_country
+					@row_num := IF(@prev_country COLLATE utf8mb4_unicode_ci = pm_cc.meta_value COLLATE utf8mb4_unicode_ci, @row_num + 1, 1) as row_num,
+					@prev_country := pm_cc.meta_value COLLATE utf8mb4_unicode_ci as prev_country
 				FROM {$wpdb->posts} p
 				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id AND pm_type.meta_key = 'wta_type'
 				INNER JOIN {$wpdb->postmeta} pm_cont ON p.ID = pm_cont.post_id AND pm_cont.meta_key = 'wta_continent_code'
