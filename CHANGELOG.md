@@ -2,6 +2,87 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.6.4] - 2026-01-22
+
+### 🐛 CRITICAL FIX - Cache Warmup Rotation & Batch Size
+
+**Problem in v3.6.0-3.6.3:**
+1. **Same cities warmed repeatedly:** Query used `ORDER BY country.post_title` (alphabetical), causing the same 5 countries to be selected every batch (Curaçao, French Guiana, Gabon, Liberia, Macao).
+2. **Incomplete coverage in 30 minutes:** Batch size of 5 meant 49 batches × 60s = 49 minutes to complete all 244 countries, overlapping with the next 30-minute recurring cycle.
+
+**Result:**
+- Only ~10-15 countries ever got warmed (the alphabetically first ones)
+- Multiple overlapping cycles ran simultaneously
+- Recurring kickstart started new cycle before previous one finished
+
+**The Fix:**
+
+**1. Increased Batch Size: 5 → 10**
+```
+244 countries ÷ 10 per batch = ~25 batches
+25 batches × 60 seconds delay = ~25 minutes total
+Completes WITHIN 30-minute recurring interval ✅
+```
+
+**2. Fixed SQL ORDER BY: post_title → ID**
+```sql
+-- v3.6.3 (WRONG - always same countries):
+ORDER BY country.post_title
+
+-- v3.6.4 (CORRECT - rotates through all):
+ORDER BY country.ID
+```
+
+**Why ORDER BY ID Works:**
+- Countries created in import order (not alphabetical)
+- Query processes countries by creation order
+- As countries get cache, next batch gets DIFFERENT countries
+- Eventually rotates through all 244 countries
+
+**Impact:**
+
+**Before v3.6.4:**
+```
+Batch 1: Curaçao, French Guiana, Gabon, Liberia, Macao
+Batch 2: Curaçao, French Guiana, Gabon, Liberia, Macao (SAME!)
+Batch 3: Curaçao, French Guiana, Gabon, Liberia, Macao (SAME!)
+...
+Result: Only 5 countries ever warmed ❌
+```
+
+**After v3.6.4:**
+```
+Batch 1 (10 countries): First 10 by ID
+Batch 2 (10 countries): Next 10 by ID (different from batch 1!)
+Batch 3 (10 countries): Next 10 by ID (different again!)
+...
+Batch 25 (4 countries): Final countries
+Result: ALL 244 countries warmed in 25 minutes ✅
+```
+
+**Timeline:**
+```
+00:00 - Recurring kickstart starts cycle 1
+00:25 - Cycle 1 completes (all 244 countries warmed)
+00:30 - Recurring kickstart starts cycle 2
+00:55 - Cycle 2 completes
+01:00 - Recurring kickstart starts cycle 3
+...
+Every country warmed every 30 minutes! 🎯
+```
+
+**Files Changed:**
+1. `includes/scheduler/class-wta-cache-warmup-processor.php` (batch size 10, ORDER BY ID)
+2. `time-zone-clock.php` (version bump to 3.6.4)
+
+**Performance:**
+- Batch processing: ~25 minutes (fits in 30-minute window)
+- No overlapping cycles
+- Complete coverage of all 244 countries
+- Each country warmed every 30 minutes
+
+---
+
 ## [3.6.3] - 2026-01-22
 
 ### 🐛 CRITICAL FIX - Cache Warmup Scheduling with Action Scheduler

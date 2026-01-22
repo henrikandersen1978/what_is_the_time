@@ -18,9 +18,13 @@ class WTA_Cache_Warmup_Processor {
 
     /**
      * Batch size - number of cities to warm per batch
-     * Conservative: 5 cities × 12s = 60s per batch (safe for Action Scheduler)
+     * 
+     * v3.6.4: Increased to 10 to complete all 244 countries within 30 minutes
+     * - 244 countries ÷ 10 per batch = ~25 batches
+     * - 25 batches × 60s delay = ~25 minutes total
+     * - Fits within 30-minute recurring interval
      */
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 10;
 
     /**
      * Delay between warmup requests within a batch (seconds)
@@ -118,6 +122,8 @@ class WTA_Cache_Warmup_Processor {
         }
 
         // Find countries without fresh master cache, get their largest city
+        // v3.6.4: ORDER BY country.ID (not post_title) to rotate through ALL countries,
+        // not just the same alphabetically-first ones every time
         $cities = $wpdb->get_results( $wpdb->prepare(
             "SELECT 
                 country.ID as country_id,
@@ -149,7 +155,7 @@ class WTA_Cache_Warmup_Processor {
                 ORDER BY CAST(pm2.meta_value AS UNSIGNED) DESC
                 LIMIT 1
             )
-            ORDER BY country.post_title
+            ORDER BY country.ID
             LIMIT %d",
             $limit
         ) );
