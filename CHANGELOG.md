@@ -2,6 +2,51 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.7.2] - 2026-01-22
+
+### ✨ NEW - Multilingual Support for Comparison Intro Text
+
+**Feature:**
+- Comparison intro text (timezone table intro) now supports all 11 languages
+- Background job reads prompts from JSON language files (da.json, en.json, de.json, etc.)
+- Cache keys now include language identifier: `wta_comparison_intro_{post_id}_{lang}`
+- Intro text automatically matches site language setting
+
+**Implementation:**
+- **Processor** (`class-wta-comparison-intro-processor.php`):
+  - New method: `load_language_prompts()` - Loads prompts from JSON files
+  - Updated `generate_intro()` - Accepts language parameter, reads language-specific prompts
+  - Updated `process_city()` - Includes language in cache key
+  - Updated `get_cities_without_intro()` - Checks language-specific cache
+  - Updated `get_stats()` - Counts language-specific intros
+  
+- **Shortcode** (`class-wta-shortcodes.php`):
+  - Updated `global_time_comparison_shortcode()` - Reads language-specific cache
+  - Falls back gracefully if intro not found (table still works)
+
+**Language Files:**
+All 11 JSON files already have correct translated prompts:
+- 🇩🇰 Danish: "verdensur", "tidsforskelle", "rejseplanlægning"
+- 🇬🇧 English: "world clock", "time differences", "travel planning"
+- 🇩🇪 German: "Weltuhr", "Zeitunterschiede", "Reiseplanung"
+- 🇫🇷 French: "horloge mondiale", "différences horaires"
+- 🇪🇸 Spanish: "reloj mundial", "diferencias horarias"
+- 🇮🇹 Italian: "orologio mondiale", "differenze orarie"
+- 🇵🇹 Portuguese: "relógio mundial", "diferenças horárias"
+- 🇳🇱 Dutch: "wereldklok", "tijdsverschillen"
+- 🇸🇪 Swedish: "världsklocka", "tidsskillnader"
+- 🇵🇱 Polish: "zegar światowy", "różnice czasowe"
+
+**Backwards Compatibility:**
+- Falls back to WordPress options if JSON file missing
+- Old cache keys (without language) ignored - will regenerate
+
+**Usage:**
+1. Set language: Admin → Load Default Prompts → Select language
+2. Run: `wta_process_comparison_intros` action
+3. Background job generates intro in selected language
+4. Change language and re-run to generate for other languages
+
 ## [3.7.1] - 2026-01-22
 
 ### 🐛 CRITICAL FIX - Cache Warmup Query Performance
