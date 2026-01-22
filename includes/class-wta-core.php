@@ -86,6 +86,7 @@ class WTA_Core {
 	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-single-ai-processor.php';
 	require_once WTA_PLUGIN_DIR . 'includes/processors/class-wta-batch-processor.php'; // v3.3.0
 	require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-comparison-intro-processor.php'; // v3.5.25
+	require_once WTA_PLUGIN_DIR . 'includes/scheduler/class-wta-cache-warmup-processor.php'; // v3.6.0
 
 		// Admin
 		if ( is_admin() ) {
@@ -350,6 +351,13 @@ class WTA_Core {
 	$comparison_intro_processor = new WTA_Comparison_Intro_Processor();
 	$this->loader->add_action( 'wta_process_comparison_intros', $comparison_intro_processor, 'process_batch' );
 
+	// Cache Warmup Processor (v3.6.0)
+	// Proactively warms cache for largest city in each country
+	// Eliminates 6-12 second first loads for users
+	$cache_warmup_processor = new WTA_Cache_Warmup_Processor();
+	$this->loader->add_action( 'wta_cache_warmup_batch', $cache_warmup_processor, 'process_batch' );
+	$this->loader->add_action( 'wta_cache_warmup_kickstart', $cache_warmup_processor, 'process_batch' );
+
 	// Log cleanup (v2.35.7) - Runs daily at 04:00
 	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );
 
@@ -428,6 +436,10 @@ class WTA_Core {
 	// Auto-start comparison intro generation if needed (v3.5.25)
 	// Checks if there are cities without intro text and starts background job
 	$this->maybe_start_comparison_intro_job();
+
+	// Auto-start cache warmup (v3.6.0)
+	// Schedules recurring warmup job every 30 minutes
+	$this->maybe_kickstart_warmup();
 }
 
 /**
@@ -475,6 +487,53 @@ private function maybe_start_comparison_intro_job() {
 		WTA_Logger::info( 'Comparison intro job auto-started', array(
 			'next_run' => date( 'Y-m-d H:i:s', $next_run ),
 			'note' => 'Background job will generate intro text for global_time_comparison shortcode'
+		) );
+	}
+}
+
+/**
+ * Register custom cron interval for cache warmup.
+ * 
+ * WordPress built-in intervals: hourly, twicedaily, daily.
+ * We need a custom 30-minute interval.
+ * 
+ * @since 3.6.0
+ */
+public function register_cache_warmup_interval( $schedules ) {
+	$schedules['wta_half_hourly'] = array(
+		'interval' => 1800, // 30 minutes
+		'display'  => __( 'Every 30 Minutes', 'world-time-ai' )
+	);
+	return $schedules;
+}
+
+/**
+ * Maybe kickstart cache warmup job.
+ * 
+ * Schedules recurring job to warmup cache every 30 minutes.
+ * First batch runs 60 seconds after plugin activation/upgrade.
+ * 
+ * @since 3.6.0
+ */
+private function maybe_kickstart_warmup() {
+	// Register custom cron interval
+	add_filter( 'cron_schedules', array( $this, 'register_cache_warmup_interval' ) );
+
+	// Check if recurring job is already scheduled
+	if ( ! wp_next_scheduled( 'wta_cache_warmup_kickstart' ) ) {
+		// Schedule recurring job every 30 minutes
+		$first_run = time() + 60; // Start in 60 seconds
+		
+		wp_schedule_event( 
+			$first_run, 
+			'wta_half_hourly', 
+			'wta_cache_warmup_kickstart' 
+		);
+		
+		WTA_Logger::info( 'Cache warmup job scheduled', array(
+			'interval' => 'Every 30 minutes',
+			'first_run' => date( 'Y-m-d H:i:s', $first_run ),
+			'note' => 'Warms cache for largest city in each country'
 		) );
 	}
 }
