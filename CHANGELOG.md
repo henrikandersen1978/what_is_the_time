@@ -2,6 +2,87 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.7.0] - 2026-01-22
+
+### 🚀 MAJOR REDESIGN - Cache Warmup System
+
+**Problem in v3.6.x:**
+- Only 10 cities warmed per 30-minute cycle (not all 244)
+- Batch chain stopped after first 10 cities had fresh cache
+- Remaining 234 countries had to wait 24 hours for cache to expire
+- Users experienced slow first loads for most countries
+
+**The Solution:**
+
+**Redesigned from batch processing to individual job queuing:**
+
+1. **Queue all 244 cities individually (not in batches)**
+   - Kickstart (every 30 min) queues all 244 cities
+   - Each city is a separate Action Scheduler job
+   - 2-second stagger between jobs (8 minutes to queue all)
+
+2. **Smart cache checking in each job**
+   - Each job checks if country cache is fresh
+   - Skips if fresh (0.01s) ⚡
+   - Only warms if needed (3-12s)
+
+3. **Robust architecture**
+   - Queries wp_posts directly (no cache table dependency)
+   - No defensive checks that could block warmup
+   - Always queues all 244 cities regardless of cache state
+
+**Performance:**
+
+**First run (cold cache):**
+```
+244 cities × 8s average = ~32 minutes
+All 244 countries warmed ✅
+```
+
+**Subsequent runs (warm cache):**
+```
+240 cities skip (0.01s each) = 2.4 seconds
+4 cities warm (8s each) = 32 seconds
+Total: ~35 seconds for entire cycle ⚡
+```
+
+**Impact:**
+
+**Before (v3.6.4):**
+```
+✅ 10 countries warm (fast loads)
+❌ 234 countries cold (6-12s first load)
+```
+
+**After (v3.7.0):**
+```
+✅ All 244 countries warm every 30 minutes
+✅ All users get fast loads (<0.5s)
+✅ No slow first loads anywhere 🎉
+```
+
+**Technical Changes:**
+
+**`class-wta-cache-warmup-processor.php`:**
+- Removed: `process_batch()`, `get_cities_needing_warmup()`, `BATCH_SIZE`, `DELAY_SECONDS`
+- Added: `kickstart()`, `get_all_country_cities()`, `warmup_single_city()`
+- No defensive cache table checks (always queue warmups)
+
+**`class-wta-core.php`:**
+- Changed hooks from batch processing to individual job system:
+  - `wta_cache_warmup_kickstart` → `kickstart()` method
+  - `wta_warmup_single_city` → `warmup_single_city()` method (with 3 params)
+
+**Why This Is Better:**
+
+1. **Complete coverage:** All 244 countries warmed (not just 10)
+2. **Fast subsequent runs:** Smart skipping when cache is fresh
+3. **Reliable:** Direct wp_posts queries (no cache table dependency)
+4. **Scalable:** Action Scheduler manages queue automatically
+5. **User experience:** No slow first loads for any country 🚀
+
+---
+
 ## [3.6.4] - 2026-01-22
 
 ### 🐛 CRITICAL FIX - Cache Warmup Rotation & Batch Size

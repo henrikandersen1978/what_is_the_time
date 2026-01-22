@@ -352,11 +352,12 @@ class WTA_Core {
 	$this->loader->add_action( 'wta_process_comparison_intros', $comparison_intro_processor, 'process_batch' );
 
 	// Cache Warmup Processor (v3.6.0)
-	// Proactively warms cache for largest city in each country
+	// Cache warmup (v3.7.0) - Queues all 244 cities individually every 30 minutes
+	// Each city checks cache freshness and skips if already warm (0.01s)
 	// Eliminates 6-12 second first loads for users
 	$cache_warmup_processor = new WTA_Cache_Warmup_Processor();
-	$this->loader->add_action( 'wta_cache_warmup_batch', $cache_warmup_processor, 'process_batch' );
-	$this->loader->add_action( 'wta_cache_warmup_kickstart', $cache_warmup_processor, 'process_batch' );
+	$this->loader->add_action( 'wta_cache_warmup_kickstart', $cache_warmup_processor, 'kickstart' );
+	$this->loader->add_action( 'wta_warmup_single_city', $cache_warmup_processor, 'warmup_single_city', 10, 3 );
 
 	// Log cleanup (v2.35.7) - Runs daily at 04:00
 	$this->loader->add_action( 'wta_cleanup_old_logs', 'WTA_Log_Cleaner', 'cleanup_old_logs' );

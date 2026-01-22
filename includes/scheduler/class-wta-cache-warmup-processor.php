@@ -5,6 +5,9 @@
  * Proactively warms up cache for largest city in each country
  * to eliminate slow first loads for users.
  *
+ * v3.7.0: Redesigned to queue all 244 cities individually instead of batch processing.
+ * Each city checks cache freshness and skips if already warm (0.01s).
+ *
  * @package     World_Time_AI
  * @subpackage  Scheduler
  * @since       3.6.0
@@ -17,113 +20,81 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WTA_Cache_Warmup_Processor {
 
     /**
-     * Batch size - number of cities to warm per batch
+     * Kickstart cache warmup for all countries
      * 
-     * v3.6.4: Increased to 10 to complete all 244 countries within 30 minutes
-     * - 244 countries ÷ 10 per batch = ~25 batches
-     * - 25 batches × 60s delay = ~25 minutes total
-     * - Fits within 30-minute recurring interval
-     */
-    const BATCH_SIZE = 10;
-
-    /**
-     * Delay between warmup requests within a batch (seconds)
-     */
-    const DELAY_SECONDS = 1;
-
-    /**
-     * Process a batch of cities for cache warmup
+     * Queues individual warmup actions for the largest city in each country.
+     * Each action checks cache freshness and skips if already warm.
+     * 
+     * v3.7.0: Queues all 244 cities with 2-second stagger (total ~8 minutes to queue all).
+     * Action Scheduler then processes them, skipping cities with fresh cache (0.01s per skip).
      *
      * @return void
      */
-    public function process_batch() {
+    public function kickstart() {
         $start_time = microtime( true );
-
-        WTA_Logger::info( 'Cache warmup batch started', array(
-            'batch_size' => self::BATCH_SIZE
-        ) );
-
-        // Get cities needing warmup
-        $cities = $this->get_cities_needing_warmup( self::BATCH_SIZE );
-
+        
+        WTA_Logger::info( 'Cache warmup kickstart: Starting queue process' );
+        
+        // Get ALL cities (one per country) - direct from wp_posts, no cache dependency
+        $cities = $this->get_all_country_cities( 300 ); // High limit to get all
+        
         if ( empty( $cities ) ) {
-            WTA_Logger::info( 'Cache warmup: No cities pending', array(
-                'batch_size' => self::BATCH_SIZE
-            ) );
+            WTA_Logger::info( 'Cache warmup kickstart: No cities found' );
             return;
         }
-
-        $warmed = 0;
+        
+        $queued = 0;
         $skipped = 0;
-        $errors = 0;
-
-        foreach ( $cities as $city ) {
-            try {
-                $result = $this->warmup_city( $city->city_id, $city->city_name, $city->country_id );
-                
-                if ( $result === 'skipped' ) {
-                    $skipped++;
-                } elseif ( $result === 'warmed' ) {
-                    $warmed++;
-                } else {
-                    $errors++;
-                }
-
-                // Delay between requests to avoid server overload
-                if ( self::DELAY_SECONDS > 0 ) {
-                    sleep( self::DELAY_SECONDS );
-                }
-
-            } catch ( Exception $e ) {
-                $errors++;
-                WTA_Logger::error( 'Cache warmup failed for city', array(
-                    'city_id' => $city->city_id,
-                    'city_name' => $city->city_name,
-                    'error' => $e->getMessage()
-                ) );
+        
+        // Queue each city as individual action with staggered timing
+        foreach ( $cities as $index => $city ) {
+            // Skip if already queued (avoid duplicates)
+            $existing = as_next_scheduled_action( 'wta_warmup_single_city', array( 
+                'city_id' => $city->city_id 
+            ) );
+            
+            if ( false !== $existing ) {
+                $skipped++;
+                continue;
             }
+            
+            // Queue with 2-second delay between each (244 cities × 2s = ~8 minutes to queue all)
+            $delay = $index * 2;
+            as_schedule_single_action( time() + $delay, 'wta_warmup_single_city', array( 
+                'city_id' => $city->city_id,
+                'city_name' => $city->city_name,
+                'country_id' => $city->country_id
+            ), 'wta_cache_warmup' );
+            
+            $queued++;
         }
-
+        
         $duration = round( microtime( true ) - $start_time, 2 );
-
-        WTA_Logger::info( 'Cache warmup batch completed', array(
-            'warmed' => $warmed,
+        
+        WTA_Logger::info( 'Cache warmup kickstart: Queue completed', array(
+            'queued' => $queued,
             'skipped' => $skipped,
-            'errors' => $errors,
+            'total_cities' => count( $cities ),
             'duration' => $duration . 's'
         ) );
-
-        // Schedule next batch if there are more cities to process
-        if ( count( $cities ) === self::BATCH_SIZE ) {
-            as_schedule_single_action( time() + 60, 'wta_cache_warmup_batch', array(), 'wta_cache_warmup' );
-            
-            WTA_Logger::debug( 'Cache warmup: Next batch scheduled in 60s' );
-        } else {
-            WTA_Logger::info( 'Cache warmup: All cities processed - cycle complete' );
-        }
     }
 
     /**
-     * Get cities that need cache warmup
-     *
-     * Returns largest city in each country that doesn't have a fresh country master cache.
-     *
-     * @param int $limit Number of cities to return
+     * Get largest city in each country (for warmup)
+     * 
+     * Returns ALL countries regardless of cache status.
+     * Individual warmup actions will check cache freshness.
+     * 
+     * v3.7.0: No defensive cache table check - we always want to queue warmups.
+     * Queries wp_posts directly for maximum reliability.
+     * 
+     * @param int $limit Maximum number of cities to return
      * @return array
      */
-    private function get_cities_needing_warmup( $limit ) {
+    private function get_all_country_cities( $limit ) {
         global $wpdb;
-
-        // DEFENSIVE: Check if cache table exists
-        $table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}wta_cache'" );
-        if ( ! $table_exists ) {
-            WTA_Logger::error( 'Cache table missing - cannot process cache warmup' );
-            return array();
-        }
-
-        // Find countries without fresh master cache, get their largest city
-        // v3.6.4: ORDER BY country.ID (not post_title) to rotate through ALL countries,
-        // not just the same alphabetically-first ones every time
+        
+        // Get largest city in each country (regardless of cache status)
         $cities = $wpdb->get_results( $wpdb->prepare(
             "SELECT 
                 country.ID as country_id,
@@ -133,16 +104,12 @@ class WTA_Cache_Warmup_Processor {
                 pm.meta_value as population
             FROM {$wpdb->posts} country
             INNER JOIN {$wpdb->posts} continent ON continent.ID = country.post_parent
-            LEFT JOIN {$wpdb->prefix}wta_cache c 
-                ON c.cache_key = CONCAT('wta_country_master_', country.ID, '_v2')
-                AND c.expires > UNIX_TIMESTAMP()
             INNER JOIN {$wpdb->posts} city ON city.post_parent = country.ID
             LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = city.ID AND pm.meta_key = 'population'
             WHERE country.post_type = 'wta_location'
                 AND country.post_status = 'publish'
                 AND country.post_parent > 0        -- Country has a parent (continent)
                 AND continent.post_parent = 0      -- Parent is a continent (no parent)
-                AND c.cache_key IS NULL            -- No fresh cache exists
                 AND city.post_type = 'wta_location'
                 AND city.post_status = 'publish'
             GROUP BY country.ID
@@ -159,8 +126,25 @@ class WTA_Cache_Warmup_Processor {
             LIMIT %d",
             $limit
         ) );
-
+        
         return $cities;
+    }
+
+    /**
+     * Warmup a single city (called by Action Scheduler)
+     * 
+     * Checks cache freshness first - skips if already warm.
+     * 
+     * @param int    $city_id City post ID
+     * @param string $city_name City name
+     * @param int    $country_id Country post ID
+     * @return void
+     */
+    public function warmup_single_city( $city_id, $city_name, $country_id ) {
+        $result = $this->warmup_city( $city_id, $city_name, $country_id );
+        
+        // warmup_city() already logs details
+        return $result;
     }
 
     /**
@@ -205,11 +189,16 @@ class WTA_Cache_Warmup_Processor {
             ) )
         );
 
-        // Make HTTP request to warmup all caches
+        // Make HTTP request - this triggers ALL the same processes as a real user visit:
+        // - WordPress loads the page
+        // - All shortcodes execute
+        // - Master cache is built
+        // - HTML caches are built
+        // - All database queries run
         $response = wp_remote_get( $url, array(
             'timeout'     => 30,
             'redirection' => 5,
-            'user-agent'  => 'WTA-Cache-Warmup/3.6.2',
+            'user-agent'  => 'WTA-Cache-Warmup/3.7.0',
             'sslverify'   => false, // Allow local/dev environments
             'cookies'     => $cookies // Exclude from Independent Analytics
         ) );
