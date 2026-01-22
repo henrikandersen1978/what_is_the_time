@@ -189,12 +189,23 @@ class WTA_Cache_Warmup_Processor {
         // Start timing for HTTP request
         $start_time = microtime( true );
 
+        // Set Independent Analytics ignore cookie to exclude warmup from stats
+        // Based on: https://independentwp.com/knowledgebase/tracking/block-user-roles/
+        // Cookie 'iawp_ignore_visitor' tells Independent Analytics to ignore this request
+        $cookies = array(
+            new WP_Http_Cookie( array(
+                'name'  => 'iawp_ignore_visitor',
+                'value' => '1'
+            ) )
+        );
+
         // Make HTTP request to warmup all caches
         $response = wp_remote_get( $url, array(
             'timeout'     => 30,
             'redirection' => 5,
-            'user-agent'  => 'WTA-Cache-Warmup/3.6.1',
-            'sslverify'   => false // Allow local/dev environments
+            'user-agent'  => 'WTA-Cache-Warmup/3.6.2',
+            'sslverify'   => false, // Allow local/dev environments
+            'cookies'     => $cookies // Exclude from Independent Analytics
         ) );
 
         // Calculate duration

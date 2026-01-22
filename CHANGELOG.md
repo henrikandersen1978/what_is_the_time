@@ -2,6 +2,63 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.6.2] - 2026-01-22
+
+### 🎯 NEW - Exclude Cache Warmup from Independent Analytics
+
+**Problem:**
+Cache warmup requests (244 cities every 30 minutes) were being counted as real pageviews in Independent Analytics, inflating statistics and making it difficult to track actual user behavior.
+
+**Solution:**
+Implemented Independent Analytics' official cookie-based exclusion mechanism using `iawp_ignore_visitor` cookie.
+
+**How It Works:**
+
+**Cache Warmup Requests (Server-to-Server):**
+```php
+wp_remote_get( $url, array(
+    'cookies' => array(
+        new WP_Http_Cookie( array(
+            'name'  => 'iawp_ignore_visitor',
+            'value' => '1'
+        ) )
+    )
+) );
+```
+→ Independent Analytics sees cookie → **Ignores request** ❌
+
+**Normal User Visits (Browser):**
+```
+User's browser → No iawp_ignore_visitor cookie
+→ Independent Analytics → **Tracks normally** ✅
+```
+
+**Key Points:**
+- ✅ Cookie only sent in server-to-server warmup requests
+- ✅ Normal users never receive this cookie
+- ✅ Zero impact on real visitor tracking
+- ✅ Uses official Independent Analytics documented feature
+- ✅ No privacy implications (cookie contains no data)
+
+**Based On:**
+Official Independent Analytics documentation:
+https://independentwp.com/knowledgebase/tracking/block-user-roles/
+
+**Impact:**
+- Cache warmup requests (244 every 30 min) excluded from stats
+- All real user visits tracked normally
+- Accurate analytics data without warmup noise
+- Same URLs tracked differently based on cookie presence
+
+**Files Changed:**
+1. `includes/scheduler/class-wta-cache-warmup-processor.php` (cookie implementation)
+2. `time-zone-clock.php` (version bump to 3.6.2)
+
+**User-Agent Updated:**
+- `WTA-Cache-Warmup/3.6.1` → `WTA-Cache-Warmup/3.6.2`
+
+---
+
 ## [3.6.1] - 2026-01-22
 
 ### 🔍 IMPROVEMENT - Enhanced Cache Warmup Logging
