@@ -2,6 +2,68 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.6.3] - 2026-01-22
+
+### 🐛 CRITICAL FIX - Cache Warmup Scheduling with Action Scheduler
+
+**Problem in v3.6.0-3.6.2:**
+Cache warmup used WordPress Cron (`wp_schedule_event`) instead of Action Scheduler, causing:
+- ❌ Warmup job never scheduled after plugin activation
+- ❌ Inconsistent with all other plugin jobs (which use Action Scheduler)
+- ❌ Required custom cron interval registration
+- ❌ Not visible in Action Scheduler UI
+
+**Root Cause:**
+```php
+// v3.6.0-3.6.2 (WRONG):
+if ( ! wp_next_scheduled( 'wta_cache_warmup_kickstart' ) ) {
+    wp_schedule_event( $first_run, 'wta_half_hourly', 'wta_cache_warmup_kickstart' );
+}
+```
+
+This ran in separate `maybe_kickstart_warmup()` method, not integrated with `ensure_actions_scheduled()`.
+
+**The Fix:**
+```php
+// v3.6.3 (CORRECT):
+if ( false === as_next_scheduled_action( 'wta_cache_warmup_kickstart' ) ) {
+    as_schedule_recurring_action( $next_run, 30 * MINUTE_IN_SECONDS, 'wta_cache_warmup_kickstart', array(), 'world-time-ai' );
+}
+```
+
+Now runs directly in `ensure_actions_scheduled()` alongside all other jobs.
+
+**Changes:**
+1. **Moved warmup scheduling** into `ensure_actions_scheduled()` method
+2. **Replaced** `wp_schedule_event()` with `as_schedule_recurring_action()`
+3. **Replaced** `wp_next_scheduled()` with `as_next_scheduled_action()`
+4. **Removed** custom cron interval (`wta_half_hourly`)
+5. **Removed** `maybe_kickstart_warmup()` method (no longer needed)
+6. **Removed** `register_cache_warmup_interval()` method (no longer needed)
+
+**Result:**
+- ✅ Warmup job schedules automatically on plugin activation
+- ✅ Visible in Action Scheduler UI (Tools → Scheduled Actions)
+- ✅ Consistent with all other plugin jobs
+- ✅ Runs every 30 minutes via Action Scheduler
+- ✅ No custom WordPress Cron intervals needed
+
+**How to Verify:**
+1. Deactivate + Activate plugin
+2. Go to Tools → Scheduled Actions
+3. Search for: `wta_cache_warmup_kickstart`
+4. Status: Pending, Recurrence: Every 30 minutes
+5. Next run: ~60 seconds after activation
+
+**Files Changed:**
+1. `includes/class-wta-core.php` (scheduling fix, removed 2 methods)
+2. `time-zone-clock.php` (version bump to 3.6.3)
+
+**Impact:**
+Cache warmup now works as intended! All 244 countries will be warmed every 30 minutes, eliminating slow first loads for users.
+
+---
+
 ## [3.6.2] - 2026-01-22
 
 ### 🎯 NEW - Exclude Cache Warmup from Independent Analytics

@@ -433,13 +433,17 @@ class WTA_Core {
 		WTA_Logger::info( 'Auto-scheduled missing action: wta_optimize_cache (daily at 02:00)' );
 	}
 
+	// Ensure cache warmup is scheduled (v3.6.3) - Every 30 minutes
+	// CRITICAL FIX: Use Action Scheduler (not wp_schedule_event) for consistency
+	if ( false === as_next_scheduled_action( 'wta_cache_warmup_kickstart' ) ) {
+		$next_run = time() + 60; // Start in 60 seconds
+		as_schedule_recurring_action( $next_run, 30 * MINUTE_IN_SECONDS, 'wta_cache_warmup_kickstart', array(), 'world-time-ai' );
+		WTA_Logger::info( 'Auto-scheduled missing action: wta_cache_warmup_kickstart (every 30 minutes)' );
+	}
+
 	// Auto-start comparison intro generation if needed (v3.5.25)
 	// Checks if there are cities without intro text and starts background job
 	$this->maybe_start_comparison_intro_job();
-
-	// Auto-start cache warmup (v3.6.0)
-	// Schedules recurring warmup job every 30 minutes
-	$this->maybe_kickstart_warmup();
 }
 
 /**
@@ -487,53 +491,6 @@ private function maybe_start_comparison_intro_job() {
 		WTA_Logger::info( 'Comparison intro job auto-started', array(
 			'next_run' => date( 'Y-m-d H:i:s', $next_run ),
 			'note' => 'Background job will generate intro text for global_time_comparison shortcode'
-		) );
-	}
-}
-
-/**
- * Register custom cron interval for cache warmup.
- * 
- * WordPress built-in intervals: hourly, twicedaily, daily.
- * We need a custom 30-minute interval.
- * 
- * @since 3.6.0
- */
-public function register_cache_warmup_interval( $schedules ) {
-	$schedules['wta_half_hourly'] = array(
-		'interval' => 1800, // 30 minutes
-		'display'  => __( 'Every 30 Minutes', 'world-time-ai' )
-	);
-	return $schedules;
-}
-
-/**
- * Maybe kickstart cache warmup job.
- * 
- * Schedules recurring job to warmup cache every 30 minutes.
- * First batch runs 60 seconds after plugin activation/upgrade.
- * 
- * @since 3.6.0
- */
-private function maybe_kickstart_warmup() {
-	// Register custom cron interval
-	add_filter( 'cron_schedules', array( $this, 'register_cache_warmup_interval' ) );
-
-	// Check if recurring job is already scheduled
-	if ( ! wp_next_scheduled( 'wta_cache_warmup_kickstart' ) ) {
-		// Schedule recurring job every 30 minutes
-		$first_run = time() + 60; // Start in 60 seconds
-		
-		wp_schedule_event( 
-			$first_run, 
-			'wta_half_hourly', 
-			'wta_cache_warmup_kickstart' 
-		);
-		
-		WTA_Logger::info( 'Cache warmup job scheduled', array(
-			'interval' => 'Every 30 minutes',
-			'first_run' => date( 'Y-m-d H:i:s', $first_run ),
-			'note' => 'Warms cache for largest city in each country'
 		) );
 	}
 }
