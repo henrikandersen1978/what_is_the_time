@@ -186,18 +186,25 @@ class WTA_Cache_Warmup_Processor {
             return 'error';
         }
 
+        // Start timing for HTTP request
+        $start_time = microtime( true );
+
         // Make HTTP request to warmup all caches
         $response = wp_remote_get( $url, array(
             'timeout'     => 30,
             'redirection' => 5,
-            'user-agent'  => 'WTA-Cache-Warmup/3.6.0',
+            'user-agent'  => 'WTA-Cache-Warmup/3.6.1',
             'sslverify'   => false // Allow local/dev environments
         ) );
+
+        // Calculate duration
+        $duration = round( microtime( true ) - $start_time, 2 );
 
         if ( is_wp_error( $response ) ) {
             WTA_Logger::error( 'Cache warmup: HTTP request failed', array(
                 'city' => $city_name,
                 'url' => $url,
+                'duration' => $duration . 's',
                 'error' => $response->get_error_message()
             ) );
             return 'error';
@@ -208,14 +215,16 @@ class WTA_Cache_Warmup_Processor {
             WTA_Logger::error( 'Cache warmup: Non-200 response', array(
                 'city' => $city_name,
                 'url' => $url,
+                'duration' => $duration . 's',
                 'status_code' => $status_code
             ) );
             return 'error';
         }
 
-        WTA_Logger::debug( 'Cache warmup: Success', array(
+        WTA_Logger::info( 'Cache warmup: Success', array(
             'city' => $city_name,
-            'url' => $url
+            'url' => $url,
+            'duration' => $duration . 's'
         ) );
 
         return 'warmed';

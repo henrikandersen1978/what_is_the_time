@@ -2,6 +2,58 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.6.1] - 2026-01-22
+
+### 🔍 IMPROVEMENT - Enhanced Cache Warmup Logging
+
+**Better Visibility:**
+Added detailed timing and URL logging for cache warmup operations to monitor performance and troubleshoot issues.
+
+**Changes:**
+1. **Per-city timing:** Each warmup request now logs exact duration
+2. **Full URL logging:** See which URLs are being warmed
+3. **Upgraded to INFO level:** Success messages now visible in production logs (not just DEBUG)
+
+**Log Output Example:**
+
+**Before v3.6.1:**
+```
+[10:01:05] DEBUG: Cache warmup: Success
+Context: { "city": "Toronto", "url": "https://..." }
+```
+
+**After v3.6.1:**
+```
+[10:01:05] INFO: Cache warmup: Success
+Context: { "city": "Toronto", "url": "https://hvad-er-klokken-nu.dk/nordamerika/canada/toronto/", "duration": "11.23s" }
+
+[10:01:17] INFO: Cache warmup: Success
+Context: { "city": "Montreal", "url": "https://hvad-er-klokken-nu.dk/nordamerika/canada/montreal/", "duration": "6.84s" }
+
+[10:01:25] INFO: Cache warmup: Success
+Context: { "city": "Vancouver", "url": "https://hvad-er-klokken-nu.dk/nordamerika/canada/vancouver/", "duration": "0.31s" }
+
+[10:01:56] INFO: Cache warmup batch completed
+Context: { "warmed": 5, "skipped": 0, "errors": 0, "duration": "51.2s" }
+```
+
+**Benefits:**
+- ✅ Monitor first load vs subsequent load performance
+- ✅ Identify slow pages that need optimization
+- ✅ Verify cache is being built correctly
+- ✅ Track total batch processing time
+- ✅ Troubleshoot warmup failures with full context
+
+**User-Agent Updated:**
+- `WTA-Cache-Warmup/3.6.0` → `WTA-Cache-Warmup/3.6.1`
+- Easier to identify and exclude from analytics
+
+**Files Changed:**
+1. `includes/scheduler/class-wta-cache-warmup-processor.php` (timing + INFO level)
+2. `time-zone-clock.php` (version bump to 3.6.1)
+
+---
+
 ## [3.6.0] - 2026-01-22
 
 ### 🚀 NEW FEATURE - Automatic Cache Warmup
