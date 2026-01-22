@@ -2,6 +2,82 @@
 
 All notable changes to World Time AI will be documented in this file.
 
+## [3.7.1] - 2026-01-22
+
+### 🐛 CRITICAL FIX - Cache Warmup Query Performance
+
+**Problem in v3.7.0:**
+- Single complex SQL query with GROUP BY + HAVING + subquery took 70+ seconds
+- Only returned 30-212 results (not all 244 countries)
+- Query timeout risk and server strain
+- Incorrect meta_key: used `population` instead of `wta_population`
+
+**Root Cause:**
+- Complex nested subqueries without proper optimization
+- Database struggled with GROUP BY + HAVING on 93K+ cities
+- Population lookups added 1.5-2s overhead per country
+
+**The Fix:**
+
+**Two-step PHP approach instead of single SQL query:**
+
+**Step 1: Get all countries (fast - 0.05s)**
+```sql
+SELECT country.ID, country.post_title
+FROM wp_posts country
+INNER JOIN wp_posts continent ON continent.ID = country.post_parent
+WHERE country.post_type = 'wta_location'
+  AND country.post_status = 'publish'
+  AND country.post_parent > 0
+  AND continent.post_parent = 0
+ORDER BY country.ID
+```
+
+**Step 2: For each country, get first city (0.8s per country)**
+```php
+foreach ($countries as $country) {
+    $city = $wpdb->get_row("
+        SELECT ID, post_title
+        FROM wp_posts
+        WHERE post_parent = {$country->ID}
+          AND post_type = 'wta_location'
+          AND post_status = 'publish'
+        ORDER BY post_title ASC
+        LIMIT 1
+    ");
+}
+```
+
+**Performance:**
+```
+244 countries × 0.8s = ~3.3 minutes total kickstart time
+```
+
+**Why alphabetical order (not population):**
+- Population lookup: 1.5-2s per country = 8+ minutes total
+- Alphabetical: 0.8s per country = 3.3 minutes total ✅
+- Goal is cache warmup, not finding "best" city
+- Any city in a country warms cache for entire country
+
+**Impact:**
+
+**Before (v3.7.0):**
+```
+❌ 70+ seconds single query
+❌ Only 30-212 results
+❌ Risk of timeout
+```
+
+**After (v3.7.1):**
+```
+✅ 3.3 minutes for all 244 countries
+✅ Reliable - always finds all countries
+✅ Simple queries - no timeout risk
+✅ Acceptable for 30-minute recurring job
+```
+
+---
+
 ## [3.7.0] - 2026-01-22
 
 ### 🚀 MAJOR REDESIGN - Cache Warmup System

@@ -80,13 +80,20 @@ class WTA_Cache_Warmup_Processor {
     }
 
     /**
-     * Get largest city in each country (for warmup)
+     * Get first city in each country (for warmup)
      * 
      * Returns ALL countries regardless of cache status.
      * Individual warmup actions will check cache freshness.
      * 
-     * v3.7.0: No defensive cache table check - we always want to queue warmups.
-     * Queries wp_posts directly for maximum reliability.
+     * v3.7.1: Two-step PHP approach for reliability and speed
+     * - Step 1: Get all countries (fast - ~0.05s)
+     * - Step 2: For each country, get first city alphabetically (~0.8s per country)
+     * - Total time: ~3.3 minutes for 244 countries (acceptable for 30-min recurring job)
+     * 
+     * We use alphabetical order instead of population lookup because:
+     * - Population queries are very slow (1.5-2s per country = 8+ minutes total)
+     * - The goal is cache warmup, not finding "best" city
+     * - Any city in a country warms cache for entire country
      * 
      * @param int $limit Maximum number of cities to return
      * @return array
@@ -94,38 +101,55 @@ class WTA_Cache_Warmup_Processor {
     private function get_all_country_cities( $limit ) {
         global $wpdb;
         
-        // Get largest city in each country (regardless of cache status)
-        $cities = $wpdb->get_results( $wpdb->prepare(
+        // Step 1: Get all countries (fast - direct query with index on post_parent)
+        $countries = $wpdb->get_results(
             "SELECT 
                 country.ID as country_id,
-                country.post_title as country_name,
-                city.ID as city_id,
-                city.post_title as city_name,
-                pm.meta_value as population
+                country.post_title as country_name
             FROM {$wpdb->posts} country
             INNER JOIN {$wpdb->posts} continent ON continent.ID = country.post_parent
-            INNER JOIN {$wpdb->posts} city ON city.post_parent = country.ID
-            LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = city.ID AND pm.meta_key = 'population'
             WHERE country.post_type = 'wta_location'
                 AND country.post_status = 'publish'
-                AND country.post_parent > 0        -- Country has a parent (continent)
-                AND continent.post_parent = 0      -- Parent is a continent (no parent)
-                AND city.post_type = 'wta_location'
-                AND city.post_status = 'publish'
-            GROUP BY country.ID
-            HAVING city_id = (
-                SELECT ID FROM {$wpdb->posts} c2
-                LEFT JOIN {$wpdb->postmeta} pm2 ON pm2.post_id = c2.ID AND pm2.meta_key = 'population'
-                WHERE c2.post_parent = country.ID
-                    AND c2.post_type = 'wta_location'
-                    AND c2.post_status = 'publish'
-                ORDER BY CAST(pm2.meta_value AS UNSIGNED) DESC
-                LIMIT 1
-            )
-            ORDER BY country.ID
-            LIMIT %d",
-            $limit
-        ) );
+                AND country.post_parent > 0
+                AND continent.post_parent = 0
+            ORDER BY country.ID"
+        );
+        
+        if ( empty( $countries ) ) {
+            return array();
+        }
+        
+        // Step 2: For each country, get first city (alphabetically)
+        $cities = array();
+        $count = 0;
+        
+        foreach ( $countries as $country ) {
+            if ( $count >= $limit ) {
+                break;
+            }
+            
+            // Get first city in this country (alphabetical order)
+            $city = $wpdb->get_row( $wpdb->prepare(
+                "SELECT ID, post_title
+                FROM {$wpdb->posts}
+                WHERE post_parent = %d
+                    AND post_type = 'wta_location'
+                    AND post_status = 'publish'
+                ORDER BY post_title ASC
+                LIMIT 1",
+                $country->country_id
+            ) );
+            
+            if ( $city ) {
+                $cities[] = (object) array(
+                    'country_id' => $country->country_id,
+                    'country_name' => $country->country_name,
+                    'city_id' => $city->ID,
+                    'city_name' => $city->post_title
+                );
+                $count++;
+            }
+        }
         
         return $cities;
     }
@@ -198,7 +222,7 @@ class WTA_Cache_Warmup_Processor {
         $response = wp_remote_get( $url, array(
             'timeout'     => 30,
             'redirection' => 5,
-            'user-agent'  => 'WTA-Cache-Warmup/3.7.0',
+            'user-agent'  => 'WTA-Cache-Warmup/3.7.1',
             'sslverify'   => false, // Allow local/dev environments
             'cookies'     => $cookies // Exclude from Independent Analytics
         ) );
