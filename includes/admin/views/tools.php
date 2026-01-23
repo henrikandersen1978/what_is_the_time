@@ -109,19 +109,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="wta-card">
 		<h2><?php esc_html_e( 'Flush ALL Custom Cache', WTA_TEXT_DOMAIN ); ?></h2>
 		<p><?php esc_html_e( 'Completely flush the custom cache table (wp_wta_cache). This removes ALL cached data for ALL pages.', WTA_TEXT_DOMAIN ); ?></p>
-		<?php
-		// Get cache stats
-		$cache_stats = WTA_Cache::get_stats();
-		$total_entries = isset( $cache_stats['total_entries'] ) ? intval( $cache_stats['total_entries'] ) : 0;
-		$active_entries = isset( $cache_stats['active_entries'] ) ? intval( $cache_stats['active_entries'] ) : 0;
-		$table_size_mb = isset( $cache_stats['table_size_mb'] ) ? floatval( $cache_stats['table_size_mb'] ) : 0;
-		?>
-		<p class="description">
-			<strong><?php esc_html_e( 'Current Cache Stats:', WTA_TEXT_DOMAIN ); ?></strong><br>
-			• <?php printf( esc_html__( 'Total entries: %s', WTA_TEXT_DOMAIN ), number_format( $total_entries ) ); ?><br>
-			• <?php printf( esc_html__( 'Active entries: %s', WTA_TEXT_DOMAIN ), number_format( $active_entries ) ); ?><br>
-			• <?php printf( esc_html__( 'Table size: %.2f MB', WTA_TEXT_DOMAIN ), $table_size_mb ); ?>
-		</p>
 		<p class="description">
 			<strong><?php esc_html_e( 'When to use:', WTA_TEXT_DOMAIN ); ?></strong><br>
 			• <?php esc_html_e( 'After plugin update to force fresh cache', WTA_TEXT_DOMAIN ); ?><br>
